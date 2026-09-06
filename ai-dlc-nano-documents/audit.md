@@ -1,0 +1,9 @@
+- 2026-09-06T15:16Z [claude] bootstrap CREATED @ec7d9c8: tier standard, 322 tracked files, docs route to AGENTS.md + ai-docs/
+- 2026-09-06T15:16Z [claude] bootstrap DECISION @ec7d9c8: ai-docs/ stays source of truth; nano docs thinned to guardrail+anchors (user confirmed)
+- 2026-09-06T15:16Z [claude] bootstrap DECISION @ec7d9c8: specs stay in ai-docs/specs/ per playbook step 0; intent.md links to them, never duplicates
+- 2026-09-06T15:16Z [claude] bootstrap DECISION @ec7d9c8: CONSTRUCT follows feature-playbook steps 1-11 + its verification checklist
+- 2026-09-06T15:16Z [claude] bootstrap DECISION @ec7d9c8: no .gitignore block added; .claude/skills/ai-dlc-nano stays tracked per user install choice
+- 2026-09-06T15:25Z [claude] 001-brand-branch-triage CREATED @ec7d9c8: triage 3 branch commits vs develop after Harbor shadcn redesign (#35)
+- 2026-09-06T15:25Z [claude] 001-brand-branch-triage DECISION @ec7d9c8: 021d07a brand still needed (BrandLogo.tsx untouched on develop, merges clean)
+- 2026-09-06T15:25Z [claude] 001-brand-branch-triage DECISION @ec7d9c8: d412884 feeds superseded by develop slice+max-h; ec7d9c8 rubrics fixed via page-stack on wrapper
+- 2026-09-06T15:32Z [claude] 001-brand-branch-triage PHASE CLARIFY→PLAN @7816d72: take 021d07a only; develop authoritative; PROJECT_PLAN.md to be refreshed (user confirmed)
