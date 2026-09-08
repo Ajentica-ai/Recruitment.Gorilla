@@ -14,6 +14,8 @@ import {
   MapPin,
   Pencil,
   Phone,
+  Plus,
+  Trash2,
   UserCheck,
   Users,
 } from 'lucide-react';
@@ -27,7 +29,12 @@ import {
 import { StatusBadge } from './StatusBadge';
 import { skillColorClass } from '../utils/skillColors';
 import SearchableDropdown, { SearchableMultiSelect } from './SearchableSelect';
-import type { CandidateDetail, UpdateCandidatePayload } from '../types';
+import type {
+  CandidateDetail,
+  CandidateEducation,
+  CandidateExperience,
+  UpdateCandidatePayload,
+} from '../types';
 import { Button } from '@/components/ui/button';
 import { Alert } from '@/components/ui/alert';
 import { Card, CardContent } from '@/components/ui/card';
@@ -146,7 +153,18 @@ interface Props {
   onSave?: (updates: UpdateCandidatePayload) => Promise<void>;
 }
 
-type EditableSection = 'none' | 'position' | 'contact' | 'links' | 'skills' | 'summary';
+type EditableSection =
+  | 'none'
+  | 'position'
+  | 'contact'
+  | 'links'
+  | 'skills'
+  | 'summary'
+  | 'education'
+  | 'experience';
+
+const EMPTY_EDUCATION: CandidateEducation = { degree: '', institution: '', graduationYear: '', cgpa: '' };
+const EMPTY_EXPERIENCE: CandidateExperience = { jobTitle: '', company: '', duration: '', description: '' };
 
 /**
  * Candidate profile shown on Candidate Detail page and Interview evaluation page.
@@ -195,6 +213,8 @@ export default function ReadOnlyCandidateProfile({
   });
 
   const [skillIds, setSkillIds] = useState<number[]>(candidate.skillOptions.map((s) => s.id));
+  const [eduList, setEduList] = useState<CandidateEducation[]>(candidate.educations ?? []);
+  const [expList, setExpList] = useState<CandidateExperience[]>(candidate.experiences ?? []);
 
   // Sync state when candidate changes
   useEffect(() => {
@@ -223,6 +243,8 @@ export default function ReadOnlyCandidateProfile({
       portfolioUrl: candidate.portfolioUrl ?? '',
     });
     setSkillIds(candidate.skillOptions.map((s) => s.id));
+    setEduList(candidate.educations ?? []);
+    setExpList(candidate.experiences ?? []);
   }, [candidate]);
 
   // Lookups for inline editors
@@ -276,9 +298,21 @@ export default function ReadOnlyCandidateProfile({
       portfolioUrl: candidate.portfolioUrl ?? '',
     });
     setSkillIds(candidate.skillOptions.map((s) => s.id));
+    setEduList(candidate.educations ?? []);
+    setExpList(candidate.experiences ?? []);
     setFieldErrors({});
     setEditingSection('none');
   };
+
+  const updateEdu = (idx: number, patch: Partial<CandidateEducation>) =>
+    setEduList((list) => list.map((row, i) => (i === idx ? { ...row, ...patch } : row)));
+  const removeEdu = (idx: number) => setEduList((list) => list.filter((_, i) => i !== idx));
+  const addEdu = () => setEduList((list) => [...list, { ...EMPTY_EDUCATION }]);
+
+  const updateExp = (idx: number, patch: Partial<CandidateExperience>) =>
+    setExpList((list) => list.map((row, i) => (i === idx ? { ...row, ...patch } : row)));
+  const removeExp = (idx: number) => setExpList((list) => list.filter((_, i) => i !== idx));
+  const addExp = () => setExpList((list) => [...list, { ...EMPTY_EXPERIENCE }]);
 
   const handleSaveSection = async () => {
     if (!onSave) return;
@@ -302,6 +336,16 @@ export default function ReadOnlyCandidateProfile({
         if (!form.referenceName.trim()) errors.referenceName = 'Reference name is required.';
         if (!EMAIL_REGEX.test(form.referenceEmail.trim())) errors.referenceEmail = 'Valid reference email is required.';
       }
+    } else if (editingSection === 'education') {
+      eduList.forEach((edu, idx) => {
+        if (!edu.degree.trim()) errors[`edu-${idx}-degree`] = 'Degree is required.';
+        if (!edu.institution.trim()) errors[`edu-${idx}-institution`] = 'Institution is required.';
+      });
+    } else if (editingSection === 'experience') {
+      expList.forEach((exp, idx) => {
+        if (!exp.jobTitle.trim()) errors[`exp-${idx}-jobTitle`] = 'Job title is required.';
+        if (!exp.company.trim()) errors[`exp-${idx}-company`] = 'Company is required.';
+      });
     }
 
     if (Object.keys(errors).length > 0) {
@@ -336,8 +380,20 @@ export default function ReadOnlyCandidateProfile({
         gitLabUrl: form.gitLabUrl.trim() || null,
         portfolioUrl: form.portfolioUrl.trim() || null,
         skillOptionIds: skillIds,
-        educations: candidate.educations,
-        experiences: candidate.experiences,
+        educations: eduList.map((edu) => ({
+          id: edu.id,
+          degree: edu.degree.trim(),
+          institution: edu.institution.trim(),
+          graduationYear: edu.graduationYear?.trim() || null,
+          cgpa: edu.cgpa?.trim() || null,
+        })),
+        experiences: expList.map((exp) => ({
+          id: exp.id,
+          jobTitle: exp.jobTitle.trim(),
+          company: exp.company.trim(),
+          duration: exp.duration?.trim() || null,
+          description: exp.description?.trim() || null,
+        })),
       });
       setEditingSection('none');
     } catch {
@@ -917,16 +973,114 @@ export default function ReadOnlyCandidateProfile({
 
         {/* Education & Academics Section */}
         <div className="profile-section">
-          <div className="profile-section__title">
-            <GraduationCap size={16} className="profile-section__icon" />
-            <span>Education &amp; Academics</span>
-            {candidate.educations && candidate.educations.length > 0 && (
-              <span className="profile-section__count badge bg-secondary-subtle text-text-soft">
-                {candidate.educations.length}
-              </span>
+          <div className="flex items-center justify-between gap-2">
+            <div className="profile-section__title">
+              <GraduationCap size={16} className="profile-section__icon" />
+              <span>Education &amp; Academics</span>
+              {candidate.educations && candidate.educations.length > 0 && (
+                <span className="profile-section__count badge bg-secondary-subtle text-text-soft">
+                  {candidate.educations.length}
+                </span>
+              )}
+            </div>
+            {canEdit && editingSection !== 'education' && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => startEdit('education')}
+                className="h-6 px-2 text-[11px] text-muted-foreground hover:text-foreground gap-1"
+                title="Edit education inline"
+              >
+                <Pencil size={11} />
+                <span>Edit education</span>
+              </Button>
             )}
           </div>
-          {candidate.educations && candidate.educations.length > 0 ? (
+
+          {editingSection === 'education' ? (
+            <div className="mt-2 p-3.5 rounded-xl border border-primary/30 bg-primary/5 space-y-3">
+              {eduList.length === 0 && (
+                <div className="profile-empty-text">No educational qualifications yet. Add one below.</div>
+              )}
+              {eduList.map((edu, idx) => (
+                <div key={edu.id ?? `new-edu-${idx}`} className="p-3 rounded-lg border border-border/60 bg-card space-y-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
+                      Qualification {idx + 1}
+                    </span>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => removeEdu(idx)}
+                      className="h-6 px-2 text-[11px] text-danger hover:text-danger gap-1"
+                      title="Remove this qualification"
+                    >
+                      <Trash2 size={11} />
+                      <span>Remove</span>
+                    </Button>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div>
+                      <Label className="text-xs font-semibold">Degree *</Label>
+                      <Input
+                        className="h-8 text-xs bg-card"
+                        value={edu.degree}
+                        onChange={(e) => updateEdu(idx, { degree: e.target.value })}
+                        placeholder="e.g. BSc in Computer Science"
+                      />
+                      {fieldErrors[`edu-${idx}-degree`] && (
+                        <span className="text-[11px] text-danger">{fieldErrors[`edu-${idx}-degree`]}</span>
+                      )}
+                    </div>
+                    <div>
+                      <Label className="text-xs font-semibold">Institution *</Label>
+                      <Input
+                        className="h-8 text-xs bg-card"
+                        value={edu.institution}
+                        onChange={(e) => updateEdu(idx, { institution: e.target.value })}
+                        placeholder="e.g. University of Dhaka"
+                      />
+                      {fieldErrors[`edu-${idx}-institution`] && (
+                        <span className="text-[11px] text-danger">{fieldErrors[`edu-${idx}-institution`]}</span>
+                      )}
+                    </div>
+                    <div>
+                      <Label className="text-xs font-semibold">Graduation Year</Label>
+                      <Input
+                        className="h-8 text-xs bg-card"
+                        value={edu.graduationYear ?? ''}
+                        onChange={(e) => updateEdu(idx, { graduationYear: e.target.value })}
+                        placeholder="e.g. 2021"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-xs font-semibold">CGPA / Grade</Label>
+                      <Input
+                        className="h-8 text-xs bg-card"
+                        value={edu.cgpa ?? ''}
+                        onChange={(e) => updateEdu(idx, { cgpa: e.target.value })}
+                        placeholder="e.g. 3.75"
+                      />
+                    </div>
+                  </div>
+                </div>
+              ))}
+
+              <Button variant="ghost" size="sm" onClick={addEdu} className="h-7 text-xs gap-1">
+                <Plus size={12} />
+                <span>Add qualification</span>
+              </Button>
+
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-border/60">
+                <Button variant="ghost" size="sm" onClick={cancelEdit} disabled={isSaving} className="h-7 text-xs">
+                  Cancel
+                </Button>
+                <Button size="sm" onClick={handleSaveSection} disabled={isSaving} className="h-7 text-xs">
+                  {isSaving ? 'Saving…' : 'Save education'}
+                </Button>
+              </div>
+            </div>
+          ) : candidate.educations && candidate.educations.length > 0 ? (
             <div className="flex flex-col gap-2 mt-1.5">
               {candidate.educations.map((edu, idx) => (
                 <div key={edu.id ?? idx} className="education-card">
@@ -959,16 +1113,114 @@ export default function ReadOnlyCandidateProfile({
 
         {/* Work & Employment History Section */}
         <div className="profile-section">
-          <div className="profile-section__title">
-            <Building2 size={15} className="profile-section__icon" />
-            <span>Work Experience</span>
-            {candidate.experiences && candidate.experiences.length > 0 && (
-              <span className="profile-section__count badge bg-secondary-subtle text-text-soft">
-                {candidate.experiences.length}
-              </span>
+          <div className="flex items-center justify-between gap-2">
+            <div className="profile-section__title">
+              <Building2 size={15} className="profile-section__icon" />
+              <span>Work Experience</span>
+              {candidate.experiences && candidate.experiences.length > 0 && (
+                <span className="profile-section__count badge bg-secondary-subtle text-text-soft">
+                  {candidate.experiences.length}
+                </span>
+              )}
+            </div>
+            {canEdit && editingSection !== 'experience' && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => startEdit('experience')}
+                className="h-6 px-2 text-[11px] text-muted-foreground hover:text-foreground gap-1"
+                title="Edit work experience inline"
+              >
+                <Pencil size={11} />
+                <span>Edit experience</span>
+              </Button>
             )}
           </div>
-          {candidate.experiences && candidate.experiences.length > 0 ? (
+
+          {editingSection === 'experience' ? (
+            <div className="mt-2 p-3.5 rounded-xl border border-primary/30 bg-primary/5 space-y-3">
+              {expList.length === 0 && (
+                <div className="profile-empty-text">No prior work experience yet. Add one below.</div>
+              )}
+              {expList.map((exp, idx) => (
+                <div key={exp.id ?? `new-exp-${idx}`} className="p-3 rounded-lg border border-border/60 bg-card space-y-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
+                      Position {idx + 1}
+                    </span>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => removeExp(idx)}
+                      className="h-6 px-2 text-[11px] text-danger hover:text-danger gap-1"
+                      title="Remove this position"
+                    >
+                      <Trash2 size={11} />
+                      <span>Remove</span>
+                    </Button>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <div>
+                      <Label className="text-xs font-semibold">Job Title *</Label>
+                      <Input
+                        className="h-8 text-xs bg-card"
+                        value={exp.jobTitle}
+                        onChange={(e) => updateExp(idx, { jobTitle: e.target.value })}
+                        placeholder="e.g. Software Engineer"
+                      />
+                      {fieldErrors[`exp-${idx}-jobTitle`] && (
+                        <span className="text-[11px] text-danger">{fieldErrors[`exp-${idx}-jobTitle`]}</span>
+                      )}
+                    </div>
+                    <div>
+                      <Label className="text-xs font-semibold">Company *</Label>
+                      <Input
+                        className="h-8 text-xs bg-card"
+                        value={exp.company}
+                        onChange={(e) => updateExp(idx, { company: e.target.value })}
+                        placeholder="e.g. Ajentica"
+                      />
+                      {fieldErrors[`exp-${idx}-company`] && (
+                        <span className="text-[11px] text-danger">{fieldErrors[`exp-${idx}-company`]}</span>
+                      )}
+                    </div>
+                    <div>
+                      <Label className="text-xs font-semibold">Duration</Label>
+                      <Input
+                        className="h-8 text-xs bg-card"
+                        value={exp.duration ?? ''}
+                        onChange={(e) => updateExp(idx, { duration: e.target.value })}
+                        placeholder="e.g. Jan 2022 – Present"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <Label className="text-xs font-semibold">Responsibilities / Achievements</Label>
+                    <Textarea
+                      className="text-xs bg-card min-h-[72px]"
+                      value={exp.description ?? ''}
+                      onChange={(e) => updateExp(idx, { description: e.target.value })}
+                      placeholder="Key responsibilities, tech stack, and impact…"
+                    />
+                  </div>
+                </div>
+              ))}
+
+              <Button variant="ghost" size="sm" onClick={addExp} className="h-7 text-xs gap-1">
+                <Plus size={12} />
+                <span>Add position</span>
+              </Button>
+
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-border/60">
+                <Button variant="ghost" size="sm" onClick={cancelEdit} disabled={isSaving} className="h-7 text-xs">
+                  Cancel
+                </Button>
+                <Button size="sm" onClick={handleSaveSection} disabled={isSaving} className="h-7 text-xs">
+                  {isSaving ? 'Saving…' : 'Save experience'}
+                </Button>
+              </div>
+            </div>
+          ) : candidate.experiences && candidate.experiences.length > 0 ? (
             <div className="flex flex-col gap-2.5 mt-1.5">
               {candidate.experiences.map((exp, idx) => (
                 <div key={exp.id ?? idx} className="experience-card">
