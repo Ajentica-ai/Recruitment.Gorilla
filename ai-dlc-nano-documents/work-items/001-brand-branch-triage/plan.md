@@ -1,22 +1,23 @@
-<!-- phase: PLAN | branch: feat/brand-gorilla-badge (not yet created) | tasks: 0/5
-     base: 7816d72 (origin/develop) | updated: 2026-09-06
-     next: get plan + branch approval, then cherry-pick 021d07a -->
-# Plan: land the gorilla badge on develop, retire the rest of the branch
+<!-- phase: CONSTRUCT | branch: feat/brand-logo-and-dashboard-feeds (stay, no new branch) | tasks: 1/5
+     base: 602d242 | updated: 2026-09-07
+     next: awaiting approval to merge origin/develop and resolve the index.css conflict -->
+# Plan: reduce the current branch to the brand work, then update it against develop
 
-Develop is authoritative. Only 021d07a survives; d412884 and ec7d9c8 are dropped
-(superseded / already fixed) per intent.md findings.
+Revised approach: revert the two dead commits in place instead of branching off
+develop and cherry-picking. Verified in a throwaway detached worktree, not asserted.
 
 ## Tasks
-- [ ] Create `feat/brand-gorilla-badge` off `origin/develop` (7816d72)  [HARD GATE]
-- [ ] Cherry-pick 021d07a; resolve the single `index.css` conflict: keep the branch's
-      image-based `.brand__mark` block, drop develop's `--brand-mark-*` tokens
-      (light ~3641-3643, dark ~3650-3652) and `.brand__mark>svg` - only the deleted
-      SVG ever read them (verified: no other consumer on develop)
+- [x] `git revert --no-edit ec7d9c8` then `d412884` (newest first). Both applied with
+      zero conflicts in the trial; net branch diff then equals 021d07a byte for byte
+- [ ] Merge `origin/develop` (7816d72) into the branch, resolving the one `index.css`
+      conflict: keep the image-based `.brand__mark` block, drop develop's
+      `--brand-mark-*` tokens (light ~3641-3643, dark ~3650-3652) and `.brand__mark>svg`;
+      only the deleted inline SVG ever read them (verified: no other consumer)
 - [ ] Re-check the commit's 37-line `ai-docs/frontend.md` hunk against the post-Bootstrap
-      reality; rewrite any Bootstrap-era wording rather than importing it wholesale
+      reality; rewrite Bootstrap-era wording rather than carrying it over
 - [ ] Update `PROJECT_PLAN.md` to describe develop as final: React 19, shadcn/ui + Radix,
       Bootstrap removed, current structure (49 components / 17 pages, not the Phase 1 tree)
-- [ ] Verify (below), then report; no merge, no push, no PR
+- [ ] Verify (below), then report. No push, no PR, no merge of the branch itself
 
 ## Tests
 - Rigor: **standard, no new automated test.** A logo/asset swap has no behavior to

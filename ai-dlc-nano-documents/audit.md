@@ -7,3 +7,8 @@
 - 2026-09-06T15:25Z [claude] 001-brand-branch-triage DECISION @ec7d9c8: 021d07a brand still needed (BrandLogo.tsx untouched on develop, merges clean)
 - 2026-09-06T15:25Z [claude] 001-brand-branch-triage DECISION @ec7d9c8: d412884 feeds superseded by develop slice+max-h; ec7d9c8 rubrics fixed via page-stack on wrapper
 - 2026-09-06T15:32Z [claude] 001-brand-branch-triage PHASE CLARIFY→PLAN @7816d72: take 021d07a only; develop authoritative; PROJECT_PLAN.md to be refreshed (user confirmed)
+- 2026-09-07T08:19Z [claude] 001-brand-branch-triage REVISED @602d242: revert ec7d9c8+d412884 in place instead of new branch + cherry-pick (user directed)
+- 2026-09-07T08:19Z [claude] 001-brand-branch-triage DECISION @602d242: trial worktree proves both reverts clean; net diff == 021d07a; develop merge drops 4 conflicts to 1
+- 2026-09-08T06:27Z [claude] 001-brand-branch-triage PHASE PLAN→CONSTRUCT @602d242: plan approved for the two reverts; staying on feat/brand-logo-and-dashboard-feeds
+- 2026-09-08T06:27Z [claude] 001-brand-branch-triage BRANCH @602d242: stay on feat/brand-logo-and-dashboard-feeds, no new branch (user confirmed)
+- 2026-09-08T06:30Z [claude] 001-brand-branch-triage REVISED @a5f05e8: reverts landed as 97925b3 + a5f05e8; net diff now byte-identical to 021d07a

@@ -24,3 +24,5 @@
 
 ## Follow-ups
 - develop's `ai-docs/frontend.md` still has 14 react-bootstrap mentions after #35 removed Bootstrap.
+- Feed styling (date tiles, avatars, hover lift) lost with the d412884 revert; re-do under shadcn if wanted.
+- Badge not legible at the sidebar 30px (the "Hiring" pill); a badge-only crop for small layouts.
