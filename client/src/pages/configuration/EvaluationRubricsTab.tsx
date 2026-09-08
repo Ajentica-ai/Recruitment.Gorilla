@@ -3,7 +3,6 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Copy,
   FileCheck2,
-  GripVertical,
   Pencil,
   Plus,
   Star,
@@ -334,7 +333,10 @@ export default function EvaluationRubricsTab() {
           key: k,
           label: crit.label.trim(),
           hint: crit.hint?.trim() || null,
-          weight: crit.weight && crit.weight > 0 ? Number(crit.weight) : 1,
+          // Scores are unweighted means everywhere they are computed, so the
+          // column is kept at its neutral default rather than exposed as a knob
+          // that would silently do nothing.
+          weight: 1,
           sortOrder: sort++,
         });
       }
@@ -576,7 +578,7 @@ export default function EvaluationRubricsTab() {
 
       {/* Create / Edit Rubric Modal */}
       <Dialog open={showModal} onOpenChange={(open) => { if (!open) { (() => setShowModal(false))(); } }}>
-<DialogContent className="sm:max-w-2xl">
+<DialogContent className="sm:max-w-4xl">
         <form onSubmit={handleFormSubmit}>
           <DialogHeader>
             <DialogTitle>
@@ -625,7 +627,8 @@ export default function EvaluationRubricsTab() {
               <div>
                 <h6 className="mb-0 font-semibold">Scorecard Sections & Criteria</h6>
                 <small className="text-muted-foreground">
-                  Organize criteria into sections. Weights adjust the overall score contribution.
+                  Group criteria into sections. Interviewers rate every criterion 1&ndash;5, and a
+                  section&rsquo;s score is the average of its criteria.
                 </small>
               </div>
               <Button
@@ -648,11 +651,10 @@ export default function EvaluationRubricsTab() {
                         Section {secIdx + 1}
                       </span>
                       <Input
-                        className="h-[var(--control-h-sm)] text-[length:var(--text-sm)] font-semibold"
+                        className="h-[var(--control-h-sm)] text-[length:var(--text-sm)] font-semibold max-w-sm"
                         placeholder="Section Name (e.g. Technical Knowledge)"
                         value={sec.name}
                         onChange={(e) => updateSectionName(sec.id, e.target.value)}
-                        style={{ maxWidth: 300 }}
                       />
                     </div>
                     <div className="flex items-center gap-1.5">
@@ -680,13 +682,26 @@ export default function EvaluationRubricsTab() {
 
                   {/* Criteria in Section */}
                   <div className="flex flex-col gap-2 mt-1">
+                    {/* Column headings, so the two free-text fields are not
+                        guessable only from their placeholders. */}
+                    <div className="hidden md:grid grid-cols-12 gap-2 px-2 pl-9 pr-9">
+                      <span className="col-span-5 text-[length:var(--text-xs)] font-semibold text-muted-foreground uppercase tracking-wider">
+                        Criterion
+                      </span>
+                      <span className="col-span-7 text-[length:var(--text-xs)] font-semibold text-muted-foreground uppercase tracking-wider">
+                        Interviewer guidance (optional)
+                      </span>
+                    </div>
+
                     {sec.criteria.map((crit, cIdx) => (
                       <div
                         key={`${sec.id}-crit-${cIdx}`}
-                        className="flex items-center gap-2 p-2 bg-background rounded-[var(--radius-md)] border border-border"
+                        className="flex items-start gap-2 p-2 bg-background rounded-[var(--radius-md)] border border-border"
                       >
-                        <GripVertical size={14} className="text-muted-foreground shrink-0" />
-                        <div className="grow grid grid-cols-12 gap-4 gap-2">
+                        <span className="shrink-0 w-5 pt-1.5 text-center text-[length:var(--text-xs)] text-muted-foreground font-monospace">
+                          {cIdx + 1}
+                        </span>
+                        <div className="grow grid grid-cols-12 gap-2">
                           <div className="col-span-12 md:col-span-5">
                             <Input className="h-[var(--control-h-sm)] text-[length:var(--text-sm)]"
                               placeholder="Criterion Label (e.g. System Design)"
@@ -695,23 +710,12 @@ export default function EvaluationRubricsTab() {
                               required
                             />
                           </div>
-                          <div className="col-span-12 md:col-span-5">
+                          <div className="col-span-12 md:col-span-7">
                             <Input className="h-[var(--control-h-sm)] text-[length:var(--text-sm)]"
-                              placeholder="Evaluation guide hint / rubric standard..."
+                              placeholder="What a strong answer looks like…"
                               value={crit.hint || ''}
                               onChange={(e) => updateCriterion(sec.id, cIdx, 'hint', e.target.value)}
-                            />
-                          </div>
-                          <div className="col-span-6 md:col-span-2 flex items-center gap-1">
-                            <span className="text-xs text-muted-foreground">Weight:</span>
-                            <Input className="h-[var(--control-h-sm)] text-[length:var(--text-sm)]"
-                              type="number"
-                              step="0.1"
-                              min="0.1"
-                              max="10"
-                              value={crit.weight ?? 1}
-                              onChange={(e) => updateCriterion(sec.id, cIdx, 'weight', parseFloat(e.target.value) || 1)}
-                              style={{ width: 64 }}
+                              title={crit.hint || ''}
                             />
                           </div>
                         </div>
@@ -720,6 +724,8 @@ export default function EvaluationRubricsTab() {
                             variant="ghost"
                             size="sm"
                             className="btn-icon text-muted-foreground hover-danger shrink-0"
+                            title="Remove criterion"
+                            aria-label={`Remove criterion ${cIdx + 1}`}
                             onClick={() => removeCriterion(sec.id, cIdx)}
                           >
                             <X size={13} strokeWidth={2.5} />
