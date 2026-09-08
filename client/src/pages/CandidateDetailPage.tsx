@@ -1,8 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { Button, Col, Form, Row } from 'react-bootstrap';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ChevronLeft, FileText, Pencil, Plus, Trash2 } from 'lucide-react';
+import { ChevronLeft, ClipboardList, Download, FileText, History, Pencil, Plus, Trash2 } from 'lucide-react';
 import {
   deleteCandidate,
   downloadCvFile,
@@ -16,23 +15,36 @@ import {
 import StatusTimeline from '../components/StatusTimeline';
 import ReadOnlyCandidateProfile from '../components/ReadOnlyCandidateProfile';
 import AddStatusModal from '../components/AddStatusModal';
+import CandidatePipelineStepper from '../components/CandidatePipelineStepper';
 import { SearchableSelect, SearchableMultiSelect } from '../components/SearchableSelect';
 import { StatusBadge } from '../components/StatusBadge';
 import { useToast } from '../components/ToastStack';
-import ConfirmModal from '../components/ui/ConfirmModal';
-import EmptyState from '../components/ui/EmptyState';
-import Page from '../components/ui/Page';
-import SectionCard from '../components/ui/SectionCard';
-import LoadingPanel from '../components/ui/Loading';
+import Avatar from '../components/common/Avatar';
+import ConfirmModal from '../components/common/ConfirmModal';
+import EmptyState from '../components/common/EmptyState';
+import Page from '../components/common/Page';
+import SectionCard from '../components/common/SectionCard';
+import LoadingPanel from '../components/common/Loading';
+import RowActions, { RowAction, RowActionSeparator } from '../components/common/RowActions';
+import EvaluationReportDrawer from '../components/EvaluationReportDrawer';
 import OfferCard from '../components/offers/OfferCard';
 import { useAuth } from '../auth/AuthContext';
-// The role-filter branch added a local copy of this; develop had already
-// extracted the same function to utils, so use the shared one.
-import { initials } from '../utils/initials';
-import type { CVFileInfo, CandidateDetail } from '../types';
+import type { CandidateDetail, UpdateCandidatePayload } from '../types';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Button } from '@/components/ui/button';
+import { CheckboxField } from '@/components/ui/field';
+import { Sheet, SheetBody, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import {
+  Dialog,
+  DialogBody,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 
-const formatSize = (bytes: number) => `${(bytes / 1024).toFixed(0)} KB`;
-const EMAIL_REGEX = /^[\w.+-]+@[\w-]+\.[a-z]{2,}$/i;
+const EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-z]{2,}$/i;
 
 function Req() {
   return <span className="required-star" aria-hidden="true">*</span>;
@@ -44,9 +56,37 @@ export default function CandidateDetailPage() {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const { canWriteCandidates, isAdminOrAbove } = useAuth();
+  const { addToast } = useToast();
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [editing, setEditing] = useState(false);
   const [addingStatus, setAddingStatus] = useState(false);
+  const [showHistoryDrawer, setShowHistoryDrawer] = useState(false);
+  const [showReportDrawer, setShowReportDrawer] = useState(false);
+  const [cvPreview, setCvPreview] = useState<{ url: string; contentType: string; fileName: string; fileId: number } | null>(null);
+  const [loadingCvId, setLoadingCvId] = useState<number | null>(null);
+  const cvUrlRef = useRef<string | null>(null);
+
+  const revokeCvUrl = () => {
+    if (cvUrlRef.current) {
+      URL.revokeObjectURL(cvUrlRef.current);
+      cvUrlRef.current = null;
+    }
+  };
+  useEffect(() => revokeCvUrl, []);
+
+  const openCvPreview = async (fileId: number, fileName: string) => {
+    setLoadingCvId(fileId);
+    try {
+      revokeCvUrl();
+      const { url, contentType } = await previewCvFile(candidateId, fileId);
+      cvUrlRef.current = url;
+      setCvPreview({ url, contentType, fileName, fileId });
+    } catch {
+      // preview error handled gracefully
+    } finally {
+      setLoadingCvId(null);
+    }
+  };
 
   const { data, isLoading, isError } = useQuery({
     queryKey: ['candidate', candidateId],
@@ -62,6 +102,16 @@ export default function CandidateDetailPage() {
     },
   });
 
+  const updateMutation = useMutation({
+    mutationFn: (updates: UpdateCandidatePayload) => updateCandidate(candidateId, updates),
+    onSuccess: () => {
+      addToast('Candidate details updated successfully.');
+      void queryClient.invalidateQueries({ queryKey: ['candidate', candidateId] });
+      void queryClient.invalidateQueries({ queryKey: ['candidates'] });
+    },
+    onError: () => addToast('Failed to update candidate. Please check your inputs.', 'danger'),
+  });
+
   if (isLoading) return <LoadingPanel label="Loading candidate…" />;
   if (isError || !data) {
     return (
@@ -71,9 +121,9 @@ export default function CandidateDetailPage() {
         title="Couldn't load this candidate"
         description="The record may have been deleted, or the request failed."
         action={
-          <Link to="/candidates" className="btn btn-outline-secondary">
-            Back to candidates
-          </Link>
+          <Button asChild variant="outline">
+            <Link to="/candidates">Back to candidates</Link>
+          </Button>
         }
       />
     );
@@ -83,45 +133,111 @@ export default function CandidateDetailPage() {
   const canWrite = canWriteCandidates && !data.roleClosed;
 
   return (
-    <Page>
-      {/* Kept as a link with this exact text — e2e/smoke.spec.ts navigates by it. */}
-      <Link to="/candidates" className="back-link">
-        <ChevronLeft size={14} strokeWidth={1.75} aria-hidden="true" />
-        Back to candidates
-      </Link>
+    <Page tight>
+      <div className="flex flex-col gap-1.5">
+        {/* Kept as a link with this exact text — e2e/smoke.spec.ts navigates by it. */}
+        <Link to="/candidates" className="back-link">
+          <ChevronLeft size={14} strokeWidth={1.75} aria-hidden="true" />
+          Back to candidates
+        </Link>
 
-      {/* Prism's flat page header, carrying the actions the role-filter branch
-          added (explicit Edit, evaluation report) rather than its gradient hero. */}
-      <div className="page-header">
+        {/* The action group used to be six buttons of equal weight — CV File,
+            Status history, Add status, Edit, Evaluation report and a red
+            Delete candidate — so nothing on the page said what to do next, and
+            the most emphatic thing on a candidate's profile was the control
+            that destroys it.
+
+            One primary (Add status: the action this page exists for), the
+            rest as ghosts, and the two rare-and-irreversible ones (delete)
+            behind the overflow menu. */}
+        <div className="page-header candidate-hero-header">
         <div className="who-cell">
-          <span className="avatar avatar--lg" aria-hidden="true">{initials(data.fullName) || '?'}</span>
+          <Avatar name={data.fullName} email={data.email} size="hero" />
           <div className="min-w-0">
-            <h2>{data.fullName}</h2>
-            <div className="d-flex align-items-center gap-2 flex-wrap mt-1">
+            <h2 className="candidate-hero-name mb-1">{data.fullName}</h2>
+            <div className="flex items-center gap-2 flex-wrap">
               <StatusBadge status={data.currentStatus} />
-              {role && <span className="form-help">{role}</span>}
+              {role && <span className="badge-role-pill">{role}</span>}
             </div>
           </div>
         </div>
         <div className="page-header__actions">
-          {canWrite && !editing && (
-            <Button onClick={() => setEditing(true)}>
-              <Pencil size={14} strokeWidth={1.75} aria-hidden="true" />
-              <span className="ms-1">Edit</span>
+          {data.cvFiles.length > 0 && (
+            <Button
+              variant="ghost"
+              className="btn-action-cv"
+              disabled={loadingCvId !== null}
+              onClick={() => openCvPreview(data.cvFiles[0].id, data.cvFiles[0].originalFileName)}
+              title={`Preview original CV (${data.cvFiles[0].originalFileName})`}
+            >
+              <FileText size={15} strokeWidth={1.75} aria-hidden="true" />
+              {loadingCvId !== null ? 'Loading…' : 'CV File'}
+              {data.cvFiles.length > 1 && (
+                <span className="count-chip">{data.cvFiles.length}</span>
+              )}
             </Button>
           )}
-          <Link to={`/candidates/${candidateId}/evaluations`} className="btn btn-outline-secondary">
-            <FileText size={14} strokeWidth={1.75} aria-hidden="true" />
-            <span className="ms-1">Evaluation report</span>
-          </Link>
-          {isAdminOrAbove && (
-            <Button variant="outline-danger" onClick={() => setConfirmDelete(true)}>
-              <Trash2 size={14} strokeWidth={1.75} aria-hidden="true" />
-              <span className="ms-1">Delete candidate</span>
+
+          {/* Status History Slide-over Trigger */}
+          <Button
+            variant="ghost"
+            className="btn-action-history"
+            onClick={() => setShowHistoryDrawer(true)}
+            title="View status change history & timeline"
+          >
+            <History size={15} strokeWidth={1.75} aria-hidden="true" />
+            Status history
+            {data.statusHistory.length > 0 && (
+              <span className="count-chip">{data.statusHistory.length}</span>
+            )}
+          </Button>
+
+          <Button
+            variant="ghost"
+            className="btn-action-eval"
+            onClick={() => setShowReportDrawer(true)}
+          >
+            <ClipboardList size={15} strokeWidth={1.75} aria-hidden="true" />
+            Evaluation report
+          </Button>
+
+          {canWrite && !editing && (
+            <Button className="btn-action-advance" onClick={() => setAddingStatus(true)}>
+              <Plus size={15} strokeWidth={2.25} aria-hidden="true" />
+              Add status
             </Button>
+          )}
+
+          {/* Edit lives in here rather than in the row. It is a mode switch for
+              the whole page, not a peer of the three read-only views beside it,
+              and as a fifth button it pushed the row wide enough to crowd the
+              one action this page is for. */}
+          {((canWrite && !editing) || isAdminOrAbove) && (
+            <RowActions label={`More actions for ${data.fullName}`}>
+              {canWrite && !editing && (
+                <RowAction
+                  icon={<Pencil size={15} strokeWidth={1.75} aria-hidden="true" />}
+                  onClick={() => setEditing(true)}
+                >
+                  Edit profile
+                </RowAction>
+              )}
+              {canWrite && !editing && isAdminOrAbove && <RowActionSeparator />}
+              {isAdminOrAbove && (
+                <RowAction
+                  icon={<Trash2 size={15} strokeWidth={1.75} aria-hidden="true" />}
+                  tone="danger"
+                  onClick={() => setConfirmDelete(true)}
+                >
+                  Delete candidate
+                </RowAction>
+              )}
+            </RowActions>
           )}
         </div>
       </div>
+      <CandidatePipelineStepper currentStatus={data.currentStatus} className="mt-1" />
+    </div>
 
       {data.roleClosed && (
         <div className="alert-warning-soft">
@@ -144,12 +260,9 @@ export default function CandidateDetailPage() {
         status history? This cannot be undone.
       </ConfirmModal>
 
-      {/* The read/edit split comes from the role-filter branch — the form is no
-          longer permanently open — rendered on Prism's flat cards. Editing is a
-          single narrow column: a form is read top-to-bottom, and the status
-          panel beside it is not actionable mid-edit. */}
+      {/* Editing Mode */}
       {editing ? (
-        <div className="detail-edit-column">
+        <div className="detail-edit-column mx-auto">
           <SectionCard
             title="Edit profile"
             description="Changes are saved to the candidate record and the audit trail."
@@ -164,48 +277,125 @@ export default function CandidateDetailPage() {
               onCancel={() => setEditing(false)}
             />
           </SectionCard>
-
-          <CvFilesCard candidateId={candidateId} files={data.cvFiles} />
         </div>
       ) : (
-        /* --panels: the two columns share one bounded height and scroll their
-           own overflow, rather than the longer one (usually the timeline)
-           stretching the page and leaving the profile stranded beside a column
-           of whitespace. Only this page opts in — the interview page uses a
-           bare .detail-grid, where the evaluation form must grow freely. */
-        <div className="detail-grid detail-grid--panels">
-          <div className="card-stack">
-            {/* showCvFiles={false}: CvFilesCard below is the CV surface for
-                this page, and rendering both listed every file twice. */}
-            <ReadOnlyCandidateProfile candidate={data} showCvFiles={false} />
+        /* Full-Width Focused Candidate Profile Stack */
+        <div className="candidate-detail-container w-full">
+          <div className="card-stack candidate-profile-stack w-full">
+            <ReadOnlyCandidateProfile
+              candidate={data}
+              showCvFiles={false}
+              canEdit={canWrite}
+              onSave={async (updates) => {
+                await updateMutation.mutateAsync(updates);
+              }}
+            />
             {canWrite && <OfferCard candidate={data} />}
-            <CvFilesCard candidateId={candidateId} files={data.cvFiles} />
-          </div>
-
-          <div className="card-stack">
-            {/* Advancing the pipeline is a deliberate, occasional act, so it is
-                a dialog rather than a form sitting permanently open above the
-                timeline — which pushed the history (the thing you came to read)
-                down the page on every visit, and grew to five fields when
-                "Interview Scheduled" was picked. The trigger lives on the
-                history card because that is what it changes. */}
-            <SectionCard
-              title="Status history"
-              className="detail-scroll"
-              actions={
-                canWrite ? (
-                  <Button size="sm" onClick={() => setAddingStatus(true)}>
-                    <Plus size={14} strokeWidth={2} aria-hidden="true" />
-                    <span className="ms-1">Add status</span>
-                  </Button>
-                ) : undefined
-              }
-            >
-              <StatusTimeline history={data.statusHistory} canViewEvaluations={isAdminOrAbove} />
-            </SectionCard>
           </div>
         </div>
       )}
+
+      {/* The CV viewer.
+
+          A CV is a full page of dense text, and the point of previewing it in
+          the app rather than downloading it is to read it — so the viewer
+          takes almost the whole window. It used to inherit the default dialog
+          width (672px) with a fixed 480px frame, which showed about a third
+          of a page and made downloading the faster route. */}
+      {cvPreview && (
+        <Dialog open onOpenChange={(open) => !open && setCvPreview(null)}>
+          <DialogContent className="sm:h-[92dvh] sm:max-h-[92dvh] sm:max-w-[min(76rem,95vw)]">
+            <DialogHeader className="flex-row items-center justify-between gap-3">
+              <DialogTitle className="flex min-w-0 items-center gap-2">
+                <FileText size={15} className="shrink-0 text-muted-foreground" aria-hidden="true" />
+                <span className="truncate">{cvPreview.fileName}</span>
+              </DialogTitle>
+              <Button
+                size="sm"
+                variant="outline"
+                className="mr-6 shrink-0"
+                onClick={() => void downloadCvFile(candidateId, cvPreview.fileId)}
+              >
+                <Download size={14} strokeWidth={1.75} aria-hidden="true" />
+                Download
+              </Button>
+            </DialogHeader>
+            {/* p-0 so the document meets the dialog's edges — padding around a
+                page of A4 is wasted reading width. */}
+            <DialogBody className="flex flex-col p-0">
+              {cvPreview.contentType.includes('pdf') ? (
+                <iframe
+                  title={`Preview of ${cvPreview.fileName}`}
+                  src={cvPreview.url}
+                  className="h-full min-h-0 w-full flex-1 border-0 bg-white"
+                />
+              ) : (
+                <div className="m-auto flex flex-col items-center gap-3 p-12 text-center text-muted-foreground">
+                  <FileText size={36} strokeWidth={1.5} aria-hidden="true" />
+                  <p>In-app preview isn't available for this file type.</p>
+                  <Button
+                    size="sm"
+                    onClick={() => void downloadCvFile(candidateId, cvPreview.fileId)}
+                  >
+                    <Download size={14} strokeWidth={1.75} aria-hidden="true" />
+                    Download file
+                  </Button>
+                </div>
+              )}
+            </DialogBody>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      <EvaluationReportDrawer
+        candidateId={candidateId}
+        candidateName={data.fullName}
+        role={role}
+        open={showReportDrawer}
+        onOpenChange={setShowReportDrawer}
+      />
+
+      {/* Status History Slide-over Offcanvas Drawer */}
+      <Sheet open={showHistoryDrawer} onOpenChange={setShowHistoryDrawer}>
+        <SheetContent side="right">
+        <SheetHeader>
+          <SheetTitle className="flex items-center gap-2 h6 mb-0">
+            <History size={18} className="text-brand" />
+            <span className="font-semibold">Status History &amp; Timeline</span>
+            <span className="badge bg-secondary-subtle text-text-soft px-2 py-0.5 rounded-full" style={{ fontSize: '11px' }}>
+              {data.statusHistory.length} events
+            </span>
+          </SheetTitle>
+        </SheetHeader>
+        <SheetBody className="p-6 flex flex-col gap-4">
+          {canWrite && (
+            <div className="p-4 rounded-[var(--radius-lg)] bg-surface-muted border border-border border-subtle flex justify-between items-center">
+              <div>
+                <div className="text-[length:var(--text-sm)] font-semibold text-muted-foreground mb-1 uppercase" style={{ fontSize: '10.5px', letterSpacing: '0.04em' }}>
+                  Current Stage
+                </div>
+                <StatusBadge status={data.currentStatus} />
+              </div>
+              <Button
+                size="sm"
+ 
+                onClick={() => {
+                  setShowHistoryDrawer(false);
+                  setAddingStatus(true);
+                }}
+              >
+                <Plus size={14} strokeWidth={2} aria-hidden="true" />
+                <span className="ml-1">Advance Stage</span>
+              </Button>
+            </div>
+          )}
+
+          <div className="mt-1">
+            <StatusTimeline history={data.statusHistory} canViewEvaluations={isAdminOrAbove} />
+          </div>
+        </SheetBody>
+      </SheetContent>
+</Sheet>
 
       {canWrite && (
         <AddStatusModal
@@ -282,6 +472,13 @@ function ProfileEditor({
         linkedInUrl: form.linkedInUrl || null,
         githubUrl: form.githubUrl || null,
         portfolioUrl: form.portfolioUrl || null,
+        location: form.location || null,
+        leetCodeUrl: form.leetCodeUrl || null,
+        codeforcesUrl: form.codeforcesUrl || null,
+        hackerRankUrl: form.hackerRankUrl || null,
+        gitLabUrl: form.gitLabUrl || null,
+        educations: form.educations || null,
+        experiences: form.experiences || null,
         appliedRole: null,
         roleAppliedOptionId: form.roleAppliedOptionId,
         sourceOptionId: form.sourceOptionId,
@@ -319,269 +516,210 @@ function ProfileEditor({
   };
 
   return (
-    <Form onSubmit={handleSubmit} noValidate>
+    <form onSubmit={handleSubmit} noValidate>
       <fieldset className="border-0 p-0 m-0">
-      <Row className="g-3">
-        <Col md={6}>
-          <Form.Label>Full name <Req /></Form.Label>
-          <Form.Control
+      <div className="grid grid-cols-12 gap-6">
+        <div className="col-span-12 md:col-span-6">
+          <Label>Full name <Req /></Label>
+          <Input
             value={form.fullName}
             onChange={(e) => { set('fullName', e.target.value); clearFE('fullName'); }}
-            isInvalid={!!fieldErrors.fullName}
+            aria-invalid={!!fieldErrors.fullName || undefined}
           />
-          <Form.Control.Feedback type="invalid">{fieldErrors.fullName}</Form.Control.Feedback>
-        </Col>
-        <Col md={6}>
-          <Form.Label>Email <Req /></Form.Label>
-          <Form.Control
+          {fieldErrors.fullName ? <p className="text-[length:var(--text-sm)] text-[var(--danger-text)]">{fieldErrors.fullName}</p> : null}
+        </div>
+        <div className="col-span-12 md:col-span-6">
+          <Label>Email <Req /></Label>
+          <Input
             value={form.email}
             onChange={(e) => { set('email', e.target.value); clearFE('email'); }}
-            isInvalid={!!fieldErrors.email}
+            aria-invalid={!!fieldErrors.email || undefined}
           />
-          <Form.Control.Feedback type="invalid">{fieldErrors.email}</Form.Control.Feedback>
-        </Col>
-        <Col md={6}>
-          <Form.Label>Phone</Form.Label>
-          <Form.Control value={form.phone ?? ''} onChange={(e) => set('phone', e.target.value)} />
-        </Col>
-        <Col md={6}>
-          <Form.Label>Current title</Form.Label>
-          <Form.Control
+          {fieldErrors.email ? <p className="text-[length:var(--text-sm)] text-[var(--danger-text)]">{fieldErrors.email}</p> : null}
+        </div>
+        <div className="col-span-12 md:col-span-6">
+          <Label>Phone</Label>
+          <Input value={form.phone ?? ''} onChange={(e) => set('phone', e.target.value)} />
+        </div>
+        <div className="col-span-12 md:col-span-6">
+          <Label>Location</Label>
+          <Input
+            value={form.location ?? ''}
+            placeholder="e.g. Dhaka, Bangladesh"
+            onChange={(e) => set('location', e.target.value)}
+          />
+        </div>
+        <div className="col-span-12 md:col-span-6">
+          <Label>Current title</Label>
+          <Input
             value={form.currentTitle ?? ''}
             onChange={(e) => set('currentTitle', e.target.value)}
           />
-        </Col>
-        <Col md={6}>
-          <Form.Label>Relevant Experience <Req /></Form.Label>
-          <Form.Control
+        </div>
+        <div className="col-span-12 md:col-span-6">
+          <Label>Relevant Experience <Req /></Label>
+          <Input
             value={form.relevantExperience ?? ''}
             placeholder="e.g. 3 Years"
             onChange={(e) => { set('relevantExperience', e.target.value); clearFE('relevantExperience'); }}
-            isInvalid={!!fieldErrors.relevantExperience}
+            aria-invalid={!!fieldErrors.relevantExperience || undefined}
           />
-          <Form.Control.Feedback type="invalid">{fieldErrors.relevantExperience}</Form.Control.Feedback>
-        </Col>
-        <Col md={6}>
-          <Form.Label>LinkedIn URL</Form.Label>
-          <Form.Control
+          {fieldErrors.relevantExperience ? <p className="text-[length:var(--text-sm)] text-[var(--danger-text)]">{fieldErrors.relevantExperience}</p> : null}
+        </div>
+        <div className="col-span-12 md:col-span-6">
+          <Label>LinkedIn URL</Label>
+          <Input
             value={form.linkedInUrl ?? ''}
             onChange={(e) => set('linkedInUrl', e.target.value)}
           />
-        </Col>
-        <Col md={6}>
-          <Form.Label>GitHub URL</Form.Label>
-          <Form.Control
+        </div>
+        <div className="col-span-12 md:col-span-6">
+          <Label>GitHub URL</Label>
+          <Input
             value={form.githubUrl ?? ''}
             onChange={(e) => set('githubUrl', e.target.value)}
           />
-        </Col>
-        <Col md={6}>
-          <Form.Label>Portfolio website</Form.Label>
-          <Form.Control
+        </div>
+        <div className="col-span-12 md:col-span-6">
+          <Label>GitLab URL</Label>
+          <Input
+            value={form.gitLabUrl ?? ''}
+            onChange={(e) => set('gitLabUrl', e.target.value)}
+          />
+        </div>
+        <div className="col-span-12 md:col-span-6">
+          <Label>LeetCode Profile</Label>
+          <Input
+            value={form.leetCodeUrl ?? ''}
+            placeholder="https://leetcode.com/u/..."
+            onChange={(e) => set('leetCodeUrl', e.target.value)}
+          />
+        </div>
+        <div className="col-span-12 md:col-span-6">
+          <Label>Codeforces Profile</Label>
+          <Input
+            value={form.codeforcesUrl ?? ''}
+            placeholder="https://codeforces.com/profile/..."
+            onChange={(e) => set('codeforcesUrl', e.target.value)}
+          />
+        </div>
+        <div className="col-span-12 md:col-span-6">
+          <Label>HackerRank Profile</Label>
+          <Input
+            value={form.hackerRankUrl ?? ''}
+            placeholder="https://hackerrank.com/profile/..."
+            onChange={(e) => set('hackerRankUrl', e.target.value)}
+          />
+        </div>
+        <div className="col-span-12 md:col-span-6">
+          <Label>Portfolio website</Label>
+          <Input
             value={form.portfolioUrl ?? ''}
             onChange={(e) => set('portfolioUrl', e.target.value)}
           />
-        </Col>
-        <Col md={6}>
-          <Form.Label>Role applied for <Req /></Form.Label>
+        </div>
+        <div className="col-span-12 md:col-span-6">
+          <Label>Role applied for <Req /></Label>
           <SearchableSelect
             options={roleOptions}
             value={form.roleAppliedOptionId}
             onChange={(roleAppliedOptionId) => { setForm((f) => ({ ...f, roleAppliedOptionId })); clearFE('roleApplied'); }}
             placeholder="Search roles…"
-            isInvalid={!!fieldErrors.roleApplied}
+            aria-invalid={!!fieldErrors.roleApplied || undefined}
           />
           {fieldErrors.roleApplied && (
-            <div className="invalid-feedback d-block">{fieldErrors.roleApplied}</div>
+            <div className="invalid-feedback block">{fieldErrors.roleApplied}</div>
           )}
-        </Col>
-        <Col md={6}>
-          <Form.Label>Source</Form.Label>
+        </div>
+        <div className="col-span-12 md:col-span-6">
+          <Label>Source</Label>
           <SearchableSelect
             options={sourceOptions}
             value={form.sourceOptionId}
             onChange={(sourceOptionId) => setForm((f) => ({ ...f, sourceOptionId }))}
             placeholder="Where did this candidate come from?"
           />
-        </Col>
-        <Col md={6}>
-          <Form.Label>Source detail</Form.Label>
-          <Form.Control
+        </div>
+        <div className="col-span-12 md:col-span-6">
+          <Label>Source detail</Label>
+          <Input
             value={form.sourceDetail ?? ''}
             onChange={(e) => set('sourceDetail', e.target.value)}
             placeholder="Agency, campaign or board name"
           />
-        </Col>
-        <Col md={12}>
-          <Form.Label>Skills</Form.Label>
+        </div>
+        <div className="col-span-12 md:col-span-12">
+          <Label>Skills</Label>
           <SearchableMultiSelect
             options={skillOptions}
             value={skillIds}
             onChange={setSkillIds}
             placeholder="Search skills…"
           />
-        </Col>
-        <Col md={12}>
-          <Form.Label>Skills summary (from CV)</Form.Label>
-          <Form.Control
-            as="textarea"
+        </div>
+        <div className="col-span-12 md:col-span-12">
+          <Label>Skills summary (from CV)</Label>
+          <Textarea
             rows={2}
             value={form.skills ?? ''}
             onChange={(e) => set('skills', e.target.value)}
           />
-        </Col>
-        <Col md={12}>
-          <Form.Label>Summary</Form.Label>
-          <Form.Control
-            as="textarea"
+        </div>
+        <div className="col-span-12 md:col-span-12">
+          <Label>Summary</Label>
+          <Textarea
             rows={3}
             value={form.summary ?? ''}
             onChange={(e) => set('summary', e.target.value)}
           />
-        </Col>
+        </div>
 
-        <Col md={12}>
+        <div className="col-span-12 md:col-span-12">
           <hr className="mb-2" />
-          <Form.Check
-            type="checkbox"
-            id="is-referred-edit"
-            label="This candidate has been referred"
-            checked={form.isReferred}
-            onChange={(e) => setForm((f) => ({ ...f, isReferred: e.target.checked }))}
-          />
-        </Col>
+          <CheckboxField id="is-referred-edit" label="This candidate has been referred" checked={form.isReferred} onCheckedChange={(checked) => setForm((f) => ({ ...f, isReferred: checked }))} />
+        </div>
         {form.isReferred && (
           <>
-            <Col md={6}>
-              <Form.Label>Reference name <Req /></Form.Label>
-              <Form.Control
+            <div className="col-span-12 md:col-span-6">
+              <Label>Reference name <Req /></Label>
+              <Input
                 value={form.referenceName ?? ''}
                 onChange={(e) => { set('referenceName', e.target.value); clearFE('referenceName'); }}
-                isInvalid={!!fieldErrors.referenceName}
+                aria-invalid={!!fieldErrors.referenceName || undefined}
               />
-              <Form.Control.Feedback type="invalid">{fieldErrors.referenceName}</Form.Control.Feedback>
-            </Col>
-            <Col md={6}>
-              <Form.Label>Reference email <Req /></Form.Label>
-              <Form.Control
+              {fieldErrors.referenceName ? <p className="text-[length:var(--text-sm)] text-[var(--danger-text)]">{fieldErrors.referenceName}</p> : null}
+            </div>
+            <div className="col-span-12 md:col-span-6">
+              <Label>Reference email <Req /></Label>
+              <Input
                 type="email"
                 value={form.referenceEmail ?? ''}
                 onChange={(e) => { set('referenceEmail', e.target.value); clearFE('referenceEmail'); }}
-                isInvalid={!!fieldErrors.referenceEmail}
+                aria-invalid={!!fieldErrors.referenceEmail || undefined}
               />
-              <Form.Control.Feedback type="invalid">{fieldErrors.referenceEmail}</Form.Control.Feedback>
-            </Col>
-            <Col md={6}>
-              <Form.Label>Employee ID</Form.Label>
-              <Form.Control
+              {fieldErrors.referenceEmail ? <p className="text-[length:var(--text-sm)] text-[var(--danger-text)]">{fieldErrors.referenceEmail}</p> : null}
+            </div>
+            <div className="col-span-12 md:col-span-6">
+              <Label>Employee ID</Label>
+              <Input
                 value={form.referenceEmployeeId ?? ''}
                 onChange={(e) => set('referenceEmployeeId', e.target.value)}
               />
-            </Col>
+            </div>
           </>
         )}
-      </Row>
+      </div>
       </fieldset>
 
       <div className="form-actions">
         <Button type="submit" disabled={mutation.isPending}>
           {mutation.isPending ? 'Saving…' : 'Save changes'}
         </Button>
-        <Button variant="outline-secondary" type="button" disabled={mutation.isPending} onClick={handleCancel}>
+        <Button variant="outline" type="button" disabled={mutation.isPending} onClick={handleCancel}>
           Cancel
         </Button>
       </div>
-    </Form>
-  );
-}
-
-function CvFilesCard({ candidateId, files }: { candidateId: number; files: CVFileInfo[] }) {
-  const [preview, setPreview] = useState<{ url: string; contentType: string } | null>(null);
-  const [loadingId, setLoadingId] = useState<number | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const urlRef = useRef<string | null>(null);
-
-  const revoke = () => {
-    if (urlRef.current) {
-      URL.revokeObjectURL(urlRef.current);
-      urlRef.current = null;
-    }
-  };
-  useEffect(() => revoke, []); // revoke any object URL on unmount
-
-  const openPreview = async (fileId: number) => {
-    setError(null);
-    setLoadingId(fileId);
-    try {
-      revoke();
-      const { url, contentType } = await previewCvFile(candidateId, fileId);
-      urlRef.current = url;
-      setPreview({ url, contentType });
-    } catch {
-      setError('Could not load preview.');
-    } finally {
-      setLoadingId(null);
-    }
-  };
-
-  const isPdf = preview?.contentType.includes('pdf') ?? false;
-
-  return (
-    <SectionCard title="CV files">
-      <div className="page-stack page-stack--tight">
-        {files.length === 0 ? (
-          <EmptyState
-            icon={<FileText size={20} strokeWidth={1.75} aria-hidden="true" />}
-            title="No CV on file"
-            description="Files uploaded for this candidate will be listed here."
-          />
-        ) : (
-          <div>
-            {files.map((f) => (
-              <div key={f.id} className="cv-file-item">
-                <span className="cv-file-item__icon">
-                  <FileText size={18} strokeWidth={1.75} aria-hidden="true" />
-                </span>
-                <span className="cv-file-item__meta">
-                  <span className="cv-file-item__name text-truncate">{f.originalFileName}</span>
-                  <span className="cv-file-item__size">
-                    {f.fileType} · {formatSize(f.fileSizeBytes)}
-                  </span>
-                </span>
-                <span className="row-actions">
-                  <Button
-                    size="sm"
-                    variant="outline-primary"
-                    disabled={loadingId === f.id}
-                    onClick={() => openPreview(f.id)}
-                  >
-                    {loadingId === f.id ? 'Loading…' : 'Preview'}
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline-secondary"
-                    onClick={() => downloadCvFile(candidateId, f.id)}
-                  >
-                    Download
-                  </Button>
-                </span>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {error && <div className="alert-danger-soft" role="alert">{error}</div>}
-
-        {preview &&
-          (isPdf ? (
-            <iframe title="CV preview" src={preview.url} className="cv-preview-frame" />
-          ) : (
-            <div className="alert-info-soft">
-              In-app preview isn't available for this file type. Use Download to open it.
-            </div>
-          ))}
-      </div>
-    </SectionCard>
+    </form>
   );
 }
 

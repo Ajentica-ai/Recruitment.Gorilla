@@ -87,7 +87,7 @@ export default function AppShell() {
         <header className="app-topbar">
           <button
             type="button"
-            className="app-sidebar__icon-btn d-inline-grid d-md-none"
+            className="app-sidebar__icon-btn inline-grid md:hidden"
             onClick={show}
             aria-label="Open navigation"
             aria-expanded={visible}

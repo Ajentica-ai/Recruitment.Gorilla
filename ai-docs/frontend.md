@@ -20,7 +20,7 @@ React 19 + TypeScript + Vite. Root: `client/`.
 | `src/utils/` | `statusColors.ts` (status → tone class); `chartColors.ts` (chart colors from status tokens + chrome read off the design tokens); `evaluationCriteria.ts` (interview-form catalog — keys match the backend); `skillColors.ts` (stable hash of a skill name → badge class); `jobStatus.ts` (job-opening lifecycle); `initials.ts`. |
 | `src/styles/tokens.css` | **Design tokens — the single source of visual truth.** |
 | `src/index.css` | Bootstrap bridge → Prism semantic layer → app-specific components. |
-| `public/logo.png` | Brand logo. |
+| `src/assets/brand-logo.png` | Brand badge artwork, imported by `BrandLogo`. `public/favicon.png` is the same art padded square. |
 | `vite.config.ts` | Dev server host + `/api` proxy. |
 
 ## Design system (Prism)
@@ -199,7 +199,7 @@ No `max-width` queries, and the phone is never the exception. Concretely:
   decides what is *reachable*, and a missing guard must never be covered for by
   a hidden nav item. `navRoutes.test.ts` covers the visibility side.
 - **Candidate role/skill lookups** come from `getActiveRoleOptions`/`getActiveSkillOptions` (`/api/candidates/role-options` · `/skill-options`, `CanWriteCandidate`); `role-options` is server-scoped so a Recruiter only sees their assigned roles. `CandidateForm` **auto-selects** the role when the list has exactly one (a single-assigned recruiter). The **"Delete candidate"** button on `CandidateDetailPage` shows only for `isAdminOrAbove` (delete is Admin-only). The dashboard shows recruiter-only users a **role filter** (`Form.Select` of their assigned roles + "All") that feeds `getDashboard(roleId)` and the `['dashboard','scoped',roleId]` key.
-- Routes: `/` → `DashboardPage` (landing), `/candidates` + `/candidates/:id` (Recruiter+, `RequireRole`), `/upload` (Recruiter+), `/interviews/:id` → `InterviewPage` (all roles), `/configuration` (Admin+), `/users` (SuperAdmin), `/change-password`. The **Dashboard** nav link (`to="/" end`) is first and visible to all roles; the **Candidates/Upload** links show only for `canWriteCandidates`. So an **Interviewer** (bottom of the hierarchy — `useAuth().isInterviewerOnly`) sees Dashboard only, plus the interview pages they're linked to. The **topbar** hosts a **`NotificationBell`** (all roles). Nav visibility is driven by `navRoutes.ts`, not by inline conditionals.
+- Routes: `/` → `DashboardPage` (landing), `/jobs` → `JobsPage` (Admin+, `RequireRole`), `/candidates` + `/candidates/:id` (Recruiter+, `RequireRole`), `/upload` (Recruiter+), `/interviews/:id` → `InterviewPage` (all roles), `/configuration` (Admin+), `/users` (SuperAdmin), `/change-password`. The **Dashboard** nav link (`to="/" end`) is first and visible to all roles; the **Candidates/Upload** links show only for `canWriteCandidates`. So an **Interviewer** (bottom of the hierarchy — `useAuth().isInterviewerOnly`) sees Dashboard only, plus the interview pages they're linked to. The **topbar** hosts a **`NotificationBell`** (all roles). Nav visibility is driven by `navRoutes.ts`, not by inline conditionals.
 
 ## Data fetching (TanStack Query)
 - Reads: `useQuery` with array keys — `['dashboard']`, `['candidates', { search, status, page }]`, `['candidate', id]`, `['status-options']`, `['status-options', 'initial']`, `['status-options', 'next', id]`, `['notifications']` (60s `refetchInterval`), `['my-interviews']`, `['assignable-users']`, `['interview', id]`. Use `keepPreviousData` for paged lists.

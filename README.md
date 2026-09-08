@@ -45,6 +45,46 @@ A recruitment management system for streamlining CV ingestion, candidate trackin
 
 ---
 
+## Run it with Docker
+
+The whole stack — MySQL, the API and the web app — from one command:
+
+```bash
+docker compose up --build
+```
+
+Then open <http://localhost:8090> and sign in as
+`admin@recruitmentgorilla.com` / `admin`.
+
+Nothing else is needed: no `.env`, no MySQL install, no `dotnet-ef`. Migrations
+run at API startup and the first Super Admin is seeded on the first boot. From
+empty volumes to a working login takes about 30 seconds.
+
+Only the web container publishes a port. The API and the database are reachable
+only on the project's internal network, which keeps the backend off the host —
+the same rule the dev setup follows by proxying through Vite. nginx serves the
+bundle and forwards `/api` and `/hubs` to the API, so the browser sees a single
+origin. That matters: the refresh token is a `SameSite=Strict` cookie, and
+splitting the bundle and the API across origins would drop it.
+
+| | |
+|---|---|
+| Change any default | copy `.env.example` to `.env` |
+| Stop | `docker compose down` |
+| Stop and wipe the database | `docker compose down -v` |
+| Follow the API log | `docker compose logs -f api` |
+| Smoke-test the running stack | `cd client && npx playwright test e2e/compose.spec.ts` |
+
+**Before deploying this anywhere but your machine**, read the notes in
+`docker-compose.yml`. Two things matter most: the secrets have working
+defaults that are committed to this repo and are therefore not secret, and the
+API runs as `Development` because the refresh cookie is marked `Secure` outside
+it — which a browser discards over plain HTTP, ending every session at the
+fifteen-minute mark with no visible error. Put TLS in front, then switch to
+`Production`.
+
+---
+
 ## Prerequisites
 
 - [.NET 10 SDK](https://dotnet.microsoft.com/download)

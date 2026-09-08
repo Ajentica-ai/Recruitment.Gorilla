@@ -42,6 +42,8 @@ The core profile. Holds a **denormalized `CurrentStatus`** for fast list queries
 | ReferenceEmail | varchar(200) | nullable; required (+valid) when IsReferred |
 | ReferenceEmployeeId | varchar(100) | nullable |
 | CurrentStatus | varchar(100) | required; mirrors latest StatusHistory.Status |
+| BatchId | varchar(100) | nullable; links to upload batch |
+| BatchName | varchar(255) | nullable; intake batch label (e.g. "Q3 Senior Engineering Intake") |
 | CreatedAt / UpdatedAt | datetime | UTC |
 
 > Reference fields are cleared server-side when `IsReferred` is false. The reference rule (name + valid email required when referred) is enforced on **both** create and update via `CandidateService.ValidateReference`. Distinct `AppliedRole` values are served from `GET /api/candidates/roles` for the role suggestions dropdown.

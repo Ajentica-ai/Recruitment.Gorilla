@@ -1,6 +1,7 @@
 using MailKit.Net.Smtp;
 using MailKit.Security;
 using MimeKit;
+using Recruitment.Gorilla.API.Services.Background;
 
 namespace Recruitment.Gorilla.API.Services;
 
@@ -43,24 +44,39 @@ public class MailKitSmtpTransport : ISmtpTransport
 /// <summary>
 /// Sends transactional email (interview assignment, password/account notices). SMTP settings are
 /// resolved at send time by <see cref="EmailSettingsResolver"/> (DB row if configured in-app, else
-/// the <c>Smtp</c> config fallback). Best-effort — a send failure is logged but never bubbles up, so
-/// a dead mailbox can't break the underlying operation (mirrors <see cref="AuditService"/>).
+/// the <c>Smtp</c> config fallback). Outbound sends are enqueued asynchronously via <see cref="IEmailQueue"/>.
 /// </summary>
-public class EmailService(IEmailSettingsResolver settings, ISmtpTransport transport, ILogger<EmailService> logger)
+public class EmailService(
+    IEmailSettingsResolver settings,
+    ISmtpTransport transport,
+    ILogger<EmailService> logger,
+    IEmailQueue? queue = null)
 {
-    /// <summary>Best-effort send — a failure is logged and swallowed, never bubbling up.</summary>
+    /// <summary>Asynchronous non-blocking queue dispatch (or immediate send if queue is not configured in tests).</summary>
     public async Task SendAsync(
         string toEmail, string toName, string subject, string htmlBody, CalendarAttachment? calendar = null)
     {
         try
         {
-            await SendCoreAsync(toEmail, toName, subject, htmlBody, calendar);
+            if (queue != null)
+            {
+                await queue.QueueAsync(new EmailJob(toEmail, toName, subject, htmlBody, calendar));
+            }
+            else
+            {
+                await SendCoreAsync(toEmail, toName, subject, htmlBody, calendar);
+            }
         }
         catch (Exception ex)
         {
-            logger.LogWarning(ex, "Failed to send email '{Subject}' to {ToEmail}.", subject, toEmail);
+            logger.LogWarning(ex, "Failed to enqueue email '{Subject}' to {ToEmail}.", subject, toEmail);
         }
     }
+
+    /// <summary>Executes direct send across the network (called by the background queue worker).</summary>
+    public Task SendDirectAsync(
+        string toEmail, string toName, string subject, string htmlBody, CalendarAttachment? calendar = null) =>
+        SendCoreAsync(toEmail, toName, subject, htmlBody, calendar);
 
     /// <summary>
     /// Send that surfaces the outcome — for the admin "send test" flow, where the caller needs to

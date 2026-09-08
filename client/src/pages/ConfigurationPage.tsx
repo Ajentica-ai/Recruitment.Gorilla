@@ -13,9 +13,9 @@ import {
   updateSourceOption,
 } from '../services/api';
 import { useAuth } from '../auth/AuthContext';
-import Page from '../components/ui/Page';
-import Tabs, { TabPanel, type TabDef } from '../components/ui/Tabs';
-import { useTabs } from '../components/ui/useTabs';
+import Page from '../components/common/Page';
+import Tabs, { TabPanel, type TabDef } from '../components/common/Tabs';
+import { useTabs } from '../components/common/useTabs';
 import JobOpeningsTab from './configuration/JobOpeningsTab';
 import OptionChipsTab, { type OptionApi } from './configuration/OptionChipsTab';
 import EmailSettingsTab from './configuration/EmailSettingsTab';
@@ -54,12 +54,12 @@ export default function ConfigurationPage() {
   const { isSuperAdmin } = useAuth();
 
   const tabs: TabDef[] = [
-    { id: 'jobs', label: 'Job openings' },
     { id: 'rubrics', label: 'Evaluation rubrics' },
     { id: 'skills', label: 'Skills' },
     { id: 'sources', label: 'Candidate sources' },
     { id: 'interview-types', label: 'Interview types' },
     ...(isSuperAdmin ? [{ id: 'email', label: 'Email' }] : []),
+    { id: 'jobs', label: 'Job openings' },
   ];
 
   const [active, setActive] = useTabs(tabs);

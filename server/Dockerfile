@@ -13,10 +13,10 @@ FROM mcr.microsoft.com/dotnet/aspnet:10.0
 WORKDIR /app
 COPY --from=build /app .
 
-# ASPNETCORE_URLS is set to 8080 in Compose so the container need not run as root
+# ASPNETCORE_URLS is set to 8081 in Compose so the container need not run as root
 # to bind a privileged port. RG's "loopback-only" golden rule is honored at the
 # network layer instead: this image declares no `ports:` in Compose, so it is
 # reachable only from the gateway over the internal bridge network.
-EXPOSE 8080
+EXPOSE 8081
 
 ENTRYPOINT ["dotnet", "Recruitment.Gorilla.API.dll"]

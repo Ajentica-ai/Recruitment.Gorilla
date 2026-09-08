@@ -1,9 +1,11 @@
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
-import { Spinner } from 'react-bootstrap';
 import { AuthProvider, useAuth } from './auth/AuthContext';
+import LoadingPanel from './components/common/Loading';
 import RequireRole from './components/RequireRole';
 import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
+import AnalyticsPage from './pages/AnalyticsPage';
+import JobsPage from './pages/JobsPage';
 import UploadPage from './pages/UploadPage';
 import CandidatesPage from './pages/CandidatesPage';
 import CandidateDetailPage from './pages/CandidateDetailPage';
@@ -24,11 +26,7 @@ function ProtectedLayout() {
   const location = useLocation();
 
   if (loading) {
-    return (
-      <div className="d-flex justify-content-center align-items-center" style={{ minHeight: '60vh' }}>
-        <Spinner animation="border" />
-      </div>
-    );
+    return <LoadingPanel label="Loading…" />;
   }
 
   if (!isAuthenticated) {
@@ -52,6 +50,22 @@ export default function App() {
           <Route path="/login" element={<LoginPage />} />
           <Route element={<ProtectedLayout />}>
             <Route path="/" element={<DashboardPage />} />
+            <Route
+              path="/analytics"
+              element={
+                <RequireRole roles={['SuperAdmin', 'Admin', 'Recruiter']}>
+                  <AnalyticsPage />
+                </RequireRole>
+              }
+            />
+            <Route
+              path="/jobs"
+              element={
+                <RequireRole roles={['SuperAdmin', 'Admin', 'Recruiter']}>
+                  <JobsPage />
+                </RequireRole>
+              }
+            />
             <Route
               path="/upload"
               element={

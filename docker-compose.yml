@@ -1,0 +1,122 @@
+# Recruitment Gorilla, whole stack, one command:
+#
+#     docker compose up --build
+#
+# Then open http://localhost:8090 and sign in as
+# admin@recruitmentgorilla.com / admin.
+#
+# It runs with no .env file and no setup step — every value below has a working
+# default. Those defaults are for LOCAL USE. `docker-compose.override.yml` or a
+# `.env` beside this file overrides any of them; see .env.example.
+#
+# WHY ONE PUBLISHED PORT. Only `web` publishes anything. The API and MySQL are
+# reachable only over the project's internal network, which is what keeps the
+# backend off the host — the same "loopback only" rule the dev setup follows by
+# proxying through Vite. nginx in `web` serves the bundle and forwards /api and
+# /hubs to the API, so the browser sees a single origin. That is required, not
+# cosmetic: the refresh token is a SameSite=Strict cookie, and splitting the
+# bundle and the API across origins would drop it and end every session the
+# moment the 15-minute access token expired.
+
+name: recruitment-gorilla
+
+services:
+  db:
+    image: mysql:8.4
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: ${DB_NAME:-recruitment_gorilla}
+      MYSQL_USER: ${DB_USER:-rg}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-rg_dev_password}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-rg_dev_root_password}
+    # utf8mb4 all the way down: CVs carry names and addresses well outside
+    # latin1, and the parser emits real Unicode.
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+    healthcheck:
+      # The API calls ServerVersion.AutoDetect at startup, which opens a real
+      # connection before the first request — so it must not start until MySQL
+      # is genuinely accepting them, not merely running. Compose waits on this.
+      test: ['CMD', 'mysqladmin', 'ping', '-h', '127.0.0.1', '-p${DB_ROOT_PASSWORD:-rg_dev_root_password}']
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 40s
+    volumes:
+      - db-data:/var/lib/mysql
+
+  api:
+    build:
+      context: ./server
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      # A high port, so the container needs no privileged port and no root.
+      # This one is internal: the api service publishes nothing, so it is
+      # reachable only from nginx over the project network.
+      ASPNETCORE_URLS: http://+:8081
+
+      # Development, deliberately, and this is the one setting to understand
+      # before deploying for real. AuthController sets the refresh cookie
+      # `Secure = !env.IsDevelopment()`. A Secure cookie is discarded by the
+      # browser over plain http://, so under Production on this HTTP-only setup
+      # sign-in would appear to work and then drop the session at the 15-minute
+      # mark with no visible error. Put TLS in front, then switch this to
+      # Production — not the other way round.
+      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Development}
+
+      # __ is the .NET convention for a nested key: ConnectionStrings:DefaultConnection.
+      # Kept on one line on purpose — a folded YAML scalar would turn the line
+      # breaks into spaces inside the connection string.
+      ConnectionStrings__DefaultConnection: "Server=db;Port=3306;Database=${DB_NAME:-recruitment_gorilla};User Id=${DB_USER:-rg};Password=${DB_PASSWORD:-rg_dev_password};"
+
+      # HS256 needs >= 32 bytes; the app refuses to start otherwise.
+      Jwt__Key: ${JWT_KEY:-dev-only-jwt-signing-key-change-me-in-production-0123456789}
+      Jwt__Issuer: RecruitmentGorilla
+      Jwt__Audience: RecruitmentGorilla
+
+      # Encrypts the SMTP password at rest. It MUST stay the same across
+      # restarts and rebuilds: change it and every stored secret becomes
+      # undecryptable, which surfaces much later as email quietly failing.
+      Encryption__Key: ${ENCRYPTION_KEY:-dev-only-encryption-key-change-me-0123456789}
+
+      # An array index, so AllowedOrigins:[0]. Same-origin through nginx means
+      # CORS is not exercised in this setup, but a wrong value here is the kind
+      # of thing that only shows up once someone does split the origins.
+      AllowedOrigins__0: ${PUBLIC_ORIGIN:-http://localhost:8090}
+      App__ClientBaseUrl: ${PUBLIC_ORIGIN:-http://localhost:8090}
+
+      # Seeds the first Super Admin, once, when the Users table is empty.
+      # PBKDF2-SHA256 "iterations.salt.hash" — see Auth/PasswordHasher.cs.
+      # The default below is the password "admin". Generate your own with:
+      #   dotnet run --project server/Recruitment.Gorilla.API -- (or any PBKDF2 tool)
+      Auth__SeedAdminEmail: ${SEED_ADMIN_EMAIL:-admin@recruitmentgorilla.com}
+      Auth__SeedAdminName: ${SEED_ADMIN_NAME:-Super Admin}
+      Auth__PasswordHash: ${SEED_ADMIN_PASSWORD_HASH:-100000.Bica99D5hF6R1Zvxio8deg==.QHr827SoGx0wsYXYdZ7MNH8s5VvxD1Fm80IlhvSDQwM=}
+    volumes:
+      # Uploaded CVs are written to ContentRootPath/Uploads and the database
+      # stores only their filenames, so without this volume every rebuild
+      # orphans every CV row in the database.
+      - api-uploads:/app/Uploads
+      - api-logs:/app/Logs
+
+  web:
+    build:
+      context: ./client
+      args:
+        # Root, not /ats/ — there is no gateway stripping a prefix here.
+        VITE_BASE: /
+        NGINX_CONF: nginx.standalone.conf
+    restart: unless-stopped
+    depends_on:
+      - api
+    ports:
+      - '${PUBLIC_PORT:-8090}:80'
+
+volumes:
+  db-data:
+  api-uploads:
+  api-logs:

@@ -61,9 +61,9 @@ export default function KanbanColumn({
       data-status-name={statusOption.name}
     >
       <div className="kanban-column__header">
-        <div className="d-flex align-items-center gap-2 min-w-0">
+        <div className="flex items-center gap-2 min-w-0">
           <StatusDot status={statusOption.name} />
-          <span className="kanban-column__title text-truncate" title={statusOption.name}>
+          <span className="kanban-column__title truncate" title={statusOption.name}>
             {statusOption.name}
           </span>
           <span className="kanban-column__count">{candidates.length}</span>

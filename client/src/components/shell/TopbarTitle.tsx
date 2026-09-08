@@ -20,7 +20,7 @@ export default function TopbarTitle() {
         <h1 className="app-topbar__title">{route?.label ?? 'Recruitment Gorilla'}</h1>
       </div>
       {route?.description && (
-        <span className="app-topbar__description d-none d-sm-block">{route.description}</span>
+        <span className="app-topbar__description hidden sm:block">{route.description}</span>
       )}
     </div>
   );

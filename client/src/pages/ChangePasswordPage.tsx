@@ -1,12 +1,14 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Button, Form, Spinner } from 'react-bootstrap';
 import { isAxiosError } from 'axios';
 import { useAuth } from '../auth/AuthContext';
 import { changePassword } from '../services/api';
-import Page from '../components/ui/Page';
-import PasswordInput from '../components/ui/PasswordInput';
-import SectionCard from '../components/ui/SectionCard';
+import Page from '../components/common/Page';
+import PasswordInput from '../components/common/PasswordInput';
+import SectionCard from '../components/common/SectionCard';
+import { Label } from '@/components/ui/label';
+import { Button } from '@/components/ui/button';
+import { Spinner } from '@/components/ui/spinner';
 
 const MIN_LENGTH = 8;
 
@@ -68,7 +70,7 @@ export default function ChangePasswordPage() {
               : 'Choose a password you do not use anywhere else.'
           }
         >
-          <Form onSubmit={handleSubmit}>
+          <form onSubmit={handleSubmit}>
             <div className="form-stack">
               {mustChangePassword && (
                 <div className="alert-info-soft">
@@ -80,10 +82,10 @@ export default function ChangePasswordPage() {
                   {error}
                 </div>
               )}
-              <Form.Group>
-                <Form.Label htmlFor="current-password">
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="current-password">
                   Current password <span className="required-star" aria-hidden="true">*</span>
-                </Form.Label>
+                </Label>
                 <PasswordInput
                   id="current-password"
                   value={currentPassword}
@@ -92,11 +94,11 @@ export default function ChangePasswordPage() {
                   autoFocus
                   required
                 />
-              </Form.Group>
-              <Form.Group>
-                <Form.Label htmlFor="new-password">
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="new-password">
                   New password <span className="required-star" aria-hidden="true">*</span>
-                </Form.Label>
+                </Label>
                 <PasswordInput
                   id="new-password"
                   value={newPassword}
@@ -104,12 +106,12 @@ export default function ChangePasswordPage() {
                   autoComplete="new-password"
                   required
                 />
-                <Form.Text className="text-muted">At least {MIN_LENGTH} characters.</Form.Text>
-              </Form.Group>
-              <Form.Group>
-                <Form.Label htmlFor="confirm-password">
+                <p className="text-[length:var(--text-sm)] leading-[var(--leading-normal)] text-muted-foreground">At least {MIN_LENGTH} characters.</p>
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="confirm-password">
                   Confirm new password <span className="required-star" aria-hidden="true">*</span>
-                </Form.Label>
+                </Label>
                 <PasswordInput
                   id="confirm-password"
                   value={confirm}
@@ -117,11 +119,11 @@ export default function ChangePasswordPage() {
                   autoComplete="new-password"
                   required
                 />
-              </Form.Group>
-              <Button type="submit" className="w-100" disabled={busy}>
+              </div>
+              <Button type="submit" className="w-full" disabled={busy}>
                 {busy ? (
                   <>
-                    <Spinner animation="border" size="sm" className="me-2" aria-hidden="true" />
+                    <Spinner className="mr-2" aria-hidden="true" />
                     Saving…
                   </>
                 ) : (
@@ -129,7 +131,7 @@ export default function ChangePasswordPage() {
                 )}
               </Button>
             </div>
-          </Form>
+          </form>
         </SectionCard>
       </div>
     </Page>

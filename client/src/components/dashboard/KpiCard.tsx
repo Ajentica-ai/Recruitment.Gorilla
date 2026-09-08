@@ -2,7 +2,14 @@ import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowUpRight } from 'lucide-react';
 
-export type KpiTone = 'orange' | 'teal' | 'green' | 'red' | 'blue' | 'purple';
+/**
+ * `neutral` is the default and should be most tiles. The remaining tones exist
+ * for figures that carry a judgement — "recommended" is good news, "rejected"
+ * is not — and resolve to the semantic palette in index.css, not to six
+ * decorative hues. A tile whose number is neither good nor bad takes
+ * `neutral`; colouring it says something the number doesn't.
+ */
+export type KpiTone = 'neutral' | 'orange' | 'teal' | 'green' | 'red' | 'blue' | 'purple';
 
 interface KpiCardProps {
   label: string;
@@ -10,7 +17,8 @@ interface KpiCardProps {
   sub?: string;
   /** 0–100. Drives the progress bar + right-aligned %; omit to hide the bar. */
   percent?: number;
-  tone: KpiTone;
+  /** Defaults to `neutral` — most tiles should stay neutral. */
+  tone?: KpiTone;
   icon: ReactNode;
   /**
    * Where the tile drills through to. Only pass one when the destination shows
@@ -22,15 +30,18 @@ interface KpiCardProps {
 }
 
 /**
- * Stat tile on Prism's .metric-card geometry: flat, border-led, no shadow, a
- * muted 13px label over a 28px value.
+ * Stat tile: a label, a large figure, one line of context, and a hairline bar
+ * for the share.
  *
- * The per-tone accent is kept. Prism uses a single fill for its charts because
- * those rank nominal categories where colour would restate the bar length —
- * but here the six tones map to distinct pipeline stages (in-process,
- * recommended, rejected…) and carry meaning the number alone doesn't.
+ * What this stopped doing: the tile used to render its percentage twice — once
+ * as a right-aligned number and once as the width of a coloured progress bar —
+ * beside a filled colour chip carrying a decorative icon, in one of six hues
+ * assigned by position in the row. Six saturated fills side by side gave the
+ * eye no way to rank the tiles and made a dashboard of four numbers the
+ * busiest screen in the product. The figure is the content; everything else on
+ * the tile is there to say what the figure counts.
  */
-export default function KpiCard({ label, value, sub, percent, tone, icon, to }: KpiCardProps) {
+export default function KpiCard({ label, value, sub, percent, tone = 'neutral', icon, to }: KpiCardProps) {
   const display = typeof value === 'number' ? value.toLocaleString() : value;
 
   const body = (
@@ -58,9 +69,11 @@ export default function KpiCard({ label, value, sub, percent, tone, icon, to }: 
 
       <div className="metric-value">{display}</div>
 
+      {/* One line, not a caption on the left and the same percentage repeated
+          as a number on the right and a third time as the bar's width below.
+          `sub` carries the share where there is one. */}
       <div className="kpi-card__foot">
         <span className="kpi-card__sub">{sub}</span>
-        {percent !== undefined && <span className="kpi-card__pct">{percent}%</span>}
       </div>
 
       {percent !== undefined && (

@@ -28,7 +28,7 @@ export default function TrendChart({ data }: { data: TrendPoint[] }) {
   const interval = Math.max(0, Math.floor(data.length / 8) - 1);
 
   if (!hasData) {
-    return <p className="text-muted mb-0">No applications in this period.</p>;
+    return <p className="text-muted-foreground mb-0">No applications in this period.</p>;
   }
 
   return (

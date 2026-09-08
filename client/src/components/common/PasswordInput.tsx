@@ -1,21 +1,10 @@
 import { useState, type InputHTMLAttributes } from 'react';
-import { Form } from 'react-bootstrap';
 import { Eye, EyeOff } from 'lucide-react';
 
-/**
- * Plain input attributes rather than react-bootstrap's `FormControlProps`.
- * `Form.Control` is generic over its `as` element, so deriving props from it
- * widens `onChange`'s event to `any` at every call site — losing `e.target.value`
- * typing in exactly the place it matters. `size` is re-declared because the
- * HTML attribute is a number and Bootstrap's is a variant name.
- */
-type Props = Omit<InputHTMLAttributes<HTMLInputElement>, 'type' | 'size' | 'value'> & {
-  size?: 'sm' | 'lg';
-  isInvalid?: boolean;
-  /** Narrower than the DOM attribute, which also allows `readonly string[]`
-   *  (for `<select multiple>`) — a shape `Form.Control` does not accept. */
-  value?: string | number;
-};
+import { Input } from '@/components/ui/input';
+import { cn } from '@/lib/utils';
+
+type Props = Omit<InputHTMLAttributes<HTMLInputElement>, 'type'>;
 
 /**
  * A password field with a show/hide control.
@@ -25,10 +14,12 @@ type Props = Omit<InputHTMLAttributes<HTMLInputElement>, 'type' | 'size' | 'valu
  * and they should all reveal the same way.
  *
  * Notes on the details:
- * - The button is `type="button"`. Inside a `<form>` a button defaults to
+ * - The button is `type="button"`. Inside a <form> a button defaults to
  *   `submit`, so without this, revealing your password would submit the form.
  * - It is a real focusable button with `aria-pressed`, not a decorative icon,
  *   so it is reachable and its state is announced.
+ * - The input's right padding clears the button, so a long value scrolls
+ *   *behind* it rather than under it.
  * - Revealed state is deliberately local and resets on unmount: it should not
  *   persist across visits to a sign-in screen.
  */
@@ -37,20 +28,26 @@ export default function PasswordInput({ className = '', ...props }: Props) {
   const label = visible ? 'Hide password' : 'Show password';
 
   return (
-    <div className="password-field">
-      <Form.Control {...props} type={visible ? 'text' : 'password'} className={className} />
+    <div className="relative">
+      <Input {...props} type={visible ? 'text' : 'password'} className={cn('pr-9', className)} />
       <button
         type="button"
-        className="password-field__toggle"
+        className={cn(
+          'absolute top-1/2 right-1 grid size-7 -translate-y-1/2 place-items-center',
+          'rounded-[var(--radius-sm)] text-muted-foreground',
+          'transition-colors duration-[var(--dur-fast)] hover:bg-muted hover:text-foreground',
+          'aria-pressed:text-brand',
+          'focus-visible:ring-[3px] focus-visible:ring-[var(--focus-ring)] outline-none',
+        )}
         onClick={() => setVisible((v) => !v)}
         aria-label={label}
         aria-pressed={visible}
         title={label}
       >
         {visible ? (
-          <EyeOff size={16} strokeWidth={1.75} aria-hidden="true" />
+          <EyeOff className="size-4" strokeWidth={1.75} aria-hidden="true" />
         ) : (
-          <Eye size={16} strokeWidth={1.75} aria-hidden="true" />
+          <Eye className="size-4" strokeWidth={1.75} aria-hidden="true" />
         )}
       </button>
     </div>

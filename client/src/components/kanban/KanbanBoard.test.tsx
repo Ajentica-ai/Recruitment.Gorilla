@@ -27,10 +27,10 @@ describe('KanbanCard Component', () => {
     );
 
     expect(screen.getByText('Alice Walker')).toBeDefined();
-    expect(screen.getByText('Staff Software Engineer')).toBeDefined();
-    expect(screen.getByText('LinkedIn')).toBeDefined();
+    // Role and source share one meta line on the compact card.
+    expect(screen.getByText('Staff Software Engineer · LinkedIn')).toBeDefined();
     expect(screen.getByText('AW')).toBeDefined(); // Initials
-    expect(screen.getByText('2d')).toBeDefined(); // Time in stage
+    expect(screen.getByText(/2d in stage/)).toBeDefined();
   });
 
   it('displays stagnant warning badge when candidate is in stage >= 5 days', () => {

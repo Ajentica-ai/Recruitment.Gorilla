@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
 import { Link, NavLink, useLocation } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { ArrowRightFromLine, LoaderCircle, PanelLeftClose, X } from 'lucide-react';
 import { useAuth } from '../../auth/AuthContext';
 import BrandLogo from '../BrandLogo';
-import { isRouteActive, visibleRoutes } from '../../navRoutes';
+import { canSeeRoute, groupedRoutes, isRouteActive, NAV_ROUTES } from '../../navRoutes';
+import { getCandidateDrafts } from '../../services/api';
 
 type SidebarNavProps = {
   isVisible: boolean;
@@ -30,7 +32,27 @@ export default function SidebarNav({
   const location = useLocation();
   const [pendingPath, setPendingPath] = useState<string | null>(null);
 
-  const routes = visibleRoutes(user?.roles ?? []);
+  const roles = user?.roles ?? [];
+  const groups = groupedRoutes(roles);
+
+  /**
+   * The count on Upload CVs. Only fetched for someone who can actually see
+   * that item — otherwise it is a request whose answer is never rendered, and
+   * on this API it would 403 anyway.
+   *
+   * pageSize 1 because only the totals are wanted; the endpoint returns them
+   * alongside whatever page you ask for, so this is the cheapest call that
+   * carries them.
+   */
+  const uploadRoute = NAV_ROUTES.find((r) => r.badge === 'pending-drafts');
+  const canSeeDrafts = !!uploadRoute && canSeeRoute(uploadRoute, roles);
+  const { data: draftTotals } = useQuery({
+    queryKey: ['candidate-drafts', 'sidebar-count'],
+    queryFn: () => getCandidateDrafts({ status: 'Pending', pageSize: 1 }),
+    enabled: canSeeDrafts,
+    staleTime: 60_000,
+  });
+  const pendingDrafts = draftTotals?.totalPending ?? 0;
 
   // Clear the pending spinner once the route has actually changed.
   useEffect(() => {
@@ -74,7 +96,7 @@ export default function SidebarNav({
             </Link>
             <button
               type="button"
-              className="app-sidebar__icon-btn d-none d-md-inline-grid"
+              className="app-sidebar__icon-btn app-sidebar__collapse-btn hidden md:inline-grid"
               onClick={onToggleCollapse}
               aria-label="Collapse sidebar"
               title="Collapse sidebar"
@@ -83,7 +105,7 @@ export default function SidebarNav({
             </button>
             <button
               type="button"
-              className="app-sidebar__icon-btn d-inline-grid d-md-none"
+              className="app-sidebar__icon-btn app-sidebar__collapse-btn inline-grid md:hidden"
               onClick={onHide}
               aria-label="Close navigation"
               title="Close navigation"
@@ -95,29 +117,52 @@ export default function SidebarNav({
       </div>
 
       <nav className="app-sidebar__nav" aria-label="Primary">
-        {routes.map((route) => {
-          // NavLink appends the `active` class itself; isRouteActive is only
-          // used to decide whether a click is a real navigation worth spinning.
-          const Icon = pendingPath === route.path ? LoaderCircle : route.icon;
-          return (
-            <NavLink
-              key={route.path}
-              to={route.path}
-              end={route.path === '/'}
-              className="nav-item-link"
-              title={route.label}
-              onClick={() => handleNavClick(route.path)}
-            >
-              <Icon
-                size={16}
-                strokeWidth={1.5}
-                aria-hidden="true"
-                className={pendingPath === route.path ? 'anim-spin' : undefined}
-              />
-              {!isCollapsed && route.label}
-            </NavLink>
-          );
-        })}
+        {groups.map(({ group, routes }) => (
+          // A <ul> per band, labelled by its heading, so the grouping is in the
+          // accessibility tree and not only in the picture.
+          <div className="app-sidebar__group" key={group}>
+            {/* Collapsed to a 56px rail the heading has nowhere to go, so the
+                band is drawn as a rule instead — see .app-sidebar__group in
+                index.css. The label stays in the DOM for screen readers. */}
+            <p className="app-sidebar__group-label" aria-hidden={isCollapsed}>
+              {group}
+            </p>
+            <ul className="app-sidebar__group-list" aria-label={group}>
+              {routes.map((route) => {
+                // NavLink appends the `active` class itself; isRouteActive is
+                // only used to decide whether a click is a real navigation
+                // worth spinning.
+                const Icon = pendingPath === route.path ? LoaderCircle : route.icon;
+                const count = route.badge === 'pending-drafts' ? pendingDrafts : undefined;
+                return (
+                  <li key={route.path}>
+                    <NavLink
+                      to={route.path}
+                      end={route.path === '/'}
+                      className="nav-item-link"
+                      title={route.label}
+                      onClick={() => handleNavClick(route.path)}
+                    >
+                      <Icon
+                        size={16}
+                        strokeWidth={1.5}
+                        aria-hidden="true"
+                        className={pendingPath === route.path ? 'anim-spin' : undefined}
+                      />
+                      {!isCollapsed && route.label}
+                      {!isCollapsed && !!count && (
+                        <span className="nav-item-link__count">
+                          {count > 999 ? '999+' : count}
+                          <span className="sr-only"> pending</span>
+                        </span>
+                      )}
+                    </NavLink>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        ))}
       </nav>
     </aside>
   );

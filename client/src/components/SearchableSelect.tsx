@@ -1,6 +1,7 @@
 import React, { useEffect, useId, useMemo, useRef, useState } from 'react';
-import { Form } from 'react-bootstrap';
 import { Check, ChevronDown, Search, X } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { cn } from '@/lib/utils';
 
 export interface Option<T = number | string> {
   id: T;
@@ -206,7 +207,7 @@ export default function SearchableDropdown<T = number | string>({
   return (
     <div
       ref={containerRef}
-      className={`dropdown-custom-root position-relative ${className}`.trim()}
+      className={`dropdown-custom-root relative ${className}`.trim()}
       onKeyDown={handleKeyDown}
     >
       {/* Multi-select tokens (when enabled for form / dialog modes) */}
@@ -237,11 +238,11 @@ export default function SearchableDropdown<T = number | string>({
       )}
 
       {/* Main Direct-Search Input Trigger */}
-      <div className="position-relative d-flex align-items-center">
+      <div className="relative flex items-center">
         {/* Leading colored dot for single-select */}
         {!open && singleSelectedOption?.color && (
           <span
-            className="dropdown-dot position-absolute pointer-events-none"
+            className="dropdown-dot absolute pointer-events-none"
             style={{
               left: 10,
               width: 7,
@@ -253,11 +254,10 @@ export default function SearchableDropdown<T = number | string>({
           />
         )}
 
-        <Form.Control
+        <Input
           ref={inputRef}
           id={inputId}
           autoComplete="off"
-          size={size === 'sm' ? 'sm' : size === 'lg' ? 'lg' : undefined}
           disabled={disabled}
           placeholder={open && singleSelectedOption ? singleSelectedOption.name : placeholder}
           value={getInputValue()}
@@ -276,8 +276,13 @@ export default function SearchableDropdown<T = number | string>({
             setQuery(e.target.value);
             if (!open) setOpen(true);
           }}
-          isInvalid={isInvalid}
-          className={`dropdown-trigger-input ${open ? 'dropdown-trigger-input--open' : ''}`}
+          aria-invalid={isInvalid || undefined}
+          className={cn(
+            'dropdown-trigger-input',
+            open && 'dropdown-trigger-input--open',
+            size === 'sm' && 'h-[var(--control-h-sm)] text-[length:var(--text-sm)]',
+            size === 'lg' && 'h-[var(--control-h-lg)]',
+          )}
           style={{
             paddingLeft: !open && singleSelectedOption?.color ? '23px' : '11px',
             paddingRight: '2rem',
@@ -288,10 +293,10 @@ export default function SearchableDropdown<T = number | string>({
           aria-controls={`${inputId}-menu`}
         />
 
-        <div className="dropdown-trigger-actions position-absolute end-0 me-2.5 d-flex align-items-center pointer-events-none">
+        <div className="dropdown-trigger-actions absolute end-0 me-2.5 flex items-center pointer-events-none">
           <ChevronDown
             size={14}
-            className={`dropdown-chevron text-muted ${
+            className={`dropdown-chevron text-muted-foreground ${
               open ? 'dropdown-chevron--rotated text-primary' : ''
             }`}
             aria-hidden="true"
@@ -321,17 +326,17 @@ export default function SearchableDropdown<T = number | string>({
                   handleClear(e);
                 }}
               >
-                <div className="d-flex align-items-center gap-2">
+                <div className="flex items-center gap-2">
                   <span
                     className="dropdown-dot"
                     style={{ backgroundColor: 'var(--text-muted, #94a3b8)', opacity: 0.5 }}
                   />
-                  <span className="dropdown-popover__item-name text-muted">
+                  <span className="dropdown-popover__item-name text-muted-foreground">
                     {placeholder.startsWith('All') ? placeholder : `All (${placeholder})`}
                   </span>
                 </div>
                 {!singleSelectedOption && (
-                  <Check size={14} className="text-primary ms-1 flex-shrink-0" strokeWidth={2.5} />
+                  <Check size={14} className="text-brand ml-1 shrink-0" strokeWidth={2.5} />
                 )}
               </button>
             )}
@@ -365,7 +370,7 @@ export default function SearchableDropdown<T = number | string>({
                     {renderOption ? (
                       renderOption(option, isSelected)
                     ) : (
-                      <div className="d-flex align-items-center gap-2 text-truncate me-2">
+                      <div className="flex items-center gap-2 truncate mr-2">
                         {option.color && (
                           <span
                             className="dropdown-dot"
@@ -376,12 +381,12 @@ export default function SearchableDropdown<T = number | string>({
                           />
                         )}
                         {option.icon && <span className="dropdown-icon">{option.icon}</span>}
-                        <div className="text-truncate">
-                          <div className="dropdown-popover__item-name text-truncate">
+                        <div className="truncate">
+                          <div className="dropdown-popover__item-name truncate">
                             {option.name}
                           </div>
                           {option.subtitle && (
-                            <div className="dropdown-popover__item-subtitle text-truncate">
+                            <div className="dropdown-popover__item-subtitle truncate">
                               {option.subtitle}
                             </div>
                           )}
@@ -389,12 +394,12 @@ export default function SearchableDropdown<T = number | string>({
                       </div>
                     )}
 
-                    <div className="d-flex align-items-center gap-1.5 flex-shrink-0">
+                    <div className="flex items-center gap-1.5 shrink-0">
                       {option.badge && (
                         <span className="dropdown-pill-badge">{option.badge}</span>
                       )}
                       {isSelected && (
-                        <Check size={14} className="text-primary ms-1 flex-shrink-0" strokeWidth={2.5} />
+                        <Check size={14} className="text-brand ml-1 shrink-0" strokeWidth={2.5} />
                       )}
                     </div>
                   </button>
@@ -438,7 +443,7 @@ export function SearchableSelect({
       multiple={false}
       placeholder={placeholder}
       id={id}
-      isInvalid={isInvalid}
+      aria-invalid={isInvalid || undefined}
       disabled={disabled}
       clearable={clearable}
       size={size}
@@ -479,7 +484,7 @@ export function SearchableMultiSelect({
       showTokens={showTokens}
       placeholder={placeholder}
       id={id}
-      isInvalid={isInvalid}
+      aria-invalid={isInvalid || undefined}
       disabled={disabled}
       clearable={clearable}
       size={size}

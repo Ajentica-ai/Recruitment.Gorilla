@@ -5,7 +5,7 @@ using Recruitment.Gorilla.Tests.Infrastructure;
 namespace Recruitment.Gorilla.Tests;
 
 /// <summary>Status-transition rules and required-field gates in ValidateStatusChangeAsync
-/// (exercises the seeded StatusTransitions graph — note the seed spellings "Ask for Assesment" /
+/// (exercises the seeded StatusTransitions graph — note the seed spellings "Ask for Assessment" /
 /// "Submission Received").</summary>
 public class CandidateServiceStatusTests(MySqlDatabaseFixture fixture) : DbTestBase(fixture)
 {
@@ -26,7 +26,7 @@ public class CandidateServiceStatusTests(MySqlDatabaseFixture fixture) : DbTestB
     public async Task Legal_transition_is_allowed()
     {
         var c = Data.AddCandidate(status: "Uploaded");
-        Assert.Null(await Candidates().ValidateStatusChangeAsync(c.Id, Change("Ask for Assesment")));
+        Assert.Null(await Candidates().ValidateStatusChangeAsync(c.Id, Change("Ask for Assessment")));
     }
 
     [Fact]
@@ -92,7 +92,7 @@ public class CandidateServiceStatusTests(MySqlDatabaseFixture fixture) : DbTestB
     [Fact]
     public async Task TechnicalAssessment_requires_task_details()
     {
-        var c = Data.AddCandidate(status: "Ask for Assesment");
+        var c = Data.AddCandidate(status: "Ask for Assessment");
         Assert.Contains("task details", await Candidates().ValidateStatusChangeAsync(
             c.Id, Change("Technical Assessment", comment: "assigned")));
         Assert.Null(await Candidates().ValidateStatusChangeAsync(
@@ -116,7 +116,7 @@ public class CandidateServiceStatusTests(MySqlDatabaseFixture fixture) : DbTestB
         var c = Data.AddCandidate(roleId: expiredRole.Id, status: "Uploaded");
 
         // Even an otherwise-legal transition is blocked by the end-date lock.
-        var error = await Candidates().ValidateStatusChangeAsync(c.Id, Change("Ask for Assesment"));
+        var error = await Candidates().ValidateStatusChangeAsync(c.Id, Change("Ask for Assessment"));
         Assert.Contains("extend", error);
     }
 }

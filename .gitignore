@@ -19,9 +19,13 @@ dist/
 .env
 .env.local
 
-# Local E2E credentials (see client/e2e/.env.e2e.example for the shape)
+# Local E2E credentials and generated test CVs
 client/e2e/.env.e2e
+client/e2e/test-cvs/
 
 # Misc
 .DS_Store
 Thumbs.db
+
+# Local screenshot harness (Claude Code)
+client/*.tmp.mjs

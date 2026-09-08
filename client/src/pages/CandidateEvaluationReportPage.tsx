@@ -1,47 +1,26 @@
 import { Link, useParams } from 'react-router-dom';
-import { Button, Table } from 'react-bootstrap';
 import { useQuery } from '@tanstack/react-query';
 import { isAxiosError } from 'axios';
-import { CalendarDays, ChevronLeft, ClipboardList, Printer } from 'lucide-react';
-import { getCandidateEvaluationReport } from '../services/api';
-import { EvaluationReadOnly } from '../components/EvaluationForm';
-import EmptyState from '../components/ui/EmptyState';
-import Page from '../components/ui/Page';
-import PageHeader from '../components/ui/PageHeader';
-import SectionCard from '../components/ui/SectionCard';
-import LoadingPanel from '../components/ui/Loading';
-import { EVALUATION_SECTIONS, RECOMMENDATIONS } from '../utils/evaluationCriteria';
-import { skillColorClass } from '../utils/skillColors';
-import type { ReportEvaluation } from '../types';
+import { ChevronLeft, Printer } from 'lucide-react';
 
-const CRITERION_LABELS: Record<string, string> = Object.fromEntries(
-  EVALUATION_SECTIONS.flatMap((s) => s.criteria.map((c) => [c.key, c.label]))
-);
-// Keep per-criterion rows in the same order as the evaluation form.
-const CRITERION_ORDER = EVALUATION_SECTIONS.flatMap((s) => s.criteria.map((c) => c.key));
+import EvaluationReportBody from '@/components/EvaluationReportBody';
+import EmptyState from '@/components/common/EmptyState';
+import Page from '@/components/common/Page';
+import PageHeader from '@/components/common/PageHeader';
+import LoadingPanel from '@/components/common/Loading';
+import { Button } from '@/components/ui/button';
+import { getCandidateEvaluationReport } from '@/services/api';
 
-const recLabel = (value: string) =>
-  RECOMMENDATIONS.find((r) => r.value === value)?.label ?? value;
-
-/** Recommendation → glyph-carrying pill, so the outcome isn't colour-alone. */
-const recBadgeClass = (value: string): string =>
-  value === 'Recommended' ? 'badge-pill badge-success'
-    : value === 'Hold' ? 'badge-pill badge-warning'
-    : value === 'Reject' ? 'badge-pill badge-danger'
-    : 'badge-pill badge-neutral';
-
-/** Small 1–5 dot meter mirroring the evaluation form's RatingDots. */
-const RatingDots = ({ rating }: { rating: number | null }) => (
-  <span className="rating-dots">
-    {[1, 2, 3, 4, 5].map((n) => (
-      <span key={n} className={`rating-dot${rating != null && n <= rating ? ' rating-dot--filled' : ''}`} />
-    ))}
-    <span className="ms-1" style={{ fontSize: 'var(--text-xs)', color: 'var(--muted)' }}>
-      {rating != null ? rating.toFixed(1) : '—'}
-    </span>
-  </span>
-);
-
+/**
+ * The standalone evaluation report.
+ *
+ * The candidate detail page opens this same report in a drawer — a recruiter
+ * reading it is almost always mid-review, and leaving the page loses the
+ * profile and status history they were reading it against. This route stays
+ * because a report is a thing people link to and print, and both of those
+ * want a page of their own. Both render EvaluationReportBody, so there is one
+ * implementation.
+ */
 export default function CandidateEvaluationReportPage() {
   const { id } = useParams();
   const candidateId = Number(id);
@@ -69,140 +48,35 @@ export default function CandidateEvaluationReportPage() {
             : 'The request failed. Refresh to try again.'
         }
         action={
-          <Link to="/candidates" className="btn btn-outline-secondary">
-            Back to candidates
-          </Link>
+          <Button asChild variant="outline">
+            <Link to="/candidates">Back to candidates</Link>
+          </Button>
         }
       />
     );
   }
 
-  const { summary } = data;
-
-  // Group the flat evaluation list by interview (round), preserving the newest-first order.
-  const groups: { interviewId: number; scheduledAt: string; tags: string[]; evals: ReportEvaluation[] }[] = [];
-  for (const r of data.evaluations) {
-    let g = groups.find((x) => x.interviewId === r.interviewId);
-    if (!g) {
-      g = { interviewId: r.interviewId, scheduledAt: r.scheduledAt, tags: r.interviewTags, evals: [] };
-      groups.push(g);
-    }
-    g.evals.push(r);
-  }
-
   return (
     <Page className="evaluation-report">
-      <Link to={`/candidates/${candidateId}`} className="back-link d-print-none">
+      <Link to={`/candidates/${candidateId}`} className="back-link print:hidden">
         <ChevronLeft size={14} strokeWidth={1.75} aria-hidden="true" />
         Back to candidate
       </Link>
 
-      {/* A section heading is right here: the topbar shows "Candidates", and this
-          is a sub-page within it. */}
+      {/* A heading is right here: the topbar shows "Candidates", and this is a
+          sub-page within it. */}
       <PageHeader
         title="Evaluation report"
         description={`${data.fullName}${data.roleApplied ? ` · ${data.roleApplied}` : ''}`}
         actions={
-          <Button variant="outline-secondary" className="d-print-none" onClick={() => window.print()}>
+          <Button variant="outline" className="print:hidden" onClick={() => window.print()}>
             <Printer size={14} strokeWidth={1.75} aria-hidden="true" />
-            <span className="ms-1">Print</span>
+            Print
           </Button>
         }
       />
 
-      {summary.interviewerCount === 0 ? (
-        <EmptyState
-          icon={<ClipboardList size={20} strokeWidth={1.75} aria-hidden="true" />}
-          title="No submitted evaluations yet"
-          description="Once an interviewer submits and locks their evaluation, it will appear here."
-        />
-      ) : (
-        <>
-          <SectionCard
-            title="Summary"
-            description={`Across ${summary.interviewerCount} interviewer${summary.interviewerCount === 1 ? '' : 's'}.`}
-          >
-            <div className="report-summary">
-              <div className="page-stack page-stack--tight">
-                <div>
-                  <span className="field-label">Average overall rating</span>
-                  <div className="metric-value">
-                    {summary.averageOverall != null ? summary.averageOverall.toFixed(1) : '—'}
-                    <small> / 5</small>
-                  </div>
-                </div>
-
-                <div>
-                  <span className="field-label">Recommendations</span>
-                  <div className="d-flex flex-wrap gap-2">
-                    {summary.recommendationCounts.length === 0 ? (
-                      <span className="table-muted">—</span>
-                    ) : (
-                      summary.recommendationCounts.map((r) => (
-                        <span key={r.recommendation} className={recBadgeClass(r.recommendation)}>
-                          {recLabel(r.recommendation)}: {r.count}
-                        </span>
-                      ))
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              <div>
-                <span className="field-label">Average by criterion</span>
-                <Table size="sm" className="mb-0 align-middle">
-                  <tbody>
-                    {CRITERION_ORDER
-                      .map((key) => summary.criterionAverages.find((c) => c.criterionKey === key))
-                      .filter((c): c is NonNullable<typeof c> => c != null)
-                      .map((c) => (
-                        <tr key={c.criterionKey}>
-                          <td>{CRITERION_LABELS[c.criterionKey] ?? c.criterionKey}</td>
-                          <td className="col-right" style={{ width: 140 }}>
-                            <RatingDots rating={c.average} />
-                          </td>
-                        </tr>
-                      ))}
-                  </tbody>
-                </Table>
-              </div>
-            </div>
-          </SectionCard>
-
-          {groups.map((g) => (
-            <section key={g.interviewId} className="page-stack page-stack--tight">
-              <div className="section-head">
-                <h3 className="section-title d-inline-flex align-items-center gap-2">
-                  <CalendarDays size={16} strokeWidth={1.75} aria-hidden="true" />
-                  {new Date(g.scheduledAt).toLocaleString(undefined, {
-                    month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit',
-                  })}
-                </h3>
-                {g.tags.length > 0 && (
-                  <div className="section-head__actions">
-                    {g.tags.map((t) => (
-                      <span key={t} className={skillColorClass(t)}>{t}</span>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              <div className="grid-2">
-                {g.evals.map((r) => (
-                  <SectionCard
-                    key={r.evaluation.id}
-                    as="h4"
-                    title={r.evaluation.interviewerName}
-                    actions={<span className="badge-pill badge-success">Submitted</span>}
-                  >
-                    <EvaluationReadOnly evaluation={r.evaluation} />
-                  </SectionCard>
-                ))}
-              </div>
-            </section>
-          ))}
-        </>
-      )}
+      <EvaluationReportBody data={data} />
     </Page>
   );
 }

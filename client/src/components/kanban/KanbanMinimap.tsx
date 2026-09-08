@@ -1,119 +1,158 @@
-import React, { useEffect, useRef, useState } from 'react';
-import type { StatusOption } from '../../types';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+
+import type { StatusOption } from '@/types';
 
 export interface KanbanMinimapProps {
   statusOptions: StatusOption[];
   boardRef: React.RefObject<HTMLDivElement | null>;
 }
 
+/** One column, as a fraction of the board's total scrollable width. */
+type Block = { id: string | number; left: number; width: number; filled: boolean };
+
+/**
+ * A minimap of the board, on Jira's model.
+ *
+ * It is a MINIATURE, not a scrollbar: each column is drawn at its real
+ * proportional width, columns holding candidates are tinted, and a lens marks
+ * the slice currently on screen. That is what makes it useful across nineteen
+ * stages — you can see that the work sits in the first three columns and drag
+ * straight to the far end.
+ *
+ * Two earlier versions were wrong in opposite directions. The first drew one
+ * identical bar per stage regardless of the column beneath it, so with
+ * nineteen stages it read as a barcode and the picture was not the board. The
+ * second replaced it with a plain scrollbar track, which was honest but threw
+ * away the only thing a minimap is for.
+ *
+ * Geometry is measured from the real columns on scroll and resize rather than
+ * assumed, so a column that grows with its card count is reflected.
+ */
 export default function KanbanMinimap({ statusOptions, boardRef }: KanbanMinimapProps) {
-  const [scrollRatio, setScrollRatio] = useState({ left: 0, width: 1 });
+  const [lens, setLens] = useState({ left: 0, width: 1 });
+  const [blocks, setBlocks] = useState<Block[]>([]);
   const [isScrollable, setIsScrollable] = useState(false);
   const isDraggingRef = useRef(false);
   const minimapRef = useRef<HTMLDivElement | null>(null);
 
-  const updateScrollState = () => {
+  const measure = useCallback(() => {
     const el = boardRef.current;
     if (!el) return;
 
     const { scrollLeft, scrollWidth, clientWidth } = el;
-    const canScroll = scrollWidth > clientWidth + 10;
-    setIsScrollable(canScroll);
+    setIsScrollable(scrollWidth > clientWidth + 10);
+    if (scrollWidth <= 0) return;
 
-    if (scrollWidth > 0) {
-      const left = scrollLeft / scrollWidth;
-      const width = Math.min(1, clientWidth / scrollWidth);
-      setScrollRatio({ left, width });
-    }
-  };
+    setLens({
+      left: scrollLeft / scrollWidth,
+      width: Math.min(1, clientWidth / scrollWidth),
+    });
+
+    const columns = Array.from(el.querySelectorAll<HTMLElement>('.kanban-column'));
+    setBlocks(
+      columns.map((col, i) => ({
+        id: statusOptions[i]?.id ?? i,
+        left: col.offsetLeft / scrollWidth,
+        width: col.offsetWidth / scrollWidth,
+        // A column with cards in it is worth seeing from here; an empty stage
+        // is context, not a destination.
+        filled: col.querySelectorAll('.kanban-card').length > 0,
+      })),
+    );
+  }, [boardRef, statusOptions]);
 
   useEffect(() => {
     const el = boardRef.current;
     if (!el) return;
 
-    updateScrollState();
-    el.addEventListener('scroll', updateScrollState, { passive: true });
-    window.addEventListener('resize', updateScrollState);
-
-    // Initial check after layout render
-    const timer = setTimeout(updateScrollState, 100);
+    measure();
+    el.addEventListener('scroll', measure, { passive: true });
+    window.addEventListener('resize', measure);
+    // The columns are measured after the cards land, so re-measure when the
+    // board's own size changes rather than guessing with a timeout.
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    const timer = setTimeout(measure, 120);
 
     return () => {
-      el.removeEventListener('scroll', updateScrollState);
-      window.removeEventListener('resize', updateScrollState);
+      el.removeEventListener('scroll', measure);
+      window.removeEventListener('resize', measure);
+      ro.disconnect();
       clearTimeout(timer);
     };
-  }, [boardRef, statusOptions]);
+  }, [boardRef, measure]);
 
-  // Click or drag on minimap to scroll the board
-  const scrollToMinimapPosition = (clientX: number) => {
+  /** Centre the board on the point clicked, in minimap coordinates. */
+  const scrollToPosition = (clientX: number) => {
     const minimapEl = minimapRef.current;
     const boardEl = boardRef.current;
     if (!minimapEl || !boardEl) return;
 
     const rect = minimapEl.getBoundingClientRect();
-    const clickX = Math.max(0, Math.min(clientX - rect.left, rect.width));
-    const targetRatio = clickX / rect.width;
-
-    const targetScrollLeft = targetRatio * boardEl.scrollWidth - boardEl.clientWidth / 2;
+    const ratio = Math.max(0, Math.min(clientX - rect.left, rect.width)) / rect.width;
     boardEl.scrollTo({
-      left: Math.max(0, targetScrollLeft),
+      left: Math.max(0, ratio * boardEl.scrollWidth - boardEl.clientWidth / 2),
       behavior: isDraggingRef.current ? 'auto' : 'smooth',
     });
   };
 
   const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
     isDraggingRef.current = true;
-    scrollToMinimapPosition(e.clientX);
+    scrollToPosition(e.clientX);
 
-    const handleMouseMove = (moveEvent: MouseEvent) => {
-      if (isDraggingRef.current) {
-        scrollToMinimapPosition(moveEvent.clientX);
-      }
+    const onMove = (ev: MouseEvent) => {
+      if (isDraggingRef.current) scrollToPosition(ev.clientX);
     };
-
-    const handleMouseUp = () => {
+    const onUp = () => {
       isDraggingRef.current = false;
-      window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('mouseup', handleMouseUp);
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
     };
-
-    window.addEventListener('mousemove', handleMouseMove);
-    window.addEventListener('mouseup', handleMouseUp);
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
   };
 
-  if (!isScrollable || statusOptions.length <= 1) {
-    return null;
-  }
+  /** Arrow keys nudge by one viewport, so the control is not pointer-only. */
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    const boardEl = boardRef.current;
+    if (!boardEl) return;
+    const step = boardEl.clientWidth * 0.6;
+    if (e.key === 'ArrowRight') {
+      e.preventDefault();
+      boardEl.scrollBy({ left: step, behavior: 'smooth' });
+    } else if (e.key === 'ArrowLeft') {
+      e.preventDefault();
+      boardEl.scrollBy({ left: -step, behavior: 'smooth' });
+    }
+  };
+
+  if (!isScrollable || statusOptions.length <= 1) return null;
 
   return (
     <div
       className="kanban-minimap"
       ref={minimapRef}
       onMouseDown={handleMouseDown}
-      title="Click or drag to navigate pipeline stages"
-      aria-label="Pipeline navigation minimap"
+      onKeyDown={handleKeyDown}
+      tabIndex={0}
+      title="Drag to move across the board"
+      aria-label="Board overview — drag to scroll"
       role="slider"
       aria-valuemin={0}
       aria-valuemax={100}
-      aria-valuenow={Math.round(scrollRatio.left * 100)}
+      aria-valuenow={Math.round(lens.left * 100)}
     >
-      <div className="kanban-minimap__track">
-        {statusOptions.map((opt) => (
-          <div
-            key={opt.id}
-            className="kanban-minimap__bar"
-            title={opt.name}
+      <div className="kanban-minimap__stage">
+        {blocks.map((b) => (
+          <span
+            key={b.id}
+            className={`kanban-minimap__col${b.filled ? ' kanban-minimap__col--filled' : ''}`}
+            style={{ left: `${b.left * 100}%`, width: `${b.width * 100}%` }}
           />
         ))}
-
-        {/* Viewport lens highlight */}
         <div
           className="kanban-minimap__lens"
-          style={{
-            left: `${scrollRatio.left * 100}%`,
-            width: `${Math.max(10, scrollRatio.width * 100)}%`,
-          }}
+          style={{ left: `${lens.left * 100}%`, width: `${lens.width * 100}%` }}
         />
       </div>
     </div>

@@ -47,6 +47,16 @@ import type {
   ReviewOfferApprovalPayload,
   OfferDecisionPayload,
   OfferMetrics,
+  AnalyticsFilterParams,
+  RecruitingAnalyticsSummary,
+  CandidateDraft,
+  DraftBatchSummary,
+  DraftsFilterParams,
+  PagedDraftsResult,
+  UpdateCandidateDraftRequest,
+  ApproveCandidateDraftRequest,
+  BulkApproveDraftsRequest,
+  BulkDiscardDraftsRequest,
 } from '../types';
 
 // Same-origin path, built from import.meta.env.BASE_URL ("/" locally, where the
@@ -185,10 +195,82 @@ export type CreateCandidateResult =
   | { kind: 'created'; candidate: CandidateDetail }
   | { kind: 'duplicate'; duplicate: DuplicateCandidate };
 
-export const uploadCV = async (file: File): Promise<CVDraft> => {
+export const uploadCV = async (
+  file: File,
+  batchId?: string,
+  fileIndex?: number,
+  totalFiles?: number,
+  batchName?: string,
+  roleAppliedOptionId?: number
+): Promise<CVDraft> => {
   const form = new FormData();
   form.append('file', file);
+  if (batchId) form.append('batchId', batchId);
+  if (batchName) form.append('batchName', batchName);
+  if (roleAppliedOptionId != null) form.append('roleAppliedOptionId', roleAppliedOptionId.toString());
+  if (fileIndex != null) form.append('fileIndex', fileIndex.toString());
+  if (totalFiles != null) form.append('totalFiles', totalFiles.toString());
   const { data } = await api.post<CVDraft>('/cvupload', form);
+  return data;
+};
+
+// Candidate Drafts Staging & Review API
+export const getCandidateDrafts = async (params?: DraftsFilterParams): Promise<PagedDraftsResult> => {
+  const { data } = await api.get<PagedDraftsResult>('/candidate-drafts', { params });
+  return data;
+};
+
+export const getCandidateDraft = async (id: number): Promise<CandidateDraft> => {
+  const { data } = await api.get<CandidateDraft>(`/candidate-drafts/${id}`);
+  return data;
+};
+
+export const getDraftBatches = async (): Promise<DraftBatchSummary[]> => {
+  const { data } = await api.get<DraftBatchSummary[]>('/candidate-drafts/batches');
+  return data;
+};
+
+export const updateCandidateDraft = async (
+  id: number,
+  payload: UpdateCandidateDraftRequest
+): Promise<CandidateDraft> => {
+  const { data } = await api.put<CandidateDraft>(`/candidate-drafts/${id}`, payload);
+  return data;
+};
+
+export const approveCandidateDraft = async (
+  id: number,
+  payload: ApproveCandidateDraftRequest
+): Promise<{ candidateId: number; message: string }> => {
+  const { data } = await api.post<{ candidateId: number; message: string }>(
+    `/candidate-drafts/${id}/approve`,
+    payload
+  );
+  return data;
+};
+
+export const bulkApproveCandidateDrafts = async (
+  payload: BulkApproveDraftsRequest
+): Promise<{ approvedCount: number; candidateIds: number[] }> => {
+  const { data } = await api.post<{ approvedCount: number; candidateIds: number[] }>(
+    '/candidate-drafts/bulk-approve',
+    payload
+  );
+  return data;
+};
+
+export const discardCandidateDraft = async (id: number): Promise<{ message: string }> => {
+  const { data } = await api.post<{ message: string }>(`/candidate-drafts/${id}/discard`);
+  return data;
+};
+
+export const bulkDiscardCandidateDrafts = async (
+  payload: BulkDiscardDraftsRequest
+): Promise<{ discardedCount: number }> => {
+  const { data } = await api.post<{ discardedCount: number }>(
+    '/candidate-drafts/bulk-discard',
+    payload
+  );
   return data;
 };
 
@@ -234,9 +316,15 @@ export const getCandidates = async (
     dir?: string; // asc | desc
     page?: number;
     pageSize?: number;
+    batch?: string;
   }
 ): Promise<PagedResult<CandidateListItem>> => {
   const { data } = await api.get<PagedResult<CandidateListItem>>('/candidates', { params });
+  return data;
+};
+
+export const getCandidateBatches = async (): Promise<string[]> => {
+  const { data } = await api.get<string[]>('/candidates/batches');
   return data;
 };
 
@@ -330,6 +418,12 @@ export const getActiveSourceOptions = async (): Promise<CandidateSourceOption[]>
 // which is active-only for the create/edit form.
 export const getCandidateFilterRoleOptions = async (): Promise<RoleAppliedOption[]> => {
   const { data } = await api.get<RoleAppliedOption[]>('/candidates/role-filter-options');
+  return data;
+};
+
+/** All pipeline jobs/openings for view-only overview — accessible to Recruiters & Admins. */
+export const getPipelineJobs = async (): Promise<RoleAppliedOption[]> => {
+  const { data } = await api.get<RoleAppliedOption[]>('/candidates/jobs');
   return data;
 };
 
@@ -620,3 +714,12 @@ export const cloneEvaluationRubric = async (id: number): Promise<EvaluationRubri
 export const setDefaultEvaluationRubric = async (id: number): Promise<void> => {
   await api.post(`/evaluation-rubrics/${id}/default`);
 };
+
+// ----- Recruiting Operational Analytics -----
+export const getRecruitingAnalytics = async (
+  params?: AnalyticsFilterParams
+): Promise<RecruitingAnalyticsSummary> => {
+  const { data } = await api.get<RecruitingAnalyticsSummary>('/analytics', { params });
+  return data;
+};
+

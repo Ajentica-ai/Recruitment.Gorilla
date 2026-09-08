@@ -7,6 +7,7 @@ import AddStatusModal from '../AddStatusModal';
 import { useToast } from '../ToastStack';
 import { addStatus, getNextStatusOptions, getStatusOptions } from '../../services/api';
 import { isStageStagnant } from '../../utils/stagnantStage';
+import { Spinner } from '@/components/ui/spinner';
 import type { CandidateListItem, StatusOption } from '../../types';
 
 export interface KanbanBoardProps {
@@ -139,8 +140,8 @@ export default function KanbanBoard({ candidates, isLoading, canWrite }: KanbanB
 
   if (isLoading) {
     return (
-      <div className="kanban-loading py-5 text-center text-muted">
-        <div className="spinner-border spinner-border-sm text-primary me-2" role="status" />
+      <div className="kanban-loading flex items-center justify-center gap-2 py-12 text-muted-foreground">
+        <Spinner className="text-brand" label="Loading board" />
         Loading recruitment pipeline board…
       </div>
     );
@@ -150,22 +151,22 @@ export default function KanbanBoard({ candidates, isLoading, canWrite }: KanbanB
     <div className="kanban-wrapper">
       {/* Board Summary & Bottleneck Alert Bar */}
       <div className="kanban-summary-bar">
-        <div className="d-flex align-items-center gap-4 flex-wrap">
+        <div className="flex items-center gap-6 flex-wrap">
           <span className="kanban-summary-item">
-            <Users size={14} className="text-primary me-2 flex-shrink-0" />
+            <Users size={14} className="text-brand mr-2 shrink-0" />
             <span>
               <strong>{candidates.length}</strong> Total Candidates
             </span>
           </span>
           <span className="kanban-summary-item">
-            <Layers size={14} className="text-secondary me-2 flex-shrink-0" />
+            <Layers size={14} className="text-text-soft mr-2 shrink-0" />
             <span>
               <strong>{statusOptions.length}</strong> Stages
             </span>
           </span>
           {stagnantCount > 0 && (
             <span className="kanban-bottleneck-alert">
-              <AlertTriangle size={14} className="me-2 flex-shrink-0" />
+              <AlertTriangle size={14} className="mr-2 shrink-0" />
               <span>
                 <strong>{stagnantCount}</strong> candidates stagnant (&gt; 5 days in stage)
               </span>

@@ -19,10 +19,16 @@ function token(name: string, fallback: string): string {
   return value || fallback;
 }
 
-/** Brand single-hue used for single-series magnitude charts (role, skills, trend). */
+/** Brand single-hue used for single-series magnitude charts (role, skills, trend).
+ *
+ *  A single hue, deliberately: these charts rank nominal categories, where the
+ *  bar's length already carries the value and a per-category colour would only
+ *  restate it in a second, worse encoding. Colour is reserved for the charts
+ *  that genuinely need to distinguish series — the status donut, which uses the
+ *  pipeline tones so a segment matches its badge exactly. */
 export const ACCENT: Record<'light' | 'dark', string> = {
-  light: '#468189', // Coastal primary teal
-  dark: '#7bc0c7',
+  light: '#7c5cfc', // Violet — matches --primary
+  dark: '#8b6dff', // Violet — matches --primary
 };
 
 /**
@@ -37,7 +43,7 @@ function resolveTone(tone: StatusTone): string {
   document.body.appendChild(probe);
   const value = getComputedStyle(probe).getPropertyValue('--status-color').trim();
   probe.remove();
-  return value || '#5f7d80';
+  return value || '#94a3b8';
 }
 
 /**
@@ -72,10 +78,10 @@ export interface ChartChrome {
 export const chartChrome = (theme: 'light' | 'dark'): ChartChrome => {
   const dark = theme === 'dark';
   return {
-    axis: token('--muted', dark ? '#7f9a9e' : '#6b8589'),
-    grid: token('--border', dark ? '#1f4451' : '#e4eae9'),
-    tooltipBg: token('--surface', dark ? '#0e2833' : '#ffffff'),
-    tooltipBorder: token('--border', dark ? '#1f4451' : '#e4eae9'),
-    tooltipText: token('--text', dark ? '#e9f1f0' : '#031926'),
+    axis: token('--muted', dark ? '#93a1b5' : '#64748b'),
+    grid: token('--line-soft', dark ? '#1e2530' : '#eef2f7'),
+    tooltipBg: token('--surface', dark ? '#161b23' : '#ffffff'),
+    tooltipBorder: token('--border', dark ? '#242c38' : '#e6ebf2'),
+    tooltipText: token('--text', dark ? '#e6ebf2' : '#0f172a'),
   };
 };

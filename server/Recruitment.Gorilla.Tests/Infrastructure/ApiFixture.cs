@@ -57,6 +57,16 @@ public sealed class ApiFixture : IAsyncLifetime
             EndDate = DateTime.UtcNow.AddDays(30),
         };
         db.RoleAppliedOptions.Add(role);
+
+        db.AuditLogs.Add(new AuditLog
+        {
+            Timestamp = DateTime.UtcNow,
+            ActorUserId = admin.Id,
+            ActorName = admin.Name,
+            Action = "System.Init",
+            Summary = "Seeded initial test audit log",
+        });
+
         await db.SaveChangesAsync();
         RoleId = role.Id;
 

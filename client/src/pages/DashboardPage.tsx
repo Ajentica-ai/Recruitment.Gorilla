@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Form, ListGroup } from 'react-bootstrap';
 import { useQuery } from '@tanstack/react-query';
 import {
   getActiveRoleOptions,
@@ -28,12 +27,18 @@ import CountBarChart from '../components/dashboard/CountBarChart';
 import ActiveJobOpeningsTable from '../components/dashboard/ActiveJobOpeningsTable';
 import MyInterviewsCard from '../components/dashboard/MyInterviewsCard';
 import DashboardHero from '../components/dashboard/DashboardHero';
-import EmptyState from '../components/ui/EmptyState';
-import Page from '../components/ui/Page';
-import SectionCard from '../components/ui/SectionCard';
-import { SkeletonCards } from '../components/ui/Loading';
+import EmptyState from '../components/common/EmptyState';
+import Page from '../components/common/Page';
+import SectionCard from '../components/common/SectionCard';
+import { SkeletonCards } from '../components/common/Loading';
 import { useAuth } from '../auth/AuthContext';
 import type { ActivityItem, UpcomingInterview } from '../types';
+import { ArrowUpRight } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { Label } from '@/components/ui/label';
+import { Button } from '@/components/ui/button';
+import { NativeSelect } from '@/components/ui/native-select';
+import { Segmented, SegmentedItem } from '@/components/ui/segmented';
 
 const relativeTime = (iso: string): string => {
   const diffMs = Date.now() - new Date(iso).getTime();
@@ -53,42 +58,71 @@ const TREND_RANGES = [7, 30, 90] as const;
 
 function InterviewRow({ item }: { item: UpcomingInterview }) {
   return (
-    <ListGroup.Item className="list-row">
-      <div className="list-row__main">
-        <Link to={`/candidates/${item.candidateId}`} className="list-row__title">
-          {item.fullName}
-        </Link>
-        <div className="list-row__meta">{item.role ?? '—'}</div>
-      </div>
-      <div className="list-row__aside">
-        <div className={`list-row__meta${isSoon(item.interviewAt) ? ' list-row__meta--urgent' : ''}`}>
-          {new Date(item.interviewAt).toLocaleString(undefined, {
-            month: 'short',
-            day: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit',
-          })}
+    <li>
+      <Link
+        to={`/candidates/${item.candidateId}`}
+        className="group flex items-center justify-between gap-4 py-2.5 px-3 -mx-3 rounded-lg transition-colors hover:bg-[var(--surface-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] cursor-pointer text-inherit no-underline"
+        title={`View candidate ${item.fullName}`}
+      >
+        <div className="min-w-0 flex-1">
+          <div className="text-sm font-semibold text-[var(--text)] group-hover:text-[var(--primary)] transition-colors truncate">
+            {item.fullName}
+          </div>
+          <div className="text-xs text-[var(--text-muted)] mt-0.5">{item.role ?? '—'}</div>
         </div>
-        <StatusBadge status={item.currentStatus} />
-      </div>
-    </ListGroup.Item>
+        <div className="flex items-center gap-3 shrink-0">
+          <div className="text-right">
+            <div
+              className={cn(
+                'text-xs text-[var(--text-muted)]',
+                isSoon(item.interviewAt) && 'text-[var(--danger)] font-semibold'
+              )}
+            >
+              {new Date(item.interviewAt).toLocaleString(undefined, {
+                month: 'short',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+              })}
+            </div>
+            <div className="mt-1 flex justify-end">
+              <StatusBadge status={item.currentStatus} />
+            </div>
+          </div>
+          <div className="flex items-center justify-center size-6 rounded-md text-[var(--text-muted)] group-hover:text-[var(--primary)] transition-colors">
+            <ArrowUpRight size={14} aria-hidden="true" />
+          </div>
+        </div>
+      </Link>
+    </li>
   );
 }
 
 function ActivityRow({ item }: { item: ActivityItem }) {
   return (
-    <ListGroup.Item className="list-row">
-      <div className="list-row__main">
-        <div className="d-flex align-items-center gap-2 flex-wrap">
-          <Link to={`/candidates/${item.candidateId}`} className="list-row__title">
-            {item.fullName}
-          </Link>
-          <StatusBadge status={item.status} />
+    <li>
+      <Link
+        to={`/candidates/${item.candidateId}`}
+        className="group flex items-center justify-between gap-4 py-2.5 px-3 -mx-3 rounded-lg transition-colors hover:bg-[var(--surface-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] cursor-pointer text-inherit no-underline"
+        title={`View candidate ${item.fullName}`}
+      >
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-sm font-semibold text-[var(--text)] group-hover:text-[var(--primary)] transition-colors truncate">
+              {item.fullName}
+            </span>
+            <StatusBadge status={item.status} />
+          </div>
+          <div className="text-xs text-[var(--text-muted)] mt-0.5">by {item.changedBy}</div>
         </div>
-        <div className="list-row__meta">by {item.changedBy}</div>
-      </div>
-      <span className="list-row__meta flex-shrink-0">{relativeTime(item.changedAt)}</span>
-    </ListGroup.Item>
+        <div className="flex items-center gap-2 shrink-0">
+          <span className="text-xs text-[var(--text-muted)]">{relativeTime(item.changedAt)}</span>
+          <div className="flex items-center justify-center size-6 rounded-md text-[var(--text-muted)] group-hover:text-[var(--primary)] transition-colors">
+            <ArrowUpRight size={14} aria-hidden="true" />
+          </div>
+        </div>
+      </Link>
+    </li>
   );
 }
 
@@ -164,12 +198,17 @@ export default function DashboardPage() {
            the API resolves with the same definitions the dashboard uses (see
            CandidateBuckets), so a tile and its list can't disagree. */
         <div className="kpi-grid">
-          <KpiCard tone="orange" icon={<IdCardIcon />} label="Total" value={total} sub="All candidates" percent={100} to={to('/candidates')} />
-          <KpiCard tone="teal" icon={<HourglassIcon />} label="In process" value={kpis.inProcess} sub="Of total" percent={pct(kpis.inProcess)} to={to('/candidates?bucket=in-process')} />
-          <KpiCard tone="green" icon={<PersonCheckIcon />} label="Recommended" value={kpis.recommended} sub="Of total" percent={pct(kpis.recommended)} to={to('/candidates?bucket=recommended')} />
-          <KpiCard tone="red" icon={<PersonXIcon />} label="Rejected" value={kpis.rejected} sub="Of total" percent={pct(kpis.rejected)} to={to('/candidates?bucket=rejected')} />
-          <KpiCard tone="blue" icon={<CalendarPlusIcon />} label="New this week" value={kpis.newThisWeek} sub="Of total" percent={pct(kpis.newThisWeek)} to={to('/candidates?bucket=new-this-week')} />
-          <KpiCard tone="purple" icon={<ShareIcon />} label="Referred" value={kpis.referredCount} sub="Of total" percent={kpis.referredPercent} to={to('/candidates?referred=1')} />
+          {/* Only the two figures that carry a judgement are coloured. "Total"
+              and "New this week" are neither good nor bad, so tinting them
+              would be asserting something the number doesn't say. The share
+              moves into the caption instead of being printed as a percentage
+              AND drawn as a bar AND tinted — one number, one encoding. */}
+          <KpiCard icon={<IdCardIcon />} label="Total" value={total} sub="all candidates" to={to('/candidates')} />
+          <KpiCard icon={<HourglassIcon />} label="In process" value={kpis.inProcess} sub={`${pct(kpis.inProcess)}% of total`} percent={pct(kpis.inProcess)} to={to('/candidates?bucket=in-process')} />
+          <KpiCard tone="green" icon={<PersonCheckIcon />} label="Recommended" value={kpis.recommended} sub={`${pct(kpis.recommended)}% of total`} percent={pct(kpis.recommended)} to={to('/candidates?bucket=recommended')} />
+          <KpiCard tone="red" icon={<PersonXIcon />} label="Rejected" value={kpis.rejected} sub={`${pct(kpis.rejected)}% of total`} percent={pct(kpis.rejected)} to={to('/candidates?bucket=rejected')} />
+          <KpiCard icon={<CalendarPlusIcon />} label="New this week" value={kpis.newThisWeek} sub={`${pct(kpis.newThisWeek)}% of total`} percent={pct(kpis.newThisWeek)} to={to('/candidates?bucket=new-this-week')} />
+          <KpiCard icon={<ShareIcon />} label="Referred" value={kpis.referredCount} sub={`${kpis.referredPercent}% of total`} percent={kpis.referredPercent} to={to('/candidates?referred=1')} />
         </div>
       )}
 
@@ -182,23 +221,25 @@ export default function DashboardPage() {
           <StatusDonutChart data={statusBreakdown} />
         </SectionCard>
 
+        {/* The range picker is one setting with three values, which is what
+            Segmented is for. As a button group the active range rendered as
+            `btn-primary`, so it looked like the card's primary action. */}
         <SectionCard
           title="Applications"
           description={`New candidates over the last ${trendDays} days.`}
           actions={
-            <div className="btn-group btn-group-sm" role="group" aria-label="Trend range">
+            <Segmented
+              type="single"
+              value={String(trendDays)}
+              onValueChange={(v) => v && setTrendDays(Number(v))}
+              aria-label="Trend range"
+            >
               {TREND_RANGES.map((d) => (
-                <button
-                  key={d}
-                  type="button"
-                  className={`btn ${trendDays === d ? 'btn-primary' : 'btn-outline-secondary'}`}
-                  aria-pressed={trendDays === d}
-                  onClick={() => setTrendDays(d)}
-                >
+                <SegmentedItem key={d} value={String(d)}>
                   {d}D
-                </button>
+                </SegmentedItem>
               ))}
-            </div>
+            </Segmented>
           }
         >
           <TrendChart data={trend} />
@@ -219,13 +260,12 @@ export default function DashboardPage() {
             </div>
             {isRecruiterOnly && assignedRoles.length > 0 && (
               <div className="section-head__actions">
-                <Form.Label htmlFor="pipeline-role" className="mb-0 form-help">
+                <Label htmlFor="pipeline-role" className="mb-0 form-help">
                   Role
-                </Form.Label>
-                <Form.Select
+                </Label>
+                <NativeSelect
                   id="pipeline-role"
                   size="sm"
-                  style={{ width: 'auto' }}
                   value={roleFilter}
                   onChange={(e) => setRoleFilter(e.target.value === 'all' ? 'all' : Number(e.target.value))}
                 >
@@ -233,7 +273,7 @@ export default function DashboardPage() {
                   {assignedRoles.map((r) => (
                     <option key={r.id} value={r.id}>{r.name}</option>
                   ))}
-                </Form.Select>
+                </NativeSelect>
               </div>
             )}
           </div>
@@ -252,33 +292,47 @@ export default function DashboardPage() {
           </div>
 
           <div className="grid-2">
-            <SectionCard title="Upcoming interviews">
+            <SectionCard
+              title="Upcoming interviews"
+              actions={
+                <Button asChild variant="outline" size="sm">
+                  <Link to="/candidates?status=Interview Scheduled">View all</Link>
+                </Button>
+              }
+            >
               {(scoped?.upcomingInterviews ?? []).length === 0 ? (
                 <EmptyState
                   title="No interviews scheduled"
                   description="Scheduling an interview from a candidate's status history will list it here."
                 />
               ) : (
-                <ListGroup variant="flush">
+                <ul className="list-group-flush">
                   {scoped!.upcomingInterviews.map((i, idx) => (
                     <InterviewRow key={`${i.candidateId}-${idx}`} item={i} />
                   ))}
-                </ListGroup>
+                </ul>
               )}
             </SectionCard>
 
-            <SectionCard title="Recent activity">
+            <SectionCard
+              title="Recent activity"
+              actions={
+                <Button asChild variant="outline" size="sm">
+                  <Link to={isAdminOrAbove ? '/audit' : '/candidates'}>View all</Link>
+                </Button>
+              }
+            >
               {(scoped?.recentActivity ?? []).length === 0 ? (
                 <EmptyState
                   title="No recent activity"
                   description="Status changes on your candidates will show up here."
                 />
               ) : (
-                <ListGroup variant="flush">
+                <ul className="list-group-flush">
                   {scoped!.recentActivity.map((a, idx) => (
                     <ActivityRow key={`${a.candidateId}-${idx}`} item={a} />
                   ))}
-                </ListGroup>
+                </ul>
               )}
             </SectionCard>
           </div>

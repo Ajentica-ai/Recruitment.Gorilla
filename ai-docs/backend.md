@@ -90,6 +90,7 @@ log4net (`log4net.config`): console + daily rolling file under `Logs/`. App cate
 |---|---|---|---|
 | GET | `/api/dashboard/kpis` · `/status-breakdown` · `/applications-trend?days=` · `/job-openings` | required (any role) | **Org-wide** figures — every role sees the same numbers |
 | GET | `/api/dashboard` | required | **Owner-scoped** remainder: by-role/top-skill counts, upcoming interviews, recent activity |
+| GET | `/api/analytics` | CanWriteCandidate | Executive **operational analytics** (time-to-hire, stage velocity, funnel drop-off conversion, sourcing channel ROI, recruiter workload). Scoped to recruiter roles; filters `preset, from, to, roleId` |
 | GET | `/api/audit` | **Admin+** | Audit trail (newest-first), filters `actorUserId,entityType,entityId,action,from,to` + paging |
 | GET | `/api/interviews/assignable-users` | required | Active users assignable as interviewers |
 | GET | `/api/interviews/mine` | required | Interviews the caller is assigned to (+ their eval state) |

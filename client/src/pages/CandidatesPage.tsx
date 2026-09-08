@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
-import { Button, Form, InputGroup, Table } from 'react-bootstrap';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowDown, ArrowUp, ChevronsUpDown, Kanban, List, Search, Trash2, Upload, Users, X } from 'lucide-react';
+import { ArrowDown, ArrowUp, ChevronsUpDown, Kanban, List, Trash2, Upload, Users, X } from 'lucide-react';
 import {
   deleteCandidate,
   getActiveSkillOptions,
+  getCandidateBatches,
   getCandidateFilterRoleOptions,
   getCandidates,
   getStatusOptions,
@@ -14,15 +14,21 @@ import SearchableDropdown, { SearchableMultiSelect, type DropdownOption } from '
 import { StatusBadge } from '../components/StatusBadge';
 import { getStatusSolidColor } from '../utils/statusColors';
 import KanbanBoard from '../components/kanban/KanbanBoard';
-import ConfirmModal from '../components/ui/ConfirmModal';
-import EmptyState from '../components/ui/EmptyState';
-import Page from '../components/ui/Page';
-import Pagination from '../components/ui/Pagination';
-import { SkeletonRows } from '../components/ui/Loading';
+import Avatar from '../components/common/Avatar';
+import ConfirmModal from '../components/common/ConfirmModal';
+import EmptyState from '../components/common/EmptyState';
+import Page from '../components/common/Page';
+import Pagination from '../components/common/Pagination';
+import RowActions, { RowAction } from '../components/common/RowActions';
+import { SkeletonRows } from '../components/common/Loading';
 import { useAuth } from '../auth/AuthContext';
 import type { CandidateListItem } from '../types';
+import { Button } from '@/components/ui/button';
+import { CheckboxField } from '@/components/ui/field';
+import { SearchInput } from '@/components/ui/search-input';
+import { NativeSelect } from '@/components/ui/native-select';
 
-const PAGE_SIZE = 20;
+const DEFAULT_PAGE_SIZE = 10;
 
 /** Sortable columns and the direction each one naturally opens in. */
 const SORTS = {
@@ -62,16 +68,19 @@ export default function CandidatesPage() {
 
   // Filters/sort/page live in the URL so views are bookmarkable and survive refresh.
   const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
   const search = searchParams.get('q') ?? '';
   const status = searchParams.get('status') ?? '';
   const roleId = searchParams.get('role') ?? '';
   const skillsCsv = searchParams.get('skills') ?? '';
   const referred = searchParams.get('referred') === '1';
+  const batch = searchParams.get('batch') ?? '';
   // Set by the dashboard KPI tiles; see BUCKET_LABELS.
   const bucket = searchParams.get('bucket') ?? '';
   const sort = searchParams.get('sort') ?? '';
   const dir = searchParams.get('dir') ?? '';
   const page = Math.max(1, Number(searchParams.get('page')) || 1);
+  const pageSizeParam = Number(searchParams.get('pageSize')) || DEFAULT_PAGE_SIZE;
   const skillIds = skillsCsv ? skillsCsv.split(',').map(Number).filter(Number.isFinite) : [];
 
   const [searchInput, setSearchInput] = useState(search);
@@ -93,10 +102,10 @@ export default function CandidatesPage() {
       { replace: true },
     );
 
-  const hasFilters = !!(search || status || roleId || skillsCsv || referred || bucket);
+  const hasFilters = !!(search || status || roleId || skillsCsv || referred || bucket || batch);
   const clearFilters = () => {
     setSearchInput('');
-    setParams({ q: null, status: null, role: null, skills: null, referred: null, bucket: null });
+    setParams({ q: null, status: null, role: null, skills: null, referred: null, bucket: null, batch: null });
   };
 
   // Default is Added desc. A first click on a column uses its natural direction;
@@ -120,7 +129,7 @@ export default function CandidatesPage() {
   const queryClient = useQueryClient();
 
   const { data, isLoading, isError } = useQuery({
-    queryKey: ['candidates', { search, status, roleId, skillsCsv, referred, bucket, sort, dir, page, viewMode }],
+    queryKey: ['candidates', { search, status, roleId, skillsCsv, referred, bucket, sort, dir, page, viewMode, batch }],
     queryFn: () =>
       getCandidates({
         search: search || undefined,
@@ -131,8 +140,9 @@ export default function CandidatesPage() {
         bucket: bucket || undefined,
         sort: sort || undefined,
         dir: dir || undefined,
+        batch: batch || undefined,
         page: viewMode === 'board' ? 1 : page,
-        pageSize: viewMode === 'board' ? 150 : PAGE_SIZE,
+        pageSize: viewMode === 'board' ? 150 : pageSizeParam,
       }),
     placeholderData: keepPreviousData,
   });
@@ -161,6 +171,18 @@ export default function CandidatesPage() {
     }));
   }, [statusOptions]);
 
+  const { data: batchOptionsList = [] } = useQuery({
+    queryKey: ['candidate-batches'],
+    queryFn: getCandidateBatches,
+  });
+
+  const batchDropdownOptions: DropdownOption<string>[] = useMemo(() => {
+    return batchOptionsList.map((b) => ({
+      id: b,
+      name: b,
+    }));
+  }, [batchOptionsList]);
+
   const roleDropdownOptions: DropdownOption<string>[] = useMemo(() => {
     return roleOptions.map((o) => ({
       id: String(o.id),
@@ -182,6 +204,12 @@ export default function CandidatesPage() {
     setParams({ q: searchInput.trim() || null });
   };
 
+  /* Whether the toolbar is about to be followed by the table it filters. Only
+     then does it fuse to it — above a skeleton, an error or an empty state it
+     stays a card in its own right. */
+  const showsTable =
+    viewMode === 'table' && !isLoading && !isError && !!data && data.items.length > 0;
+
   /** A sortable column header. A button, so it's reachable by keyboard. */
   const SortHeader = ({ col }: { col: SortKey }) => {
     const active = activeSort === col;
@@ -197,21 +225,24 @@ export default function CandidatesPage() {
   return (
     <Page>
       <search>
-        <div className="data-toolbar">
-          <Form onSubmit={applySearch} className="data-toolbar__search" role="search">
-            <InputGroup>
-              <Form.Control
-                type="search"
-                placeholder="Search by name, email or phone"
-                value={searchInput}
-                onChange={(e) => setSearchInput(e.target.value)}
-                aria-label="Search candidates"
-              />
-              <Button type="submit" variant="outline-secondary" aria-label="Search">
-                <Search size={15} strokeWidth={1.75} aria-hidden="true" />
-              </Button>
-            </InputGroup>
-          </Form>
+        {/* Fused to the table below it in table mode: the filters and the
+            results they filter are one object, so the seam is a rule rather
+            than a 20px gap with page background showing through. */}
+        <div className={`data-toolbar${showsTable ? ' data-toolbar--attached' : ''}`}>
+          {/* The glyph leads the field rather than sitting in a bordered button
+              after it. A submit button implied search would not happen without
+              it, next to three filters that apply on change; and it is the only
+              search box in the app shaped that way — the drafts workspace and
+              the job openings tab both use this component. Enter still submits,
+              because the form is still a form. */}
+          <form onSubmit={applySearch} className="data-toolbar__search" role="search">
+            <SearchInput
+              placeholder="Search by name, email or phone"
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              aria-label="Search candidates"
+            />
+          </form>
 
           <div className="data-toolbar__field">
             <SearchableDropdown<string>
@@ -235,6 +266,17 @@ export default function CandidatesPage() {
             />
           </div>
 
+          <div className="data-toolbar__field">
+            <SearchableDropdown<string>
+              options={batchDropdownOptions}
+              value={batch || null}
+              onChange={(val) => setParams({ batch: val || null })}
+              placeholder="All batches"
+              emptyMessage="No batch found"
+              clearable
+            />
+          </div>
+
           <div className="data-toolbar__field--wide">
             <SearchableMultiSelect
               options={skillOptions}
@@ -248,8 +290,8 @@ export default function CandidatesPage() {
           <div className="data-toolbar__end">
             {/* Small screens hide the table header, and the sortable columns
                 with it — this select is the equivalent control there. */}
-            <Form.Select
-              className="d-md-none data-toolbar__field"
+            <NativeSelect
+              wrapperClassName="md:hidden data-toolbar__field"
               aria-label="Sort candidates"
               value={`${activeSort}:${activeDir}`}
               onChange={(e) => {
@@ -262,18 +304,18 @@ export default function CandidatesPage() {
                   {s.label}
                 </option>
               ))}
-            </Form.Select>
+            </NativeSelect>
 
-            <Form.Check
-              type="checkbox"
+            <CheckboxField
               id="filter-referred"
               label="Referred only"
               checked={referred}
-              onChange={(e) => setParams({ referred: e.target.checked ? '1' : null })}
+              onCheckedChange={(checked) => setParams({ referred: checked ? '1' : null })}
+              className="h-8 self-center"
             />
 
             {BUCKET_LABELS[bucket] && (
-              <span className="filter-chip">
+              <span className="filter-chip h-8 self-center">
                 {BUCKET_LABELS[bucket]}
                 <button
                   type="button"
@@ -288,41 +330,51 @@ export default function CandidatesPage() {
 
             {/* Rendered only when something is filtered */}
             {hasFilters && (
-              <Button variant="outline-secondary" size="sm" onClick={clearFilters}>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={clearFilters}
+                className="h-8 gap-1.5 px-2.5 text-xs text-muted-foreground hover:text-foreground self-center"
+              >
+                <X size={13} strokeWidth={2.25} aria-hidden="true" />
                 Clear filters
               </Button>
             )}
 
-            <div className="toolbar-divider d-none d-md-block" />
+            <div className="toolbar-divider hidden md:block" />
 
-            <div className="btn-group view-toggle" role="group" aria-label="Candidate view mode">
+            {/* A segmented control, not two buttons. Table/Board is one setting
+                with two values; rendering the active one as .btn-primary made
+                it look like the page's primary action, competing with the one
+                button on the row that actually is. */}
+            <div className="segmented view-toggle self-center" role="group" aria-label="Candidate view mode">
               <button
                 type="button"
-                className={`btn btn-sm ${viewMode === 'table' ? 'btn-primary' : 'btn-outline-secondary'}`}
+                className={viewMode === 'table' ? 'active' : ''}
+                aria-pressed={viewMode === 'table'}
                 onClick={() => handleViewModeChange('table')}
-                aria-label="Table view"
-                title="Table view (≡)"
               >
-                <List size={14} strokeWidth={2} className="me-1" aria-hidden="true" />
+                <List size={14} strokeWidth={2} aria-hidden="true" />
                 Table
               </button>
               <button
                 type="button"
-                className={`btn btn-sm ${viewMode === 'board' ? 'btn-primary' : 'btn-outline-secondary'}`}
+                className={viewMode === 'board' ? 'active' : ''}
+                aria-pressed={viewMode === 'board'}
                 onClick={() => handleViewModeChange('board')}
-                aria-label="Pipeline board view"
-                title="Pipeline board view (⊞)"
               >
-                <Kanban size={14} strokeWidth={2} className="me-1" aria-hidden="true" />
+                <Kanban size={14} strokeWidth={2} aria-hidden="true" />
                 Board
               </button>
             </div>
 
             {canWriteCandidates && (
-              <Link to="/upload" className="btn btn-primary btn-sm d-inline-flex align-items-center">
-                <Upload size={14} strokeWidth={1.75} aria-hidden="true" />
-                <span className="ms-1">Upload CVs</span>
-              </Link>
+              <Button asChild size="sm" className="h-8 self-center">
+                <Link to="/upload">
+                  <Upload strokeWidth={2} aria-hidden="true" />
+                  Upload CVs
+                </Link>
+              </Button>
             )}
           </div>
         </div>
@@ -347,13 +399,13 @@ export default function CandidatesPage() {
           }
           action={
             hasFilters ? (
-              <Button variant="outline-secondary" onClick={clearFilters}>
+              <Button variant="outline" onClick={clearFilters}>
                 Clear filters
               </Button>
             ) : canWriteCandidates ? (
-              <Link to="/upload" className="btn btn-primary">
-                Upload CVs
-              </Link>
+              <Button asChild>
+                <Link to="/upload">Upload CVs</Link>
+              </Button>
             ) : undefined
           }
         />
@@ -367,54 +419,87 @@ export default function CandidatesPage() {
         <>
           {/* .table-cards reflows each row into a labelled card below md, so no
               column is hidden on small screens — see index.css. */}
-          <div className="table-wrap">
-            <Table hover className="table-cards align-middle">
+          <div className="table-wrap table-wrap--attached">
+            <table className="table table-cards align-middle">
               <thead>
                 <tr>
                   <th><SortHeader col="name" /></th>
                   <th>Email</th>
-                  <th>Title</th>
+                  <th>Current title</th>
                   <th><SortHeader col="status" /></th>
                   <th><SortHeader col="added" /></th>
                   {/* Delete is Admin/SuperAdmin-only (the API rejects recruiters). */}
-                  {isAdminOrAbove && <th className="col-actions">Actions</th>}
+                  {isAdminOrAbove && <th className="col-actions"><span className="sr-only">Actions</span></th>}
                 </tr>
               </thead>
               <tbody>
                 {data.items.map((c) => (
-                  <tr key={c.id}>
+                  /* The whole row opens the candidate. The name stays a real
+                     <Link>: that is what keyboard and screen-reader users
+                     follow, what the browser shows in the status bar, and what
+                     ctrl/middle-click opens in a new tab. This handler is a
+                     mouse convenience layered on top of it, so it stands aside
+                     for clicks that landed on a control of their own and for
+                     modified clicks, which the link already handles. */
+                  <tr
+                    key={c.id}
+                    className="row-clickable"
+                    onClick={(e) => {
+                      if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;
+                      if ((e.target as HTMLElement).closest('a, button, input, [role="menu"]')) return;
+                      if (window.getSelection()?.toString()) return;
+                      navigate(`/candidates/${c.id}`);
+                    }}
+                  >
+                    {/* Avatar + name, with the location and experience the row
+                        used to have no room for on its second line. This is
+                        what the taller row buys: a candidate is recognisable
+                        without reading, and two facts that previously required
+                        opening the profile are on the list. */}
                     <td data-label="Name">
-                      <Link to={`/candidates/${c.id}`} className="table-link">
-                        {c.fullName}
-                      </Link>
+                      <div className="cell-identity">
+                        <Avatar name={c.fullName} email={c.email} />
+                        <span className="cell-identity__text">
+                          <Link to={`/candidates/${c.id}`} className="cell-identity__name">
+                            {c.fullName}
+                          </Link>
+                          {(c.appliedRole || c.source || c.batchName) && (
+                            <span className="cell-identity__meta">
+                              {[c.appliedRole, c.source, c.batchName].filter(Boolean).join(' · ')}
+                            </span>
+                          )}
+                        </span>
+                      </div>
                     </td>
-                    <td data-label="Email" className="text-break">{c.email}</td>
-                    <td data-label="Title">{c.currentTitle ?? '—'}</td>
+                    <td data-label="Email" className="[overflow-wrap:anywhere]">{c.email}</td>
+                    <td data-label="Current title">{c.currentTitle ?? '—'}</td>
                     <td data-label="Status">
                       <StatusBadge status={c.currentStatus} />
                     </td>
-                    <td data-label="Added" className="text-nowrap">
-                      {new Date(c.createdAt).toLocaleDateString()}
+                    <td data-label="Added" className="whitespace-nowrap">
+                      {new Date(c.createdAt).toLocaleDateString(undefined, {
+                        day: 'numeric',
+                        month: 'short',
+                        year: 'numeric',
+                      })}
                     </td>
                     {isAdminOrAbove && (
                       <td className="col-actions">
-                        <span className="row-actions">
-                          <Button
-                            size="sm"
-                            variant="outline-danger"
+                        <RowActions label={`Actions for ${c.fullName}`}>
+                          <RowAction
+                            icon={<Trash2 size={15} strokeWidth={1.75} aria-hidden="true" />}
+                            tone="danger"
                             onClick={() => setToDelete(c)}
-                            aria-label={`Delete ${c.fullName}`}
                           >
-                            <Trash2 size={14} strokeWidth={1.75} aria-hidden="true" />
-                            <span className="ms-1">Delete</span>
-                          </Button>
-                        </span>
+                            Delete candidate
+                          </RowAction>
+                        </RowActions>
                       </td>
                     )}
                   </tr>
                 ))}
               </tbody>
-            </Table>
+            </table>
           </div>
 
           <Pagination
@@ -422,6 +507,8 @@ export default function CandidatesPage() {
             pageSize={data.pageSize}
             totalCount={data.totalCount}
             onPageChange={(p) => setParams({ page: p > 1 ? String(p) : null }, false)}
+            pageSizeOptions={[10, 25, 50, 100]}
+            onPageSizeChange={(sz) => setParams({ pageSize: sz !== 10 ? String(sz) : null, page: null }, false)}
             noun="candidate"
           />
         </>

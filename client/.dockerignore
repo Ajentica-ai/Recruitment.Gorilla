@@ -1,4 +1,10 @@
-node_modules/
-dist/
-test-results/
-.env
+# Same reasoning as server/.dockerignore: anchor these so a nested copy cannot
+# slip into the build context. node_modules in particular must come from
+# `npm ci` inside the image — the host's is built for the host's platform.
+**/node_modules/
+**/dist/
+**/test-results/
+**/playwright-report/
+**/.env
+**/.env.*
+!**/.env.example

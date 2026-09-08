@@ -41,6 +41,9 @@ public abstract class DbTestBase : IDisposable
         new(Db, new CurrentUser(new Microsoft.AspNetCore.Http.HttpContextAccessor()), NullLogger<AuditService>.Instance);
     protected OfferService Offers() => new(Db, Candidates(), Notifications(), Audit(), NullLogger<OfferService>.Instance);
     protected EvaluationRubricService EvaluationRubrics() => new(Db, Audit());
+    protected AnalyticsService Analytics() => new(Db);
+    protected CandidateDraftService CandidateDrafts(CurrentUser? user = null) =>
+        new(Db, Audit(), user ?? new CurrentUser(new Microsoft.AspNetCore.Http.HttpContextAccessor()), NullLogger<CandidateDraftService>.Instance);
 
     /// <summary>An EmailService whose transport is a no-op — never hits the network, never throws.</summary>
     protected static EmailService TestEmail(ISmtpTransport? transport = null) => new(

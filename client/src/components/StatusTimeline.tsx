@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import { History } from 'lucide-react';
 import { StatusBadge, StatusDot } from './StatusBadge';
-import EmptyState from './ui/EmptyState';
+import EmptyState from './common/EmptyState';
 import { skillColorClass } from '../utils/skillColors';
 import { initials } from '../utils/initials';
 import type { EvaluationSummary, StatusHistoryEntry } from '../types';
@@ -40,7 +40,7 @@ const OverallDots = ({ rating }: { rating: number | null }) => (
     {[1, 2, 3, 4, 5].map((n) => (
       <span key={n} className={`rating-dot${rating != null && n <= rating ? ' rating-dot--filled' : ''}`} />
     ))}
-    <span className="ms-1 small fw-semibold">{rating != null ? `${rating}/5` : '—'}</span>
+    <span className="ml-1 text-[length:var(--text-sm)] font-semibold">{rating != null ? `${rating}/5` : '—'}</span>
   </span>
 );
 
@@ -71,7 +71,7 @@ function EvaluationSummaries({ items }: { items: EvaluationSummary[] }) {
               <div className="eval-card__meta">
                 <OverallDots rating={e.overallRating} />
                 {e.submittedAt && (
-                  <span className="text-muted small">· {formatDay(e.submittedAt)}</span>
+                  <span className="text-muted-foreground text-[length:var(--text-sm)]">· {formatDay(e.submittedAt)}</span>
                 )}
               </div>
             </div>
@@ -107,7 +107,7 @@ export default function StatusTimeline({ history, canViewEvaluations = false }: 
             </div>
 
             <div className={`timeline__body${isLast ? ' timeline__body--last' : ''}`}>
-              <div className="d-flex align-items-center gap-2 flex-wrap">
+              <div className="flex items-center gap-2 flex-wrap">
                 <StatusBadge status={entry.status} />
                 {isLatest && <span className="timeline__current">Current</span>}
               </div>
@@ -123,30 +123,30 @@ export default function StatusTimeline({ history, canViewEvaluations = false }: 
               {canViewEvaluations &&
                 entry.status === 'Interview Completed' &&
                 entry.interviewId && (
-                  <div className="mt-1 small">
+                  <div className="mt-1 text-[length:var(--text-sm)]">
                     <Link to={`/interviews/${entry.interviewId}`}>View full evaluations →</Link>
                   </div>
                 )}
               {entry.taskDetails && (
-                <div className="mt-1 small">
-                  <span className="fw-semibold">Task:</span> {entry.taskDetails}
+                <div className="mt-1 text-[length:var(--text-sm)]">
+                  <span className="font-semibold">Task:</span> {entry.taskDetails}
                 </div>
               )}
               {entry.submissionUrl && (
-                <div className="mt-1 small">
-                  <span className="fw-semibold">Submission:</span>{' '}
+                <div className="mt-1 text-[length:var(--text-sm)]">
+                  <span className="font-semibold">Submission:</span>{' '}
                   <a href={entry.submissionUrl} target="_blank" rel="noreferrer">
                     {entry.submissionUrl}
                   </a>
                 </div>
               )}
               {entry.interviewAt && (
-                <div className="mt-1 small">
-                  <span className="fw-semibold">Interview:</span> {formatDate(entry.interviewAt)}
+                <div className="mt-1 text-[length:var(--text-sm)]">
+                  <span className="font-semibold">Interview:</span> {formatDate(entry.interviewAt)}
                 </div>
               )}
               {entry.interviewTags.length > 0 && (
-                <div className="mt-2 d-flex flex-wrap gap-1">
+                <div className="mt-2 flex flex-wrap gap-1">
                   {entry.interviewTags.map((tag) => (
                     <span key={tag} className={skillColorClass(tag)}>{tag}</span>
                   ))}
@@ -154,8 +154,8 @@ export default function StatusTimeline({ history, canViewEvaluations = false }: 
               )}
               {entry.interviewers.length > 0 && (
                 <div className="mt-2">
-                  <div className="text-muted small mb-1">Interviewers</div>
-                  <div className="d-flex flex-wrap gap-2">
+                  <div className="text-muted-foreground text-[length:var(--text-sm)] mb-1">Interviewers</div>
+                  <div className="flex flex-wrap gap-2">
                     {entry.interviewers.map((iv) => {
                       const pill = (
                         <span className="interviewer-pill">
@@ -164,7 +164,7 @@ export default function StatusTimeline({ history, canViewEvaluations = false }: 
                         </span>
                       );
                       return entry.interviewId ? (
-                        <Link key={iv.userId} to={`/interviews/${entry.interviewId}`} className="text-decoration-none">
+                        <Link key={iv.userId} to={`/interviews/${entry.interviewId}`} className="no-underline">
                           {pill}
                         </Link>
                       ) : (

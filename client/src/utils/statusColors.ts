@@ -27,6 +27,7 @@ const STATUS_TONE: Record<string, StatusTone> = {
   'Not Available': 'muted',
   Uploaded: 'uploaded',
   'Ask for Assesment': 'intake',
+  'Ask for Assessment': 'intake',
   'Offer Preparation': 'assessment',
   'Offer Extended': 'interview',
   'Offer Accepted': 'success',
@@ -34,14 +35,17 @@ const STATUS_TONE: Record<string, StatusTone> = {
   Hired: 'success',
 };
 
+/** Solid hexes mirroring the `.status--*` tokens in index.css. Kept in sync by
+ *  hand because charts and the dropdown swatches need a literal value, not a
+ *  CSS variable. Mid-tones: legible on both the light and the dark surface. */
 export const STATUS_HEX_COLORS: Record<StatusTone, string> = {
-  uploaded: '#0d9488',
+  uploaded: '#64748b',
   intake: '#d97706',
-  assessment: '#8b5cf6',
-  interview: '#3b82f6',
-  success: '#10b981',
-  reject: '#ef4444',
-  muted: '#64748b',
+  assessment: '#7c3aed',
+  interview: '#2563eb',
+  success: '#059669',
+  reject: '#dc2626',
+  muted: '#94a3b8',
 };
 
 /** Solid hex color corresponding to the status tone. */

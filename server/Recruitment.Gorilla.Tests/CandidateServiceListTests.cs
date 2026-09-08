@@ -170,4 +170,22 @@ public class CandidateServiceListTests(MySqlDatabaseFixture fixture) : DbTestBas
         var junk = await List(new CandidateListQuery(RoleId: role.Id, Sort: "; DROP TABLE Candidates"));
         Assert.Equal(2, junk.Items.Count);
     }
+
+    [Fact]
+    public async Task Batch_filter_returns_only_candidates_matching_batch_label()
+    {
+        var role = Data.AddRole();
+        var c1 = Data.AddCandidate(roleId: role.Id);
+        var c2 = Data.AddCandidate(roleId: role.Id);
+        Db.Candidates.Find(c1.Id)!.BatchName = "Batch 2026 Alpha";
+        Db.Candidates.Find(c2.Id)!.BatchName = "Batch 2026 Beta";
+        await Db.SaveChangesAsync();
+
+        var page = await List(new CandidateListQuery(RoleId: role.Id, Batch: "Batch 2026 Alpha"));
+        var ids = page.Items.Select(i => i.Id).ToHashSet();
+
+        Assert.Contains(c1.Id, ids);
+        Assert.DoesNotContain(c2.Id, ids);
+        Assert.Equal("Batch 2026 Alpha", page.Items.First(i => i.Id == c1.Id).BatchName);
+    }
 }

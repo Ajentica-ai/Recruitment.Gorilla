@@ -194,6 +194,16 @@ public class CandidatesController(
     public async Task<IActionResult> GetSourceOptions() => Ok(await config.GetActiveSourcesAsync());
 
     [Authorize(Roles = Roles.CanWriteCandidate)]
+    [HttpGet("batches")]
+    public async Task<IActionResult> GetBatches() =>
+        Ok(await candidateService.GetCandidateBatchesAsync(ReadOwnerScope));
+
+    [Authorize(Roles = Roles.CanWriteCandidate)]
+    [HttpGet("jobs")]
+    public async Task<IActionResult> GetJobs() =>
+        Ok(await config.GetAllRolesAsync());
+
+    [Authorize(Roles = Roles.CanWriteCandidate)]
     [HttpPut("{id}")]
     public async Task<IActionResult> Update(int id, [FromBody] UpdateCandidateDto dto)
     {

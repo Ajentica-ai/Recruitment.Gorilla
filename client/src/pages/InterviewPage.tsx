@@ -1,16 +1,20 @@
+import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { Accordion } from 'react-bootstrap';
 import { useQuery } from '@tanstack/react-query';
 import { isAxiosError } from 'axios';
-import { StickyNote } from 'lucide-react';
+import { FileText, StickyNote } from 'lucide-react';
 import { getInterview, getInterviewEvaluationRubric } from '../services/api';
 import ReadOnlyCandidateProfile from '../components/ReadOnlyCandidateProfile';
 import EvaluationForm, { EvaluationReadOnly } from '../components/EvaluationForm';
 import { skillColorClass } from '../utils/skillColors';
-import EmptyState from '../components/ui/EmptyState';
-import Page from '../components/ui/Page';
-import LoadingPanel from '../components/ui/Loading';
+import EmptyState from '../components/common/EmptyState';
+import Page from '../components/common/Page';
+import LoadingPanel from '../components/common/Loading';
 import { initials } from '../utils/initials';
+import { Sheet, SheetBody, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 
 const CalendarIcon = () => (
   <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
@@ -45,6 +49,11 @@ export default function InterviewPage() {
     enabled: !!data,
   });
 
+  /* Declared before the early returns below. A hook placed after them runs on
+     some renders and not others, which desynchronises React's hook order the
+     first time the query resolves. */
+  const [showProfileDrawer, setShowProfileDrawer] = useState(false);
+
   if (isLoading) {
     return <LoadingPanel label="Loading interview…" />;
   }
@@ -64,9 +73,9 @@ export default function InterviewPage() {
             : 'The request failed. Refresh the page to try again.'
         }
         action={
-          <Link to="/" className="btn btn-outline-secondary">
-            Back to dashboard
-          </Link>
+          <Button asChild variant="outline">
+            <Link to="/">Back to dashboard</Link>
+          </Button>
         }
       />
     );
@@ -100,30 +109,40 @@ export default function InterviewPage() {
         <div className="interview-hero__top">
           <div className="profile-avatar">{initials(data.candidate.fullName) || '?'}</div>
           <div className="interview-hero__identity">
-            {/* No "Interview" eyebrow — the topbar directly above already says
-                it. The name is the heading; the role and the interview's type
-                tags are one meta line rather than a three-deep stack. */}
-            <h2>{data.candidate.fullName}</h2>
-            <div className="interview-hero__meta">
-              {role && <span className="form-help">{role}</span>}
+            <div className="flex items-center gap-2 flex-wrap">
+              <h2 className="mb-0">{data.candidate.fullName}</h2>
+              {role && <span className="badge bg-primary-subtle text-brand font-medium px-2 py-1 rounded-full">{role}</span>}
               {data.interviewTags.map((tag) => (
                 <span key={tag} className={skillColorClass(tag)}>{tag}</span>
               ))}
             </div>
+            <div className="interview-hero__meta text-muted-foreground text-[length:var(--text-sm)] mt-1">
+              <span>{data.candidate.email}</span>
+              {data.candidate.currentTitle && <span>• {data.candidate.currentTitle}</span>}
+            </div>
           </div>
-          {/* The schedule and the interviewers are one right-hand cluster.
-              They used to be two rows — the chip here and a full-width
-              "INTERVIEWERS" strip below a divider — which spent a third of the
-              hero's height on what is usually one avatar pill. */}
+
           <div className="interview-hero__aside">
-            <span className={`interview-chip${relative.soon ? ' interview-chip--soon' : ''}`}>
-              <CalendarIcon /> {scheduled} · {data.durationMinutes} min · {relative.label}
-            </span>
-            <div className="interview-hero__people">
-              {/* Inline, not a row of its own — the pills are meaningless
-                  without it, but it doesn't warrant its own band either. */}
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className={`interview-chip${relative.soon ? ' interview-chip--soon' : ''}`}>
+                <CalendarIcon /> {scheduled} · {data.durationMinutes} min · {relative.label}
+              </span>
+
+              {/* View Full Candidate Profile Button */}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowProfileDrawer(true)}
+                title="View full candidate CV, education, experience and details"
+              >
+                <FileText strokeWidth={2} aria-hidden="true" />
+                View Profile &amp; CV
+              </Button>
+            </div>
+
+            <div className="interview-hero__people mt-1">
               <span className="field-label interview-hero__people-label">
-                {data.interviewers.length === 1 ? 'Interviewer' : 'Interviewers'}
+                {data.interviewers.length === 1 ? 'Interviewer' : 'Interviewers'}:
               </span>
               {data.interviewers.map((i) => (
                 <span key={i.userId} className="interviewer-pill" title={i.name}>
@@ -136,64 +155,63 @@ export default function InterviewPage() {
         </div>
       </div>
 
-      {/* --panels gives both columns one shared height so their bottoms line
-          up; .interview-grid overrides that height to exactly the viewport
-          below the topbar and pins the columns, so the profile scrolls on the
-          left and the rubric on the right without the page moving. */}
-      <div className="detail-grid detail-grid--panels interview-grid">
-        <div className="card-stack anim-fade-up" style={{ animationDelay: '60ms' }}>
-          <ReadOnlyCandidateProfile candidate={data.candidate} className="detail-scroll" />
-        </div>
-
-        {/* The evaluation column sticks below the topbar and is sized to the
-            remaining viewport, so the rubric is always the thing on screen
-            while the candidate profile scrolls past it on the left. */}
-        <div className="card-stack interview-grid__eval anim-fade-up" style={{ animationDelay: '120ms' }}>
-          {/* The briefing is folded into the evaluation card itself rather than
-              floating above it as a second card: it is instructions *for this
-              form*, it belongs to the same object, and as its own card it cost
-              a whole surface plus a gap to show one line. Inside the card it
-              also sits outside the scrolling rubric, so it stays readable the
-              whole way down the twelve criteria. */}
-          {data.canEvaluate ? (
-            <EvaluationForm
-              interviewId={interviewId}
-              evaluation={data.myEvaluation}
-              briefing={briefing}
-            />
-          ) : (
-            <div className="pulse-card">
-              {briefing}
-              <div className="alert-info-soft">
-                You are viewing this interview but are not an assigned interviewer.
-              </div>
+      {/* Main Full-Width Evaluation Studio */}
+      <div className="interview-studio-container anim-fade-up" style={{ animationDelay: '60ms' }}>
+        {data.canEvaluate ? (
+          <EvaluationForm
+            interviewId={interviewId}
+            evaluation={data.myEvaluation}
+            briefing={briefing}
+          />
+        ) : (
+          <div className="pulse-card">
+            {briefing}
+            <div className="alert-info-soft">
+              You are viewing this interview but are not an assigned interviewer.
             </div>
-          )}
+          </div>
+        )}
 
-          {data.allEvaluations && otherEvaluations.length > 0 && (
-            <Accordion>
-              <Accordion.Item eventKey="others">
-                <Accordion.Header>Other interviewers' evaluations ({otherEvaluations.length})</Accordion.Header>
-                <Accordion.Body>
+        {data.allEvaluations && otherEvaluations.length > 0 && (
+          <div className="mt-6">
+            <Accordion type="single" collapsible>
+              <AccordionItem value="others">
+                <AccordionTrigger>Other interviewers' evaluations ({otherEvaluations.length})</AccordionTrigger>
+                <AccordionContent>
                   <div className="card-stack">
                     {otherEvaluations.map((e) => (
                       <div key={e.id}>
-                        <div className="d-flex justify-content-between align-items-center gap-2 mb-2">
+                        <div className="flex justify-between items-center gap-2 mb-2">
                           <strong>{e.interviewerName}</strong>
-                          <span className={`badge-pill ${e.isSubmitted ? 'badge-success' : 'badge-neutral'}`}>
+                          <Badge variant={e.isSubmitted ? 'success' : 'neutral'}>
                             {e.isSubmitted ? 'Submitted' : 'Draft'}
-                          </span>
+                          </Badge>
                         </div>
                         <EvaluationReadOnly evaluation={e} rubric={rubric} />
                       </div>
                     ))}
                   </div>
-                </Accordion.Body>
-              </Accordion.Item>
+                </AccordionContent>
+              </AccordionItem>
             </Accordion>
-          )}
-        </div>
+          </div>
+        )}
       </div>
+
+      {/* Slide-over Candidate Profile & CV Drawer */}
+      <Sheet open={showProfileDrawer} onOpenChange={setShowProfileDrawer}>
+        <SheetContent side="right" className="w-[min(35rem,100vw)]">
+        <SheetHeader>
+          <SheetTitle className="flex items-center gap-2 font-semibold">
+            <FileText size={18} className="text-brand" />
+            <span>Candidate Profile & Qualifications</span>
+          </SheetTitle>
+        </SheetHeader>
+        <SheetBody className="p-4">
+          <ReadOnlyCandidateProfile candidate={data.candidate} />
+        </SheetBody>
+      </SheetContent>
+</Sheet>
     </Page>
   );
 }

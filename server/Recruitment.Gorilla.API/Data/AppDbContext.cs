@@ -31,6 +31,9 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<OfferApproval> OfferApprovals => Set<OfferApproval>();
     public DbSet<EvaluationRubric> EvaluationRubrics => Set<EvaluationRubric>();
     public DbSet<RubricCriterion> RubricCriteria => Set<RubricCriterion>();
+    public DbSet<CandidateDraft> CandidateDrafts => Set<CandidateDraft>();
+    public DbSet<CandidateEducation> CandidateEducations => Set<CandidateEducation>();
+    public DbSet<CandidateExperience> CandidateExperiences => Set<CandidateExperience>();
 
     /// <summary>
     /// Marks every DateTime coming out of MySQL as UTC — see <see cref="UtcDateTimeConverter"/>.
@@ -56,11 +59,18 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.Property(c => c.LinkedInUrl).HasMaxLength(500);
             e.Property(c => c.GithubUrl).HasMaxLength(500);
             e.Property(c => c.PortfolioUrl).HasMaxLength(500);
+            e.Property(c => c.Location).HasMaxLength(200);
+            e.Property(c => c.LeetCodeUrl).HasMaxLength(500);
+            e.Property(c => c.CodeforcesUrl).HasMaxLength(500);
+            e.Property(c => c.HackerRankUrl).HasMaxLength(500);
+            e.Property(c => c.GitLabUrl).HasMaxLength(500);
             e.Property(c => c.AppliedRole).HasMaxLength(150);
             e.Property(c => c.ReferenceName).HasMaxLength(200);
             e.Property(c => c.ReferenceEmail).HasMaxLength(200);
             e.Property(c => c.ReferenceEmployeeId).HasMaxLength(100);
             e.Property(c => c.CurrentStatus).HasMaxLength(100).IsRequired();
+            e.Property(c => c.BatchId).HasMaxLength(100);
+            e.Property(c => c.BatchName).HasMaxLength(255);
             e.Property(c => c.SourceDetail).HasMaxLength(300);
             e.HasOne(c => c.RoleAppliedOption)
              .WithMany()
@@ -75,6 +85,14 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
              .WithMany()
              .HasForeignKey(c => c.OwnerUserId)
              .OnDelete(DeleteBehavior.SetNull);
+            e.HasMany(c => c.Educations)
+             .WithOne(ed => ed.Candidate)
+             .HasForeignKey(ed => ed.CandidateId)
+             .OnDelete(DeleteBehavior.Cascade);
+            e.HasMany(c => c.Experiences)
+             .WithOne(ex => ex.Candidate)
+             .HasForeignKey(ex => ex.CandidateId)
+             .OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<CVFile>(e =>
@@ -163,7 +181,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 new StatusOption { Id = 11, Name = "Not Recommended", SortOrder = 13, IsInitial = false, IsActive = true, CreatedAt = new DateTime(2026, 06, 29, 0, 0, 0, DateTimeKind.Utc) },
                 new StatusOption { Id = 12, Name = "Discontinued", SortOrder = 15, IsInitial = true, IsActive = true, CreatedAt = new DateTime(2026, 06, 29, 0, 0, 0, DateTimeKind.Utc) },
                 new StatusOption { Id = 13, Name = "Uploaded", SortOrder = 1, IsInitial = true, IsActive = true, CreatedAt = new DateTime(2026, 06, 29, 0, 0, 0, DateTimeKind.Utc) },
-                new StatusOption { Id = 14, Name = "Ask for Assesment", SortOrder = 2, IsInitial = false, IsActive = true, CreatedAt = new DateTime(2026, 06, 29, 0, 0, 0, DateTimeKind.Utc) },
+                new StatusOption { Id = 14, Name = "Ask for Assessment", SortOrder = 2, IsInitial = false, IsActive = true, CreatedAt = new DateTime(2026, 06, 29, 0, 0, 0, DateTimeKind.Utc) },
                 new StatusOption { Id = 15, Name = "Offer Preparation", SortOrder = 12, IsInitial = false, IsActive = true, CreatedAt = new DateTime(2026, 06, 29, 0, 0, 0, DateTimeKind.Utc) },
                 new StatusOption { Id = 16, Name = "Offer Extended", SortOrder = 13, IsInitial = false, IsActive = true, CreatedAt = new DateTime(2026, 06, 29, 0, 0, 0, DateTimeKind.Utc) },
                 new StatusOption { Id = 17, Name = "Offer Accepted", SortOrder = 14, IsInitial = false, IsActive = true, CreatedAt = new DateTime(2026, 06, 29, 0, 0, 0, DateTimeKind.Utc) },
@@ -552,6 +570,70 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 new RubricCriterion { Id = 11, EvaluationRubricId = 1, SectionName = "Cultural Fit & Motivation", Key = "MotivationEnthusiasm", Label = "Motivation & Enthusiasm", Hint = "Interest in the role/company", Weight = 1.0, SortOrder = 11 },
                 new RubricCriterion { Id = 12, EvaluationRubricId = 1, SectionName = "Cultural Fit & Motivation", Key = "TeamDynamics", Label = "Team Dynamics", Hint = "Collaborative vs. independent style", Weight = 1.0, SortOrder = 12 }
             );
+        });
+
+        modelBuilder.Entity<CandidateDraft>(e =>
+        {
+            e.HasKey(d => d.Id);
+            e.Property(d => d.FullName).HasMaxLength(200);
+            e.Property(d => d.Email).HasMaxLength(200);
+            e.Property(d => d.Phone).HasMaxLength(50);
+            e.Property(d => d.CurrentTitle).HasMaxLength(200);
+            e.Property(d => d.RelevantExperience).HasMaxLength(100);
+            e.Property(d => d.LinkedInUrl).HasMaxLength(500);
+            e.Property(d => d.GithubUrl).HasMaxLength(500);
+            e.Property(d => d.PortfolioUrl).HasMaxLength(500);
+            e.Property(d => d.Location).HasMaxLength(200);
+            e.Property(d => d.LeetCodeUrl).HasMaxLength(500);
+            e.Property(d => d.CodeforcesUrl).HasMaxLength(500);
+            e.Property(d => d.HackerRankUrl).HasMaxLength(500);
+            e.Property(d => d.GitLabUrl).HasMaxLength(500);
+            e.Property(d => d.OriginalFileName).HasMaxLength(255).IsRequired();
+            e.Property(d => d.StoredFileName).HasMaxLength(255).IsRequired();
+            e.Property(d => d.FileType).HasMaxLength(20).HasDefaultValue("PDF");
+            e.Property(d => d.Status).HasMaxLength(50).HasDefaultValue("Pending");
+            e.Property(d => d.BatchId).HasMaxLength(100);
+            e.Property(d => d.BatchName).HasMaxLength(200);
+
+            e.HasIndex(d => d.Status);
+            e.HasIndex(d => d.BatchId);
+            e.HasIndex(d => d.UploadedByUserId);
+            e.HasIndex(d => d.CreatedAt);
+
+            e.HasOne(d => d.RoleAppliedOption)
+             .WithMany()
+             .HasForeignKey(d => d.RoleAppliedOptionId)
+             .OnDelete(DeleteBehavior.SetNull);
+
+            e.HasOne(d => d.SourceOption)
+             .WithMany()
+             .HasForeignKey(d => d.SourceOptionId)
+             .OnDelete(DeleteBehavior.SetNull);
+
+            e.HasOne(d => d.UploadedByUser)
+             .WithMany()
+             .HasForeignKey(d => d.UploadedByUserId)
+             .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<CandidateEducation>(e =>
+        {
+            e.HasKey(ed => ed.Id);
+            e.Property(ed => ed.Degree).HasMaxLength(200).IsRequired();
+            e.Property(ed => ed.Institution).HasMaxLength(200).IsRequired();
+            e.Property(ed => ed.GraduationYear).HasMaxLength(50);
+            e.Property(ed => ed.Cgpa).HasMaxLength(50);
+            e.HasIndex(ed => ed.CandidateId);
+        });
+
+        modelBuilder.Entity<CandidateExperience>(e =>
+        {
+            e.HasKey(ex => ex.Id);
+            e.Property(ex => ex.JobTitle).HasMaxLength(200).IsRequired();
+            e.Property(ex => ex.Company).HasMaxLength(200).IsRequired();
+            e.Property(ex => ex.Duration).HasMaxLength(100);
+            e.Property(ex => ex.Description).HasColumnType("text");
+            e.HasIndex(ex => ex.CandidateId);
         });
     }
 }

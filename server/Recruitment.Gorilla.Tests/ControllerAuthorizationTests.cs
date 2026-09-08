@@ -198,6 +198,16 @@ public class ControllerAuthorizationTests(ApiFixture fx)
     public Task Post_evaluation_rubric_authorized_roles(string role, HttpStatusCode expected) =>
         AssertStatus(role, HttpMethod.Post, "/api/evaluation-rubrics", expected);
 
+    // ---- Analytics authorization: CanWriteCandidate (SuperAdmin, Admin, Recruiter) ----
+
+    [Theory]
+    [InlineData("SuperAdmin", HttpStatusCode.OK)]
+    [InlineData("Admin", HttpStatusCode.OK)]
+    [InlineData("Recruiter", HttpStatusCode.OK)]
+    [InlineData("Interviewer", HttpStatusCode.Forbidden)]
+    public Task Get_analytics_authorized_roles(string role, HttpStatusCode expected) =>
+        AssertStatus(role, HttpMethod.Get, "/api/analytics", expected);
+
     // ---- Audit recording is wired: an action produces a queryable row ----
 
     [Fact]
@@ -209,15 +219,21 @@ public class ControllerAuthorizationTests(ApiFixture fx)
         var del = await fx.SendAsync(HttpMethod.Delete, $"/api/candidates/{id}", token);
         Assert.Equal(HttpStatusCode.NoContent, del.StatusCode);
 
-        var resp = await fx.SendAsync(HttpMethod.Get,
-            "/api/audit?entityType=Candidate&action=Deleted&pageSize=200", token);
-        Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
+        var found = false;
+        for (var i = 0; i < 10 && !found; i++)
+        {
+            await Task.Delay(50);
+            var resp = await fx.SendAsync(HttpMethod.Get,
+                "/api/audit?entityType=Candidate&action=Deleted&pageSize=200", token);
+            Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
 
-        using var doc = JsonDocument.Parse(await resp.Content.ReadAsStringAsync());
-        var found = doc.RootElement.GetProperty("items").EnumerateArray().Any(e =>
-            e.GetProperty("action").GetString() == "Candidate.Deleted" &&
-            e.GetProperty("entityId").ValueKind == JsonValueKind.Number &&
-            e.GetProperty("entityId").GetInt32() == id);
+            using var doc = JsonDocument.Parse(await resp.Content.ReadAsStringAsync());
+            found = doc.RootElement.GetProperty("items").EnumerateArray().Any(e =>
+                e.GetProperty("action").GetString() == "Candidate.Deleted" &&
+                e.GetProperty("entityId").ValueKind == JsonValueKind.Number &&
+                e.GetProperty("entityId").GetInt32() == id);
+        }
+
         Assert.True(found, "expected a Candidate.Deleted audit row for the deleted candidate");
     }
 }

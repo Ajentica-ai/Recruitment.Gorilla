@@ -15,6 +15,11 @@
     "noEmit": true,
     "jsx": "react-jsx",
 
+    /* shadcn components are published with "@/..." imports; the alias keeps
+       them copy-pasteable from upstream instead of needing a rewrite on every
+       component we pull in. */
+    "paths": { "@/*": ["./src/*"] },
+
     /* Linting */
     "noUnusedLocals": true,
     "noUnusedParameters": true,

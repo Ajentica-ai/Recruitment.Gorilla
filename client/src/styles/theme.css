@@ -1,0 +1,148 @@
+/* ==========================================================================
+   Tailwind v4 + shadcn/ui theme bridge.
+
+   THE POINT OF THIS FILE: shadcn components are written against Tailwind
+   utilities — `bg-primary`, `text-muted-foreground`, `border-border`,
+   `ring-ring`. Harbor's palette lives in tokens.css under its own names.
+   Rather than maintaining two palettes, this maps Tailwind's colour namespace
+   onto the Harbor tokens, so a colour is changed in exactly one place.
+
+   WHY ONLY THE COLOUR NAMESPACE IS MAPPED. Tailwind v4 derives utilities from
+   token namespaces — `--text-*`, `--radius-*`, `--shadow-*`, `--spacing-*` —
+   and Harbor already uses those exact prefixes for different things.
+   Re-declaring them here would be self-referential
+   (`--radius-sm: var(--radius-sm)`), so only `--color-*` and the font stacks
+   are bridged. Everywhere a component needs Harbor geometry it reaches for the
+   token directly: `rounded-[var(--radius-control)]`, `h-[var(--control-h)]`.
+
+   BOOTSTRAP IS GONE. Both `bootstrap` and `react-bootstrap` are out of
+   package.json, so preflight is on and there is no vendor layer left to order
+   against. `index.css` stays in a `legacy` layer below Tailwind's utilities:
+   it still owns the app-specific component classes (.kpi-card, .status--*,
+   .table-cards, the kanban board, the candidate profile) that have no shadcn
+   equivalent. A Tailwind utility must still win over it on a shadcn
+   component, which is what the layer order buys.
+   ========================================================================== */
+
+/* ORDER IS LOAD-BEARING, and getting it wrong is silent.
+
+   `legacy` must sit ABOVE Tailwind's `base`. Preflight lives in `base`, and it
+   zeroes padding, margins, borders and font sizes on every element. With
+   `legacy` first, preflight outranked index.css and flattened the entire app
+   chrome — the page gutter, the topbar height, table cell padding, the card
+   surfaces — while every build stayed green.
+
+   So: theme and base (Tailwind's tokens and reset) at the bottom, then
+   index.css, then Tailwind's utilities on top so a utility on a shadcn
+   component still wins over anything index.css says. */
+@layer theme, base, legacy, components, utilities;
+
+@import 'tailwindcss';
+@import '../index.css' layer(legacy);
+@import 'tw-animate-css';
+
+@custom-variant dark (&:where([data-bs-theme='dark'], [data-bs-theme='dark'] *));
+
+@theme inline {
+  /* ---- shadcn's contract ----
+     Every value is a var() into tokens.css; nothing here is a literal colour,
+     which is what stops the two systems drifting. `inline` matters: it emits
+     `var(--surface)` into the utility rather than snapshotting today's value,
+     so utilities follow the theme when [data-bs-theme] flips. */
+  --color-background: var(--bg);
+  --color-foreground: var(--text);
+
+  --color-card: var(--surface);
+  --color-card-foreground: var(--text);
+
+  --color-popover: var(--surface);
+  --color-popover-foreground: var(--text);
+
+  /* shadcn's "primary" is a solid fill carrying primary-foreground on top, so
+     it maps to --primary-dark — the shade validated under white text in both
+     themes — and not to --primary, which is tuned for use AS text. */
+  --color-primary: var(--primary-dark);
+  --color-primary-foreground: var(--on-accent);
+
+  --color-secondary: var(--surface-muted);
+  --color-secondary-foreground: var(--text);
+
+  --color-muted: var(--surface-muted);
+  --color-muted-foreground: var(--muted);
+
+  --color-accent: var(--surface-muted);
+  --color-accent-foreground: var(--text);
+
+  --color-destructive: var(--danger);
+  --color-destructive-foreground: #fff;
+
+  --color-border: var(--border);
+  --color-input: var(--border);
+  --color-ring: var(--primary);
+
+  /* ---- Harbor's own vocabulary, for components shadcn has no name for ---- */
+  --color-brand: var(--primary);
+  --color-brand-muted: var(--primary-tint);
+  --color-brand-border: var(--primary-border);
+
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-text);
+  --color-success-muted: var(--success-tint);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-text);
+  --color-warning-muted: var(--warning-tint);
+  --color-info: var(--info);
+  --color-info-foreground: var(--info-text-strong);
+  --color-info-muted: var(--info-tint);
+  --color-danger-muted: var(--danger-tint);
+
+  --color-rail: var(--rail-bg);
+  --color-sunken: var(--surface-sunken);
+  --color-line: var(--line-soft);
+  --color-text-soft: var(--text-soft);
+  --color-text-faint: var(--muted-light);
+
+  --font-sans: var(--font-body);
+  --font-mono: var(--font-mono);
+}
+
+/* Preflight leaves `border-color` at currentColor, which paints a bare
+   `border` in the text colour. Tailwind's own recommendation is to set the
+   default globally. */
+@layer base {
+  *,
+  ::after,
+  ::before,
+  ::backdrop,
+  ::file-selector-button {
+    border-color: var(--border);
+  }
+
+  body {
+    background-color: var(--bg);
+    color: var(--text);
+    font-family: var(--font-body);
+    font-size: var(--text-md);
+    line-height: var(--leading-normal);
+    -webkit-font-smoothing: antialiased;
+    /* Tabular figures app-wide: every number here sits in a column, a row of
+       tiles or a timeline, and proportional figures make those wobble. */
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+/* Radix reports a collapsible's measured height on this variable; the keyframes
+   read it so an accordion animates to its real height instead of a guess. */
+@theme {
+  --animate-accordion-down: accordion-down var(--dur) var(--ease);
+  --animate-accordion-up: accordion-up var(--dur) var(--ease);
+}
+
+@keyframes accordion-down {
+  from { height: 0; }
+  to { height: var(--radix-accordion-content-height); }
+}
+@keyframes accordion-up {
+  from { height: var(--radix-accordion-content-height); }
+  to { height: 0; }
+}

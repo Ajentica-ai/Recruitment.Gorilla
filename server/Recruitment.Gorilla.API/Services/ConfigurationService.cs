@@ -15,22 +15,35 @@ public class ConfigurationService(AppDbContext db)
 {
     // ----- Role Applied options -----
 
-    public async Task<List<RoleAppliedOptionDto>> GetActiveRolesAsync() =>
-        (await db.RoleAppliedOptions
+    private async Task<Dictionary<int, int>> GetRoleCandidateCountsAsync() =>
+        await db.Candidates
+            .Where(c => c.RoleAppliedOptionId != null)
+            .GroupBy(c => c.RoleAppliedOptionId!.Value)
+            .Select(g => new { RoleId = g.Key, Count = g.Count() })
+            .ToDictionaryAsync(x => x.RoleId, x => x.Count);
+
+    public async Task<List<RoleAppliedOptionDto>> GetActiveRolesAsync()
+    {
+        var roles = await db.RoleAppliedOptions
             .Include(r => r.Recruiters).ThenInclude(rr => rr.User)
             .Include(r => r.EvaluationRubric)
             .Where(r => r.IsActive)
             .OrderBy(r => r.SortOrder).ThenBy(r => r.Name)
-            .ToListAsync())
-            .Select(ToDto).ToList();
+            .ToListAsync();
+        var counts = await GetRoleCandidateCountsAsync();
+        return roles.Select(r => ToDto(r, counts.GetValueOrDefault(r.Id, 0))).ToList();
+    }
 
-    public async Task<List<RoleAppliedOptionDto>> GetAllRolesAsync() =>
-        (await db.RoleAppliedOptions
+    public async Task<List<RoleAppliedOptionDto>> GetAllRolesAsync()
+    {
+        var roles = await db.RoleAppliedOptions
             .Include(r => r.Recruiters).ThenInclude(rr => rr.User)
             .Include(r => r.EvaluationRubric)
             .OrderBy(r => r.SortOrder).ThenBy(r => r.Name)
-            .ToListAsync())
-            .Select(ToDto).ToList();
+            .ToListAsync();
+        var counts = await GetRoleCandidateCountsAsync();
+        return roles.Select(r => ToDto(r, counts.GetValueOrDefault(r.Id, 0))).ToList();
+    }
 
     /// <summary>
     /// Roles the given user is an assigned recruiter for. Active only by default (for the
@@ -38,14 +51,17 @@ public class ConfigurationService(AppDbContext db)
     /// (for the candidate-list role filter, where closed openings must stay filterable).
     /// </summary>
     public async Task<List<RoleAppliedOptionDto>> GetAssignedRolesAsync(
-        int recruiterUserId, bool includeInactive = false) =>
-        (await db.RoleAppliedOptions
+        int recruiterUserId, bool includeInactive = false)
+    {
+        var roles = await db.RoleAppliedOptions
             .Include(r => r.Recruiters).ThenInclude(rr => rr.User)
             .Include(r => r.EvaluationRubric)
             .Where(r => (includeInactive || r.IsActive) && r.Recruiters.Any(rr => rr.UserId == recruiterUserId))
             .OrderBy(r => r.SortOrder).ThenBy(r => r.Name)
-            .ToListAsync())
-            .Select(ToDto).ToList();
+            .ToListAsync();
+        var counts = await GetRoleCandidateCountsAsync();
+        return roles.Select(r => ToDto(r, counts.GetValueOrDefault(r.Id, 0))).ToList();
+    }
 
     public async Task<(RoleAppliedOptionDto? Created, bool Conflict, string? Error)> CreateRoleAsync(UpsertRoleAppliedOptionDto dto)
     {
@@ -401,14 +417,15 @@ public class ConfigurationService(AppDbContext db)
     /// <summary>Auto-generated title: role name + the posted (created) date.</summary>
     public static string RoleTitle(string name, DateTime createdAt) => $"{name} — {createdAt:dd MMM yyyy}";
 
-    private static RoleAppliedOptionDto ToDto(RoleAppliedOption r) =>
+    private static RoleAppliedOptionDto ToDto(RoleAppliedOption r, int candidateCount = 0) =>
         new(r.Id, r.Name, r.SortOrder, r.IsActive, r.Location, r.Department, r.Priority,
             r.CreatedAt, r.EndDate, RoleTitle(r.Name, r.CreatedAt),
             r.Recruiters
                 .Select(rr => new RecruiterDto(rr.UserId, rr.User.Name))
                 .OrderBy(x => x.Name).ToList(),
             r.EvaluationRubricId,
-            r.EvaluationRubric?.Name);
+            r.EvaluationRubric?.Name,
+            candidateCount);
     private static SkillOptionDto ToDto(SkillOption s) => new(s.Id, s.Name, s.SortOrder, s.IsActive);
     private static CandidateSourceOptionDto ToDto(CandidateSourceOption s) => new(s.Id, s.Name, s.SortOrder, s.IsActive);
     private static InterviewTypeOptionDto ToDto(InterviewTypeOption t) => new(t.Id, t.Name, t.SortOrder, t.IsActive);

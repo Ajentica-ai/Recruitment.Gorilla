@@ -1,6 +1,13 @@
-bin/
-obj/
-Logs/
-Uploads/*
-!Uploads/.gitkeep
-*.user
+# `bin/` and `obj/` on their own match only the context root, and every one of
+# these actually lives a level down, in Recruitment.Gorilla.API/ and
+# Recruitment.Gorilla.Tests/. So the host's build output was being copied into
+# the image, and the restore inside the container then read a project.assets.json
+# written on Windows — which failed on "Unable to find fallback package folder
+# 'C:\Program Files (x86)\Microsoft Visual Studio\Shared\NuGetPackages'".
+**/bin/
+**/obj/
+**/Logs/
+**/Uploads/*
+!**/Uploads/.gitkeep
+**/*.user
+**/.vs/

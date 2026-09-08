@@ -1,7 +1,6 @@
 import { useMemo, useState } from 'react';
-import { Button, Form, Modal } from 'react-bootstrap';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Briefcase, ChevronRight, Plus, Search, Trash2 } from 'lucide-react';
+import { Briefcase, ChevronRight, Plus, Trash2 } from 'lucide-react';
 import { isAxiosError } from 'axios';
 import {
   createRoleOption,
@@ -14,9 +13,9 @@ import {
 import { useAuth } from '../../auth/AuthContext';
 import { useToast } from '../../components/ToastStack';
 import SearchableDropdown, { SearchableMultiSelect } from '../../components/SearchableSelect';
-import ConfirmModal from '../../components/ui/ConfirmModal';
-import EmptyState from '../../components/ui/EmptyState';
-import { SkeletonRows } from '../../components/ui/Loading';
+import ConfirmModal from '../../components/common/ConfirmModal';
+import EmptyState from '../../components/common/EmptyState';
+import { SkeletonRows } from '../../components/common/Loading';
 import { skillColorModifier } from '../../utils/skillColors';
 import {
   JOB_STATUS_BADGE,
@@ -27,6 +26,22 @@ import {
 } from '../../utils/jobStatus';
 import type { UpsertOptionPayload } from '../../types';
 import type { Opt } from './types';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import { DatePicker } from '@/components/ui/date-picker';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { CheckboxField } from '@/components/ui/field';
+import { NativeSelect } from '@/components/ui/native-select';
+import { SearchInput } from '@/components/ui/search-input';
+import {
+  Dialog,
+  DialogBody,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 
 const PRIORITIES = ['High', 'Medium', 'Low'];
 const LOCATIONS = ['Remote', 'Office', 'Hybrid', 'Contractual'];
@@ -199,24 +214,17 @@ export default function JobOpeningsTab() {
     <>
       {/* The action shares the filter row rather than taking one of its own
           — see .page-bar. */}
-      <div className="page-bar">
-        <search className="flex-grow-1">
-          <div className="data-toolbar">
-          <div className="search-field data-toolbar__search">
-            <Search size={15} strokeWidth={1.75} aria-hidden="true" className="search-field__icon" />
-            <Form.Control
-              type="search"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search role, recruiter or department…"
-              aria-label="Search job openings"
-            />
-          </div>
-          {/* A segmented control, not the underline tab strip it borrowed
-              before: these filter a list in place, they don't switch between
-              panels, and an underline inside a bordered toolbar read as a
-              stray rule. */}
-          <div className="segmented data-toolbar__end" role="group" aria-label="Filter by status">
+      <div className="data-toolbar">
+        <SearchInput
+          wrapperClassName="!max-w-[420px] !flex-[1_1_320px]"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Search role, recruiter or department…"
+          aria-label="Search job openings"
+          className="h-10 text-sm pl-9"
+        />
+        <div className="data-toolbar__end">
+          <div className="segmented" role="group" aria-label="Filter by status">
             {STATUS_FILTERS.map((f) => (
               <button
                 key={f.id}
@@ -228,14 +236,11 @@ export default function JobOpeningsTab() {
                 {f.label}
               </button>
             ))}
-            </div>
           </div>
-        </search>
-
-        <div className="page-bar__actions">
-          <Button onClick={() => resetForm(null)}>
+          <div className="toolbar-divider hidden sm:block" />
+          <Button size="sm" onClick={() => resetForm(null)} className="shrink-0 gap-1.5">
             <Plus size={15} strokeWidth={2} aria-hidden="true" />
-            <span className="ms-1">Add job opening</span>
+            <span>Add job opening</span>
           </Button>
         </div>
       </div>
@@ -256,7 +261,7 @@ export default function JobOpeningsTab() {
               <Button onClick={() => resetForm(null)}>Add job opening</Button>
             ) : (
               <Button
-                variant="outline-secondary"
+                variant="outline"
                 onClick={() => { setQuery(''); setStatusFilter('all'); }}
               >
                 Clear filters
@@ -278,8 +283,9 @@ export default function JobOpeningsTab() {
         </div>
       )}
 
-      <Modal show={showModal} onHide={() => setShowModal(false)} centered size="lg">
-        <Form
+      <Dialog open={showModal} onOpenChange={(open) => { if (!open) { (() => setShowModal(false))(); } }}>
+<DialogContent className="sm:max-w-2xl">
+        <form
           noValidate
           onSubmit={(e) => {
             e.preventDefault();
@@ -290,12 +296,12 @@ export default function JobOpeningsTab() {
             saveMutation.mutate();
           }}
         >
-          <Modal.Header closeButton>
-            <Modal.Title>{editing ? 'Edit job opening' : 'Add job opening'}</Modal.Title>
-          </Modal.Header>
-          <Modal.Body>
+          <DialogHeader>
+            <DialogTitle>{editing ? 'Edit job opening' : 'Add job opening'}</DialogTitle>
+          </DialogHeader>
+          <DialogBody>
             {error && (
-              <div className="alert-danger-soft mb-4" role="alert">
+              <div className="alert-danger-soft mb-6" role="alert">
                 {error}
               </div>
             )}
@@ -303,53 +309,57 @@ export default function JobOpeningsTab() {
             {/* Title and Posted date used to sit here as readOnly plaintext
                 fields, which rendered borderless and read as broken. Both are
                 derived and both are shown on the card, so they are gone. */}
-            <div className="row g-3">
-              <div className="col-12">
-                <Form.Label>Role name <span className="required-star" aria-hidden="true">*</span></Form.Label>
-                <Form.Control
+            <div className="grid grid-cols-12 gap-4">
+              <div className="col-span-12">
+                <Label>Role name <span className="required-star" aria-hidden="true">*</span></Label>
+                <Input
                   value={name}
                   onChange={(e) => { setName(e.target.value); if (nameInvalid) setNameInvalid(false); }}
-                  isInvalid={nameInvalid}
+                  aria-invalid={nameInvalid || undefined}
                   autoFocus
                 />
-                <Form.Control.Feedback type="invalid">Role name is required.</Form.Control.Feedback>
-              </div>
-              <div className="col-12 col-md-6">
-                <Form.Label>Closes <span className="required-star" aria-hidden="true">*</span></Form.Label>
-                <Form.Control
-                  type="datetime-local"
-                  value={endDate}
-                  onChange={(e) => { setEndDate(e.target.value); if (endDateInvalid) setEndDateInvalid(false); }}
-                  isInvalid={endDateInvalid}
-                />
-                <Form.Control.Feedback type="invalid">A closing date is required.</Form.Control.Feedback>
-                {editing?.createdAt && (
-                  <Form.Text muted>Posted {formatDate(editing.createdAt)}.</Form.Text>
+                {nameInvalid && (
+                  <p className="text-[length:var(--text-sm)] text-[var(--danger-text)]">Role name is required.</p>
                 )}
               </div>
-              <div className="col-12 col-md-6">
-                <Form.Label>Priority</Form.Label>
-                <Form.Select value={priority} onChange={(e) => setPriority(e.target.value)}>
+              <div className="col-span-12 md:col-span-6">
+                <Label>Closes <span className="required-star" aria-hidden="true">*</span></Label>
+                <DatePicker
+                  withTime
+                  value={endDate}
+                  onChange={(v) => { setEndDate(v); if (endDateInvalid) setEndDateInvalid(false); }}
+                  aria-invalid={endDateInvalid || undefined}
+                />
+                {endDateInvalid && (
+                  <p className="text-[length:var(--text-sm)] text-[var(--danger-text)]">A closing date is required.</p>
+                )}
+                {editing?.createdAt && (
+                  <p className="text-[length:var(--text-sm)] leading-[var(--leading-normal)] text-muted-foreground">Posted {formatDate(editing.createdAt)}.</p>
+                )}
+              </div>
+              <div className="col-span-12 md:col-span-6">
+                <Label>Priority</Label>
+                <NativeSelect value={priority} onChange={(e) => setPriority(e.target.value)}>
                   <option value="">None</option>
                   {PRIORITIES.map((p) => <option key={p} value={p}>{p}</option>)}
-                </Form.Select>
+                </NativeSelect>
               </div>
-              <div className="col-12 col-md-6">
-                <Form.Label>Location</Form.Label>
-                <Form.Select value={location} onChange={(e) => setLocation(e.target.value)}>
+              <div className="col-span-12 md:col-span-6">
+                <Label>Location</Label>
+                <NativeSelect value={location} onChange={(e) => setLocation(e.target.value)}>
                   <option value="">None</option>
                   {LOCATIONS.map((l) => <option key={l} value={l}>{l}</option>)}
-                </Form.Select>
+                </NativeSelect>
               </div>
-              <div className="col-12 col-md-6">
-                <Form.Label>Department</Form.Label>
-                <Form.Select value={department} onChange={(e) => setDepartment(e.target.value)}>
+              <div className="col-span-12 md:col-span-6">
+                <Label>Department</Label>
+                <NativeSelect value={department} onChange={(e) => setDepartment(e.target.value)}>
                   <option value="">None</option>
                   {DEPARTMENTS.map((d) => <option key={d} value={d}>{d}</option>)}
-                </Form.Select>
+                </NativeSelect>
               </div>
-              <div className="col-12 col-md-6">
-                <Form.Label>Evaluation rubric</Form.Label>
+              <div className="col-span-12 md:col-span-6">
+                <Label>Evaluation rubric</Label>
                 <SearchableDropdown<number>
                   options={rubricOptions}
                   value={evaluationRubricId}
@@ -358,42 +368,37 @@ export default function JobOpeningsTab() {
                   emptyMessage="No rubric found"
                   clearable
                 />
-                <Form.Text muted>
+                <p className="text-[length:var(--text-sm)] leading-[var(--leading-normal)] text-muted-foreground">
                   Determines the scorecard criteria and sections for candidates in this opening.
-                </Form.Text>
+                </p>
               </div>
-              <div className="col-12">
-                <Form.Label>Recruiters</Form.Label>
+              <div className="col-span-12">
+                <Label>Recruiters</Label>
                 <SearchableMultiSelect
                   options={recruiterOptions}
                   value={recruiterUserIds}
                   onChange={setRecruiterUserIds}
                   placeholder="Search by name or email…"
                 />
-                <Form.Text muted>
+                <p className="text-[length:var(--text-sm)] leading-[var(--leading-normal)] text-muted-foreground">
                   Each assigned recruiter can access every candidate under this role. Only users with
                   the Recruiter role or higher are listed — an Interviewer would gain no access.
-                </Form.Text>
+                </p>
               </div>
-              <div className="col-12">
-                <Form.Check
-                  type="checkbox"
-                  id="job-active"
-                  label="Active — shown in candidate forms and on the dashboard"
-                  checked={isActive}
-                  onChange={(e) => setIsActive(e.target.checked)}
-                />
+              <div className="col-span-12">
+                <CheckboxField id="job-active" label="Active — shown in candidate forms and on the dashboard" checked={isActive} onCheckedChange={(checked) => setIsActive(checked)} />
               </div>
             </div>
-          </Modal.Body>
-          <Modal.Footer>
-            <Button variant="outline-secondary" onClick={() => setShowModal(false)}>Cancel</Button>
+          </DialogBody>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowModal(false)}>Cancel</Button>
             <Button type="submit" disabled={saveMutation.isPending}>
               {saveMutation.isPending ? 'Saving…' : 'Save'}
             </Button>
-          </Modal.Footer>
-        </Form>
-      </Modal>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+</Dialog>
 
       {/* The shared confirm dialog rather than a fourth hand-rolled copy of the
           same three elements. */}
@@ -489,7 +494,7 @@ function JobRow({
           {job.evaluationRubricName && (
             <>
               <span aria-hidden="true">·</span>
-              <span className="text-muted" title="Assigned scorecard rubric">
+              <span className="text-muted-foreground" title="Assigned scorecard rubric">
                 Rubric: {job.evaluationRubricName}
               </span>
             </>
@@ -500,7 +505,7 @@ function JobRow({
 
       <div className="job-row__metrics">
         <div className="job-row__status">
-          <span className={badge.className}>{badge.label}</span>
+          <Badge variant={badge.variant}>{badge.label}</Badge>
           <span className="job-row__gauge">
             {gauge.label}
             <span className="job-row__gauge-value">{gauge.value}</span>
@@ -531,10 +536,14 @@ function JobRow({
       </div>
 
       <div className="job-row__actions">
+        {/* Ghost, not outline-danger: a red-outlined button on every row made
+            "delete this opening" the most emphatic control on the page. It
+            turns red under the pointer, which is when the warning is useful. */}
         {canDelete && (
           <Button
             size="sm"
-            variant="outline-danger"
+            variant="ghostDestructive"
+            className="btn-icon"
             onClick={(e) => {
               e.stopPropagation();
               onDelete();
@@ -542,7 +551,7 @@ function JobRow({
             title="Delete"
             aria-label={`Delete ${job.name}`}
           >
-            <Trash2 size={14} strokeWidth={1.75} aria-hidden="true" />
+            <Trash2 size={15} strokeWidth={1.75} aria-hidden="true" />
           </Button>
         )}
         <ChevronRight size={18} strokeWidth={1.75} aria-hidden="true" className="job-row__chevron" />

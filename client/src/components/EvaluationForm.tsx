@@ -1,10 +1,9 @@
 import { useMemo, useState } from 'react';
-import { Button, Collapse, Form } from 'react-bootstrap';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { getInterviewEvaluationRubric, saveEvaluation } from '../services/api';
 import { useToast } from './ToastStack';
-import ConfirmModal from './ui/ConfirmModal';
-import SectionCard from './ui/SectionCard';
+import ConfirmModal from './common/ConfirmModal';
+import SectionCard from './common/SectionCard';
 import {
   ALL_CRITERION_KEYS,
   EVALUATION_SECTIONS,
@@ -14,6 +13,12 @@ import {
   type Criterion,
 } from '../utils/evaluationCriteria';
 import type { EvaluationItem, EvaluationRubric, InterviewEvaluation } from '../types';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Textarea } from '@/components/ui/textarea';
+import { NativeSelect } from '@/components/ui/native-select';
 
 type ItemMap = Record<string, { rating: number | null; comment: string }>;
 
@@ -105,7 +110,7 @@ const RatingDots = ({ rating }: { rating: number | null }) => (
     {[1, 2, 3, 4, 5].map((n) => (
       <span key={n} className={`rating-dot${rating != null && n <= rating ? ' rating-dot--filled' : ''}`} />
     ))}
-    <span className="ms-1 small text-muted">{rating ?? '—'}</span>
+    <span className="ml-1 text-[length:var(--text-sm)] text-muted-foreground">{rating ?? '—'}</span>
   </span>
 );
 
@@ -133,26 +138,26 @@ export function EvaluationReadOnly({
               const v = itemMap[c.key];
               return (
                 <div key={c.key} className="eval-criterion">
-                  <div className="d-flex justify-content-between align-items-center gap-2">
-                    <span className="fw-medium">{c.label}</span>
+                  <div className="flex justify-between items-center gap-2">
+                    <span className="font-medium">{c.label}</span>
                     <RatingDots rating={v?.rating ?? null} />
                   </div>
-                  {v?.comment && <div className="text-muted small readonly-value mt-1">{v.comment}</div>}
+                  {v?.comment && <div className="text-muted-foreground text-[length:var(--text-sm)] readonly-value mt-1">{v.comment}</div>}
                 </div>
               );
             })}
           </div>
         </div>
       ))}
-      <div className="mt-3">
+      <div className="mt-4">
         {evaluation.generalAssessment && (
           <div className="mb-2">
-            <div className="text-muted small">General assessment</div>
+            <div className="text-muted-foreground text-[length:var(--text-sm)]">General assessment</div>
             <div className="readonly-value">{evaluation.generalAssessment}</div>
           </div>
         )}
         <div className="mb-2">
-          <div className="text-muted small">Final recommendation</div>
+          <div className="text-muted-foreground text-[length:var(--text-sm)]">Final recommendation</div>
           <div>
             {recLabel(evaluation.recommendation)}
             {evaluation.recommendation === 'Other' && evaluation.recommendationOther
@@ -161,11 +166,11 @@ export function EvaluationReadOnly({
           </div>
         </div>
         <div className="mb-2">
-          <div className="text-muted small">Overall rating</div>
+          <div className="text-muted-foreground text-[length:var(--text-sm)]">Overall rating</div>
           <RatingDots rating={evaluation.overallRating} />
         </div>
         {evaluation.isSubmitted && evaluation.submittedAt && (
-          <p className="text-muted small mb-0">
+          <p className="text-muted-foreground text-[length:var(--text-sm)] mb-0">
             Submitted {new Date(evaluation.submittedAt).toLocaleString()} by {evaluation.interviewerName}
           </p>
         )}
@@ -247,13 +252,11 @@ export default function EvaluationForm({
       <SectionCard
         title="Your evaluation"
         actions={
-          <div className="d-flex align-items-center gap-2">
+          <div className="flex items-center gap-2">
             {rubric && (
-              <span className="badge-pill badge-neutral small">
-                Rubric: {rubric.name}
-              </span>
+              <Badge variant="neutral">Rubric: {rubric.name}</Badge>
             )}
-            <span className="badge-pill badge-success">Submitted</span>
+            <Badge variant="success">Submitted</Badge>
           </div>
         }
       >
@@ -308,11 +311,11 @@ export default function EvaluationForm({
       className="eval-form-card"
       title="Interview evaluation"
       actions={
-        <div className="d-flex align-items-center gap-2">
+        <div className="flex items-center gap-2">
           {rubric && (
-            <span className="badge-pill badge-neutral small" title={rubric.description || undefined}>
+            <Badge variant="neutral" title={rubric.description || undefined}>
               {rubric.name}
-            </span>
+            </Badge>
           )}
           <span className={`eval-progress__count${showErrors && !allRated ? ' eval-progress__count--invalid' : ''}`}>
             Rated {ratedCount} of {totalCriteriaCount}
@@ -352,7 +355,7 @@ export default function EvaluationForm({
               >
                 <span className="eval-panel__icon">{SECTION_ICONS[section.id] || DefaultSectionIcon}</span>
                 <span className="eval-panel__titles">
-                  <span className="eval-panel__title d-block">{section.title}</span>
+                  <span className="eval-panel__title block">{section.title}</span>
                   <span className="eval-panel__hint">{section.description}</span>
                 </span>
                 <span className="eval-panel__meta">
@@ -362,7 +365,7 @@ export default function EvaluationForm({
                   <ChevronIcon open={open} />
                 </span>
               </button>
-              <Collapse in={open}>
+              {open && (
                 <div id={`eval-body-${section.id}`}>
                   <div className="eval-panel__body">
                     {section.criteria.map((c) => {
@@ -399,9 +402,8 @@ export default function EvaluationForm({
                               })}
                             </div>
                           </div>
-                          <Form.Control
-                            size="sm"
-                            className="mt-2 eval-criterion__comment"
+                          <Input
+                            className="h-[var(--control-h-sm)] text-[length:var(--text-sm)] mt-2 eval-criterion__comment"
                             placeholder="Optional notes or examples…"
                             value={v?.comment ?? ''}
                             onChange={(e) => setItem(c.key, { comment: e.target.value })}
@@ -412,7 +414,7 @@ export default function EvaluationForm({
                     })}
                   </div>
                 </div>
-              </Collapse>
+              )}
             </div>
           );
         })}
@@ -420,11 +422,10 @@ export default function EvaluationForm({
         <div className="eval-summary">
           <h4 className="eval-summary__title">Overall evaluation</h4>
 
-          <div className="mb-3">
-            <Form.Label htmlFor="eval-general">General assessment</Form.Label>
-            <Form.Control
+          <div className="mb-4">
+            <Label htmlFor="eval-general">General assessment</Label>
+            <Textarea
               id="eval-general"
-              as="textarea"
               rows={3}
               placeholder="Summary of the interview, candidate's key strengths and concerns…"
               value={generalAssessment}
@@ -433,16 +434,16 @@ export default function EvaluationForm({
             />
           </div>
 
-          <div className="row g-3 mb-3">
-            <div className="col-12 col-md-6">
-              <Form.Label htmlFor="eval-rec">
+          <div className="grid grid-cols-12 gap-4 mb-4">
+            <div className="col-span-12 md:col-span-6">
+              <Label htmlFor="eval-rec">
                 Final recommendation <span className="required-star" aria-hidden="true">*</span>
-              </Form.Label>
-              <Form.Select
+              </Label>
+              <NativeSelect
                 id="eval-rec"
                 value={recommendation}
                 onChange={(e) => setRecommendation(e.target.value)}
-                isInvalid={showErrors && recommendationMissing}
+                aria-invalid={showErrors && recommendationMissing || undefined}
               >
                 <option value="">Select a recommendation…</option>
                 {RECOMMENDATIONS.map((r) => (
@@ -450,21 +451,21 @@ export default function EvaluationForm({
                     {r.label}
                   </option>
                 ))}
-              </Form.Select>
-              <Form.Control.Feedback type="invalid">
-                Recommendation is required to submit.
-              </Form.Control.Feedback>
+              </NativeSelect>
+              {showErrors && recommendationMissing && (
+                <p className="text-[length:var(--text-sm)] text-[var(--danger-text)]">Recommendation is required to submit.</p>
+              )}
             </div>
 
-            <div className="col-12 col-md-6">
-              <Form.Label htmlFor="eval-overall">
+            <div className="col-span-12 md:col-span-6">
+              <Label htmlFor="eval-overall">
                 Overall rating <span className="required-star" aria-hidden="true">*</span>
-              </Form.Label>
-              <Form.Select
+              </Label>
+              <NativeSelect
                 id="eval-overall"
                 value={overallRating}
                 onChange={(e) => setOverallRating(e.target.value)}
-                isInvalid={showErrors && overallMissing}
+                aria-invalid={showErrors && overallMissing || undefined}
               >
                 <option value="">Select an overall rating…</option>
                 {RATING_SCALE.map((r) => (
@@ -472,28 +473,28 @@ export default function EvaluationForm({
                     {r.value} — {r.label}
                   </option>
                 ))}
-              </Form.Select>
-              <Form.Control.Feedback type="invalid">
-                Overall rating is required to submit.
-              </Form.Control.Feedback>
+              </NativeSelect>
+              {showErrors && overallMissing && (
+                <p className="text-[length:var(--text-sm)] text-[var(--danger-text)]">Overall rating is required to submit.</p>
+              )}
             </div>
 
             {recommendation === 'Other' && (
-              <div className="col-12">
-                <Form.Label htmlFor="eval-rec-other">
+              <div className="col-span-12">
+                <Label htmlFor="eval-rec-other">
                   Please specify <span className="required-star" aria-hidden="true">*</span>
-                </Form.Label>
-                <Form.Control
+                </Label>
+                <Input
                   id="eval-rec-other"
                   value={recommendationOther}
                   onChange={(e) => setRecommendationOther(e.target.value)}
                   placeholder="e.g., Hold for senior position, Consider for different team…"
-                  isInvalid={showErrors && otherMissing}
+                  aria-invalid={showErrors && otherMissing || undefined}
                   maxLength={100}
                 />
-                <Form.Control.Feedback type="invalid">
-                  Please specify the recommendation.
-                </Form.Control.Feedback>
+                {showErrors && otherMissing && (
+                  <p className="text-[length:var(--text-sm)] text-[var(--danger-text)]">Please specify the recommendation.</p>
+                )}
               </div>
             )}
           </div>
@@ -503,26 +504,26 @@ export default function EvaluationForm({
       <div className="eval-form-actions">
         <div className="eval-form-actions__hint">
           {allRated ? (
-            <span className="text-success small">All criteria rated — ready to submit.</span>
+            <span className="text-success-foreground text-[length:var(--text-sm)]">All criteria rated — ready to submit.</span>
           ) : (
-            <span className="text-muted small">
+            <span className="text-muted-foreground text-[length:var(--text-sm)]">
               {totalCriteriaCount - ratedCount} criteria left to rate before submitting.
             </span>
           )}
         </div>
         <div className="eval-form-actions__buttons">
           <Button
-            variant="outline-secondary"
+            variant="outline"
             disabled={mutation.isPending}
             onClick={() => mutation.mutate(false)}
           >
             Save draft
           </Button>
           <Button
-            variant="primary"
+ 
             disabled={mutation.isPending}
             onClick={onSubmitClick}
-          >
+            >
             Submit evaluation
           </Button>
         </div>
@@ -532,7 +533,7 @@ export default function EvaluationForm({
         show={confirmSubmit}
         title="Submit evaluation?"
         confirmLabel="Yes, submit"
-        confirmVariant="primary"
+        confirmVariant="default"
         onConfirm={() => mutation.mutate(true)}
         onCancel={() => setConfirmSubmit(false)}
         pending={mutation.isPending}

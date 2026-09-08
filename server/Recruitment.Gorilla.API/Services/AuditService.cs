@@ -2,14 +2,20 @@ using Microsoft.EntityFrameworkCore;
 using Recruitment.Gorilla.API.Data;
 using Recruitment.Gorilla.API.DTOs;
 using Recruitment.Gorilla.API.Models;
+using Recruitment.Gorilla.API.Services.Background;
 
 namespace Recruitment.Gorilla.API.Services;
 
 /// <summary>
 /// Writes and queries the append-only <see cref="AuditLog"/> ("who changed what, when"). Recording is
 /// best-effort — a failure to write an audit row is logged but never breaks the underlying operation.
+/// When <see cref="IAuditLogQueue"/> is registered, writes are buffered asynchronously.
 /// </summary>
-public class AuditService(AppDbContext db, CurrentUser currentUser, ILogger<AuditService> logger)
+public class AuditService(
+    AppDbContext db,
+    CurrentUser currentUser,
+    ILogger<AuditService> logger,
+    IAuditLogQueue? queue = null)
 {
     /// <summary>Records an action attributed to the current authenticated user.</summary>
     public Task RecordAsync(
@@ -23,7 +29,7 @@ public class AuditService(AppDbContext db, CurrentUser currentUser, ILogger<Audi
     {
         try
         {
-            db.AuditLogs.Add(new AuditLog
+            var entry = new AuditLog
             {
                 Timestamp = DateTime.UtcNow,
                 ActorUserId = actorUserId,
@@ -33,8 +39,17 @@ public class AuditService(AppDbContext db, CurrentUser currentUser, ILogger<Audi
                 EntityId = entityId,
                 Summary = summary,
                 Details = details,
-            });
-            await db.SaveChangesAsync();
+            };
+
+            if (queue != null)
+            {
+                await queue.QueueAsync(entry);
+            }
+            else
+            {
+                db.AuditLogs.Add(entry);
+                await db.SaveChangesAsync();
+            }
         }
         catch (Exception ex)
         {

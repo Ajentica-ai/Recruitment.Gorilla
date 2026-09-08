@@ -1,14 +1,18 @@
 import { useState, useMemo } from 'react';
-import { Button, Col, Form, Row, Table } from 'react-bootstrap';
 import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import { ScrollText } from 'lucide-react';
 import { getAuditLog } from '../services/api';
 import SearchableDropdown, { type DropdownOption } from '../components/SearchableSelect';
-import EmptyState from '../components/ui/EmptyState';
-import Page from '../components/ui/Page';
-import Pagination from '../components/ui/Pagination';
-import { SkeletonRows } from '../components/ui/Loading';
+import EmptyState from '../components/common/EmptyState';
+import Page from '../components/common/Page';
+import Pagination from '../components/common/Pagination';
+import { SkeletonRows } from '../components/common/Loading';
 import type { AuditQuery } from '../types';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import { DatePicker } from '@/components/ui/date-picker';
+import { Button } from '@/components/ui/button';
+import { Badge, type BadgeVariant } from '@/components/ui/badge';
 
 const ENTITY_TYPES = ['Candidate', 'Interview', 'Role', 'Skill', 'InterviewType', 'User'];
 const PAGE_SIZE = 50;
@@ -22,13 +26,13 @@ const fmt = (iso: string) =>
  * they match every other badge in the app and carry a glyph, since the colour
  * is the only thing distinguishing a create from a delete at a glance.
  */
-const actionBadge = (action: string): string => {
+const actionBadge = (action: string): BadgeVariant => {
   if (action.startsWith('Auth')) {
-    return action.includes('Failed') ? 'badge-pill badge-danger' : 'badge-pill badge-neutral';
+    return action.includes('Failed') ? 'danger' : 'neutral';
   }
-  if (action.endsWith('.Deleted')) return 'badge-pill badge-warning';
-  if (action.endsWith('.Created')) return 'badge-pill badge-success';
-  return 'badge-pill badge-info';
+  if (action.endsWith('.Deleted')) return 'warning';
+  if (action.endsWith('.Created')) return 'success';
+  return 'info';
 };
 
 export default function AuditLogPage() {
@@ -78,10 +82,10 @@ export default function AuditLogPage() {
           "Audit". A title and a caption over four labelled inputs was just
           height. */}
       <div className="pulse-card">
-        <Form onSubmit={applyFilters}>
-          <Row className="g-3 align-items-end">
-            <Col xs={12} md={6} lg={3}>
-              <Form.Label htmlFor="audit-entity">Entity type</Form.Label>
+        <form onSubmit={applyFilters}>
+          <div className="grid grid-cols-12 gap-6 items-end">
+            <div className="col-span-12 md:col-span-6 lg:col-span-2">
+              <Label htmlFor="audit-entity">Entity type</Label>
               <SearchableDropdown<string>
                 id="audit-entity"
                 options={entityOptions}
@@ -91,25 +95,25 @@ export default function AuditLogPage() {
                 emptyMessage="No entity type found"
                 clearable
               />
-            </Col>
-            <Col xs={12} md={6} lg={3}>
-              <Form.Label htmlFor="audit-action">Action contains</Form.Label>
-              <Form.Control id="audit-action" value={action} onChange={(e) => setAction(e.target.value)} placeholder="e.g. Deleted, Auth" />
-            </Col>
-            <Col xs={12} sm={6} lg={2}>
-              <Form.Label htmlFor="audit-from">From</Form.Label>
-              <Form.Control id="audit-from" type="datetime-local" value={from} onChange={(e) => setFrom(e.target.value)} />
-            </Col>
-            <Col xs={12} sm={6} lg={2}>
-              <Form.Label htmlFor="audit-to">To</Form.Label>
-              <Form.Control id="audit-to" type="datetime-local" value={to} onChange={(e) => setTo(e.target.value)} />
-            </Col>
-            <Col xs={12} lg={2} className="d-flex gap-2">
-              <Button type="submit" className="flex-grow-1">Filter</Button>
-              <Button type="button" variant="outline-secondary" onClick={reset}>Reset</Button>
-            </Col>
-          </Row>
-        </Form>
+            </div>
+            <div className="col-span-12 md:col-span-6 lg:col-span-2">
+              <Label htmlFor="audit-action">Action contains</Label>
+              <Input id="audit-action" value={action} onChange={(e) => setAction(e.target.value)} placeholder="e.g. Deleted, Auth" />
+            </div>
+            <div className="col-span-12 sm:col-span-6 lg:col-span-3">
+              <Label htmlFor="audit-from">From</Label>
+              <DatePicker id="audit-from" withTime value={from} onChange={setFrom} />
+            </div>
+            <div className="col-span-12 sm:col-span-6 lg:col-span-3">
+              <Label htmlFor="audit-to">To</Label>
+              <DatePicker id="audit-to" withTime value={to} onChange={setTo} />
+            </div>
+            <div className="col-span-12 lg:col-span-2 flex gap-2">
+              <Button type="submit" className="grow">Filter</Button>
+              <Button type="button" variant="outline" onClick={reset}>Reset</Button>
+            </div>
+          </div>
+        </form>
       </div>
 
       {isLoading ? (
@@ -131,7 +135,7 @@ export default function AuditLogPage() {
           }
           action={
             hasFilters ? (
-              <Button variant="outline-secondary" onClick={reset}>
+              <Button variant="outline" onClick={reset}>
                 Reset filters
               </Button>
             ) : undefined
@@ -149,7 +153,7 @@ export default function AuditLogPage() {
           )}
 
           <div className="table-wrap">
-            <Table hover className="table-cards align-middle">
+            <table className="table table-cards align-middle">
               <thead>
                 <tr>
                   <th>Time</th>
@@ -162,19 +166,19 @@ export default function AuditLogPage() {
               <tbody>
                 {data!.items.map((e) => (
                   <tr key={e.id}>
-                    <td data-label="Time" className="text-nowrap table-muted">{fmt(e.timestamp)}</td>
-                    <td data-label="Actor" className="fw-semibold">{e.actorName}</td>
+                    <td data-label="Time" className="whitespace-nowrap table-muted">{fmt(e.timestamp)}</td>
+                    <td data-label="Actor" className="font-semibold">{e.actorName}</td>
                     <td data-label="Action">
-                      <span className={actionBadge(e.action)}>{e.action}</span>
+                      <Badge variant={actionBadge(e.action)}>{e.action}</Badge>
                     </td>
-                    <td data-label="Entity" className="text-nowrap col-mono">
+                    <td data-label="Entity" className="whitespace-nowrap col-mono">
                       {e.entityType ? `${e.entityType}${e.entityId != null ? ` #${e.entityId}` : ''}` : '—'}
                     </td>
                     <td data-label="Summary">{e.summary ?? '—'}</td>
                   </tr>
                 ))}
               </tbody>
-            </Table>
+            </table>
           </div>
 
           <Pagination

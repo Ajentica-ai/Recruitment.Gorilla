@@ -1,11 +1,16 @@
 import { useState } from 'react';
 import { Navigate, useLocation, useNavigate } from 'react-router-dom';
-import { Button, Form, Spinner } from 'react-bootstrap';
 import { isAxiosError } from 'axios';
-import { useAuth } from '../auth/AuthContext';
-import PasswordInput from '../components/ui/PasswordInput';
-import BrandLogo from '../components/BrandLogo';
-import ThemeMenu from '../components/ThemeMenu';
+
+import BrandLogo from '@/components/BrandLogo';
+import ThemeMenu from '@/components/ThemeMenu';
+import PasswordInput from '@/components/common/PasswordInput';
+import { Alert } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
+import { Field, FieldStack } from '@/components/ui/field';
+import { Input } from '@/components/ui/input';
+import { Spinner } from '@/components/ui/spinner';
+import { useAuth } from '@/auth/AuthContext';
 
 interface LocationState {
   from?: string;
@@ -37,7 +42,7 @@ export default function LoginPage() {
       setError(
         isAxiosError(err) && err.response?.status === 401
           ? 'Invalid email or password.'
-          : 'Unable to sign in. Please try again.'
+          : 'Unable to sign in. Please try again.',
       );
     } finally {
       setBusy(false);
@@ -45,57 +50,57 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="login-shell">
-      <div className="login-card position-relative">
-        <ThemeMenu className="position-absolute top-0 end-0 mt-3 me-3" />
-        <BrandLogo layout="stacked" size={72} className="login-logo" title="Recruitment Gorilla" />
-        <h1 className="login-title">Sign in</h1>
+    <div className="grid min-h-dvh place-items-center content-center bg-background p-6">
+      {/* The one card in the app that floats on an otherwise empty page, so it
+          takes dialog-level elevation rather than the resting card shadow. */}
+      <div className="relative w-full max-w-[26rem] rounded-[var(--radius-2xl)] border border-border bg-card px-8 py-10 shadow-[var(--shadow-lg)]">
+        <ThemeMenu className="absolute top-3 right-3" />
 
-        <Form onSubmit={handleSubmit}>
-          <div className="form-stack">
-            {error && (
-              <div className="alert-danger-soft" role="alert">
-                {error}
-              </div>
-            )}
-            <Form.Group>
-              <Form.Label htmlFor="login-email">
-                Email <span className="required-star" aria-hidden="true">*</span>
-              </Form.Label>
-              <Form.Control
-                id="login-email"
-                autoFocus
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                autoComplete="username"
-                required
-              />
-            </Form.Group>
-            <Form.Group>
-              <Form.Label htmlFor="login-password">
-                Password <span className="required-star" aria-hidden="true">*</span>
-              </Form.Label>
-              <PasswordInput
-                id="login-password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                autoComplete="off"
-                required
-              />
-            </Form.Group>
-            <Button type="submit" className="w-100" disabled={busy}>
+        <BrandLogo layout="stacked" size={68} className="mb-6 w-full justify-center" title="Recruitment Gorilla" />
+        <h1 className="mb-6 text-center text-[length:var(--text-2xl)] font-bold tracking-[var(--tracking-display)]">
+          Sign in
+        </h1>
+
+        <form onSubmit={handleSubmit}>
+          <FieldStack>
+            {error && <Alert variant="danger">{error}</Alert>}
+
+            <Field label="Email" required>
+              {(field) => (
+                <Input
+                  {...field}
+                  autoFocus
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  autoComplete="username"
+                />
+              )}
+            </Field>
+
+            <Field label="Password" required>
+              {(field) => (
+                <PasswordInput
+                  {...field}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  autoComplete="current-password"
+                />
+              )}
+            </Field>
+
+            <Button type="submit" className="w-full" disabled={busy}>
               {busy ? (
                 <>
-                  <Spinner animation="border" size="sm" className="me-2" aria-hidden="true" />
+                  <Spinner />
                   Signing in…
                 </>
               ) : (
                 'Sign in'
               )}
             </Button>
-          </div>
-        </Form>
+          </FieldStack>
+        </form>
       </div>
     </div>
   );

@@ -1,8 +1,9 @@
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { Bell, CalendarClock, CheckCircle2, ClipboardCheck } from 'lucide-react';
+import { Bell, CalendarClock, CheckCircle2, ClipboardCheck, UploadCloud, Users } from 'lucide-react';
 import { getMyInterviews, getNotifications } from '../../services/api';
 import { useAuth } from '../../auth/AuthContext';
+import { Button } from '@/components/ui/button';
 
 const greeting = (): string => {
   const h = new Date().getHours();
@@ -12,27 +13,38 @@ const greeting = (): string => {
 };
 
 const today = new Date().toLocaleDateString(undefined, {
-  weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
+  weekday: 'long',
+  day: 'numeric',
+  month: 'long',
+  year: 'numeric',
 });
 
 /** A pending-task chip; links somewhere when `to` is set. */
-function TaskChip({ to, children, tone = 'default' }: { to?: string; children: React.ReactNode; tone?: 'default' | 'accent' }) {
+function TaskChip({
+  to,
+  children,
+  tone = 'default',
+}: {
+  to?: string;
+  children: React.ReactNode;
+  tone?: 'default' | 'accent';
+}) {
   const cls = `hero-chip${tone === 'accent' ? ' hero-chip--accent' : ''}`;
-  return to ? <Link to={to} className={cls}>{children}</Link> : <span className={cls}>{children}</span>;
+  return to ? (
+    <Link to={to} className={cls}>
+      {children}
+    </Link>
+  ) : (
+    <span className={cls}>{children}</span>
+  );
 }
 
 /**
- * Dashboard welcome kicker: greeting + user + date, and "pending task" chips
- * built from the caller's existing queries (no new endpoint).
- *
- * The chips are strictly *the signed-in user's* outstanding work — evaluations
- * they owe, their next interview, their unread notifications. A chip counting
- * candidates in process was removed: it is a pipeline statistic, not a task,
- * it is already the "In process" KPI card directly below, and it made the row
- * read as a mix of "things you must do" and "things that are true".
+ * Dashboard welcome kicker: greeting + user + date, pending task chips,
+ * and quick-action shortcuts for candidate intake and review.
  */
 export default function DashboardHero() {
-  const { user } = useAuth();
+  const { user, canWriteCandidates } = useAuth();
 
   const { data: interviews } = useQuery({ queryKey: ['my-interviews'], queryFn: getMyInterviews });
   const { data: notifications } = useQuery({ queryKey: ['notifications'], queryFn: getNotifications });
@@ -46,7 +58,10 @@ export default function DashboardHero() {
 
   const nextTime = next
     ? new Date(next.scheduledAt).toLocaleString(undefined, {
-        weekday: 'short', hour: '2-digit', minute: '2-digit', timeZoneName: 'short',
+        weekday: 'short',
+        hour: '2-digit',
+        minute: '2-digit',
+        timeZoneName: 'short',
       })
     : null;
 
@@ -54,12 +69,38 @@ export default function DashboardHero() {
 
   return (
     <div className="dashboard-hero-kicker animate-fade-in-up">
-      <div className="dashboard-hero-kicker__eyebrow">{today}</div>
-      <h2 className="dashboard-hero-kicker__greeting">{greeting()}, {user?.name ?? 'there'}</h2>
-      <p className="dashboard-hero-kicker__lede">
-        {nothingPending ? 'Nothing needs your attention right now.' : "Here's what needs your attention."}
-      </p>
-      <div className="hero-chip-row">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <div className="dashboard-hero-kicker__eyebrow">{today}</div>
+          <h2 className="dashboard-hero-kicker__greeting">
+            {greeting()}, {user?.name ?? 'there'}
+          </h2>
+          <p className="dashboard-hero-kicker__lede mb-0">
+            {nothingPending
+              ? 'All caught up — no urgent tasks require your attention.'
+              : "Here is your recruitment overview for today."}
+          </p>
+        </div>
+
+        {canWriteCandidates && (
+          <div className="flex items-center gap-2 shrink-0">
+            <Button asChild size="sm" variant="outline" className="gap-1.5 shadow-xs">
+              <Link to="/candidates">
+                <Users size={14} />
+                <span>Candidates</span>
+              </Link>
+            </Button>
+            <Button asChild size="sm" className="gap-1.5 shadow-xs">
+              <Link to="/upload">
+                <UploadCloud size={14} />
+                <span>Upload CVs</span>
+              </Link>
+            </Button>
+          </div>
+        )}
+      </div>
+
+      <div className="hero-chip-row mt-3.5">
         {pending.length > 0 && (
           <TaskChip to={`/interviews/${pending[0].id}`} tone="accent">
             <ClipboardCheck size={14} strokeWidth={1.75} aria-hidden="true" />

@@ -1,5 +1,21 @@
 namespace Recruitment.Gorilla.API.DTOs;
 
+public record CandidateEducationDto(
+    int Id,
+    string Degree,
+    string Institution,
+    string? GraduationYear,
+    string? Cgpa
+);
+
+public record CandidateExperienceDto(
+    int Id,
+    string JobTitle,
+    string Company,
+    string? Duration,
+    string? Description
+);
+
 public record CVDraftDto(
     string? FullName,
     string? Email,
@@ -12,7 +28,17 @@ public record CVDraftDto(
     string OriginalFileName,
     string StoredFileName,
     string FileType,
-    long FileSizeBytes
+    long FileSizeBytes,
+    int? Id = null,
+    string? BatchId = null,
+    string? BatchName = null,
+    string? Location = null,
+    string? LeetCodeUrl = null,
+    string? CodeforcesUrl = null,
+    string? HackerRankUrl = null,
+    string? GitLabUrl = null,
+    List<CandidateEducationDto>? Educations = null,
+    List<CandidateExperienceDto>? Experiences = null
 );
 
 public record CreateCandidateDto(
@@ -45,7 +71,14 @@ public record CreateCandidateDto(
     bool AllowDuplicate = false,
     // Where the candidate came from. Optional — appended so existing positional callers are unaffected.
     int? SourceOptionId = null,
-    string? SourceDetail = null
+    string? SourceDetail = null,
+    string? Location = null,
+    string? LeetCodeUrl = null,
+    string? CodeforcesUrl = null,
+    string? HackerRankUrl = null,
+    string? GitLabUrl = null,
+    List<CandidateEducationDto>? Educations = null,
+    List<CandidateExperienceDto>? Experiences = null
 );
 
 public record DuplicateCandidateDto(
@@ -78,7 +111,14 @@ public record UpdateCandidateDto(
     int? RoleAppliedOptionId,
     List<int>? SkillOptionIds,
     int? SourceOptionId = null,
-    string? SourceDetail = null
+    string? SourceDetail = null,
+    string? Location = null,
+    string? LeetCodeUrl = null,
+    string? CodeforcesUrl = null,
+    string? HackerRankUrl = null,
+    string? GitLabUrl = null,
+    List<CandidateEducationDto>? Educations = null,
+    List<CandidateExperienceDto>? Experiences = null
 );
 
 public record StatusChangeDto(
@@ -110,7 +150,8 @@ public record CandidateListItemDto(
     string CurrentStatus,
     DateTime CreatedAt,
     string? Source = null,
-    DateTime? UpdatedAt = null
+    DateTime? UpdatedAt = null,
+    string? BatchName = null
 );
 
 /// <summary>
@@ -134,7 +175,8 @@ public record CandidateListQuery(
     string? Sort = null,
     string? Dir = null,
     int Page = 1,
-    int PageSize = 20
+    int PageSize = 20,
+    string? Batch = null
 );
 
 public record CandidateDetailDto(
@@ -166,7 +208,14 @@ public record CandidateDetailDto(
     bool RoleClosed,         // true when RoleEndDate has passed → edits/status locked
     int? SourceOptionId = null,
     string? Source = null,   // the source option's name, for display
-    string? SourceDetail = null
+    string? SourceDetail = null,
+    string? Location = null,
+    string? LeetCodeUrl = null,
+    string? CodeforcesUrl = null,
+    string? HackerRankUrl = null,
+    string? GitLabUrl = null,
+    List<CandidateEducationDto>? Educations = null,
+    List<CandidateExperienceDto>? Experiences = null
 );
 
 public record CVFileDto(
@@ -223,7 +272,8 @@ public record RoleAppliedOptionDto(
     string Title,         // computed: "{Name} — {CreatedAt:dd MMM yyyy}"
     List<RecruiterDto> Recruiters,
     int? EvaluationRubricId = null,
-    string? EvaluationRubricName = null);
+    string? EvaluationRubricName = null,
+    int CandidateCount = 0);
 
 public record UpsertRoleAppliedOptionDto(
     string Name,

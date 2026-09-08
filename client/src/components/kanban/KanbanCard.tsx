@@ -1,9 +1,11 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Clock, AlertTriangle, ChevronRight, User } from 'lucide-react';
-import { initials } from '../../utils/initials';
-import { calculateDaysInStage, formatStageAge, isStageStagnant } from '../../utils/stagnantStage';
-import type { CandidateListItem } from '../../types';
+import { AlertTriangle, ChevronRight } from 'lucide-react';
+
+import Avatar from '@/components/common/Avatar';
+import { calculateDaysInStage, formatStageAge, isStageStagnant } from '@/utils/stagnantStage';
+import { cn } from '@/lib/utils';
+import type { CandidateListItem } from '@/types';
 
 export interface KanbanCardProps {
   candidate: CandidateListItem;
@@ -11,13 +13,30 @@ export interface KanbanCardProps {
   canWrite: boolean;
 }
 
+/**
+ * A card on the pipeline board.
+ *
+ * Compact on purpose. The version this replaces stacked four rows — a name
+ * row, a role row, a source row and a footer carrying a time badge and a full
+ * "Advance" button — which made a card 100px tall and fitted four per column
+ * on a laptop. A board's whole value is seeing the shape of the pipeline at
+ * once, and it cannot do that if each column shows four of eleven cards.
+ *
+ * So: identity and role share the avatar's two lines, the metadata is one
+ * muted line, and the advance control appears on hover. It is still keyboard
+ * reachable — `focus-within` reveals it too — but it is not painted 40 times
+ * on a board where the primary interaction is dragging.
+ */
 export default function KanbanCard({ candidate, onAdvanceClick, canWrite }: KanbanCardProps) {
   const stageDate = candidate.updatedAt || candidate.createdAt;
   const daysInStage = calculateDaysInStage(stageDate);
   const isStagnant = isStageStagnant(stageDate, candidate.currentStatus);
 
   const handleDragStart = (e: React.DragEvent<HTMLDivElement>) => {
-    e.dataTransfer.setData('text/plain', JSON.stringify({ candidateId: candidate.id, currentStatus: candidate.currentStatus }));
+    e.dataTransfer.setData(
+      'text/plain',
+      JSON.stringify({ candidateId: candidate.id, currentStatus: candidate.currentStatus }),
+    );
     e.dataTransfer.effectAllowed = 'move';
     e.currentTarget.classList.add('kanban-card--dragging');
   };
@@ -26,68 +45,68 @@ export default function KanbanCard({ candidate, onAdvanceClick, canWrite }: Kanb
     e.currentTarget.classList.remove('kanban-card--dragging');
   };
 
+  const meta = [candidate.appliedRole, candidate.source, candidate.batchName].filter(Boolean).join(' · ');
+
   return (
     <div
-      className={`kanban-card ${isStagnant ? 'kanban-card--stagnant' : ''}`}
+      className={cn('kanban-card group', isStagnant && 'kanban-card--stagnant')}
       draggable={canWrite}
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
       data-candidate-id={candidate.id}
     >
-      <div className="kanban-card__header">
-        <div className="d-flex align-items-center gap-2 min-w-0">
-          <span className="avatar avatar--sm flex-shrink-0" aria-hidden="true">
-            {initials(candidate.fullName) || <User size={12} />}
-          </span>
+      <div className="flex min-w-0 items-start gap-2">
+        <Avatar name={candidate.fullName} email={candidate.email} size="sm" className="mt-px" />
+        <div className="flex min-w-0 flex-1 flex-col">
           <Link
             to={`/candidates/${candidate.id}`}
-            className="kanban-card__name text-truncate"
+            className="kanban-card__name truncate"
             title={candidate.fullName}
           >
             {candidate.fullName}
           </Link>
-        </div>
-      </div>
-
-      <div className="kanban-card__meta">
-        {candidate.appliedRole && (
-          <span className="kanban-card__role text-truncate" title={candidate.appliedRole}>
-            {candidate.appliedRole}
-          </span>
-        )}
-        {candidate.source && (
-          <span className="kanban-card__source text-truncate" title={`Source: ${candidate.source}`}>
-            {candidate.source}
-          </span>
-        )}
-      </div>
-
-      <div className="kanban-card__footer">
-        <div className="kanban-card__age">
-          {isStagnant ? (
-            <span
-              className="kanban-badge kanban-badge--stagnant"
-              title={`Bottleneck Warning: Candidate has been in ${candidate.currentStatus} for ${daysInStage} days (> 5 business days)`}
-            >
-              <AlertTriangle size={12} className="me-1 flex-shrink-0" />
-              {formatStageAge(daysInStage)} Stagnant
-            </span>
-          ) : (
-            <span className="kanban-badge kanban-badge--neutral" title={`Time in stage: ${formatStageAge(daysInStage)}`}>
-              <Clock size={11} className="me-1 flex-shrink-0" />
-              {formatStageAge(daysInStage)}
+          {meta && (
+            <span className="truncate text-[length:var(--text-xs)] text-muted-foreground" title={meta}>
+              {meta}
             </span>
           )}
         </div>
+      </div>
+
+      <div className="flex items-center justify-between gap-2">
+        {isStagnant ? (
+          <span
+            className="kanban-badge kanban-badge--stagnant"
+            title={`Bottleneck: ${daysInStage} days in ${candidate.currentStatus} (over 5 business days)`}
+          >
+            <AlertTriangle size={11} className="shrink-0" aria-hidden="true" />
+            {formatStageAge(daysInStage)} Stagnant
+          </span>
+        ) : (
+          <span
+            className="text-[length:var(--text-2xs)] text-muted-foreground tabular-nums"
+            title={`Time in stage: ${formatStageAge(daysInStage)}`}
+          >
+            {formatStageAge(daysInStage)} in stage
+          </span>
+        )}
 
         {canWrite && (
           <button
             type="button"
-            className="btn btn-sm kanban-card__advance-btn"
-            title="Advance candidate to next stage"
+            className={cn(
+              'inline-flex shrink-0 items-center gap-0.5 rounded-[var(--radius-sm)] px-1.5 py-0.5',
+              'text-[length:var(--text-2xs)] font-semibold text-brand',
+              'opacity-0 transition-opacity duration-[var(--dur-fast)]',
+              'group-hover:opacity-100 focus-visible:opacity-100',
+              'hover:bg-brand-muted',
+              'focus-visible:ring-[3px] focus-visible:ring-[var(--focus-ring)] outline-none',
+            )}
+            title="Advance candidate to the next stage"
             onClick={() => onAdvanceClick(candidate)}
           >
-            Advance <ChevronRight size={13} />
+            Advance
+            <ChevronRight size={12} aria-hidden="true" />
           </button>
         )}
       </div>

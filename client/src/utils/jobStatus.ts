@@ -1,3 +1,5 @@
+import type { BadgeVariant } from '@/components/ui/badge';
+
 /**
  * The single lifecycle state of a job opening.
  *
@@ -37,12 +39,12 @@ export function jobStatus(job: JobStatusInput, now: number = Date.now()): JobSta
   return 'open';
 }
 
-/** Badge class + label for a status. Classes are the .badge-pill set in index.css. */
-export const JOB_STATUS_BADGE: Record<JobStatus, { className: string; label: string }> = {
-  open: { className: 'badge-pill badge-success', label: 'Open' },
-  'closing-soon': { className: 'badge-pill badge-warning', label: 'Closing soon' },
-  closed: { className: 'badge-pill badge-danger', label: 'Closed' },
-  inactive: { className: 'badge-pill badge-neutral', label: 'Inactive' },
+/** Badge tone + label for a status. */
+export const JOB_STATUS_BADGE: Record<JobStatus, { variant: BadgeVariant; label: string }> = {
+  open: { variant: 'success', label: 'Open' },
+  'closing-soon': { variant: 'warning', label: 'Closing soon' },
+  closed: { variant: 'danger', label: 'Closed' },
+  inactive: { variant: 'neutral', label: 'Inactive' },
 };
 
 /**

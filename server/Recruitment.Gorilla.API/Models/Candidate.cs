@@ -14,6 +14,11 @@ public class Candidate
     public string? LinkedInUrl { get; set; }
     public string? GithubUrl { get; set; }
     public string? PortfolioUrl { get; set; }
+    public string? Location { get; set; }
+    public string? LeetCodeUrl { get; set; }
+    public string? CodeforcesUrl { get; set; }
+    public string? HackerRankUrl { get; set; }
+    public string? GitLabUrl { get; set; }
     public string? AppliedRole { get; set; }
     public int? RoleAppliedOptionId { get; set; }
     public RoleAppliedOption? RoleAppliedOption { get; set; }
@@ -30,6 +35,9 @@ public class Candidate
     public string? ReferenceEmployeeId { get; set; }
     public string CurrentStatus { get; set; } = "Uploaded";
 
+    public string? BatchId { get; set; }
+    public string? BatchName { get; set; }
+
     /// <summary>The user who owns this candidate (the creator). Recruiters only see their own.</summary>
     public int? OwnerUserId { get; set; }
     public User? OwnerUser { get; set; }
@@ -42,4 +50,6 @@ public class Candidate
     public ICollection<CandidateSkill> CandidateSkills { get; set; } = [];
     public ICollection<Interview> Interviews { get; set; } = [];
     public ICollection<Offer> Offers { get; set; } = [];
+    public ICollection<CandidateEducation> Educations { get; set; } = [];
+    public ICollection<CandidateExperience> Experiences { get; set; } = [];
 }

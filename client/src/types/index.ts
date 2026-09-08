@@ -1,4 +1,21 @@
+export interface CandidateEducation {
+  id?: number;
+  degree: string;
+  institution: string;
+  graduationYear?: string | null;
+  cgpa?: string | null;
+}
+
+export interface CandidateExperience {
+  id?: number;
+  jobTitle: string;
+  company: string;
+  duration?: string | null;
+  description?: string | null;
+}
+
 export interface CVDraft {
+  id?: number;
   fullName: string | null;
   email: string | null;
   phone: string | null;
@@ -11,6 +28,167 @@ export interface CVDraft {
   storedFileName: string;
   fileType: string;
   fileSizeBytes: number;
+  batchId?: string;
+  batchName?: string;
+  location?: string | null;
+  leetCodeUrl?: string | null;
+  codeforcesUrl?: string | null;
+  hackerRankUrl?: string | null;
+  gitLabUrl?: string | null;
+  educations?: CandidateEducation[] | null;
+  experiences?: CandidateExperience[] | null;
+}
+
+export interface CandidateDraft {
+  id: number;
+  fullName: string | null;
+  email: string | null;
+  phone: string | null;
+  currentTitle: string | null;
+  relevantExperience: string | null;
+  skills: string | null;
+  summary: string | null;
+  linkedInUrl: string | null;
+  githubUrl: string | null;
+  portfolioUrl: string | null;
+  roleAppliedOptionId: number | null;
+  roleAppliedOptionName: string | null;
+  sourceOptionId: number | null;
+  sourceOptionName: string | null;
+  sourceDetail: string | null;
+  originalFileName: string;
+  storedFileName: string;
+  fileType: string;
+  fileSizeBytes: number;
+  status: 'Pending' | 'Approved' | 'Discarded' | string;
+  batchId: string | null;
+  batchName: string | null;
+  uploadedByUserId: number | null;
+  uploadedByUserName: string | null;
+  createdAt: string;
+  updatedAt: string;
+  location?: string | null;
+  leetCodeUrl?: string | null;
+  codeforcesUrl?: string | null;
+  hackerRankUrl?: string | null;
+  gitLabUrl?: string | null;
+  educations?: CandidateEducation[] | null;
+  experiences?: CandidateExperience[] | null;
+}
+
+export interface CandidateDraftListItem {
+  id: number;
+  fullName: string | null;
+  email: string | null;
+  phone: string | null;
+  currentTitle: string | null;
+  relevantExperience: string | null;
+  skills: string | null;
+  roleAppliedOptionId: number | null;
+  roleAppliedOptionName: string | null;
+  originalFileName: string;
+  storedFileName: string;
+  fileType: string;
+  fileSizeBytes: number;
+  status: 'Pending' | 'Approved' | 'Discarded' | string;
+  batchId: string | null;
+  batchName: string | null;
+  createdAt: string;
+  location?: string | null;
+}
+
+export interface UpdateCandidateDraftRequest {
+  fullName?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  currentTitle?: string | null;
+  relevantExperience?: string | null;
+  skills?: string | null;
+  summary?: string | null;
+  linkedInUrl?: string | null;
+  githubUrl?: string | null;
+  portfolioUrl?: string | null;
+  roleAppliedOptionId?: number | null;
+  sourceOptionId?: number | null;
+  sourceDetail?: string | null;
+  location?: string | null;
+  leetCodeUrl?: string | null;
+  codeforcesUrl?: string | null;
+  hackerRankUrl?: string | null;
+  gitLabUrl?: string | null;
+  educations?: CandidateEducation[] | null;
+  experiences?: CandidateExperience[] | null;
+}
+
+export interface ApproveCandidateDraftRequest {
+  fullName: string;
+  email: string;
+  phone?: string | null;
+  currentTitle?: string | null;
+  relevantExperience?: string;
+  skills?: string | null;
+  summary?: string | null;
+  linkedInUrl?: string | null;
+  githubUrl?: string | null;
+  portfolioUrl?: string | null;
+  roleAppliedOptionId: number;
+  sourceOptionId?: number | null;
+  sourceDetail?: string | null;
+  skillOptionIds?: number[];
+  isReferred?: boolean;
+  referenceName?: string | null;
+  referenceEmail?: string | null;
+  referenceEmployeeId?: string | null;
+  location?: string | null;
+  leetCodeUrl?: string | null;
+  codeforcesUrl?: string | null;
+  hackerRankUrl?: string | null;
+  gitLabUrl?: string | null;
+  educations?: CandidateEducation[] | null;
+  experiences?: CandidateExperience[] | null;
+}
+
+export interface BulkApproveDraftsRequest {
+  draftIds: number[];
+  defaultRoleAppliedOptionId?: number;
+  defaultSourceOptionId?: number;
+  defaultRelevantExperience?: string;
+}
+
+export interface BulkDiscardDraftsRequest {
+  draftIds: number[];
+}
+
+export interface DraftBatchSummary {
+  batchId: string;
+  batchName: string;
+  totalDrafts: number;
+  pendingDrafts: number;
+  approvedDrafts: number;
+  discardedDrafts: number;
+  createdAt: string;
+}
+
+export interface DraftsFilterParams {
+  status?: string;
+  batchId?: string;
+  roleId?: number;
+  search?: string;
+  page?: number;
+  pageSize?: number;
+  cursor?: number;
+}
+
+export interface PagedDraftsResult {
+  items: CandidateDraftListItem[];
+  totalCount: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+  totalPending: number;
+  totalApproved: number;
+  totalDiscarded: number;
+  nextCursor: number | null;
 }
 
 export interface CreateCandidatePayload {
@@ -40,6 +218,13 @@ export interface CreateCandidatePayload {
   allowDuplicate?: boolean;
   sourceOptionId: number | null;
   sourceDetail: string | null;
+  location?: string | null;
+  leetCodeUrl?: string | null;
+  codeforcesUrl?: string | null;
+  hackerRankUrl?: string | null;
+  gitLabUrl?: string | null;
+  educations?: CandidateEducation[] | null;
+  experiences?: CandidateExperience[] | null;
 }
 
 export interface DuplicateCandidate {
@@ -65,8 +250,15 @@ export interface UpdateCandidatePayload {
   referenceEmployeeId: string | null;
   roleAppliedOptionId: number | null;
   skillOptionIds: number[];
-  sourceOptionId: number | null;
-  sourceDetail: string | null;
+  sourceOptionId?: number | null;
+  sourceDetail?: string | null;
+  location?: string | null;
+  leetCodeUrl?: string | null;
+  codeforcesUrl?: string | null;
+  hackerRankUrl?: string | null;
+  gitLabUrl?: string | null;
+  educations?: CandidateEducation[] | null;
+  experiences?: CandidateExperience[] | null;
 }
 
 export interface CandidateSourceOption {
@@ -91,6 +283,7 @@ export interface RoleAppliedOption {
   recruiters: { userId: number; name: string }[];
   evaluationRubricId?: number | null;
   evaluationRubricName?: string | null;
+  candidateCount?: number;
 }
 
 export interface SkillOption {
@@ -151,6 +344,7 @@ export interface CandidateListItem {
   createdAt: string;
   source: string | null;
   updatedAt?: string;
+  batchName?: string | null;
 }
 
 export interface CVFileInfo {
@@ -221,6 +415,13 @@ export interface CandidateDetail {
   sourceOptionId: number | null;
   source: string | null;
   sourceDetail: string | null;
+  location?: string | null;
+  leetCodeUrl?: string | null;
+  codeforcesUrl?: string | null;
+  hackerRankUrl?: string | null;
+  gitLabUrl?: string | null;
+  educations?: CandidateEducation[] | null;
+  experiences?: CandidateExperience[] | null;
 }
 
 export interface PagedResult<T> {
@@ -627,4 +828,76 @@ export interface UpsertEvaluationRubricPayload {
   isActive: boolean;
   criteria: UpsertRubricCriterionPayload[];
 }
+
+// ----- Recruiting Operational Analytics -----
+export interface AnalyticsFilterParams {
+  preset?: string;
+  from?: string;
+  to?: string;
+  roleId?: number;
+}
+
+export interface TimeToHireMetrics {
+  averageDays: number;
+  medianDays: number;
+  fastestDays: number;
+  longestDays: number;
+  totalHires: number;
+  changeVsPreviousPeriodPercent: number | null;
+}
+
+export interface StageVelocity {
+  stageName: string;
+  sortOrder: number;
+  averageDays: number;
+  medianDays: number;
+  candidatesCount: number;
+}
+
+export interface FunnelStage {
+  stageKey: string;
+  stageName: string;
+  stepNumber: number;
+  totalEntered: number;
+  conversionFromStartPercent: number;
+  conversionFromPreviousPercent: number;
+  dropoffCount: number;
+}
+
+export interface SourcePerformance {
+  sourceId: number | null;
+  sourceName: string;
+  totalApplicants: number;
+  screenedCount: number;
+  interviewedCount: number;
+  offeredCount: number;
+  hiredCount: number;
+  conversionToHirePercent: number;
+  shareOfTotalHiresPercent: number;
+}
+
+export interface RecruiterWorkload {
+  recruiterUserId: number;
+  recruiterName: string;
+  activeCandidates: number;
+  totalAssigned: number;
+  transitionsLogged: number;
+  interviewsParticipated: number;
+  hiresMade: number;
+}
+
+export interface RecruitingAnalyticsSummary {
+  timeToHire: TimeToHireMetrics;
+  averagePipelineDays: number;
+  overallFunnelConversionRate: number;
+  totalCandidatesInPeriod: number;
+  activeCandidates: number;
+  funnelStages: FunnelStage[];
+  stageVelocities: StageVelocity[];
+  sourcingChannels: SourcePerformance[];
+  recruiterWorkloads: RecruiterWorkload[];
+  periodStart: string;
+  periodEnd: string;
+}
+
 

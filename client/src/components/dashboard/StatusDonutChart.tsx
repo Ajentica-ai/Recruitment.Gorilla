@@ -22,11 +22,11 @@ export default function StatusDonutChart({ data }: { data: StatusCount[] }) {
   const total = useMemo(() => slices.reduce((sum, s) => sum + s.count, 0), [slices]);
 
   if (slices.length === 0) {
-    return <p className="text-muted mb-0">No candidates yet.</p>;
+    return <p className="text-muted-foreground mb-0">No candidates yet.</p>;
   }
 
   return (
-    <div className="d-flex flex-column flex-sm-row align-items-center gap-3">
+    <div className="flex flex-col flex-sm-row items-center gap-4">
       <div style={{ position: 'relative', width: 200, height: 200, flexShrink: 0 }}>
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
@@ -54,20 +54,20 @@ export default function StatusDonutChart({ data }: { data: StatusCount[] }) {
           </PieChart>
         </ResponsiveContainer>
         <div
-          className="position-absolute top-50 start-50 translate-middle text-center"
+          className="absolute top-50 start-50 translate-middle text-center"
           style={{ pointerEvents: 'none' }}
         >
-          <div className="fw-bold lh-1" style={{ fontSize: '1.6rem' }}>
+          <div className="font-bold leading-none" style={{ fontSize: '1.6rem' }}>
             {total}
           </div>
-          <div className="text-muted small">total</div>
+          <div className="text-muted-foreground text-[length:var(--text-sm)]">total</div>
         </div>
       </div>
-      <div className="d-flex flex-column gap-1 w-100" style={{ maxHeight: 200, overflowY: 'auto' }}>
+      <div className="flex flex-col gap-1 w-full" style={{ maxHeight: 200, overflowY: 'auto' }}>
         {slices.map((s) => (
-          <div key={s.status} className="d-flex justify-content-between align-items-center gap-2">
+          <div key={s.status} className="flex justify-between items-center gap-2">
             <StatusBadge status={s.status} />
-            <span className="text-muted small">{s.count}</span>
+            <span className="text-muted-foreground text-[length:var(--text-sm)]">{s.count}</span>
           </div>
         ))}
       </div>

@@ -1,9 +1,17 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Dropdown } from 'react-bootstrap';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { getNotifications, markAllNotificationsRead, markNotificationRead } from '../services/api';
-import type { AppNotification } from '../types';
+import { Bell } from 'lucide-react';
+
+import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { getNotifications, markAllNotificationsRead, markNotificationRead } from '@/services/api';
+import { cn } from '@/lib/utils';
+import type { AppNotification } from '@/types';
 
 const relativeTime = (iso: string): string => {
   const mins = Math.round((Date.now() - new Date(iso).getTime()) / 60000);
@@ -16,16 +24,7 @@ const relativeTime = (iso: string): string => {
   return new Date(iso).toLocaleDateString();
 };
 
-function BellIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" />
-      <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-    </svg>
-  );
-}
-
-/** Navbar notification bell: unread badge + dropdown of recent notifications. */
+/** Topbar notification bell: unread dot + a panel of recent notifications. */
 export default function NotificationBell() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -56,53 +55,94 @@ export default function NotificationBell() {
   };
 
   return (
-    <Dropdown show={open} onToggle={setOpen} align="end">
-      <Dropdown.Toggle
-        as="button"
-        className="btn btn-outline-secondary btn-sm position-relative d-inline-flex align-items-center justify-content-center notification-toggle"
-        aria-label="Notifications"
-      >
-        <BellIcon />
-        {unread > 0 && (
-          <span className="notification-badge">{unread > 9 ? '9+' : unread}</span>
-        )}
-      </Dropdown.Toggle>
-
-      <Dropdown.Menu className="notification-menu">
-        <div className="d-flex justify-content-between align-items-center px-3 py-2 border-bottom">
-          <strong className="small">Notifications</strong>
+    <DropdownMenu open={open} onOpenChange={setOpen}>
+      <DropdownMenuTrigger asChild>
+        <Button
+          variant="ghost"
+          size="iconSm"
+          className="relative"
+          aria-label={unread > 0 ? `Notifications, ${unread} unread` : 'Notifications'}
+        >
+          <Bell strokeWidth={1.75} aria-hidden="true" />
+          {/* A count, not a number in a red circle: the count IS the
+              information, and the ring matches the rail behind it so the badge
+              reads as sitting on the bell rather than floating over it. */}
           {unread > 0 && (
-            <button
-              type="button"
-              className="btn btn-link btn-sm p-0 text-decoration-none"
+            <span
+              className={cn(
+                'absolute -top-0.5 -right-0.5 grid min-w-4 place-items-center rounded-full px-1',
+                'bg-destructive text-[10px] leading-4 font-bold text-white',
+                'ring-2 ring-rail',
+              )}
+              aria-hidden="true"
+            >
+              {unread > 9 ? '9+' : unread}
+            </span>
+          )}
+        </Button>
+      </DropdownMenuTrigger>
+
+      <DropdownMenuContent align="end" className="w-80 p-0">
+        <div className="flex items-center justify-between gap-2 border-b border-line px-4 py-2">
+          <span className="text-[length:var(--text-md)] font-semibold">Notifications</span>
+          {unread > 0 && (
+            <Button
+              variant="link"
+              size="sm"
+              className="h-auto p-0"
               onClick={() => readAll.mutate()}
               disabled={readAll.isPending}
             >
               Mark all read
-            </button>
+            </Button>
           )}
         </div>
+
         {items.length === 0 ? (
-          <div className="px-3 py-3 text-muted small">No notifications.</div>
+          <p className="px-4 py-6 text-center text-[length:var(--text-sm)] text-muted-foreground">
+            No notifications.
+          </p>
         ) : (
-          items.map((n) => (
-            <button
-              key={n.id}
-              type="button"
-              className={`notification-item text-start w-100 ${n.isRead ? '' : 'notification-item--unread'}`}
-              onClick={() => openItem(n)}
-            >
-              <div className="d-flex justify-content-between gap-2">
-                <span className="fw-medium small">{n.title}</span>
-                <span className="text-muted flex-shrink-0" style={{ fontSize: '0.72rem' }}>
-                  {relativeTime(n.createdAt)}
+          <div className="max-h-80 overflow-y-auto p-1">
+            {items.map((n) => (
+              <button
+                key={n.id}
+                type="button"
+                className={cn(
+                  'flex w-full flex-col gap-0.5 rounded-[var(--radius-md)] px-2 py-2 text-left',
+                  'transition-colors duration-[var(--dur-fast)] hover:bg-accent',
+                  'focus-visible:ring-[3px] focus-visible:ring-[var(--focus-ring)] outline-none',
+                  // Unread is carried by weight and a dot, not by a tinted
+                  // row — a list where half the rows are tinted reads as a
+                  // selection, not as a read state.
+                  !n.isRead && 'font-medium',
+                )}
+                onClick={() => openItem(n)}
+              >
+                <span className="flex items-center gap-2">
+                  {!n.isRead && (
+                    <span className="size-1.5 shrink-0 rounded-full bg-brand" aria-hidden="true" />
+                  )}
+                  <span className="min-w-0 flex-1 truncate text-[length:var(--text-md)] text-foreground">
+                    {n.title}
+                  </span>
+                  <span className="shrink-0 text-[length:var(--text-2xs)] text-muted-foreground">
+                    {relativeTime(n.createdAt)}
+                  </span>
                 </span>
-              </div>
-              <div className="text-muted small">{n.message}</div>
-            </button>
-          ))
+                <span
+                  className={cn(
+                    'text-[length:var(--text-sm)] font-normal text-muted-foreground',
+                    !n.isRead && 'ps-3.5',
+                  )}
+                >
+                  {n.message}
+                </span>
+              </button>
+            ))}
+          </div>
         )}
-      </Dropdown.Menu>
-    </Dropdown>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }

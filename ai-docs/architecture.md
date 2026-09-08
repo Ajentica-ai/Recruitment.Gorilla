@@ -41,9 +41,10 @@ Recruitment.Gorilla/
 | API docs | Swashbuckle (Swagger) | 10.x |
 | CV parsing | PdfPig (PDF) + DocumentFormat.OpenXml (Word) | 0.1.15 / 3.5.1 |
 | Frontend | React + TypeScript + Vite | 19 / Vite 8 |
-| Data fetching | TanStack Query v5 + Axios | — |
 | UI | react-bootstrap 2 + Bootstrap 5, Fluent theme | — |
 | Routing | react-router-dom | 7 |
+| Background Queues | System.Threading.Channels (Email & AuditLog) | .NET 10 |
+| Real-time WebSockets | Microsoft.AspNetCore.SignalR & @microsoft/signalr | 10.0.x / 8.0.x |
 
 > EF Core packages are pinned to **9.0.0** to stay inside Pomelo 9.x's compatibility window. Do not bump them independently.
 

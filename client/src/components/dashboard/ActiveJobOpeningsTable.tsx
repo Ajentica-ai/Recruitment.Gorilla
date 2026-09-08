@@ -1,8 +1,9 @@
 import { Link } from 'react-router-dom';
-import { Table } from 'react-bootstrap';
+
 import { Briefcase, Calendar, MapPin, User, type LucideProps } from 'lucide-react';
-import EmptyState from '../ui/EmptyState';
-import SectionCard from '../ui/SectionCard';
+import EmptyState from '../common/EmptyState';
+import { Button } from '@/components/ui/button';
+import SectionCard from '../common/SectionCard';
 import type { JobOpening } from '../../types';
 
 const iconProps: LucideProps = {
@@ -45,9 +46,9 @@ export default function ActiveJobOpeningsTable({ data }: { data: JobOpening[] })
       title="Active job openings"
       description="Roles still open for applications, soonest to close first."
       actions={
-        <Link to="/configuration" className="btn btn-sm btn-outline-secondary">
-          View all
-        </Link>
+        <Button asChild variant="outline" size="sm">
+          <Link to="/configuration">View all</Link>
+        </Button>
       }
       flush={data.length > 0}
     >
@@ -57,14 +58,14 @@ export default function ActiveJobOpeningsTable({ data }: { data: JobOpening[] })
           title="No active job openings"
           description="Openings you add in Configuration show up here until their end date passes."
           action={
-            <Link to="/configuration" className="btn btn-primary">
-              Add a job opening
-            </Link>
+            <Button asChild>
+              <Link to="/configuration">Add a job opening</Link>
+            </Button>
           }
         />
       ) : (
         <div className="table-wrap table-wrap--seamless">
-          <Table hover className="job-openings-table table-cards align-middle mb-0">
+          <table className="table job-openings-table table-cards align-middle mb-0">
             <thead>
               <tr>
                 <th>Job ID</th>
@@ -80,14 +81,14 @@ export default function ActiveJobOpeningsTable({ data }: { data: JobOpening[] })
               {data.map((job) => (
                 <tr key={job.id}>
                   <td data-label="Job ID" className="job-id">{jobId(job.id)}</td>
-                  <td data-label="Posted" className="text-nowrap">
-                    <span className="d-inline-flex align-items-center gap-2">
+                  <td data-label="Posted" className="whitespace-nowrap">
+                    <span className="inline-flex items-center gap-2">
                       <CalendarIcon />
                       {formatDate(job.postedDate)}
                     </span>
                   </td>
                   <td data-label="Job title">
-                    <div className="fw-semibold">{job.title}</div>
+                    <div className="font-semibold">{job.title}</div>
                     {job.priority && (
                       <span className={`priority-badge ${priorityClass(job.priority)}`}>
                         {priorityLabel(job.priority)}
@@ -96,17 +97,17 @@ export default function ActiveJobOpeningsTable({ data }: { data: JobOpening[] })
                   </td>
                   <td data-label="Location">
                     {job.location ? (
-                      <span className="d-inline-flex align-items-center gap-2">
+                      <span className="inline-flex items-center gap-2">
                         <PinIcon />
                         {job.location}
                       </span>
                     ) : (
-                      <span className="text-muted">—</span>
+                      <span className="text-muted-foreground">—</span>
                     )}
                   </td>
-                  <td data-label="Department" className="text-muted">{job.department ?? '—'}</td>
-                  <td data-label="End date" className="text-nowrap">
-                    <span className="d-inline-flex align-items-center gap-2">
+                  <td data-label="Department" className="text-muted-foreground">{job.department ?? '—'}</td>
+                  <td data-label="End date" className="whitespace-nowrap">
+                    <span className="inline-flex items-center gap-2">
                       <CalendarIcon />
                       {formatDate(job.endDate)}
                     </span>
@@ -115,7 +116,7 @@ export default function ActiveJobOpeningsTable({ data }: { data: JobOpening[] })
                     )}
                   </td>
                   <td data-label="Applicants">
-                    <span className="d-inline-flex align-items-center gap-2">
+                    <span className="inline-flex items-center gap-2">
                       <PersonIcon />
                       {job.applicants.toLocaleString()}
                     </span>
@@ -123,7 +124,7 @@ export default function ActiveJobOpeningsTable({ data }: { data: JobOpening[] })
                 </tr>
               ))}
             </tbody>
-          </Table>
+          </table>
         </div>
       )}
     </SectionCard>

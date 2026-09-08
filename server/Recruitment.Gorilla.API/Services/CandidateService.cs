@@ -55,6 +55,9 @@ public class CandidateService(AppDbContext db, IWebHostEnvironment env, Notifica
         if (q.RoleId is int rid)
             query = query.Where(c => c.RoleAppliedOptionId == rid);
 
+        if (!string.IsNullOrWhiteSpace(q.Batch))
+            query = query.Where(c => c.BatchName == q.Batch || c.BatchId == q.Batch);
+
         // ANY-of: candidates having at least one of the selected skills.
         if (q.SkillIds is { Count: > 0 })
             query = query.Where(c => c.CandidateSkills.Any(cs => q.SkillIds.Contains(cs.SkillOptionId)));
@@ -98,10 +101,22 @@ public class CandidateService(AppDbContext db, IWebHostEnvironment env, Notifica
                 c.RoleAppliedOption != null ? c.RoleAppliedOption.Name : c.AppliedRole,
                 c.CurrentStatus, c.CreatedAt,
                 c.SourceOption != null ? c.SourceOption.Name : null,
-                c.UpdatedAt))
+                c.UpdatedAt,
+                c.BatchName))
             .ToListAsync();
 
         return new PagedResult<CandidateListItemDto>(items, total, q.Page, q.PageSize);
+    }
+
+    public async Task<List<string>> GetCandidateBatchesAsync(int? ownerUserId = null)
+    {
+        var query = ApplyAccess(db.Candidates.AsQueryable(), ownerUserId);
+        return await query
+            .Where(c => !string.IsNullOrEmpty(c.BatchName))
+            .Select(c => c.BatchName!)
+            .Distinct()
+            .OrderBy(b => b)
+            .ToListAsync();
     }
 
     public async Task<CandidateDetailDto?> GetByIdAsync(int id, int? ownerUserId = null)
@@ -115,6 +130,8 @@ public class CandidateService(AppDbContext db, IWebHostEnvironment env, Notifica
             .Include(x => x.Interviews).ThenInclude(i => i.Interviewers).ThenInclude(ii => ii.User)
             .Include(x => x.Interviews).ThenInclude(i => i.Tags).ThenInclude(t => t.InterviewTypeOption)
             .Include(x => x.Interviews).ThenInclude(i => i.Evaluations).ThenInclude(e => e.InterviewerUser)
+            .Include(x => x.Educations)
+            .Include(x => x.Experiences)
             .AsSplitQuery();
 
         var c = await ApplyAccess(query, ownerUserId).FirstOrDefaultAsync(x => x.Id == id);
@@ -352,6 +369,11 @@ public class CandidateService(AppDbContext db, IWebHostEnvironment env, Notifica
             LinkedInUrl = dto.LinkedInUrl,
             GithubUrl = dto.GithubUrl,
             PortfolioUrl = dto.PortfolioUrl,
+            Location = dto.Location,
+            LeetCodeUrl = dto.LeetCodeUrl,
+            CodeforcesUrl = dto.CodeforcesUrl,
+            HackerRankUrl = dto.HackerRankUrl,
+            GitLabUrl = dto.GitLabUrl,
             AppliedRole = dto.AppliedRole,
             IsReferred = dto.IsReferred,
             ReferenceName = dto.IsReferred ? dto.ReferenceName : null,
@@ -363,6 +385,34 @@ public class CandidateService(AppDbContext db, IWebHostEnvironment env, Notifica
             CurrentStatus = dto.InitialStatus,
             OwnerUserId = ownerUserId,
         };
+
+        if (dto.Educations is { Count: > 0 })
+        {
+            foreach (var ed in dto.Educations)
+            {
+                candidate.Educations.Add(new CandidateEducation
+                {
+                    Degree = ed.Degree,
+                    Institution = ed.Institution,
+                    GraduationYear = ed.GraduationYear,
+                    Cgpa = ed.Cgpa
+                });
+            }
+        }
+
+        if (dto.Experiences is { Count: > 0 })
+        {
+            foreach (var ex in dto.Experiences)
+            {
+                candidate.Experiences.Add(new CandidateExperience
+                {
+                    JobTitle = ex.JobTitle,
+                    Company = ex.Company,
+                    Duration = ex.Duration,
+                    Description = ex.Description
+                });
+            }
+        }
 
         foreach (var skillId in (dto.SkillOptionIds ?? []).Distinct())
             candidate.CandidateSkills.Add(new CandidateSkill { SkillOptionId = skillId });
@@ -454,6 +504,11 @@ public class CandidateService(AppDbContext db, IWebHostEnvironment env, Notifica
         candidate.LinkedInUrl = dto.LinkedInUrl;
         candidate.GithubUrl = dto.GithubUrl;
         candidate.PortfolioUrl = dto.PortfolioUrl;
+        candidate.Location = dto.Location;
+        candidate.LeetCodeUrl = dto.LeetCodeUrl;
+        candidate.CodeforcesUrl = dto.CodeforcesUrl;
+        candidate.HackerRankUrl = dto.HackerRankUrl;
+        candidate.GitLabUrl = dto.GitLabUrl;
         candidate.AppliedRole = dto.AppliedRole;
         candidate.IsReferred = dto.IsReferred;
         candidate.ReferenceName = dto.IsReferred ? dto.ReferenceName : null;
@@ -463,6 +518,38 @@ public class CandidateService(AppDbContext db, IWebHostEnvironment env, Notifica
         candidate.SourceOptionId = dto.SourceOptionId;
         candidate.SourceDetail = CleanText(dto.SourceDetail);
         candidate.UpdatedAt = DateTime.UtcNow;
+
+        if (dto.Educations != null)
+        {
+            await db.Entry(candidate).Collection(c => c.Educations).LoadAsync();
+            candidate.Educations.Clear();
+            foreach (var ed in dto.Educations)
+            {
+                candidate.Educations.Add(new CandidateEducation
+                {
+                    Degree = ed.Degree,
+                    Institution = ed.Institution,
+                    GraduationYear = ed.GraduationYear,
+                    Cgpa = ed.Cgpa
+                });
+            }
+        }
+
+        if (dto.Experiences != null)
+        {
+            await db.Entry(candidate).Collection(c => c.Experiences).LoadAsync();
+            candidate.Experiences.Clear();
+            foreach (var ex in dto.Experiences)
+            {
+                candidate.Experiences.Add(new CandidateExperience
+                {
+                    JobTitle = ex.JobTitle,
+                    Company = ex.Company,
+                    Duration = ex.Duration,
+                    Description = ex.Description
+                });
+            }
+        }
 
         // Replace the candidate's skills with the new selection.
         var newSkillIds = (dto.SkillOptionIds ?? []).Distinct().ToHashSet();
@@ -606,7 +693,14 @@ public class CandidateService(AppDbContext db, IWebHostEnvironment env, Notifica
         c.RoleAppliedOption != null && c.RoleAppliedOption.EndDate < DateTime.UtcNow,
         c.SourceOptionId,
         c.SourceOption != null ? c.SourceOption.Name : null,
-        c.SourceDetail
+        c.SourceDetail,
+        c.Location,
+        c.LeetCodeUrl,
+        c.CodeforcesUrl,
+        c.HackerRankUrl,
+        c.GitLabUrl,
+        c.Educations.Select(ed => new CandidateEducationDto(ed.Id, ed.Degree, ed.Institution, ed.GraduationYear, ed.Cgpa)).ToList(),
+        c.Experiences.Select(ex => new CandidateExperienceDto(ex.Id, ex.JobTitle, ex.Company, ex.Duration, ex.Description)).ToList()
     );
 
     /// <summary>

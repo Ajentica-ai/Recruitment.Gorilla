@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import { Button, Col, Form, Row } from 'react-bootstrap';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import {
@@ -12,6 +11,11 @@ import {
 import { SearchableSelect, SearchableMultiSelect } from './SearchableSelect';
 import { useToast } from './ToastStack';
 import type { CVDraft, DuplicateCandidate } from '../types';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Button } from '@/components/ui/button';
+import { CheckboxField } from '@/components/ui/field';
 
 interface Props {
   draft: CVDraft;
@@ -19,7 +23,7 @@ interface Props {
   onCancel: () => void;
 }
 
-const EMAIL_REGEX = /^[\w.+-]+@[\w-]+\.[a-z]{2,}$/i;
+const EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-z]{2,}$/i;
 type FieldKey = 'fullName' | 'email' | 'roleApplied' | 'relevantExperience' | 'referenceName' | 'referenceEmail';
 type FieldErrors = Partial<Record<FieldKey, string>>;
 
@@ -121,6 +125,13 @@ export default function CandidateForm({ draft, onSaved, onCancel }: Props) {
         initialStatus,
         initialStatusComment: null,
         allowDuplicate,
+        location: draft.location ?? null,
+        leetCodeUrl: draft.leetCodeUrl ?? null,
+        codeforcesUrl: draft.codeforcesUrl ?? null,
+        hackerRankUrl: draft.hackerRankUrl ?? null,
+        gitLabUrl: draft.gitLabUrl ?? null,
+        educations: draft.educations ?? null,
+        experiences: draft.experiences ?? null,
       });
 
       if (result.kind === 'duplicate') {
@@ -157,23 +168,23 @@ export default function CandidateForm({ draft, onSaved, onCancel }: Props) {
   return (
     // The card that hosts this form owns the heading and the file name now, so
     // the form no longer prints its own <h5> above them.
-    <Form onSubmit={handleSubmit} noValidate>
+    <form onSubmit={handleSubmit} noValidate>
       {saveError && (
-        <div className="alert-danger-soft mb-4" role="alert">
+        <div className="alert-danger-soft mb-6" role="alert">
           {saveError}
         </div>
       )}
 
       {duplicate && (
-        <div className="alert-warning-soft mb-4">
+        <div className="alert-warning-soft mb-6">
           <div>
             {duplicate.message}{' '}
             <Link to={`/candidates/${duplicate.existing.id}`}>Open existing candidate</Link>.
           </div>
-          <div className="mt-3">
+          <div className="mt-4">
             <Button
               size="sm"
-              variant="outline-secondary"
+              variant="outline"
               disabled={saving}
               onClick={() => void save(true)}
             >
@@ -183,153 +194,147 @@ export default function CandidateForm({ draft, onSaved, onCancel }: Props) {
         </div>
       )}
 
-      <Row className="g-3">
-        <Col md={6}>
-          <Form.Label>Full name <Req /></Form.Label>
-          <Form.Control
+      <div className="grid grid-cols-12 gap-6">
+        <div className="col-span-12 md:col-span-6">
+          <Label>Full name <Req /></Label>
+          <Input
             value={fullName}
             onChange={(e) => { setFullName(e.target.value); clearFE('fullName'); }}
-            isInvalid={!!fieldErrors.fullName}
+            aria-invalid={!!fieldErrors.fullName || undefined}
           />
-          <Form.Control.Feedback type="invalid">{fieldErrors.fullName}</Form.Control.Feedback>
-        </Col>
-        <Col md={6}>
-          <Form.Label>Email <Req /></Form.Label>
-          <Form.Control
+          {fieldErrors.fullName ? <p className="text-[length:var(--text-sm)] text-[var(--danger-text)]">{fieldErrors.fullName}</p> : null}
+        </div>
+        <div className="col-span-12 md:col-span-6">
+          <Label>Email <Req /></Label>
+          <Input
             type="email"
             value={email}
             onChange={(e) => { setEmail(e.target.value); clearFE('email'); }}
-            isInvalid={!!fieldErrors.email}
+            aria-invalid={!!fieldErrors.email || undefined}
           />
-          <Form.Control.Feedback type="invalid">{fieldErrors.email}</Form.Control.Feedback>
-        </Col>
-        <Col md={6}>
-          <Form.Label>Phone</Form.Label>
-          <Form.Control value={phone} onChange={(e) => setPhone(e.target.value)} />
-        </Col>
-        <Col md={6}>
-          <Form.Label>Current title</Form.Label>
-          <Form.Control value={currentTitle} onChange={(e) => setCurrentTitle(e.target.value)} />
-        </Col>
-        <Col md={6}>
-          <Form.Label>Relevant Experience <Req /></Form.Label>
-          <Form.Control
+          {fieldErrors.email ? <p className="text-[length:var(--text-sm)] text-[var(--danger-text)]">{fieldErrors.email}</p> : null}
+        </div>
+        <div className="col-span-12 md:col-span-6">
+          <Label>Phone</Label>
+          <Input value={phone} onChange={(e) => setPhone(e.target.value)} />
+        </div>
+        <div className="col-span-12 md:col-span-6">
+          <Label>Current title</Label>
+          <Input value={currentTitle} onChange={(e) => setCurrentTitle(e.target.value)} />
+        </div>
+        <div className="col-span-12 md:col-span-6">
+          <Label>Relevant Experience <Req /></Label>
+          <Input
             value={relevantExperience}
             placeholder="e.g. 3 Years"
             onChange={(e) => { setRelevantExperience(e.target.value); clearFE('relevantExperience'); }}
-            isInvalid={!!fieldErrors.relevantExperience}
+            aria-invalid={!!fieldErrors.relevantExperience || undefined}
           />
-          <Form.Control.Feedback type="invalid">{fieldErrors.relevantExperience}</Form.Control.Feedback>
-        </Col>
-        <Col md={6}>
-          <Form.Label>LinkedIn URL</Form.Label>
-          <Form.Control value={linkedInUrl} onChange={(e) => setLinkedInUrl(e.target.value)} />
-        </Col>
-        <Col md={6}>
-          <Form.Label>GitHub URL</Form.Label>
-          <Form.Control value={githubUrl} onChange={(e) => setGithubUrl(e.target.value)} />
-        </Col>
-        <Col md={6}>
-          <Form.Label>Portfolio website</Form.Label>
-          <Form.Control value={portfolioUrl} onChange={(e) => setPortfolioUrl(e.target.value)} />
-        </Col>
-        <Col md={6}>
-          <Form.Label>Role applied for <Req /></Form.Label>
+          {fieldErrors.relevantExperience ? <p className="text-[length:var(--text-sm)] text-[var(--danger-text)]">{fieldErrors.relevantExperience}</p> : null}
+        </div>
+        <div className="col-span-12 md:col-span-6">
+          <Label>LinkedIn URL</Label>
+          <Input value={linkedInUrl} onChange={(e) => setLinkedInUrl(e.target.value)} />
+        </div>
+        <div className="col-span-12 md:col-span-6">
+          <Label>GitHub URL</Label>
+          <Input value={githubUrl} onChange={(e) => setGithubUrl(e.target.value)} />
+        </div>
+        <div className="col-span-12 md:col-span-6">
+          <Label>Portfolio website</Label>
+          <Input value={portfolioUrl} onChange={(e) => setPortfolioUrl(e.target.value)} />
+        </div>
+        <div className="col-span-12 md:col-span-6">
+          <Label>Role applied for <Req /></Label>
           <SearchableSelect
             options={roleOptions}
             value={roleAppliedOptionId}
             onChange={(v) => { setRoleAppliedOptionId(v); clearFE('roleApplied'); }}
             placeholder="Search roles…"
-            isInvalid={!!fieldErrors.roleApplied}
+            aria-invalid={!!fieldErrors.roleApplied || undefined}
           />
           {fieldErrors.roleApplied && (
-            <div className="invalid-feedback d-block">{fieldErrors.roleApplied}</div>
+            <div className="invalid-feedback block">{fieldErrors.roleApplied}</div>
           )}
-        </Col>
-        <Col md={6}>
-          <Form.Label>Source</Form.Label>
+        </div>
+        <div className="col-span-12 md:col-span-6">
+          <Label>Source</Label>
           <SearchableSelect
             options={sourceOptions}
             value={sourceOptionId}
             onChange={setSourceOptionId}
             placeholder="Where did this candidate come from?"
           />
-        </Col>
-        <Col md={6}>
-          <Form.Label>Source detail</Form.Label>
-          <Form.Control
+        </div>
+        <div className="col-span-12 md:col-span-6">
+          <Label>Source detail</Label>
+          <Input
             value={sourceDetail}
             onChange={(e) => setSourceDetail(e.target.value)}
             placeholder="Agency, campaign or board name"
           />
-        </Col>
-        <Col md={12}>
-          <Form.Label>Skills</Form.Label>
+        </div>
+        <div className="col-span-12 md:col-span-12">
+          <Label>Skills</Label>
           <SearchableMultiSelect
             options={skillOptions}
             value={skillOptionIds}
             onChange={setSkillOptionIds}
             placeholder="Search skills…"
           />
-        </Col>
-        <Col md={12}>
-          <Form.Label>Skills summary (from CV)</Form.Label>
-          <Form.Control as="textarea" rows={2} value={skills} onChange={(e) => setSkills(e.target.value)} />
-        </Col>
-        <Col md={12}>
-          <Form.Label>Summary</Form.Label>
-          <Form.Control as="textarea" rows={3} value={summary} onChange={(e) => setSummary(e.target.value)} />
-        </Col>
-        <Col md={12}>
+        </div>
+        <div className="col-span-12 md:col-span-12">
+          <Label>Skills summary (from CV)</Label>
+          <Textarea rows={2} value={skills} onChange={(e) => setSkills(e.target.value)} />
+        </div>
+        <div className="col-span-12 md:col-span-12">
+          <Label>Summary</Label>
+          <Textarea rows={3} value={summary} onChange={(e) => setSummary(e.target.value)} />
+        </div>
+        <div className="col-span-12 md:col-span-12">
           <div className="field-divider" />
-          <Form.Check
-            type="checkbox"
-            id="is-referred"
-            label="This candidate has been referred"
-            checked={isReferred}
-            onChange={(e) => setIsReferred(e.target.checked)}
-          />
-        </Col>
+          <CheckboxField id="is-referred" label="This candidate has been referred" checked={isReferred} onCheckedChange={(checked) => setIsReferred(checked)} />
+        </div>
         {isReferred && (
           <>
-            <Col md={6}>
-              <Form.Label>Reference name <Req /></Form.Label>
-              <Form.Control
+            <div className="col-span-12 md:col-span-6">
+              <Label>Reference name <Req /></Label>
+              <Input
                 value={referenceName}
                 onChange={(e) => { setReferenceName(e.target.value); clearFE('referenceName'); }}
-                isInvalid={!!fieldErrors.referenceName}
+                aria-invalid={!!fieldErrors.referenceName || undefined}
               />
-              <Form.Control.Feedback type="invalid">{fieldErrors.referenceName}</Form.Control.Feedback>
-            </Col>
-            <Col md={6}>
-              <Form.Label>Reference email <Req /></Form.Label>
-              <Form.Control
+              {fieldErrors.referenceName ? <p className="text-[length:var(--text-sm)] text-[var(--danger-text)]">{fieldErrors.referenceName}</p> : null}
+            </div>
+            <div className="col-span-12 md:col-span-6">
+              <Label>Reference email <Req /></Label>
+              <Input
                 type="email"
                 value={referenceEmail}
                 onChange={(e) => { setReferenceEmail(e.target.value); clearFE('referenceEmail'); }}
-                isInvalid={!!fieldErrors.referenceEmail}
+                aria-invalid={!!fieldErrors.referenceEmail || undefined}
               />
-              <Form.Control.Feedback type="invalid">{fieldErrors.referenceEmail}</Form.Control.Feedback>
-            </Col>
-            <Col md={6}>
-              <Form.Label>Employee ID</Form.Label>
-              <Form.Control
+              {fieldErrors.referenceEmail ? <p className="text-[length:var(--text-sm)] text-[var(--danger-text)]">{fieldErrors.referenceEmail}</p> : null}
+            </div>
+            <div className="col-span-12 md:col-span-6">
+              <Label>Employee ID</Label>
+              <Input
                 value={referenceEmployeeId}
                 onChange={(e) => setReferenceEmployeeId(e.target.value)}
               />
-            </Col>
+            </div>
           </>
         )}
-      </Row>
+      </div>
 
       <div className="form-actions">
-        <Button type="submit" variant="primary" disabled={saving}>
+        <Button type="submit" disabled={saving}>
           {saving ? 'Saving…' : 'Save candidate'}
         </Button>
-        <Button type="button" variant="outline-secondary" disabled={saving} onClick={onCancel}>
+        <Button type="button" variant="outline" disabled={saving} onClick={onCancel}>
           Skip this CV
         </Button>
       </div>
-    </Form>
+    </form>
   );
 }
