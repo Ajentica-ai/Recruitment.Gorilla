@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { ListGroup } from 'react-bootstrap';
 import { useQuery } from '@tanstack/react-query';
 import { CalendarCheck } from 'lucide-react';
 import { getMyInterviews } from '../../services/api';
@@ -47,56 +48,32 @@ export default function MyInterviewsCard() {
           description="Interviews you're scheduled for will appear here."
         />
       ) : (
-        // tabIndex makes the capped list scrollable by keyboard, which a plain
-        // overflow container is not. The label names it, since to a screen
-        // reader the region is otherwise an unnamed box of list items.
-        <div
-          className="feed-list"
-          tabIndex={0}
-          role="group"
-          aria-label={`Assigned interviews, ${data.length} total`}
-        >
-          <ul className="feed-list__items">
-            {data.map((i) => {
-              const badge = stateBadge[i.evaluationState];
-              const when = new Date(i.scheduledAt);
-              const soon = isSoon(i.scheduledAt);
-              return (
-                <li key={i.id} className={`feed-row${soon ? ' feed-row--soon' : ''}`}>
-                  {/* The tile reads as "Aug 10" to a screen reader; the time and
-                      zone follow in the meta line, so the whole moment is
-                      announced across the two without a hidden duplicate. */}
-                  <time className="feed-date" dateTime={i.scheduledAt}>
-                    <span className="feed-date__month">
-                      {when.toLocaleString(undefined, { month: 'short' })}
-                    </span>
-                    <span className="feed-date__day">
-                      {when.toLocaleString(undefined, { day: 'numeric' })}
-                    </span>
-                  </time>
-                  <div className="feed-row__main">
-                    <Link to={`/interviews/${i.id}`} className="feed-row__name">
-                      {i.candidateName}
-                    </Link>
-                    <div className="feed-row__meta">
-                      {i.role ?? '—'}
-                      {' · '}
-                      {/* timeZoneName from develop's UTC work: the API returns
-                          UTC, so the zone has to be shown or the time is
-                          ambiguous. */}
-                      <span className={soon ? 'feed-row__time--soon' : undefined}>
-                        {when.toLocaleString(undefined, {
-                          hour: '2-digit', minute: '2-digit', timeZoneName: 'short',
-                        })}
-                      </span>
-                    </div>
+        <ListGroup variant="flush">
+          {data.map((i) => {
+            const badge = stateBadge[i.evaluationState];
+            return (
+              <ListGroup.Item key={i.id} className="list-row">
+                <div className="list-row__main">
+                  <Link to={`/interviews/${i.id}`} className="list-row__title">
+                    {i.candidateName}
+                  </Link>
+                  <div className="list-row__meta">{i.role ?? '—'}</div>
+                </div>
+                <div className="list-row__aside">
+                  {/* timeZoneName from develop's UTC work: the API returns UTC,
+                      so the zone has to be shown or the time is ambiguous. */}
+                  <div className={`list-row__meta${isSoon(i.scheduledAt) ? ' list-row__meta--urgent' : ''}`}>
+                    {new Date(i.scheduledAt).toLocaleString(undefined, {
+                      month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit',
+                      timeZoneName: 'short',
+                    })}
                   </div>
                   <span className={badge.cls}>{badge.label}</span>
-                </li>
-              );
-            })}
-          </ul>
-        </div>
+                </div>
+              </ListGroup.Item>
+            );
+          })}
+        </ListGroup>
       )}
     </SectionCard>
   );
