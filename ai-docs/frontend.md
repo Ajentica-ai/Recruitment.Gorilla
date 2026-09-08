@@ -70,13 +70,6 @@ with ad-hoc margins wherever someone noticed, which is why the rhythm differed
 page to page. Putting the gap on the page's own root puts it where the siblings
 actually are.
 
-Corollary: **a tab returns a fragment, not a wrapper `<div>`.** `TabPanel` is
-the stack; wrapping a tab's sections in one element makes the stack a
-single-child flex container again and the gap has nothing to fall between —
-exactly the `.rg-content` bug above, one level down. `EvaluationRubricsTab` hit
-this with an `.evaluation-rubrics-tab` wrapper that carried no CSS at all, which
-sat its action bar flush on the table header (0px where `--stack-gap` is 24px).
-
 Corollary: **use `.grid-2`/`.grid-3`/`.kpi-grid`, not Bootstrap `Row`/`Col`,
 for page-level layout.** `Row`'s negative gutter margins have to be cancelled by
 matching padding on every child, and they made the gap between two cards
