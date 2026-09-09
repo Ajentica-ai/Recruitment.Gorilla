@@ -20,7 +20,7 @@ React 19 + TypeScript + Vite. Root: `client/`.
 | `src/utils/` | `statusColors.ts` (status → tone class); `chartColors.ts` (chart colors from status tokens + chrome read off the design tokens); `evaluationCriteria.ts` (interview-form catalog — keys match the backend); `skillColors.ts` (stable hash of a skill name → badge class); `jobStatus.ts` (job-opening lifecycle); `initials.ts`. |
 | `src/styles/tokens.css` | **Design tokens — the single source of visual truth.** |
 | `src/index.css` | Bootstrap bridge → Prism semantic layer → app-specific components. |
-| `public/logo.png` | Brand logo. |
+| `src/assets/brand-logo.png` | Brand badge artwork, imported by `BrandLogo`. `public/favicon.png` is the same art padded square. |
 | `vite.config.ts` | Dev server host + `/api` proxy. |
 
 ## Design system (Prism)
@@ -347,26 +347,27 @@ Each CV file has **Preview** + **Download**. Preview calls `previewCvFile` (auth
   paint. It must resolve `'system'` (and "nothing saved") against
   `prefers-color-scheme` — writing the stored value straight through would set
   `data-bs-theme="system"`, which matches no stylesheet and paints light.
-- **The logo is `components/BrandLogo.tsx`**, not the old `/logo.png`: a gorilla in spectacles
-  over an uppercase two-weight wordmark —
+- **The logo is `components/BrandLogo.tsx`**: the gorilla-in-a-magnifier badge over an
+  uppercase two-weight wordmark —
   RECRUITMENT tracked at 0.1em over GORILLA smaller and tracked at 0.42em.
   Three layouts from one source: `stacked` (sign-in card), `horizontal` (the sidebar's 32px
-  row), `mark` (collapsed rail, and `public/favicon.svg` which is kept in sync by hand).
-  The **mark is inline SVG and the wordmark is HTML text** — `<text>` inside the SVG meant
-  guessing a viewBox width for a string whose width depends on the font, so it never fitted and
-  tracking had to be tuned in user units. The figure is built from *stroked* paths, not filled
-  outlines, so it keeps an even weight down to 20px where a tapered silhouette fills in.
-  The three tones are set by **what each sits on**, not by a shared ramp:
-  `--brand-mark-accent` is the fur and sits on the page, so it must clear the page background;
-  `--brand-mark-soft` is the hairless face and sits on the fur, so it must clear *accent* or the
-  brow overhang in the silhouette is lost; `--brand-mark-deep` is the brow shadow, frames and
-  features and only ever sits on the face, so it stays dark in **both** themes. The
-  `[data-bs-theme='dark']` block lifts accent and soft only. (An earlier revision lifted `deep`
-  too — correct for the striding-figure mark this replaced, whose limbs lay directly on the
-  page, and wrong here, where it washed the glasses out against the pale face.)
-  The brow ridge comes from the **face path's silhouette** — its top edge peaks over each eye
-  and dips between them. Drawing it as a separate deep band across the head read as a swimming
-  cap.
+  row), `mark` (collapsed rail).
+  The **mark is a raster asset and the wordmark is HTML text** — keeping the wordmark out of the
+  image means one file rather than one per layout, and it stays typeset by the app's own type
+  tokens. The artwork is **imported** (`src/assets/brand-logo.png`), not referenced from
+  `/public`: an import is fingerprinted and rewritten under the gateway's `/ats/` base, where a
+  hardcoded `/brand-logo.png` would 404 in the container build.
+  Its background was **flood-filled to transparency from the image borders** when the asset was
+  generated, so no theme-specific plate sits behind it. Filling every white pixel instead would
+  have punched out the white disc inside the ring and the white lettering — those are enclosed,
+  so a fill that starts at the edges never reaches them. `.brand__mark` is a square box and the
+  portrait lockup is fitted into it with `object-fit: contain`, so `--brand-size` still means
+  the same thing it did for the square SVG that preceded it.
+  `public/favicon.png` is the same artwork padded to a square; `index.html` links it as
+  `type="image/png"`. Both are palette PNGs (~10KB and ~6KB) — the badge is flat-coloured, so
+  quantising costs nothing visible and saves ~190KB over a straight resize.
+  **Note:** at the sidebar's 30px the "Hiring" pill in the badge is not legible; the gorilla
+  head still reads. A badge-only crop for the small layouts is the open option there.
 - **Picker:** `components/ThemeMenu.tsx` — a Light / Dark / System dropdown in
   the topbar and on the login card. The trigger icon shows what is currently
   *painted*; the tick marks the *preference*, so it sits on "System" even when

@@ -3614,10 +3614,10 @@ a.list-row__title:hover {
 }
 
 /* ---------- Brand logo ----------
-   Inline SVG mark + HTML wordmark (components/BrandLogo). The dark-mode white
-   chip that used to sit behind the old PNG is gone: the wordmark takes
-   `currentColor` and the mark carries its own palette, so both themes work
-   without pasting a white sticker into a dark sidebar.
+   Badge image + HTML wordmark (components/BrandLogo). No theme-specific plate
+   sits behind the artwork: its background was flood-filled to transparency when
+   the asset was generated, so the badge drops straight onto either ground, and
+   the wordmark takes `currentColor`.
 
    Everything scales off --brand-size, which the component sets from its `size`
    prop, so one number drives the mark and both wordmark lines together. */
@@ -3625,44 +3625,22 @@ a.list-row__title:hover {
   display: inline-flex;
   min-width: 0;
   line-height: 1;
-  /* The mark's three tones, and what each has to contrast against — which is
-     what sets their values, not a shared ramp:
-       accent (fur)      sits on the page  → must clear the page background
-       soft   (face)     sits on the fur   → must clear accent, or the brow
-                                             overhang in the silhouette is lost
-       deep   (features) sits on the face  → must clear soft
-     Note `deep` never touches the page, so it stays dark in both themes. An
-     earlier revision lifted it for dark mode, which was right for the striding
-     figure it replaced (whose limbs lay directly on the background) and wrong
-     here — it washed the glasses out against the pale face.
-
-     Fixed values rather than token-derived: --primary brightens in dark mode to
-     stay legible as *text*, which would flatten the fur/face separation. */
-  --brand-mark-accent: #7c5cfc;
-  --brand-mark-deep: #5b21b6;
-  --brand-mark-soft: #ede9fe;
 }
-
-[data-bs-theme='dark'] .brand {
-  /* Fur lifts to clear the darker page ground (#8b6dff); the
-     face stays pale so the brow overhang survives; the
-     features stay dark against that pale face. */
-  --brand-mark-accent: #8b6dff;
-  --brand-mark-deep: #3b1e7c;
-  --brand-mark-soft: #ede9fe;
-}
-
+/* A square box the artwork is fitted into, so --brand-size means the same
+   thing here as it did for the square SVG that preceded it: the lockup is
+   taller than it is wide, and `contain` letterboxes it rather than cropping
+   the "Hiring" pill off the bottom. */
 .brand__mark {
   display: block;
   flex-shrink: 0;
   width: var(--brand-size);
   height: var(--brand-size);
 }
-
-.brand__mark>svg {
+.brand__mark > img {
   display: block;
   width: 100%;
   height: 100%;
+  object-fit: contain;
 }
 
 /* The wordmark: uppercase, tracked, two weights. The second line is set
