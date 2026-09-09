@@ -12,3 +12,6 @@
 - 2026-09-08T06:27Z [claude] 001-brand-branch-triage PHASE PLAN→CONSTRUCT @602d242: plan approved for the two reverts; staying on feat/brand-logo-and-dashboard-feeds
 - 2026-09-08T06:27Z [claude] 001-brand-branch-triage BRANCH @602d242: stay on feat/brand-logo-and-dashboard-feeds, no new branch (user confirmed)
 - 2026-09-08T06:30Z [claude] 001-brand-branch-triage REVISED @a5f05e8: reverts landed as 97925b3 + a5f05e8; net diff now byte-identical to 021d07a
+- 2026-09-08T12:44Z [claude] 001-brand-branch-triage PHASE CONSTRUCT @ac06cbd: merged origin/develop as ac06cbd; index.css conflict resolved to the raster badge, --brand-mark-* dropped
+- 2026-09-09T02:44Z [claude] 001-brand-branch-triage PHASE CONSTRUCT @ac06cbd: app run verified, badge correct in light+dark, no white plate in dark; 4/5 tasks done
+- 2026-09-09T02:44Z [claude] 001-brand-branch-triage DECISION @ac06cbd: API port is 5134 (launchSettings+vite proxy), not the 5000 the docs claim; logged as follow-up

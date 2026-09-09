@@ -1,6 +1,6 @@
-<!-- phase: CONSTRUCT | branch: feat/brand-logo-and-dashboard-feeds (stay, no new branch) | tasks: 1/5
+<!-- phase: CONSTRUCT | branch: feat/brand-logo-and-dashboard-feeds (stay, no new branch) | tasks: 4/5
      base: 602d242 | updated: 2026-09-07
-     next: awaiting approval to merge origin/develop and resolve the index.css conflict -->
+     next: update PROJECT_PLAN.md (last task); app verified running in both themes -->
 # Plan: reduce the current branch to the brand work, then update it against develop
 
 Revised approach: revert the two dead commits in place instead of branching off
@@ -9,15 +9,15 @@ develop and cherry-picking. Verified in a throwaway detached worktree, not asser
 ## Tasks
 - [x] `git revert --no-edit ec7d9c8` then `d412884` (newest first). Both applied with
       zero conflicts in the trial; net branch diff then equals 021d07a byte for byte
-- [ ] Merge `origin/develop` (7816d72) into the branch, resolving the one `index.css`
+- [x] Merge `origin/develop` (7816d72) into the branch, resolving the one `index.css`
       conflict: keep the image-based `.brand__mark` block, drop develop's
       `--brand-mark-*` tokens (light ~3641-3643, dark ~3650-3652) and `.brand__mark>svg`;
       only the deleted inline SVG ever read them (verified: no other consumer)
-- [ ] Re-check the commit's 37-line `ai-docs/frontend.md` hunk against the post-Bootstrap
+- [x] Re-check the commit's 37-line `ai-docs/frontend.md` hunk against the post-Bootstrap
       reality; rewrite Bootstrap-era wording rather than carrying it over
 - [ ] Update `PROJECT_PLAN.md` to describe develop as final: React 19, shadcn/ui + Radix,
       Bootstrap removed, current structure (49 components / 17 pages, not the Phase 1 tree)
-- [ ] Verify (below), then report. No push, no PR, no merge of the branch itself
+- [x] Verify (below), then report. No push, no PR, no merge of the branch itself
 
 ## Tests
 - Rigor: **standard, no new automated test.** A logo/asset swap has no behavior to

@@ -26,3 +26,5 @@
 - develop's `ai-docs/frontend.md` still has 14 react-bootstrap mentions after #35 removed Bootstrap.
 - Feed styling (date tiles, avatars, hover lift) lost with the d412884 revert; re-do under shadcn if wanted.
 - Badge not legible at the sidebar 30px (the "Hiring" pill); a badge-only crop for small layouts.
+- Port drift: launchSettings/vite proxy use 5134, but AGENTS.md, README, 3 ai-docs files, client/README,
+  playwright.config.ts and start-app.bat still say 5000. E2E config points at the dead port.
