@@ -26,3 +26,11 @@
 - 2026-09-30T01:05Z [claude] 002-issue-76-eval-submitted-notification PAUSED @cb89f36: committed code+tests+spec; AspNetCore 10.0.12 installed but Microsoft.NETCore.App 10.0.12 still missing, dotnet test still aborts
 - 2026-09-30T01:20Z [claude] 002-issue-76-eval-submitted-notification SIDE-EFFECT @cb89f36: installed .NET runtime 10.0.12 x64 from builds.dotnet.microsoft.com, signature verified, user approved UAC
 - 2026-09-30T01:20Z [claude] 002-issue-76-eval-submitted-notification PAUSED @cb89f36: testhost fixed, suite runs; 179/217 fail on MySQL 'Access denied for root@localhost' - stored secret no longer matches local server
+- 2026-09-30T01:35Z [claude] 002-issue-76-eval-submitted-notification SIDE-EFFECT @f307d5f: pushed branch and opened PR #77 against develop (user requested); verification gap stated in the body
+- 2026-09-30T01:45Z [claude] 002-issue-76-eval-submitted-notification SIDE-EFFECT @f307d5f: commented on issue #76 with PR #77 details, decisions and the unverified-tests caveat (user requested)
+- 2026-09-29T20:17Z [claude] RG-36 CREATED @f307d5f: issue #36 - native Chromium ::-ms-reveal duplicates PasswordInput's own eye button once the field has a value
+- 2026-09-29T20:20Z [claude] 002-issue-76-eval-submitted-notification DONE @6d4dbae: PR #77 merged into develop; no follow-ups to promote; closed out at WRAP-UP
+- 2026-09-29T20:24Z [claude] RG-36 BRANCH @6d4dbae: fix/RG-36/Duplicate-visibility-icons created off develop (user confirmed)
+- 2026-09-29T20:24Z [claude] RG-36 PHASE PLAN->CONSTRUCT @6d4dbae: fast path - plan, branch and dead-CSS cleanup approved in one confirmation
+- 2026-09-29T20:24Z [claude] RG-36 DECISION @6d4dbae: keep our own toggle and hide the native control - Firefox/Safari have none, so the reverse makes reveal browser-dependent
+- 2026-09-29T20:24Z [claude] RG-36 DONE @6d4dbae: one CSS rule + 8 lines of dead CSS removed; tsc/88 vitest/oxlint/build green; two-icons-to-one confirmed in real Edge
