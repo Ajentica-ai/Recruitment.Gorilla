@@ -15,3 +15,14 @@
 - 2026-09-08T12:44Z [claude] 001-brand-branch-triage PHASE CONSTRUCT @ac06cbd: merged origin/develop as ac06cbd; index.css conflict resolved to the raster badge, --brand-mark-* dropped
 - 2026-09-09T02:44Z [claude] 001-brand-branch-triage PHASE CONSTRUCT @ac06cbd: app run verified, badge correct in light+dark, no white plate in dark; 4/5 tasks done
 - 2026-09-09T02:44Z [claude] 001-brand-branch-triage DECISION @ac06cbd: API port is 5134 (launchSettings+vite proxy), not the 5000 the docs claim; logged as follow-up
+- 2026-09-29T19:01Z [claude] 001-brand-branch-triage DONE @cc5bad9: branch landed on develop as cc5bad9; PROJECT_PLAN.md task never done, carried to backlog
+- 2026-09-29T19:01Z [claude] 002-issue-76-eval-submitted-notification CREATED @cc5bad9: issue #76 - Admin/SuperAdmin get no notification when an interviewer submits an evaluation
+- 2026-09-30T00:05Z [claude] 002-issue-76-eval-submitted-notification PHASE CLARIFY→PLAN @cc5bad9: in-app only; Admin+SuperAdmin+Recruiters; link /candidates/{id}/evaluations; backend regression test (user confirmed)
+- 2026-09-30T00:05Z [claude] 002-issue-76-eval-submitted-notification DECISION @cc5bad9: recruiter fan-out scoped to candidate-visible recruiters, report route is owner-scoped so unscoped would dead-link
+- 2026-09-30T00:10Z [claude] 002-issue-76-eval-submitted-notification BRANCH @cc5bad9: fix/RG-76/Eval-submitted-notification created off develop (user confirmed)
+- 2026-09-30T00:10Z [claude] 002-issue-76-eval-submitted-notification PHASE PLAN→CONSTRUCT @cc5bad9: plan approved incl. recruiter visibility scoping
+- 2026-09-30T00:40Z [claude] 002-issue-76-eval-submitted-notification PHASE CONSTRUCT @cc5bad9: code + 4 tests + spec done; tsc/vitest/lint green; dotnet test blocked - SDK 10.0.303 testhost needs runtime 10.0.12, only 10.0.11 installed
+- 2026-09-30T00:55Z [claude] 002-issue-76-eval-submitted-notification PAUSED @cc5bad9: blocked on dotnet test - both SDKs (10.0.300/10.0.303) bake testhost against runtime 10.0.12; tried pin, clean, MTP runner, all refused
+- 2026-09-30T01:05Z [claude] 002-issue-76-eval-submitted-notification PAUSED @cb89f36: committed code+tests+spec; AspNetCore 10.0.12 installed but Microsoft.NETCore.App 10.0.12 still missing, dotnet test still aborts
+- 2026-09-30T01:20Z [claude] 002-issue-76-eval-submitted-notification SIDE-EFFECT @cb89f36: installed .NET runtime 10.0.12 x64 from builds.dotnet.microsoft.com, signature verified, user approved UAC
+- 2026-09-30T01:20Z [claude] 002-issue-76-eval-submitted-notification PAUSED @cb89f36: testhost fixed, suite runs; 179/217 fail on MySQL 'Access denied for root@localhost' - stored secret no longer matches local server

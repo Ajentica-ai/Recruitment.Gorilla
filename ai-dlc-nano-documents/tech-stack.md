@@ -25,3 +25,8 @@ The playbook's "Verification checklist" is the authority; this is the short form
   at it. For a bug or small change, `intent.md` alone is enough - no spec.
 - **WRAP-UP updates `ai-docs/` first** (project rule 4), then `codebase-map.md`.
 - Commits carry no AI attribution, and no em-dash characters.
+- **Project prefix: `RG`.** Work-item folders are the bare tracker key: `ai-dlc-nano-documents/work-items/RG-<issue number>/` (e.g. `RG-76`). Branch names add the issue type (skill gate 2):
+  Bug -> `fix/RG-<issue number>/<Simple-Title>`,
+  Feature -> `feature/RG-<issue number>/<Simple-Title>`.
+  Take the type from the GitHub issue's labels at INTAKE. Titles are short and
+  hyphenated, e.g. `fix/RG-76/Eval-submitted-notification`.

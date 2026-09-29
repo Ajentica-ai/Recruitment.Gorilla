@@ -1,6 +1,6 @@
-<!-- phase: CONSTRUCT | branch: feat/brand-logo-and-dashboard-feeds (stay, no new branch) | tasks: 4/5
+<!-- phase: DONE | branch: feat/brand-logo-and-dashboard-feeds (landed on develop) | tasks: 4/5
      base: 602d242 | updated: 2026-09-07
-     next: update PROJECT_PLAN.md (last task); app verified running in both themes -->
+     next: superseded - branch landed on develop as cc5bad9; closed at 002 intake -->
 # Plan: reduce the current branch to the brand work, then update it against develop
 
 Revised approach: revert the two dead commits in place instead of branching off

@@ -44,7 +44,7 @@ Criterion keys are fixed in `Models/EvaluationCriteria.cs`. Full detail in
 | GET | `/api/interviews/assignable-users` | any | — | `AssignableUserDto[]` | active users |
 | GET | `/api/interviews/mine` | any | — | `MyInterviewDto[]` | caller's assigned interviews + eval state |
 | GET | `/api/interviews/{id}` | assigned or Admin+ | — | `InterviewDetailDto` | else 404 |
-| PUT | `/api/interviews/{id}/evaluation` | assigned | `UpsertEvaluationDto` | `InterviewEvaluationDto` | 409 if already submitted; 400 on invalid keys/ratings |
+| PUT | `/api/interviews/{id}/evaluation` | assigned | `UpsertEvaluationDto` | `InterviewEvaluationDto` | 409 if already submitted; 400 on invalid keys/ratings; on `Submit` notifies Admin+ and candidate-visible Recruiters (issue #76) |
 | GET | `/api/notifications` | any | — | `NotificationListDto` | items + unreadCount |
 | POST | `/api/notifications/{id}/read` · `/read-all` | any | — | 204 | caller-scoped |
 
@@ -56,6 +56,13 @@ Criterion keys are fixed in `Models/EvaluationCriteria.cs`. Full detail in
   Admin+; candidate snapshot via `CandidateService.GetByIdAsync`; all evals for Admin+),
   `UpsertEvaluationAsync` (assigned-only; validates against `EvaluationCriteria`; submit-lock →
   Conflict), `GetAssignableUsersAsync`.
+- **On submit only**, `UpsertEvaluationAsync` calls `NotifyEvaluationSubmittedAsync`: one in-app
+  notification (no email) per active recipient, linking to `/candidates/{id}/evaluations`.
+  Recipients are every SuperAdmin/Admin plus the Recruiters who can see that candidate (own it,
+  or assigned on its applied role — the same rule as `CandidateService.ApplyAccess`), minus the
+  submitter, who may hold Admin and be the interviewer at once. The recruiter scoping is
+  deliberate: the report route is owner-scoped for recruiters, so an unscoped fan-out would
+  hand the rest of them a link that 404s. Draft saves notify nobody.
 - `NotificationService`: caller-scoped list/unread/mark-read. Both controllers `[Authorize]`.
   See [../backend.md](../backend.md).
 
@@ -82,7 +89,10 @@ Criterion keys are fixed in `Models/EvaluationCriteria.cs`. Full detail in
 - [x] Assigned user: bell badge + `/interviews/:id` reachable; dashboard lists it.
 - [x] Non-assigned non-admin → 404 on the interview; Admin+ can open any and see all evals.
 - [x] Draft persists; submit locks (subsequent PUT → 409).
+- [x] Submit raises one notification per Admin+/candidate-visible Recruiter, never for the
+      submitter, never on a draft save (`InterviewServiceEvaluationTests`).
 - [x] `dotnet build`, `dotnet ef database update`, `tsc --noEmit`, `lint` clean.
 
 ## 10. Open questions
-- None. Future: email delivery, aggregate scorecards, editable/withdrawn submissions.
+- None. Future: email delivery for the submit notification, aggregate scorecards,
+  editable/withdrawn submissions.

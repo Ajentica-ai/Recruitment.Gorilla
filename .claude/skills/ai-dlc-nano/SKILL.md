@@ -33,7 +33,7 @@ Present each phase's result in a line or two and ask before advancing ("Intent c
 **Four hard gates. Never skipped, batched away, or assumed — not on the fast path, not on resume, not under time pressure:**
 
 1. **Generate code (PLAN → CONSTRUCT).** Never create or modify code until the user has explicitly approved `plan.md`. The single most important gate. On resume into CONSTRUCT with an unapproved plan, get approval first.
-2. **Branch.** Before the first code change of a work item, confirm where it lands: stay on the current branch or create a new one (offer a name, e.g. `feat/api-keys`, `fix/issue-45`). Never create, switch, or rename a branch without an explicit yes. If the current branch is the default/protected one (`main`/`master`), actively recommend a new branch. Record the choice in `state.md`, the resume card, and `audit.md`.
+2. **Branch.** Before the first code change of a work item, confirm where it lands: stay on the current branch or create a new one. Never create, switch, or rename a branch without an explicit yes. If the current branch is the default/protected one (`main`/`master`), actively recommend a new branch. **The name is driven by the tracker item's type**, with the project prefix recorded in `tech-stack.md`: a **Bug** gets `fix/<PREFIX>-<issue number>/<Simple-Title>`, a **Feature** gets `feature/<PREFIX>-<issue number>/<Simple-Title>` (e.g. `fix/RG-76/Eval-submitted-notification`, `feature/RG-82/Bulk-CV-upload`). With no issue number to hand (a plain-language request), fall back to `fix/<short-slug>` or `feature/<short-slug>` and say so. Record the choice in `state.md`, the resume card, and `audit.md`.
 3. **External side effects.** See below.
 4. **Destructive local actions.** Deleting files or branches, `git reset --hard`, force operations, history rewrites — confirm first, and prefer a reversible alternative.
 
@@ -62,13 +62,13 @@ ai-dlc-nano-documents/          # at the repo root; committed — this is the re
 ├── audit.md                    # append-only log — NEVER read in full
 ├── backlog.md                  # out-of-scope findings, carried across work items
 └── work-items/
-    ├── <NNN>-<slug>/           # e.g. 001-fix-login-redirect, 002-issue-45-api-keys
+    ├── <PREFIX>-<issue>/       # one folder per tracker issue, e.g. RG-76, RG-72
     │   ├── intent.md           # what & why: source, request, decisions
     │   └── plan.md             # how: resume card, tasks, tests, files
-    └── _archive/<NNN>-<slug>/  # completed items beyond the last ten. Never read these.
+    └── _archive/<PREFIX>-<issue>/   # completed items beyond the last ten. Never read these.
 ```
 
-IDs are zero-padded sequence numbers plus a short slug; include the tracker reference when there is one (`003-issue-45-api-keys`).
+The item ID **is the tracker key**: the project prefix recorded in `tech-stack.md` plus the issue number (`RG-76`), matching the branch (`fix/RG-76/Eval-submitted-notification`) so folder, branch, `state.md` and `audit.md` all grep alike. With no tracker issue, fall back to a zero-padded sequence number plus a short slug (`004-dropzone-copy`). Folders created before this rule keep their existing names; only new ones follow it.
 
 ## Cheap reads and cheap writes
 
@@ -99,13 +99,13 @@ Each cap is a ceiling, not a target. If content doesn't fit, cut detail — neve
 
 ```markdown
 # AI-DLC Nano State
-- Active work item: work-items/003-issue-45-api-keys  (or "none")
+- Active work item: work-items/RG-45  (or "none")
 - Phase: CLARIFY | PLAN | CONSTRUCT | WRAP-UP  (or "—")
-- Branch: fix/issue-45  ("—" until chosen)
+- Branch: fix/RG-45/Api-keys  ("—" until chosen)
 - Base SHA: a92c083  (HEAD when the current phase began; "—" until CONSTRUCT)
 - Next step: <one sentence: the very next action on resume>
 - Paused work items:  (newest first, at most 5; or "none")
-  - work-items/002-dark-mode (CONSTRUCT, feat/dark-mode, base 31ff0ac)
+  - work-items/RG-30 (CONSTRUCT, feature/RG-30/Dark-mode, base 31ff0ac)
 - Uncommitted code: yes | no
 - Last updated: <ISO datetime> by <agent>
 ```
@@ -146,8 +146,8 @@ One physical line per event, no wrapping, **≤200 characters** total, detail �
 ```
 
 ```markdown
-- 2026-07-17T14:32Z [claude] 003-issue-45-api-keys PHASE CLARIFY→PLAN @a92c083: store keys hashed (user confirmed)
-- 2026-07-17T14:35Z [claude] 003-issue-45-api-keys BRANCH @a92c083: fix/issue-45 created off main (user confirmed)
+- 2026-07-17T14:32Z [claude] RG-45 PHASE CLARIFY→PLAN @a92c083: store keys hashed (user confirmed)
+- 2026-07-17T14:35Z [claude] RG-45 BRANCH @a92c083: fix/RG-45/Api-keys created off develop (user confirmed)
 ```
 
 `EVENT` is exactly one of `CREATED` · `PHASE X→Y` · `DECISION` · `BRANCH` · `SIDE-EFFECT` · `REVISED` · `PAUSED` · `DONE` · `ABANDONED`.
@@ -175,7 +175,7 @@ Log: item created, every phase transition, every human-confirmed decision, the b
 ```markdown
 # Backlog
 <!-- Out-of-scope findings, newest first. Delete a line when it is resolved. -->
-- [2026-08-21] backend/billing — proration rounds before FX conversion (found: 007-invoice-fix)
+- [2026-08-21] backend/billing — proration rounds before FX conversion (found: RG-38)
 ```
 
 Where, what, which item found it — nothing more. If it would exceed 50 lines, say so and offer to promote the oldest entries to tracker issues (gated) or drop them.
@@ -199,8 +199,8 @@ Otherwise skip straight to INTAKE and never load it.
 
 Establish what to work on:
 
-1. GitHub issue reference + GitHub MCP or `gh` available → fetch title, body, labels, comments.
-2. Jira reference + Jira/Atlassian MCP available → fetch summary, description, comments.
+1. GitHub issue reference + GitHub MCP or `gh` available → fetch title, body, labels, comments. Note the **type** from the labels (Bug vs Feature); the branch name depends on it, and if the labels do not say, ask.
+2. Jira reference + Jira/Atlassian MCP available → fetch summary, description, issue type, comments (Bug vs Story/Task drives the branch name).
 3. No tracker access, or the fetch fails → say so briefly and ask the user to paste details, or work from their description.
 4. Plain natural language → use it directly.
 
@@ -209,7 +209,7 @@ Then two one-command checks:
 - **Repo size re-check.** Count tracked files; compare with the `Size tier` line in `tech-stack.md`. If the count crossed a tier boundary **or tripled**, say so and offer to generate or upgrade the codebase map. A tier decided on day one against an empty scaffold must never govern the repo forever — this check is what prevents that.
 - **Backlog check.** `grep` `backlog.md` for the area(s) in scope. Surface any relevant entry and offer to fold it into this work item.
 
-Create the work item folder, draft `intent.md` (Request section), set `state.md` to CLARIFY, append a `CREATED` line. Confirm before advancing.
+Create the work item folder, named `<PREFIX>-<issue>` per **Directory layout** (`RG-76`), draft `intent.md` (Request section), set `state.md` to CLARIFY, append a `CREATED` line. Confirm before advancing.
 
 **Fast path.** If the request is small AND unambiguous (typo, copy change, config tweak, obvious one-function bug — nothing irreversible, no design choice), collapse CLARIFY and PLAN into one message: assumptions, a 1–3 task micro-plan, and the branch choice together; **one** confirmation; then construct. Still create `intent.md` and `plan.md` (three lines each is fine, resume card included) and still append to `audit.md` — the trail must never have holes; only the ceremony shrinks. The hard gates still hold: the fast path bundles them into that single confirmation, it does not remove them. When in doubt whether something is trivial, it isn't.
 
@@ -231,7 +231,7 @@ Write `plan.md`: resume card, short task checklist, test approach (state the rig
 Then **hold at two hard gates before any code exists:**
 
 1. Present `plan.md`, get an explicit go-ahead (or apply the user's edits and re-confirm).
-2. Confirm the **branch** — recommend a new one if the current branch is default/protected. Create or switch only after the yes.
+2. Confirm the **branch**, named per gate 2: `fix/<PREFIX>-<issue>/<Simple-Title>` for a Bug, `feature/<PREFIX>-<issue>/<Simple-Title>` for a Feature. Recommend a new one if the current branch is default/protected. Create or switch only after the yes.
 
 Once both are satisfied: record `base:` = current short SHA in the card and `state.md`, advance to CONSTRUCT, append the `PHASE PLAN→CONSTRUCT` line.
 
@@ -288,13 +288,13 @@ Phase-boundary updates mean nothing extra is normally required. But when the use
 
 1. Update `state.md` — phase, branch, base SHA, next step, and the "Uncommitted code" flag.
 2. Refresh the `plan.md` resume card. This is what keeps the item resumable after it falls off the paused list.
-3. If code changes are uncommitted, remind the user that **cross-device resume needs the code committed and pushed, not just the documents**, and offer a WIP commit (`wip(ai-dlc-nano): 003-issue-45-api-keys — 2/5 tasks`) on the item's branch. Commit only on a yes; pushing needs its own yes. If they commit, record the new SHA in the card and append a `PAUSED` line.
+3. If code changes are uncommitted, remind the user that **cross-device resume needs the code committed and pushed, not just the documents**, and offer a WIP commit (`wip(ai-dlc-nano): RG-45 2/5 tasks`) on the item's branch. Commit only on a yes; pushing needs its own yes. If they commit, record the new SHA in the card and append a `PAUSED` line.
 
 ## Resuming
 
 Read `state.md`, then at most `head -6` of the active item's `plan.md`. That is the entire resume read — roughly 350 tokens. Do **not** reload `intent.md` and the full `plan.md` to work out where you are; load them when you need their content, not to orient.
 
-With an active item, ask nothing: check out the recorded branch if not already on it (switching to an existing branch is free; creating one still needs the gate), announce the position in one or two sentences ("Resuming 003-issue-45-api-keys at CONSTRUCT on fix/issue-45: 2 of 5 tasks done; next: wire the middleware"), and continue from the recorded next step. If the user's new request is clearly about something else, ask whether to switch — the old item moves to the paused list and stays resumable.
+With an active item, ask nothing: check out the recorded branch if not already on it (switching to an existing branch is free; creating one still needs the gate), announce the position in one or two sentences ("Resuming RG-45 at CONSTRUCT on fix/RG-45/Api-keys: 2 of 5 tasks done; next: wire the middleware"), and continue from the recorded next step. If the user's new request is clearly about something else, ask whether to switch — the old item moves to the paused list and stays resumable.
 
 **Verify the code matches the plan with one command, never by re-reading source:**
 

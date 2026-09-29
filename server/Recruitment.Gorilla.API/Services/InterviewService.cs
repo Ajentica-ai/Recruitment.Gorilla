@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Recruitment.Gorilla.API.Auth;
 using Recruitment.Gorilla.API.Data;
 using Recruitment.Gorilla.API.DTOs;
 using Recruitment.Gorilla.API.Models;
@@ -10,7 +11,7 @@ namespace Recruitment.Gorilla.API.Services;
 /// interviewers or to Admin+ (this intentionally bypasses candidate owner-scoping —
 /// being assigned grants read access to the candidate snapshot).
 /// </summary>
-public class InterviewService(AppDbContext db, CandidateService candidateService)
+public class InterviewService(AppDbContext db, CandidateService candidateService, NotificationService notificationService)
 {
     /// <summary>True if the user is an assigned interviewer on any interview of this candidate.</summary>
     public Task<bool> IsAssignedInterviewerForCandidateAsync(int candidateId, int userId) =>
@@ -300,7 +301,45 @@ public class InterviewService(AppDbContext db, CandidateService candidateService
         var name = eval.InterviewerUser?.Name
                    ?? await db.Users.Where(u => u.Id == userId).Select(u => u.Name).FirstOrDefaultAsync()
                    ?? "Unknown";
+
+        // The Candidate include is guaranteed by the required FK; the pattern keeps the compiler's
+        // nullable analysis happy, matching how the rubric lookup above treats the navigation.
+        if (dto.Submit && interview.Candidate is { } candidate)
+            await NotifyEvaluationSubmittedAsync(candidate, userId, name);
+
         return (ToDto(eval, name), null, false, false);
+    }
+
+    /// <summary>
+    /// Tells the people who act on evaluations that one has landed: every active Admin+, plus the
+    /// active Recruiters who can see this candidate. The recruiter scope mirrors
+    /// <c>CandidateService.ApplyAccess</c> on purpose - the notification links to the candidate's
+    /// evaluation report, which is owner-scoped for recruiters, so a wider fan-out would hand the
+    /// rest of them a dead link. The submitter is skipped: an Admin may also be the interviewer.
+    /// </summary>
+    private async Task NotifyEvaluationSubmittedAsync(Candidate candidate, int submitterUserId, string submitterName)
+    {
+        var assignedRecruiterIds = candidate.RoleAppliedOptionId is int roleOptionId
+            ? await db.RoleAppliedOptions
+                .Where(o => o.Id == roleOptionId)
+                .SelectMany(o => o.Recruiters.Select(r => r.UserId))
+                .ToListAsync()
+            : [];
+
+        var recipientIds = await db.Users
+            .Where(u => u.IsActive && u.Id != submitterUserId)
+            .Where(u => u.Roles.Any(r => r.Role == Roles.SuperAdmin || r.Role == Roles.Admin) ||
+                        (u.Roles.Any(r => r.Role == Roles.Recruiter) &&
+                         (candidate.OwnerUserId == u.Id || assignedRecruiterIds.Contains(u.Id))))
+            .Select(u => u.Id)
+            .ToListAsync();
+
+        foreach (var recipientId in recipientIds)
+            await notificationService.NotifyAsync(
+                recipientId,
+                "Evaluation submitted",
+                $"{submitterName} submitted an interview evaluation for {candidate.FullName}.",
+                $"/candidates/{candidate.Id}/evaluations");
     }
 
     private static InterviewEvaluationDto ToDto(InterviewEvaluation e) =>
