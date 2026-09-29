@@ -1,5 +1,6 @@
 # Codebase Map
-<!-- generated: 2026-09-06 @ ec7d9c8 - tier: standard - coverage: guardrail + anchors only -->
+<!-- generated: 2026-09-06 @ ec7d9c8 - tier: standard - coverage: guardrail + anchors only
+     index.css size + tracked-file count re-verified 2026-09-30 @ 6d4dbae (RG-36) -->
 
 **Routing lives in `AGENTS.md` ("Where things are") and `ai-docs/README.md`.**
 Go there first. This file deliberately holds only the two things those do not:
@@ -11,7 +12,7 @@ the expensive-file guardrail and the anchor index for long documents.
 | `server/Recruitment.Gorilla.API/Migrations/*.Designer.cs` | up to 98 KB each | EF Core generated | `git grep -n "<col>" -- server/**/Migrations`; regenerate with `dotnet ef migrations add` |
 | `server/Recruitment.Gorilla.API/Migrations/AppDbContextModelSnapshot.cs` | 98 KB | EF Core generated | same; never hand-edit |
 | `client/package-lock.json` | 140 KB | npm lockfile | `npm ls <pkg>` |
-| `client/src/index.css` | 5106 lines | hand-written theme, far over the 500-line read cap | `git grep -n "<token>" -- client/src/index.css`, then `sed -n` a window |
+| `client/src/index.css` | 7436 lines | hand-written theme, far over the 500-line read cap | `git grep -n "<token>" -- client/src/index.css`, then `sed -n` a window |
 | `docs/user-guide/USER-GUIDE.pdf`, `docs/user-guide/images/*.png`, `client/public/logo.png` | 0.1-1.9 MB | binary | do not read |
 
 ## Long documents

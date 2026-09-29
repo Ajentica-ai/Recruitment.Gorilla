@@ -1107,14 +1107,16 @@ a.cell-identity__name:focus-visible {
   margin-left: 0.15em;
 }
 
-.password-field .form-control {
-  padding-right: 42px;
-}
-
-/* Bootstrap paints its own validation glyph on the input's right edge, which
-   would sit underneath the button. Move it inboard when both are present. */
-.password-field .form-control.is-invalid {
-  background-position: right 42px center;
+/* PasswordInput draws its own show/hide button over the field. Chromium and
+   Edge paint a *native* reveal control inside that same input the moment it
+   holds a value, which showed two eye icons side by side (issue #36). Ours is
+   the one that stays: it is focusable, labelled and announces its pressed
+   state, and Firefox and Safari have no native control at all, so leaning on
+   the browser's would make reveal browser-dependent. `::-ms-clear` goes with
+   it - same vendor control, same overlap. */
+input[type='password']::-ms-reveal,
+input[type='password']::-ms-clear {
+  display: none;
 }
 
 .form-control.is-invalid:focus,
