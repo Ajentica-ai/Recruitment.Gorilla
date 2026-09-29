@@ -1,6 +1,6 @@
 <!-- phase: CONSTRUCT | branch: fix/RG-76/Eval-submitted-notification | tasks: 6/6
-     base: cc5bad9 | updated: 2026-09-30
-     next: backend suite blocked by SDK/runtime mismatch, awaiting user -->
+     base: cb89f36 | updated: 2026-09-30
+     next: run dotnet test once Microsoft.NETCore.App 10.0.12 x64 is installed, then WRAP-UP -->
 # Plan: notify Admin/SuperAdmin/owning Recruiters when an evaluation is submitted
 
 Fix in the service layer, matching CandidateService and OfferService which both

@@ -23,3 +23,6 @@
 - 2026-09-30T00:10Z [claude] 002-issue-76-eval-submitted-notification PHASE PLAN→CONSTRUCT @cc5bad9: plan approved incl. recruiter visibility scoping
 - 2026-09-30T00:40Z [claude] 002-issue-76-eval-submitted-notification PHASE CONSTRUCT @cc5bad9: code + 4 tests + spec done; tsc/vitest/lint green; dotnet test blocked - SDK 10.0.303 testhost needs runtime 10.0.12, only 10.0.11 installed
 - 2026-09-30T00:55Z [claude] 002-issue-76-eval-submitted-notification PAUSED @cc5bad9: blocked on dotnet test - both SDKs (10.0.300/10.0.303) bake testhost against runtime 10.0.12; tried pin, clean, MTP runner, all refused
+- 2026-09-30T01:05Z [claude] 002-issue-76-eval-submitted-notification PAUSED @cb89f36: committed code+tests+spec; AspNetCore 10.0.12 installed but Microsoft.NETCore.App 10.0.12 still missing, dotnet test still aborts
+- 2026-09-30T01:20Z [claude] 002-issue-76-eval-submitted-notification SIDE-EFFECT @cb89f36: installed .NET runtime 10.0.12 x64 from builds.dotnet.microsoft.com, signature verified, user approved UAC
+- 2026-09-30T01:20Z [claude] 002-issue-76-eval-submitted-notification PAUSED @cb89f36: testhost fixed, suite runs; 179/217 fail on MySQL 'Access denied for root@localhost' - stored secret no longer matches local server
