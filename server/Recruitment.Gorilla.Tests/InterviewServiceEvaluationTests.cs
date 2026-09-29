@@ -202,4 +202,77 @@ public class InterviewServiceEvaluationTests(MySqlDatabaseFixture fixture) : DbT
         Assert.NotNull(await Interviews().GetCandidateEvaluationReportAsync(visible.Id, recruiter.Id));
         Assert.Null(await Interviews().GetCandidateEvaluationReportAsync(hidden.Id, recruiter.Id));
     }
+
+    // ---- Issue #76: a submitted evaluation notifies the people who act on it ----
+
+    /// <summary>Notification titles raised for a user, so a test asserts on content, not just a count.</summary>
+    private List<string> NotificationsFor(int userId) =>
+        Db.Notifications.Where(n => n.UserId == userId).Select(n => n.Title).ToList();
+
+    [Fact]
+    public async Task Submit_notifies_admins_and_super_admins()
+    {
+        var admin = Data.AddUser(Roles.Admin);
+        var superAdmin = Data.AddUser(Roles.SuperAdmin);
+        var interviewer = Data.AddUser(Roles.Interviewer, name: "Ivy Interviewer");
+        var candidate = Data.AddCandidate();
+        var interview = Data.AddInterview(candidate.Id, interviewer.Id);
+
+        await Interviews().UpsertEvaluationAsync(interview.Id, interviewer.Id, Eval(submit: true));
+
+        Assert.Equal(["Evaluation submitted"], NotificationsFor(admin.Id));
+        Assert.Equal(["Evaluation submitted"], NotificationsFor(superAdmin.Id));
+
+        var sent = Db.Notifications.First(n => n.UserId == admin.Id);
+        Assert.Contains("Ivy Interviewer", sent.Message);
+        Assert.Contains(candidate.FullName, sent.Message);
+        Assert.Equal($"/candidates/{candidate.Id}/evaluations", sent.LinkUrl);
+    }
+
+    [Fact]
+    public async Task Draft_save_notifies_nobody()
+    {
+        var admin = Data.AddUser(Roles.Admin);
+        var (interviewId, userId) = Assigned();
+
+        await Interviews().UpsertEvaluationAsync(interviewId, userId, Eval(submit: false));
+
+        Assert.Empty(NotificationsFor(admin.Id));
+    }
+
+    [Fact]
+    public async Task Submitter_is_not_notified_about_their_own_evaluation()
+    {
+        // An Admin can also be an assigned interviewer; they should not be told about their own submit.
+        var adminInterviewer = Data.AddUser(Roles.Admin);
+        var otherAdmin = Data.AddUser(Roles.Admin);
+        var candidate = Data.AddCandidate();
+        var interview = Data.AddInterview(candidate.Id, adminInterviewer.Id);
+
+        await Interviews().UpsertEvaluationAsync(interview.Id, adminInterviewer.Id, Eval(submit: true));
+
+        Assert.Empty(NotificationsFor(adminInterviewer.Id));
+        Assert.Single(NotificationsFor(otherAdmin.Id));
+    }
+
+    [Fact]
+    public async Task Only_recruiters_who_can_see_the_candidate_are_notified()
+    {
+        var owningRecruiter = Data.AddUser(Roles.Recruiter);
+        var assignedRecruiter = Data.AddUser(Roles.Recruiter);
+        var strangerRecruiter = Data.AddUser(Roles.Recruiter);
+        var inactiveAdmin = Data.AddUser(Roles.Admin, active: false);
+        var interviewer = Data.AddUser(Roles.Interviewer);
+
+        var role = Data.AddRole(recruiterUserIds: assignedRecruiter.Id);
+        var candidate = Data.AddCandidate(ownerUserId: owningRecruiter.Id, roleId: role.Id);
+        var interview = Data.AddInterview(candidate.Id, interviewer.Id);
+
+        await Interviews().UpsertEvaluationAsync(interview.Id, interviewer.Id, Eval(submit: true));
+
+        Assert.Single(NotificationsFor(owningRecruiter.Id));
+        Assert.Single(NotificationsFor(assignedRecruiter.Id));
+        Assert.Empty(NotificationsFor(strangerRecruiter.Id));
+        Assert.Empty(NotificationsFor(inactiveAdmin.Id));
+    }
 }
