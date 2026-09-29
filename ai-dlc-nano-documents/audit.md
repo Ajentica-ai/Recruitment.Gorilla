@@ -34,3 +34,4 @@
 - 2026-09-29T20:24Z [claude] RG-36 PHASE PLAN->CONSTRUCT @6d4dbae: fast path - plan, branch and dead-CSS cleanup approved in one confirmation
 - 2026-09-29T20:24Z [claude] RG-36 DECISION @6d4dbae: keep our own toggle and hide the native control - Firefox/Safari have none, so the reverse makes reveal browser-dependent
 - 2026-09-29T20:24Z [claude] RG-36 DONE @6d4dbae: one CSS rule + 8 lines of dead CSS removed; tsc/88 vitest/oxlint/build green; two-icons-to-one confirmed in real Edge
+- 2026-09-29T20:31Z [claude] RG-36 SIDE-EFFECT @f0fe7d5: pushed branch and opened PR #78 against develop (user approved)

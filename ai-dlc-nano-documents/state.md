@@ -3,7 +3,7 @@
 - Phase: -
 - Branch: fix/RG-36/Duplicate-visibility-icons
 - Base SHA: 6d4dbae
-- Next step: RG-36 complete and verified. Uncommitted - say the word to commit, push or open a PR.
+- Next step: RG-36 complete. PR #78 open against develop, awaiting your review and merge.
 - Paused work items: none
-- Uncommitted code: yes
+- Uncommitted code: no
 - Last updated: 2026-09-30T02:30Z by claude
