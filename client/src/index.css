@@ -122,11 +122,6 @@
   border-color: var(--danger);
 }
 
-.required-star {
-  color: var(--danger);
-  margin-left: 0.15em;
-}
-
 *,
 *::before,
 *::after {
@@ -5012,6 +5007,17 @@ a.hero-chip--accent:hover {
   /* The schedule line is long ("Wed, Aug 19, 01:23 AM GMT+6 · 60 min ·
      Completed"); on a phone it wraps rather than forcing the row wide. */
   white-space: normal;
+  /* Because the text wraps, the icon must align to the first line rather than
+     to the middle of the whole block (issue #72). */
+  align-items: flex-start;
+}
+
+/* The icon is a flex child with no intrinsic minimum, so without flex-shrink it
+   was squashed from 15px to 13.8px at 320px wide (issue #72). The top offset
+   centres it on the first text line, matching the old single-line look. */
+.interview-chip>svg {
+  flex-shrink: 0;
+  margin-top: calc((1lh - 15px) / 2);
 }
 
 .interview-chip--soon {

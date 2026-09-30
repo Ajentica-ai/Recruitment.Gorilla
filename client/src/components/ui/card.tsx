@@ -29,7 +29,10 @@ function CardHeader({ className, ...props }: React.ComponentProps<'div'>) {
     <div
       data-slot="card-header"
       className={cn(
-        'flex min-h-[var(--control-h)] items-center justify-between gap-3 px-[var(--card-pad)] pt-[var(--card-pad)]',
+        // Wraps rather than crushing: CardAction is shrink-0, so without this the
+        // title absorbs every pixel of loss and collapses to 0px on a phone, and
+        // its text spills under the actions (issue #72).
+        'flex min-h-[var(--control-h)] flex-wrap items-center justify-between gap-x-3 gap-y-2 px-[var(--card-pad)] pt-[var(--card-pad)]',
         'has-[+[data-slot=card-content]]:pb-[var(--space-3)]',
         className,
       )}

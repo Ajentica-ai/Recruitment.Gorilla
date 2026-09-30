@@ -47,7 +47,9 @@ export default function SectionCard({
     <Card className={cn(flush && 'overflow-hidden', className)}>
       {hasHead && (
         <CardHeader>
-          <div className="min-w-0">
+          {/* basis-40 makes the header wrap (issue #72): below ~10rem of room the
+              title takes its own row instead of shrinking away to nothing. */}
+          <div className="min-w-0 flex-1 basis-40">
             {title && (
               <CardTitle asChild>
                 <Heading>{title}</Heading>

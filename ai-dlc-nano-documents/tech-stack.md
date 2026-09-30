@@ -6,7 +6,7 @@ facts the ai-dlc-nano workflow itself needs.
 
 - Stack: see `AGENTS.md` § "Tech stack (pinned)". Do not duplicate versions here.
 - Conventions: `ai-docs/conventions.md`. Feature recipe: `ai-docs/feature-playbook.md`.
-- Size tier: standard - 418 tracked files - re-checked 2026-09-30 (was 322 on 2026-09-06; no tier change)
+- Size tier: standard - 426 tracked files - re-checked 2026-09-30 (was 418 earlier same day; no tier change)
 - Code-intelligence MCP: none
 
 ## Verify commands (used by CONSTRUCT)
