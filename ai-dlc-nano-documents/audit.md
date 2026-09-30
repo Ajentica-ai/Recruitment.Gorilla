@@ -61,3 +61,5 @@
 - 2026-09-30T07:08Z [claude] RG-72 PHASE PLAN->CONSTRUCT @8a35295: plan and branch approved in one confirmation
 - 2026-09-30T07:16Z [claude] RG-72 REVISED @8a35295: header e2e initially only probed the dashboard and passed against unfixed code; widened to the interview page
 - 2026-09-30T07:16Z [claude] RG-72 PHASE CONSTRUCT->WRAP-UP @8a35295: 6/6 tasks; both e2e checks fail without the fix and pass with it; 10 card headers swept clean at 390 and 1280
+- 2026-09-30T07:54Z [claude] RG-72 SIDE-EFFECT @d7ebf80: pushed branch and opened PR #80 against develop (user approved)
+- 2026-09-30T07:54Z [claude] RG-72 DONE @d7ebf80: CardHeader wraps, chip icon fixed, duplicate CSS removed; 2 new e2e checks red without the fix

@@ -1,6 +1,6 @@
-<!-- phase: WRAP-UP | branch: fix/RG-72/Responsive-interview-header | tasks: 6/6
+<!-- phase: DONE | branch: fix/RG-72/Responsive-interview-header | tasks: 6/6
      base: 8a35295 | updated: 2026-09-30
-     next: none - all tasks done and verified; awaiting the user on commit/push -->
+     next: none - PR #80 open against develop -->
 # Plan: Responsive interview header and chip icon
 Root causes, measured not guessed: `CardHeader` is a one-row flex whose
 `CardAction` is `shrink-0` (constant 281px here), so the title absorbs every
