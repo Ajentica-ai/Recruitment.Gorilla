@@ -49,3 +49,5 @@
 - 2026-09-30T03:13Z [claude] RG-38 DECISION @d7dced9: seeded demo.superadmin@rg.local via Auth__SeedAdminEmail (user asked for a test account) to reach the SuperAdmin-only Users page
 - 2026-09-30T03:44Z [claude] RG-38 SIDE-EFFECT @2898b90: pushed branch and opened PR #79 against develop (user approved)
 - 2026-09-30T03:44Z [claude] RG-38 DONE @2898b90: shared PersonNameValidator on 4 server paths + 3 client forms; 246 backend / 119 client tests green; emoji rejection confirmed over HTTP on both user endpoints
+- 2026-09-30T03:47Z [claude] RG-38 DECISION @2784aca: DB scan shows 0 existing user/candidate/draft names violate the new rule, so no backfill is needed
+- 2026-09-30T03:53Z [claude] RG-38 DECISION @2784aca: docs addendum kept local only, not pushed to PR #79 (user requested)

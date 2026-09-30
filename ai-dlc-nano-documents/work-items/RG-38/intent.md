@@ -39,4 +39,7 @@
 - `CandidateDraftService.UpdateDraftAsync` still accepts any draft name. Left
   deliberately: drafts hold raw CV-parser output, and the approve path now
   rejects a bad name before it can become a candidate.
-- Names already stored with emoji are not backfilled or cleaned.
+- Names already stored with emoji are not backfilled. Scanned the local DB at
+  WRAP-UP with the MySQL client: 0 of 14 users, 0 of 44 candidates and 0 drafts
+  violate the new rule (emoji/symbol, no letter, over 100, or empty), so nothing
+  needs cleaning and no existing row will start failing on edit.
