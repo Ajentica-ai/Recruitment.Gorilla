@@ -178,6 +178,10 @@ public class CandidateService(AppDbContext db, IWebHostEnvironment env, Notifica
         if (string.IsNullOrWhiteSpace(referenceName) || string.IsNullOrWhiteSpace(referenceEmail))
             return "A referred candidate requires a reference name and a reference email.";
 
+        var referenceNameError = PersonNameValidator.Validate(referenceName, "Reference name");
+        if (referenceNameError is not null)
+            return referenceNameError;
+
         if (!EmailRegex.IsMatch(referenceEmail))
             return "The reference email is not a valid email address.";
 
@@ -192,8 +196,9 @@ public class CandidateService(AppDbContext db, IWebHostEnvironment env, Notifica
         string fullName, string email, int? roleAppliedOptionId, List<int>? skillOptionIds,
         string? relevantExperience, int? sourceOptionId = null)
     {
-        if (string.IsNullOrWhiteSpace(fullName))
-            return "Full name is required.";
+        var nameError = PersonNameValidator.Validate(fullName, "Full name");
+        if (nameError is not null)
+            return nameError;
 
         if (string.IsNullOrWhiteSpace(email) || !EmailRegex.IsMatch(email.Trim()))
             return "A valid email address is required.";

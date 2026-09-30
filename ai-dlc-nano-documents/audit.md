@@ -35,3 +35,15 @@
 - 2026-09-29T20:24Z [claude] RG-36 DECISION @6d4dbae: keep our own toggle and hide the native control - Firefox/Safari have none, so the reverse makes reveal browser-dependent
 - 2026-09-29T20:24Z [claude] RG-36 DONE @6d4dbae: one CSS rule + 8 lines of dead CSS removed; tsc/88 vitest/oxlint/build green; two-icons-to-one confirmed in real Edge
 - 2026-09-29T20:31Z [claude] RG-36 SIDE-EFFECT @f0fe7d5: pushed branch and opened PR #78 against develop (user approved)
+- 2026-09-29T20:36Z [claude] RG-38 CREATED @1bf47be: issue #38 - Add/Edit user Name field accepts emoji; no client or server validation beyond non-empty
+- 2026-09-29T20:39Z [claude] RG-38 DECISION @1bf47be: Bug -> branch fix/RG-38/User-name-validation
+- 2026-09-29T20:39Z [claude] RG-38 DECISION @1bf47be: rule: at least one Unicode letter, no \p{C}, no \p{S}, max 100 - keeps non-Latin names legal
+- 2026-09-29T20:39Z [claude] RG-38 DECISION @1bf47be: enforce on client AND server - client-only leaves the API bypassable
+- 2026-09-29T20:39Z [claude] RG-38 DECISION @1bf47be: scope widened to candidate name + reference name + draft approve, not just the user name
+- 2026-09-29T20:39Z [claude] RG-38 PHASE CLARIFY->PLAN @1bf47be: plan.md written - 9 tasks, standard test tier
+- 2026-09-29T20:40Z [claude] RG-38 BRANCH @d7dced9: fix/RG-38/User-name-validation created off origin/develop (user confirmed)
+- 2026-09-29T20:40Z [claude] RG-38 PHASE PLAN->CONSTRUCT @d7dced9: plan and branch approved in one confirmation
+- 2026-09-29T20:46Z [claude] RG-38 REVISED @d7dced9: added a CandidateForm wiring test and a conventions.md entry beyond the 9 planned tasks
+- 2026-09-30T03:09Z [claude] RG-38 DECISION @d7dced9: user supplied the working local MySQL credential; full backend suite then ran green
+- 2026-09-30T03:09Z [claude] RG-38 PHASE CONSTRUCT->WRAP-UP @d7dced9: 246 backend + 119 client tests green; emoji rejection confirmed over real HTTP
+- 2026-09-30T03:13Z [claude] RG-38 DECISION @d7dced9: seeded demo.superadmin@rg.local via Auth__SeedAdminEmail (user asked for a test account) to reach the SuperAdmin-only Users page
