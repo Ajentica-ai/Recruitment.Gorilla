@@ -27,4 +27,9 @@ the expensive-file guardrail and the anchor index for long documents.
 ## Gotchas not covered by ai-docs
 - `dotnet build` fails while the API is running (exe lock) - stop it first.
 - `dotnet test` needs a local MySQL instance up.
+- The MySQL client is NOT on PATH and NOT under `C:\Program Files\MySQL`. Use the
+  9.7 bundle's own binary under
+  `C:\Users\Tahmid\Downloads\mysql-enterprise-9.7.1_winx64_bundle\...\bin\mysql.exe`.
+  The 8.0.23 client at `C:\tools\mysql\...` fails against the 9.7 server (auth plugin).
+  Pass the password via the `MYSQL_PWD` env var, never on the command line.
 - Migrations are generated: change the entity and re-scaffold, never edit the Designer file.

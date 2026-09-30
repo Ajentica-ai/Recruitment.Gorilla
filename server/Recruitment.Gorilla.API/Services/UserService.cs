@@ -29,7 +29,7 @@ public class UserService(AppDbContext db, EmailService emailService)
     {
         var error = ValidateRoles(dto.Roles)
             ?? ValidateEmail(dto.Email)
-            ?? (string.IsNullOrWhiteSpace(dto.Name) ? "Name is required." : null)
+            ?? PersonNameValidator.Validate(dto.Name, "Name")
             ?? (string.IsNullOrWhiteSpace(dto.TemporaryPassword) ? "A temporary password is required." : null);
         if (error is not null) return MutationResult.Fail(error);
 
@@ -60,7 +60,7 @@ public class UserService(AppDbContext db, EmailService emailService)
     public async Task<MutationResult> UpdateAsync(int id, UpdateUserDto dto)
     {
         var error = ValidateRoles(dto.Roles)
-            ?? (string.IsNullOrWhiteSpace(dto.Name) ? "Name is required." : null);
+            ?? PersonNameValidator.Validate(dto.Name, "Name");
         if (error is not null) return MutationResult.Fail(error);
 
         var user = await db.Users.Include(u => u.Roles).FirstOrDefaultAsync(u => u.Id == id);

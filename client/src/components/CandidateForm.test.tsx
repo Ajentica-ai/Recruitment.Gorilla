@@ -73,6 +73,20 @@ describe('CandidateForm', () => {
     expect(createCandidate).not.toHaveBeenCalled();
   });
 
+  // Issue #38: the form used to accept anything non-empty as a name.
+  it('rejects an emoji full name and does not submit', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<CandidateForm draft={draft} onSaved={() => {}} onCancel={() => {}} />);
+
+    // The Prism Label is not wired with htmlFor, so reach the field by position:
+    // Full name is the first text input in the form.
+    await user.type(screen.getAllByRole('textbox')[0], '\u{1F604}\u{1F60A}');
+    await user.click(screen.getByRole('button', { name: /Save candidate/i }));
+
+    expect(await screen.findByText('Full name cannot contain emoji or symbols.')).toBeInTheDocument();
+    expect(createCandidate).not.toHaveBeenCalled();
+  });
+
   it('auto-selects the role when the recruiter has exactly one assigned', async () => {
     vi.mocked(getActiveRoleOptions).mockResolvedValue([role()]);
     renderWithProviders(<CandidateForm draft={draft} onSaved={() => {}} onCancel={() => {}} />);

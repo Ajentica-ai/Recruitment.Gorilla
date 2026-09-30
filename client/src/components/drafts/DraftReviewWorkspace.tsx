@@ -31,6 +31,7 @@ import EmptyState from '../common/EmptyState';
 import LoadingPanel from '../common/Loading';
 import { SearchInput } from '@/components/ui/search-input';
 import { cn } from '@/lib/utils';
+import { validatePersonName } from '@/utils/personName';
 import type {
   CandidateDraft,
   ApproveCandidateDraftRequest,
@@ -355,7 +356,8 @@ export default function DraftReviewWorkspace({ initialBatchId, onCandidateCreate
     if (!activeDraft) return;
 
     const errors: Record<string, string> = {};
-    if (!editForm.fullName?.trim()) errors.fullName = 'Full name is required.';
+    const fullNameError = validatePersonName(editForm.fullName, 'Full name');
+    if (fullNameError) errors.fullName = fullNameError;
     if (!editForm.email?.trim()) {
       errors.email = 'Email address is required.';
     } else if (!/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/i.test(editForm.email.trim())) {

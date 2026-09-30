@@ -28,6 +28,24 @@ Match these patterns. Consistency is the point — prefer the existing approach 
 | Deleted | `NoContent()` |
 | Unauthorized | `Unauthorized(new { message })` |
 
+### Person names go through one shared validator
+Every field holding a human name (the user `Name`, the candidate `FullName`, the
+reference name) is validated by `Services/PersonNameValidator.cs` on the server
+and `client/src/utils/personName.ts` on the client. The two are mirrors: change
+one and change the other, and keep their test tables in step
+(`PersonNameValidatorTests.cs` / `personName.test.ts`).
+
+The rule: required, at most 100 characters, at least one Unicode letter
+(`\p{L}`), and no `\p{S}` or `\p{C}` characters. `\p{S}` is where emoji and
+pictographs live; `\p{C}` catches control characters and the zero-width joiners
+that glue emoji sequences together. It stays permissive about script and
+punctuation on purpose, so `Anne-Marie O'Neill` and non-Latin names still save.
+Added for issue #38, where emoji could be saved as a user's name.
+
+The client check only buys an immediate message. The server is the authority,
+and every write path (`UserService`, `CandidateService.ValidateCandidateAsync`,
+`CandidateDraftService.ApproveDraftAsync`) calls it.
+
 ## Frontend (React + TypeScript)
 
 ### Data flow: types → api.ts → TanStack Query → component

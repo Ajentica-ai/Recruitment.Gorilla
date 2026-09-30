@@ -16,6 +16,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { CheckboxField } from '@/components/ui/field';
+import { validatePersonName } from '@/utils/personName';
 
 interface Props {
   draft: CVDraft;
@@ -150,11 +151,15 @@ export default function CandidateForm({ draft, onSaved, onCancel }: Props) {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const errs: FieldErrors = {};
-    if (!fullName.trim()) errs.fullName = 'Full name is required.';
+    const fullNameError = validatePersonName(fullName, 'Full name');
+    if (fullNameError) errs.fullName = fullNameError;
     if (!EMAIL_REGEX.test(email.trim())) errs.email = 'A valid email address is required.';
     if (!relevantExperience.trim()) errs.relevantExperience = 'Relevant experience is required.';
     if (!roleAppliedOptionId) errs.roleApplied = 'Role applied for is required.';
-    if (isReferred && !referenceName.trim()) errs.referenceName = 'Reference name is required.';
+    if (isReferred) {
+      const referenceNameError = validatePersonName(referenceName, 'Reference name');
+      if (referenceNameError) errs.referenceName = referenceNameError;
+    }
     if (isReferred && !EMAIL_REGEX.test(referenceEmail.trim()))
       errs.referenceEmail = 'A valid reference email is required.';
     if (Object.keys(errs).length > 0) {

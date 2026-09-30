@@ -21,6 +21,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { CheckboxField } from '@/components/ui/field';
 import { Badge, type BadgeVariant } from '@/components/ui/badge';
+import { validatePersonName } from '@/utils/personName';
 import {
   Dialog,
   DialogBody,
@@ -156,8 +157,9 @@ export default function UsersPage() {
   const submitForm = (e: React.FormEvent) => {
     e.preventDefault();
     setFormError(null);
-    if (!name.trim()) {
-      setFormError('Name is required.');
+    const nameError = validatePersonName(name, 'Name');
+    if (nameError) {
+      setFormError(nameError);
       return;
     }
     if (!editing && !email.trim()) {

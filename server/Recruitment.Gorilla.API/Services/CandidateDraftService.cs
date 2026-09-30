@@ -326,7 +326,8 @@ public class CandidateDraftService(
         var roleId = dto.RoleAppliedOptionId ?? draft.RoleAppliedOptionId;
         var experience = (dto.RelevantExperience ?? draft.RelevantExperience)?.Trim();
 
-        if (string.IsNullOrWhiteSpace(fullName)) return (null, "Full name is required.");
+        var nameError = PersonNameValidator.Validate(fullName, "Full name");
+        if (nameError is not null) return (null, nameError);
         if (string.IsNullOrWhiteSpace(email)) return (null, "Email is required.");
         if (!roleId.HasValue) return (null, "Role applied for is required.");
         if (string.IsNullOrWhiteSpace(experience)) experience = "0 Years";
