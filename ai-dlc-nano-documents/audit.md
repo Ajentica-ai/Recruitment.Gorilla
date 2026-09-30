@@ -47,3 +47,5 @@
 - 2026-09-30T03:09Z [claude] RG-38 DECISION @d7dced9: user supplied the working local MySQL credential; full backend suite then ran green
 - 2026-09-30T03:09Z [claude] RG-38 PHASE CONSTRUCT->WRAP-UP @d7dced9: 246 backend + 119 client tests green; emoji rejection confirmed over real HTTP
 - 2026-09-30T03:13Z [claude] RG-38 DECISION @d7dced9: seeded demo.superadmin@rg.local via Auth__SeedAdminEmail (user asked for a test account) to reach the SuperAdmin-only Users page
+- 2026-09-30T03:44Z [claude] RG-38 SIDE-EFFECT @2898b90: pushed branch and opened PR #79 against develop (user approved)
+- 2026-09-30T03:44Z [claude] RG-38 DONE @2898b90: shared PersonNameValidator on 4 server paths + 3 client forms; 246 backend / 119 client tests green; emoji rejection confirmed over HTTP on both user endpoints

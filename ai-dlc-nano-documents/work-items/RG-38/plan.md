@@ -1,6 +1,6 @@
-<!-- phase: WRAP-UP | branch: fix/RG-38/User-name-validation | tasks: 9/9
+<!-- phase: DONE | branch: fix/RG-38/User-name-validation | tasks: 9/9
  base: d7dced9 | updated: 2026-09-30
-     next: nothing - all tasks done and verified; awaiting the user on commit/push -->
+     next: none - PR #79 open against develop -->
 # Plan: Reject emoji and symbol-only person names
 Rule (one shared definition, enforced client and server):
 required (unchanged) - trimmed length <= 100 - must contain at least one
