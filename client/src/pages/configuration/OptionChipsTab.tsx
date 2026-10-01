@@ -236,6 +236,7 @@ export default function OptionChipsTab({
       >
         <DialogContent>
           <form
+            className="contents"
             noValidate
             onSubmit={(e) => {
               e.preventDefault();

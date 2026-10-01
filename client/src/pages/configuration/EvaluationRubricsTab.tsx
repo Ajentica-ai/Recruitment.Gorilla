@@ -577,7 +577,7 @@ export default function EvaluationRubricsTab() {
       {/* Create / Edit Rubric Modal */}
       <Dialog open={showModal} onOpenChange={(open) => { if (!open) { (() => setShowModal(false))(); } }}>
 <DialogContent className="sm:max-w-2xl">
-        <form onSubmit={handleFormSubmit}>
+        <form onSubmit={handleFormSubmit} className="contents">
           <DialogHeader>
             <DialogTitle>
               {editingRubric ? `Edit Rubric: ${editingRubric.name}` : 'New Evaluation Scorecard Rubric'}
