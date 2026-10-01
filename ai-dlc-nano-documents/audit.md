@@ -96,3 +96,6 @@
 - 2026-10-01T14:40Z [claude] RG-82 BRANCH @ab8fbe6: fix/RG-82/Rubric-section-header created off develop (user confirmed)
 - 2026-10-01T14:40Z [claude] RG-82 PHASE PLAN->CONSTRUCT @ab8fbe6: plan and branch approved together; 4 tasks, standard tier
 - 2026-10-01T14:43Z [claude] RG-82 PHASE CONSTRUCT->WRAP-UP @ab8fbe6: 4/4; all three layout assertions red then green; resolves the RG-85 backlog line too
+- 2026-10-01T18:48Z [claude] RG-82 SIDE-EFFECT @830b712: pushed branch and opened PR #90 against develop (user approved)
+- 2026-10-01T18:48Z [claude] RG-82 SIDE-EFFECT @830b712: commented on issue #82 with the measurements and the folded-in RG-85 finding (user approved)
+- 2026-10-01T18:48Z [claude] RG-82 DONE @830b712: section header wraps and the chip holds one line; criterion row rebalanced to 4/6/2; RG-85 backlog line resolved

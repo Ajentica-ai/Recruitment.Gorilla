@@ -1,4 +1,4 @@
-<!-- phase: WRAP-UP | branch: fix/RG-82/Rubric-section-header | tasks: 4/4
+<!-- phase: DONE | branch: fix/RG-82/Rubric-section-header | tasks: 4/4
      base: ab8fbe6 | updated: 2026-10-01
      next: summarise; nothing committed yet, commit and push need approval -->
 # Plan: Rubric editor rows reflow at narrow widths
