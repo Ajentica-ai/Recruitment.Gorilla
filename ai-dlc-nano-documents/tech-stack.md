@@ -30,3 +30,26 @@ The playbook's "Verification checklist" is the authority; this is the short form
   Feature -> `feature/RG-<issue number>/<Simple-Title>`.
   Take the type from the GitHub issue's labels at INTAKE. Titles are short and
   hyphenated, e.g. `fix/RG-76/Eval-submitted-notification`.
+
+## Tracker bindings (used by the INTAKE claim)
+Issues live in `Ajentica-ai/Recruitment.Gorilla`; the board is **Project-Recruitment.Gorilla**
+(owner `Ajentica-ai`, project number `2`). At INTAKE the item is claimed automatically, no
+confirmation: assign it to whoever is doing the work, then set Status to **In Development**.
+
+- Assignee: the authenticated `gh` user - `gh api user --jq .login`, or `--add-assignee @me`.
+- Status option: `In Development` (this board has no "In Progress"). Other options:
+  Backlog, Ready, In review, Ready For Testing, In Testing, Done.
+
+```bash
+R=Ajentica-ai/Recruitment.Gorilla; N=<issue number>
+gh issue edit $N -R $R --add-assignee @me          # skip if already assigned to someone else
+ITEM=$(gh project item-list 2 --owner Ajentica-ai --limit 200 --format json \
+       --jq ".items[] | select(.content.number==$N) | .id")
+# not on the board yet:
+# ITEM=$(gh project item-add 2 --owner Ajentica-ai --url https://github.com/$R/issues/$N --format json --jq .id)
+gh project item-edit --id "$ITEM" \
+  --project-id PVT_kwDOE4z7D84BlR3O \
+  --field-id PVTSSF_lADOE4z7D84BlR3Ozhj_V-g \
+  --single-select-option-id 47fc9ee4            # In Development
+```
+Then append one `SIDE-EFFECT` line to `audit.md` with what changed.
