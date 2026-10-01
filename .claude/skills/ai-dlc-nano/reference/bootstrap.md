@@ -21,6 +21,7 @@ Two one-time paths. **Bootstrap** (sections 1–7) runs the first time the workf
 - Test: <framework> — run with `<command>`
 - Lint/format: <tools> — run with `<command>`
 - Size tier: standard · 631 tracked files · recorded 2026-08-21
+- Tracker: <repo/project the issues live in> | none. For the INTAKE claim, record who to assign (normally the authenticated tracker user) plus the board's in-progress status option, by its exact name
 - Code-intelligence MCP: <name, if one is connected> | none
 - Conventions: <bullets: naming, structure, error handling, anything non-obvious>
 ```

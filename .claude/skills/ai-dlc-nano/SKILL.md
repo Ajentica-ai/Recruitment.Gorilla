@@ -3,7 +3,7 @@ name: ai-dlc-nano
 description: Minimalist AI development lifecycle (AI-DLC Nano) for bug fixes and features. Use when the user invokes /ai-dlc-nano or mentions "ai-dlc-nano" in natural language, e.g. "work on issue #45 with ai-dlc-nano".
 ---
 
-<!-- AI-DLC Nano spec 2.0 — this document is duplicated verbatim in every harness folder. Editing it? See "Editing the workflow" in the ai-dlc-nano project README: the same edit must land in every copy, and the version above must be bumped in all of them. -->
+<!-- AI-DLC Nano spec 2.1 — this document is duplicated verbatim in every harness folder. Editing it? See "Editing the workflow" in the ai-dlc-nano project README: the same edit must land in every copy, and the version above must be bumped in all of them. -->
 
 # AI-DLC Nano Workflow
 
@@ -47,6 +47,7 @@ The boundary is the local dev environment: inside it act freely, crossing it nee
 
 - **Free:** all reads, including MCP reads — fetching an issue, ticket, page, or record.
 - **Always confirm, showing exactly what will happen:** any MCP *write* (creating/editing an issue or ticket, comments, status or label changes, Slack/Notion/Linear messages, calendar or email, remote DB mutations) and any remote git action (`git push`, opening or merging a PR, pushing tags, triggering a deploy).
+- **One carve-out, the INTAKE claim.** Assigning the tracker item to the person doing the work and moving its status to the in-progress column runs **automatically at INTAKE, with no confirmation** (see Phase 1). It is reversible, it touches only the item already being worked on, and it is still logged as a `SIDE-EFFECT` line. Nothing else is exempt.
 - A local commit is fine when offered or requested; **pushing** it is gated.
 - With no MCP/CLI access to a remote system, never guess its contents or fabricate a result — rely on the human.
 - **Commits made as part of this workflow never include AI attribution** — no `Co-Authored-By: Claude ...` trailer, no "Generated with ..." line, no mention of the assistant or tool that wrote the code. Plain, human-style commit message only.
@@ -203,6 +204,8 @@ Establish what to work on:
 2. Jira reference + Jira/Atlassian MCP available → fetch summary, description, issue type, comments (Bug vs Story/Task drives the branch name).
 3. No tracker access, or the fetch fails → say so briefly and ask the user to paste details, or work from their description.
 4. Plain natural language → use it directly.
+
+**Claim the item.** Once the tracker item is identified and tracker access exists, immediately **assign it to the person doing the work** and **move its status to the in-progress column**: no confirmation, per the carve-out above. Take both values from `tech-stack.md` § "Tracker bindings": who to assign (normally the authenticated tracker user, e.g. `gh api user --jq .login`) and the exact status option, whose name differs per board ("In Development", "In Progress", "Doing"). If the item is already assigned to someone else, leave the assignee alone, say so in one line, and still move the status. If it is not on the board yet, add it, then set the status. Append one `SIDE-EFFECT` line recording what actually changed. No tracker access, or a write fails → say so in one line and carry on; the claim never blocks INTAKE.
 
 Then two one-command checks:
 
