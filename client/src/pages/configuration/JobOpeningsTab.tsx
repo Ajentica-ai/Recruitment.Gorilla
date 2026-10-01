@@ -35,13 +35,13 @@ import { CheckboxField } from '@/components/ui/field';
 import { NativeSelect } from '@/components/ui/native-select';
 import { SearchInput } from '@/components/ui/search-input';
 import {
-  Dialog,
-  DialogBody,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+  Sheet,
+  SheetBody,
+  SheetContent,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+} from '@/components/ui/sheet';
 
 const PRIORITIES = ['High', 'Medium', 'Low'];
 const LOCATIONS = ['Remote', 'Office', 'Hybrid', 'Contractual'];
@@ -283,8 +283,8 @@ export default function JobOpeningsTab() {
         </div>
       )}
 
-      <Dialog open={showModal} onOpenChange={(open) => { if (!open) { (() => setShowModal(false))(); } }}>
-<DialogContent className="sm:max-w-2xl">
+      <Sheet open={showModal} onOpenChange={(open) => { if (!open) { (() => setShowModal(false))(); } }}>
+<SheetContent className="sm:w-[min(42rem,100vw)]">
         <form
           className="contents"
           noValidate
@@ -297,10 +297,10 @@ export default function JobOpeningsTab() {
             saveMutation.mutate();
           }}
         >
-          <DialogHeader>
-            <DialogTitle>{editing ? 'Edit job opening' : 'Add job opening'}</DialogTitle>
-          </DialogHeader>
-          <DialogBody>
+          <SheetHeader>
+            <SheetTitle>{editing ? 'Edit job opening' : 'Add job opening'}</SheetTitle>
+          </SheetHeader>
+          <SheetBody>
             {error && (
               <div className="alert-danger-soft mb-6" role="alert">
                 {error}
@@ -390,16 +390,16 @@ export default function JobOpeningsTab() {
                 <CheckboxField id="job-active" label="Active — shown in candidate forms and on the dashboard" checked={isActive} onCheckedChange={(checked) => setIsActive(checked)} />
               </div>
             </div>
-          </DialogBody>
-          <DialogFooter>
+          </SheetBody>
+          <SheetFooter>
             <Button variant="outline" onClick={() => setShowModal(false)}>Cancel</Button>
             <Button type="submit" disabled={saveMutation.isPending}>
               {saveMutation.isPending ? 'Saving…' : 'Save'}
             </Button>
-          </DialogFooter>
+          </SheetFooter>
         </form>
-      </DialogContent>
-</Dialog>
+      </SheetContent>
+</Sheet>
 
       {/* The shared confirm dialog rather than a fourth hand-rolled copy of the
           same three elements. */}

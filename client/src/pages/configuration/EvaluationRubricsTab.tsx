@@ -30,13 +30,13 @@ import { Textarea } from '@/components/ui/textarea';
 import { CheckboxField } from '@/components/ui/field';
 import { SearchInput } from '@/components/ui/search-input';
 import {
-  Dialog,
-  DialogBody,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+  Sheet,
+  SheetBody,
+  SheetContent,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+} from '@/components/ui/sheet';
 import type {
   EvaluationRubric,
   UpsertEvaluationRubricPayload,
@@ -575,16 +575,16 @@ export default function EvaluationRubricsTab() {
       )}
 
       {/* Create / Edit Rubric Modal */}
-      <Dialog open={showModal} onOpenChange={(open) => { if (!open) { (() => setShowModal(false))(); } }}>
-<DialogContent className="sm:max-w-2xl">
+      <Sheet open={showModal} onOpenChange={(open) => { if (!open) { (() => setShowModal(false))(); } }}>
+<SheetContent className="sm:w-[min(52rem,100vw)]">
         <form onSubmit={handleFormSubmit} className="contents">
-          <DialogHeader>
-            <DialogTitle>
+          <SheetHeader>
+            <SheetTitle>
               {editingRubric ? `Edit Rubric: ${editingRubric.name}` : 'New Evaluation Scorecard Rubric'}
-            </DialogTitle>
-          </DialogHeader>
+            </SheetTitle>
+          </SheetHeader>
 
-          <DialogBody>
+          <SheetBody>
             {errorMsg && <Alert variant="danger" className="py-2 text-[length:var(--text-sm)]">{errorMsg}</Alert>}
 
             {/* Rubric Top Metadata */}
@@ -731,19 +731,19 @@ export default function EvaluationRubricsTab() {
                 </div>
               ))}
             </div>
-          </DialogBody>
+          </SheetBody>
 
-          <DialogFooter>
+          <SheetFooter>
             <Button variant="outline" onClick={() => setShowModal(false)}>
               Cancel
             </Button>
             <Button type="submit" disabled={saveMutation.isPending}>
               {saveMutation.isPending ? 'Saving...' : 'Save Rubric Scorecard'}
             </Button>
-          </DialogFooter>
+          </SheetFooter>
         </form>
-      </DialogContent>
-</Dialog>
+      </SheetContent>
+</Sheet>
 
       {/* Delete Confirmation Modal */}
       {deleteTarget && (

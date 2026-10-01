@@ -11,13 +11,13 @@ import { Button } from '@/components/ui/button';
 import { InputGroup } from '@/components/ui/input-group';
 import { NativeSelect } from '@/components/ui/native-select';
 import {
-  Dialog,
-  DialogBody,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+  Sheet,
+  SheetBody,
+  SheetContent,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+} from '@/components/ui/sheet';
 
 const CURRENCIES = ['USD', 'EUR', 'GBP', 'CAD', 'AUD', 'BDT'];
 
@@ -121,14 +121,14 @@ export default function CreateOfferModal({
   };
 
   return (
-    <Dialog open={show} onOpenChange={(open) => { if (!open) { (onHide)(); } }}>
-<DialogContent>
+    <Sheet open={show} onOpenChange={(open) => { if (!open) { (onHide)(); } }}>
+<SheetContent className="sm:w-[min(42rem,100vw)]">
       <form onSubmit={handleSubmit} className="contents">
-        <DialogHeader>
-          <DialogTitle>{existingOffer ? 'Edit Offer Terms' : 'Draft New Employment Offer'}</DialogTitle>
-        </DialogHeader>
+        <SheetHeader>
+          <SheetTitle>{existingOffer ? 'Edit Offer Terms' : 'Draft New Employment Offer'}</SheetTitle>
+        </SheetHeader>
 
-        <DialogBody>
+        <SheetBody>
           {error && <div className="alert alert-danger py-2 mb-4 text-[length:var(--text-sm)]">{error}</div>}
 
           <div className="flex flex-col gap-1.5 mb-4">
@@ -224,18 +224,18 @@ export default function CreateOfferModal({
               onChange={(e) => setNotes(e.target.value)}
             />
           </div>
-        </DialogBody>
+        </SheetBody>
 
-        <DialogFooter>
+        <SheetFooter>
           <Button variant="secondary" onClick={onHide} disabled={mutation.isPending}>
             Cancel
           </Button>
           <Button type="submit" disabled={mutation.isPending}>
             {mutation.isPending ? 'Saving...' : existingOffer ? 'Save Changes' : 'Create Offer'}
           </Button>
-        </DialogFooter>
+        </SheetFooter>
       </form>
-    </DialogContent>
-</Dialog>
+    </SheetContent>
+</Sheet>
   );
 }

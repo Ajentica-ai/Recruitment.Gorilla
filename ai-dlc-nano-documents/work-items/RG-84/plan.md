@@ -1,4 +1,4 @@
-<!-- phase: WRAP-UP | branch: feature/RG-84/Mobile-first-sheet | tasks: 7/7
+<!-- phase: DONE | branch: feature/RG-84/Mobile-first-sheet | tasks: 7/7
      base: 99f987f | updated: 2026-10-01
      next: summarise; commit is unmade and push/PR need approval -->
 # Plan: Make the Sheet primitive mobile-first

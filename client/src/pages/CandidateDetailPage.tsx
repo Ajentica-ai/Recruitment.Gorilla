@@ -61,6 +61,24 @@ export default function CandidateDetailPage() {
   const [editing, setEditing] = useState(false);
   const [addingStatus, setAddingStatus] = useState(false);
   const [showHistoryDrawer, setShowHistoryDrawer] = useState(false);
+  /**
+   * Whether closing the status drawer should put the history drawer back.
+   *
+   * "Add status" is reachable from two places: the page header, where no drawer
+   * was open and none should appear, and the history drawer's own "Advance
+   * Stage", which has to close first because two stacked panels is a poor shape
+   * on a phone. Only the second case returns, so the reader keeps their place in
+   * the timeline instead of landing back on the page and reopening it.
+   */
+  const [returnToHistory, setReturnToHistory] = useState(false);
+
+  const closeStatusDrawer = () => {
+    setAddingStatus(false);
+    if (returnToHistory) {
+      setReturnToHistory(false);
+      setShowHistoryDrawer(true);
+    }
+  };
   const [showReportDrawer, setShowReportDrawer] = useState(false);
   const [cvPreview, setCvPreview] = useState<{ url: string; contentType: string; fileName: string; fileId: number } | null>(null);
   const [loadingCvId, setLoadingCvId] = useState<number | null>(null);
@@ -381,6 +399,7 @@ export default function CandidateDetailPage() {
  
                 onClick={() => {
                   setShowHistoryDrawer(false);
+                  setReturnToHistory(true);
                   setAddingStatus(true);
                 }}
               >
@@ -401,9 +420,9 @@ export default function CandidateDetailPage() {
         <AddStatusModal
           candidateId={candidateId}
           show={addingStatus}
-          onHide={() => setAddingStatus(false)}
+          onHide={closeStatusDrawer}
           onAdded={() => {
-            setAddingStatus(false);
+            closeStatusDrawer();
             void queryClient.invalidateQueries({ queryKey: ['candidate', candidateId] });
           }}
         />
