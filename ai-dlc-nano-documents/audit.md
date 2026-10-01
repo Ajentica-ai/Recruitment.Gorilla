@@ -51,3 +51,15 @@
 - 2026-09-30T03:44Z [claude] RG-38 DONE @2898b90: shared PersonNameValidator on 4 server paths + 3 client forms; 246 backend / 119 client tests green; emoji rejection confirmed over HTTP on both user endpoints
 - 2026-09-30T03:47Z [claude] RG-38 DECISION @2784aca: DB scan shows 0 existing user/candidate/draft names violate the new rule, so no backfill is needed
 - 2026-09-30T03:53Z [claude] RG-38 DECISION @2784aca: docs addendum kept local only, not pushed to PR #79 (user requested)
+- 2026-09-30T06:22Z [claude] RG-38 SIDE-EFFECT @8a35295: commented on issue #38 with the QA handoff and moved its card In Development -> Ready For Testing (user approved)
+- 2026-09-30T07:02Z [claude] RG-72 CREATED @8a35295: issue #72 - CardHeader crushes the title at narrow widths; interview-chip svg shrinks below 15px
+- 2026-09-30T07:07Z [claude] RG-72 DECISION @8a35295: fix shared CardHeader rather than scoping an override to .eval-form-card
+- 2026-09-30T07:07Z [claude] RG-72 DECISION @8a35295: calendar icon: flex-shrink 0 plus align to the first text line
+- 2026-09-30T07:07Z [claude] RG-72 DECISION @8a35295: fold in the duplicate .required-star backlog entry while in index.css
+- 2026-09-30T07:07Z [claude] RG-72 PHASE CLARIFY->PLAN @8a35295: plan.md written - 6 tasks, standard tier, Playwright measurement as the regression test
+- 2026-09-30T07:08Z [claude] RG-72 BRANCH @8a35295: fix/RG-72/Responsive-interview-header created off develop (user confirmed)
+- 2026-09-30T07:08Z [claude] RG-72 PHASE PLAN->CONSTRUCT @8a35295: plan and branch approved in one confirmation
+- 2026-09-30T07:16Z [claude] RG-72 REVISED @8a35295: header e2e initially only probed the dashboard and passed against unfixed code; widened to the interview page
+- 2026-09-30T07:16Z [claude] RG-72 PHASE CONSTRUCT->WRAP-UP @8a35295: 6/6 tasks; both e2e checks fail without the fix and pass with it; 10 card headers swept clean at 390 and 1280
+- 2026-09-30T07:54Z [claude] RG-72 SIDE-EFFECT @d7ebf80: pushed branch and opened PR #80 against develop (user approved)
+- 2026-09-30T07:54Z [claude] RG-72 DONE @d7ebf80: CardHeader wraps, chip icon fixed, duplicate CSS removed; 2 new e2e checks red without the fix
