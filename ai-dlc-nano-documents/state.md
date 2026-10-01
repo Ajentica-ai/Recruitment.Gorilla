@@ -1,9 +1,9 @@
 # AI-DLC Nano State
-- Active work item: none
-- Phase: -
-- Branch: fix/RG-72/Responsive-interview-header
-- Base SHA: d7ebf80
-- Next step: RG-72 complete. PR #80 open against develop, awaiting your review and merge. RG-38 docs commit 3c27c34 still sits unpushed on its own branch.
+- Active work item: work-items/RG-84
+- Phase: WRAP-UP
+- Branch: feature/RG-84/Mobile-first-sheet
+- Base SHA: 99f987f
+- Next step: RG-84 complete and unstaged. Commit, push and PR all need your go-ahead.
 - Paused work items: none
-- Uncommitted code: no
-- Last updated: 2026-09-30T07:02Z by claude
+- Uncommitted code: yes
+- Last updated: 2026-10-01T06:05Z by claude

@@ -63,3 +63,14 @@
 - 2026-09-30T07:16Z [claude] RG-72 PHASE CONSTRUCT->WRAP-UP @8a35295: 6/6 tasks; both e2e checks fail without the fix and pass with it; 10 card headers swept clean at 390 and 1280
 - 2026-09-30T07:54Z [claude] RG-72 SIDE-EFFECT @d7ebf80: pushed branch and opened PR #80 against develop (user approved)
 - 2026-09-30T07:54Z [claude] RG-72 DONE @d7ebf80: CardHeader wraps, chip icon fixed, duplicate CSS removed; 2 new e2e checks red without the fix
+- 2026-10-01T04:09Z [claude] RG-84 CREATED @fac5b53: issue #84 - Sheet lacks Dialog's mobile-first treatment; blocks #85
+- 2026-10-01T04:09Z [claude] RG-84 SIDE-EFFECT @fac5b53: INTAKE claim BLOCKED by harness permission layer (external write); issue unassigned, board status unchanged
+- 2026-10-01T04:09Z [claude] RG-81 DONE @fac5b53: completed outside this workflow before /ai-dlc-nano was invoked; PR #86 open, closes #81 and #70 (recorded here so the trail has no hole)
+- 2026-10-01T05:24Z [claude] RG-84 DECISION @fac5b53: all three shipped drawers become bottom sheets below sm, no opt-out prop (user confirmed)
+- 2026-10-01T05:24Z [claude] RG-84 DECISION @fac5b53: delete the dead side=left/top/bottom branches; only side=right is used (user confirmed)
+- 2026-10-01T05:24Z [claude] RG-84 DECISION @fac5b53: mobile nav is a hand-rolled aside in SidebarNav, not a Sheet; issue body and sheet.tsx comment both stale
+- 2026-10-01T09:55Z [claude] RG-84 BRANCH @99f987f: feature/RG-84/Mobile-first-sheet created off develop (user confirmed)
+- 2026-10-01T09:55Z [claude] RG-84 PHASE PLAN->CONSTRUCT @99f987f: plan and branch approved together; 7 tasks, standard tier
+- 2026-10-01T09:55Z [claude] RG-84 REVISED @99f987f: PR #86 merged to develop before branching, so .env.e2e.example already carries the admin keys; 7 tasks -> 6
+- 2026-10-01T10:04Z [claude] RG-84 PHASE CONSTRUCT->WRAP-UP @99f987f: 7/7; drawer spec red then green; all three drawers checked at 390 and 1280 in both themes
+- 2026-10-01T10:04Z [claude] RG-84 DECISION @99f987f: responsive-card-header spec is red on clean develop too (data/role dependency); recorded as a follow-up, not fixed here

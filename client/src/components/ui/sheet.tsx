@@ -5,10 +5,21 @@ import type * as React from 'react';
 import { cn } from '@/lib/utils';
 
 /**
- * A panel that slides in from an edge — the status-history drawer, and the
- * mobile navigation. Radix's Dialog underneath, so it gets the same focus trap
- * and escape handling as a modal; the difference is purely where it comes from
- * and that it does not interrupt the page the way a centred dialog does.
+ * A drawer: the evaluation report, the candidate's status history, and the
+ * interview page's profile panel. Radix's Dialog underneath, so it gets the
+ * same focus trap and escape handling as a modal; the difference is that it
+ * comes in from the side and does not interrupt the page the way a centred
+ * dialog does.
+ *
+ * From `sm` up it is a right-hand panel. Below `sm` it is a bottom sheet, the
+ * same shape DialogContent takes, because a full-width panel sliding in
+ * horizontally on a 390px screen reads as a page navigation: people then reach
+ * for the browser back button, which does not dismiss it. A sheet rising from
+ * the bottom sets no such expectation, and it puts the footer actions in thumb
+ * reach.
+ *
+ * Not the mobile navigation, despite what this comment claimed until #84.
+ * `shell/SidebarNav` hand-rolls that as an `<aside>` and never used this.
  */
 function Sheet({ ...props }: React.ComponentProps<typeof SheetPrimitive.Root>) {
   return <SheetPrimitive.Root data-slot="sheet" {...props} />;
@@ -25,11 +36,9 @@ function SheetClose({ ...props }: React.ComponentProps<typeof SheetPrimitive.Clo
 function SheetContent({
   className,
   children,
-  side = 'right',
   showCloseButton = true,
   ...props
 }: React.ComponentProps<typeof SheetPrimitive.Content> & {
-  side?: 'top' | 'right' | 'bottom' | 'left';
   showCloseButton?: boolean;
 }) {
   return (
@@ -47,14 +56,16 @@ function SheetContent({
           'fixed z-[var(--z-modal)] flex flex-col gap-0 bg-card text-card-foreground shadow-[var(--shadow-lg)]',
           'transition ease-[var(--ease-harbor)]',
           'data-[state=open]:animate-in data-[state=closed]:animate-out',
-          side === 'right' &&
-            'inset-y-0 right-0 h-full w-[min(28rem,100vw)] border-l border-border data-[state=open]:slide-in-from-right data-[state=closed]:slide-out-to-right',
-          side === 'left' &&
-            'inset-y-0 left-0 h-full w-[min(20rem,85vw)] border-r border-border data-[state=open]:slide-in-from-left data-[state=closed]:slide-out-to-left',
-          side === 'top' &&
-            'inset-x-0 top-0 h-auto border-b border-border data-[state=open]:slide-in-from-top data-[state=closed]:slide-out-to-top',
-          side === 'bottom' &&
-            'inset-x-0 bottom-0 h-auto border-t border-border data-[state=open]:slide-in-from-bottom data-[state=closed]:slide-out-to-bottom',
+          // Phone: a bottom sheet pinned to the viewport edges. Capped rather
+          // than full height, so the page stays visible above it and it reads
+          // as an overlay instead of a new screen.
+          'inset-x-0 bottom-0 max-h-[92dvh] rounded-t-[var(--radius-2xl)] border-t border-border',
+          'data-[state=open]:slide-in-from-bottom data-[state=closed]:slide-out-to-bottom',
+          // sm and up: the right-hand panel, full height against the edge.
+          'sm:inset-x-auto sm:inset-y-0 sm:right-0 sm:h-full sm:max-h-none sm:w-[min(28rem,100vw)]',
+          'sm:rounded-t-none sm:border-t-0 sm:border-l',
+          'sm:data-[state=open]:slide-in-from-right sm:data-[state=closed]:slide-out-to-right',
+          'sm:data-[state=open]:slide-in-from-bottom-0 sm:data-[state=closed]:slide-out-to-bottom-0',
           className,
         )}
         {...props}
@@ -91,6 +102,14 @@ function SheetHeader({ className, ...props }: React.ComponentProps<'div'>) {
   );
 }
 
+/** The scrolling middle, so the header and footer stay pinned.
+ *
+ *  Same contract as DialogBody: `flex-1 min-h-0` only works on a DIRECT flex
+ *  child of SheetContent. A form wrapping header/body/footer is not a flex
+ *  container, so the body stops scrolling, grows to its content and pushes the
+ *  footer past the bottom edge, with no scrollbar to show anything was cut off.
+ *  Give any such wrapper `className="contents"`. See #81, which fixed exactly
+ *  that in all eight form dialogs. */
 function SheetBody({ className, ...props }: React.ComponentProps<'div'>) {
   return (
     <div
@@ -107,7 +126,11 @@ function SheetFooter({ className, ...props }: React.ComponentProps<'div'>) {
       data-slot="sheet-footer"
       className={cn(
         'flex flex-col-reverse gap-2 border-t border-line px-[var(--card-pad)] py-[var(--space-3)]',
-        'sm:flex-row sm:justify-end',
+        // On a phone the primary action goes full width and leads, under the
+        // thumb, and clears the home indicator. Same rules as DialogFooter.
+        'pb-[max(var(--space-3),env(safe-area-inset-bottom))]',
+        'sm:flex-row sm:justify-end sm:pb-[var(--space-3)]',
+        '[&>*]:w-full sm:[&>*]:w-auto',
         className,
       )}
       {...props}

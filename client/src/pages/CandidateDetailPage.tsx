@@ -357,7 +357,7 @@ export default function CandidateDetailPage() {
 
       {/* Status History Slide-over Offcanvas Drawer */}
       <Sheet open={showHistoryDrawer} onOpenChange={setShowHistoryDrawer}>
-        <SheetContent side="right">
+        <SheetContent>
         <SheetHeader>
           <SheetTitle className="flex items-center gap-2 h6 mb-0">
             <History size={18} className="text-brand" />
