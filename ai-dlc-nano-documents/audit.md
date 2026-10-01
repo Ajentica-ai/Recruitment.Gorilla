@@ -89,3 +89,13 @@
 - 2026-10-01T14:31Z [claude] RG-85 SIDE-EFFECT @34e0791: pushed branch and opened PR #89 against develop (user approved)
 - 2026-10-01T14:31Z [claude] RG-85 SIDE-EFFECT @34e0791: commented on issue #85 with decisions and the two corrected claims (user approved)
 - 2026-10-01T14:31Z [claude] RG-85 DONE @34e0791: four forms converted to Sheet; history drawer returns after the status drawer; drawer-forms.spec.ts red then green
+- 2026-10-01T14:36Z [claude] RG-82 CREATED @ab8fbe6: issue #82 - rubric section header wraps inside its chip and truncates the name input below ~420px
+- 2026-10-01T14:36Z [claude] RG-82 SIDE-EFFECT @ab8fbe6: INTAKE claim skipped - the assign and board-status writes were refused by the harness permission layer on RG-84 and RG-85
+- 2026-10-01T14:39Z [claude] RG-82 DECISION @ab8fbe6: fold in the RG-85 backlog entry on the clipping criterion description; same file and root concern (user confirmed)
+- 2026-10-01T14:39Z [claude] RG-82 DECISION @ab8fbe6: criterion row rebalanced to 4/6/2 columns rather than giving the description its own line (user confirmed)
+- 2026-10-01T14:40Z [claude] RG-82 BRANCH @ab8fbe6: fix/RG-82/Rubric-section-header created off develop (user confirmed)
+- 2026-10-01T14:40Z [claude] RG-82 PHASE PLAN->CONSTRUCT @ab8fbe6: plan and branch approved together; 4 tasks, standard tier
+- 2026-10-01T14:43Z [claude] RG-82 PHASE CONSTRUCT->WRAP-UP @ab8fbe6: 4/4; all three layout assertions red then green; resolves the RG-85 backlog line too
+- 2026-10-01T18:48Z [claude] RG-82 SIDE-EFFECT @830b712: pushed branch and opened PR #90 against develop (user approved)
+- 2026-10-01T18:48Z [claude] RG-82 SIDE-EFFECT @830b712: commented on issue #82 with the measurements and the folded-in RG-85 finding (user approved)
+- 2026-10-01T18:48Z [claude] RG-82 DONE @830b712: section header wraps and the chip holds one line; criterion row rebalanced to 4/6/2; RG-85 backlog line resolved

@@ -1,9 +1,9 @@
 # AI-DLC Nano State
 - Active work item: none
 - Phase: -
-- Branch: feature/RG-85/Form-dialogs-to-drawers
-- Base SHA: aae3a90
-- Next step: RG-85 complete. PR #89 open against develop, awaiting review and merge. The #82 and #83 issues remain open and independent.
+- Branch: fix/RG-82/Rubric-section-header
+- Base SHA: ab8fbe6
+- Next step: RG-82 complete. PR #90 open against develop, awaiting review and merge. Issue #83 is the last of the five still open.
 - Paused work items: none
 - Uncommitted code: no
-- Last updated: 2026-10-01T14:20Z by claude
+- Last updated: 2026-10-02T04:30Z by claude
