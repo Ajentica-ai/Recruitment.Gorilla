@@ -642,20 +642,22 @@ export default function EvaluationRubricsTab() {
             <div className="flex flex-col gap-4">
               {sections.map((sec, secIdx) => (
                 <div key={sec.id} className="card p-4 border border-border rounded-[var(--radius-lg)] bg-light-subtle">
-                  <div className="flex items-center justify-between gap-2 mb-2.5">
-                    <div className="flex items-center gap-2 grow">
-                      <span className="badge bg-secondary-subtle text-text-soft font-monospace">
+                  {/* Wraps rather than squeezing: below roughly 420px the actions
+                      drop to a second line, which is the only way the chip and the
+                      name input both keep their content (issue #82). */}
+                  <div className="flex flex-wrap items-center justify-between gap-2 mb-2.5">
+                    <div className="flex min-w-0 grow basis-60 items-center gap-2">
+                      <span className="badge bg-secondary-subtle text-text-soft font-monospace shrink-0 whitespace-nowrap">
                         Section {secIdx + 1}
                       </span>
                       <Input
-                        className="h-[var(--control-h-sm)] text-[length:var(--text-sm)] font-semibold"
+                        className="h-[var(--control-h-sm)] text-[length:var(--text-sm)] font-semibold min-w-0 max-w-[300px]"
                         placeholder="Section Name (e.g. Technical Knowledge)"
                         value={sec.name}
                         onChange={(e) => updateSectionName(sec.id, e.target.value)}
-                        style={{ maxWidth: 300 }}
                       />
                     </div>
-                    <div className="flex items-center gap-1.5">
+                    <div className="flex shrink-0 items-center gap-1.5">
                       <Button
                         variant="outline"
                         size="sm"
@@ -686,8 +688,8 @@ export default function EvaluationRubricsTab() {
                         className="flex items-center gap-2 p-2 bg-background rounded-[var(--radius-md)] border border-border"
                       >
                         <GripVertical size={14} className="text-muted-foreground shrink-0" />
-                        <div className="grow grid grid-cols-12 gap-4 gap-2">
-                          <div className="col-span-12 md:col-span-5">
+                        <div className="grow grid grid-cols-12 gap-2">
+                          <div className="col-span-12 md:col-span-4">
                             <Input className="h-[var(--control-h-sm)] text-[length:var(--text-sm)]"
                               placeholder="Criterion Label (e.g. System Design)"
                               value={crit.label}
@@ -695,7 +697,10 @@ export default function EvaluationRubricsTab() {
                               required
                             />
                           </div>
-                          <div className="col-span-12 md:col-span-5">
+                          {/* Six columns, not five: the guidance text is the longest
+                              thing in the row and clipped at 5/12 even in a 52rem
+                              drawer, while the label has slack. */}
+                          <div className="col-span-12 md:col-span-6">
                             <Input className="h-[var(--control-h-sm)] text-[length:var(--text-sm)]"
                               placeholder="Evaluation guide hint / rubric standard..."
                               value={crit.hint || ''}
