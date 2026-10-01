@@ -78,3 +78,11 @@
 - 2026-10-01T12:55Z [claude] RG-84 SIDE-EFFECT @9245848: split the spec 2.1 commit onto chore/ai-dlc-nano-spec-2.1 and opened PR #88 (user approved)
 - 2026-10-01T12:55Z [claude] RG-84 SIDE-EFFECT @9245848: commented on issue #84 with decisions and the two corrected claims (user approved)
 - 2026-10-01T12:55Z [claude] RG-84 DONE @9245848: Sheet is a bottom sheet below sm and a right panel from sm; side prop removed; drawer-mobile.spec.ts red then green
+- 2026-10-01T13:02Z [claude] RG-85 CREATED @735b6f1: issue #85 - convert 4 heavy form dialogs to drawers; #81 and #84 both merged so prerequisites are met
+- 2026-10-01T13:05Z [claude] RG-85 DECISION @735b6f1: all four conversions in one branch and PR; the edit is mechanical and identical per file (user confirmed)
+- 2026-10-01T13:05Z [claude] RG-85 DECISION @735b6f1: status-history drawer reopens after the status drawer closes, on save and on cancel (user confirmed)
+- 2026-10-01T13:05Z [claude] RG-85 DECISION @735b6f1: job opening editor included for consistency with the rubric editor (user confirmed)
+- 2026-10-01T13:32Z [claude] RG-85 BRANCH @aae3a90: feature/RG-85/Form-dialogs-to-drawers created off develop (user confirmed)
+- 2026-10-01T13:32Z [claude] RG-85 PHASE PLAN->CONSTRUCT @aae3a90: plan and branch approved together; 7 tasks, standard tier
+- 2026-10-01T13:42Z [claude] RG-85 REVISED @aae3a90: dialog-footer-visible retargeted to the chip editors; #85 moved its rubric and job-opening subjects to drawers
+- 2026-10-01T13:42Z [claude] RG-85 PHASE CONSTRUCT->WRAP-UP @aae3a90: 7/7; drawer-forms red then green; history handoff tested both paths; four forms checked at 390 and 1280 in both themes

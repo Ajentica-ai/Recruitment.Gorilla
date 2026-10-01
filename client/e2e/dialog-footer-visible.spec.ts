@@ -13,16 +13,23 @@ import { expect, test, type Page } from '@playwright/test';
  * `toBeVisible()` passes for an element that is merely painted off-screen,
  * which is exactly the failure mode here.
  *
- * Both dialogs live under Configuration so the spec needs no candidate and
- * writes nothing: it only opens a create form and closes it again.
+ * #85 moved this spec's original subjects, the rubric and job opening editors,
+ * onto the drawer primitive; `drawer-forms.spec.ts` guards them there. What is
+ * left under Configuration is the option chip editor, which is short enough to
+ * clear the fold on its own, so geometry alone would pass even with the bug
+ * reintroduced. Hence the second assertion: the form wrapper must compute to
+ * `display: contents`. That is the actual contract, and it fails the moment
+ * someone drops the class, regardless of how tall the form happens to be.
+ *
+ * Needs no candidate and writes nothing: it opens an edit form and closes it.
  */
 const email = process.env.E2E_ADMIN_EMAIL;
 const password = process.env.E2E_ADMIN_PASSWORD ?? process.env.DEMO_PASSWORD;
 
-/** The tall rubric editor is the worst case; the job opening form is the control. */
+/** The form dialogs still reachable under Configuration after #85. */
 const DIALOGS = [
-  { name: 'rubric editor', tab: 'rubrics', open: /Add rubric scorecard/i },
-  { name: 'job opening editor', tab: 'jobs', open: /Add job opening/i },
+  { name: 'skill editor', tab: 'skills', open: /^Edit / },
+  { name: 'interview type editor', tab: 'interview-types', open: /^Edit / },
 ] as const;
 
 /** A phone, and the short laptop viewport from issue #70's screenshot. */
@@ -73,12 +80,19 @@ test.describe('dialog footers stay on screen', () => {
           const body = pick('dialog-body');
           const footer = pick('dialog-footer');
           if (!body || !footer) return null;
+          // Whatever sits between DialogContent and DialogBody must not take
+          // part in layout, or the body stops being the flex child that scrolls.
+          const wrapper = body.parentElement;
+          const content = pick('dialog-content');
           return {
             viewportBottom: window.innerHeight,
             footerBottom: Math.round(footer.getBoundingClientRect().bottom),
             bodyOverflows: body.scrollHeight > body.clientHeight + 1,
             bodyClientHeight: body.clientHeight,
             bodyScrollHeight: body.scrollHeight,
+            wrapperTag: wrapper ? wrapper.tagName.toLowerCase() : null,
+            wrapperDisplay: wrapper ? getComputedStyle(wrapper).display : null,
+            bodyIsDirectChild: wrapper === content,
           };
         });
 
@@ -95,6 +109,17 @@ test.describe('dialog footers stay on screen', () => {
           expect(geo!.bodyOverflows, 'an overlong body must scroll rather than push the footer').toBe(
             true,
           );
+        }
+
+        // The contract itself, which short forms would otherwise satisfy by
+        // accident: the body is either a direct child of the content box, or
+        // whatever wraps it is out of the layout via `display: contents`.
+        if (!geo!.bodyIsDirectChild) {
+          expect(
+            geo!.wrapperDisplay,
+            `a <${geo!.wrapperTag}> between the content box and the body must be display:contents, ` +
+              'otherwise the body stops scrolling and the footer leaves the viewport',
+          ).toBe('contents');
         }
       });
     }

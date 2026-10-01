@@ -10,13 +10,13 @@ import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
 import { NativeSelect } from '@/components/ui/native-select';
 import {
-  Dialog,
-  DialogBody,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+  Sheet,
+  SheetBody,
+  SheetContent,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+} from '@/components/ui/sheet';
 import {
   addStatus,
   getActiveInterviewTypes,
@@ -170,15 +170,15 @@ export default function AddStatusModal({
   };
 
   return (
-    <Dialog open={show} onOpenChange={(open) => { if (!open) { (handleHide)(); } }}>
-<DialogContent className="sm:max-w-2xl">
+    <Sheet open={show} onOpenChange={(open) => { if (!open) { (handleHide)(); } }}>
+<SheetContent className="sm:w-[min(42rem,100vw)]">
       <form onSubmit={handleSubmit} noValidate className="contents">
-        <DialogHeader>
-          <DialogTitle>
+        <SheetHeader>
+          <SheetTitle>
             {candidateName ? `Advance Status — ${candidateName}` : 'Add a status'}
-          </DialogTitle>
-        </DialogHeader>
-        <DialogBody>
+          </SheetTitle>
+        </SheetHeader>
+        <SheetBody>
           <p className="form-help mb-6">
             Moves the candidate to the next stage and records who changed it.
           </p>
@@ -343,8 +343,8 @@ export default function AddStatusModal({
               {fieldErrors.comment ? <p className="text-[length:var(--text-sm)] text-[var(--danger-text)]">{fieldErrors.comment}</p> : null}
             </div>
           </div>
-        </DialogBody>
-        <DialogFooter>
+        </SheetBody>
+        <SheetFooter>
           <Button variant="outline" onClick={handleHide}>
             Cancel
           </Button>
@@ -357,9 +357,9 @@ export default function AddStatusModal({
               'Save status'
             )}
           </Button>
-        </DialogFooter>
+        </SheetFooter>
       </form>
-    </DialogContent>
-</Dialog>
+    </SheetContent>
+</Sheet>
   );
 }
