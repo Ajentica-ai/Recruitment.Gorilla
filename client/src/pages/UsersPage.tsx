@@ -302,7 +302,7 @@ export default function UsersPage() {
       {/* Create / edit modal */}
       <Dialog open={showEdit} onOpenChange={(open) => { if (!open) { (() => setShowEdit(false))(); } }}>
 <DialogContent>
-        <form onSubmit={submitForm}>
+        <form onSubmit={submitForm} className="contents">
           <DialogHeader>
             <DialogTitle>{editing ? 'Edit user' : 'Add user'}</DialogTitle>
           </DialogHeader>
@@ -370,7 +370,7 @@ export default function UsersPage() {
       {/* Reset password modal */}
       <Dialog open={resetTarget !== null} onOpenChange={(open) => { if (!open) { (() => setResetTarget(null))(); } }}>
 <DialogContent>
-        <form onSubmit={submitReset}>
+        <form onSubmit={submitReset} className="contents">
           <DialogHeader>
             <DialogTitle>Reset password</DialogTitle>
           </DialogHeader>

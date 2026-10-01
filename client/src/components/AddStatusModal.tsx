@@ -172,7 +172,7 @@ export default function AddStatusModal({
   return (
     <Dialog open={show} onOpenChange={(open) => { if (!open) { (handleHide)(); } }}>
 <DialogContent className="sm:max-w-2xl">
-      <form onSubmit={handleSubmit} noValidate>
+      <form onSubmit={handleSubmit} noValidate className="contents">
         <DialogHeader>
           <DialogTitle>
             {candidateName ? `Advance Status — ${candidateName}` : 'Add a status'}

@@ -112,7 +112,14 @@ function DialogHeader({ className, ...props }: React.ComponentProps<'div'>) {
 }
 
 /** The scrolling middle. Its own element so the header and footer stay pinned
- *  while a long form moves — the thing a sheet on a phone most needs. */
+ *  while a long form moves, which is what a sheet on a phone most needs.
+ *
+ *  `flex-1 min-h-0` only works on a DIRECT flex child of DialogContent. A form
+ *  wrapping header/body/footer is the usual way this breaks: the form is not a
+ *  flex container, so the body stops being a scroll region, grows to its content
+ *  and pushes the footer (Save and Cancel) past the bottom of the viewport,
+ *  with no scrollbar to hint that anything was cut off. Give any such wrapper
+ *  `className="contents"` so its children stay direct flex children. */
 function DialogBody({ className, ...props }: React.ComponentProps<'div'>) {
   return (
     <div

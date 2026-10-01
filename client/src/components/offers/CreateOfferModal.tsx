@@ -123,7 +123,7 @@ export default function CreateOfferModal({
   return (
     <Dialog open={show} onOpenChange={(open) => { if (!open) { (onHide)(); } }}>
 <DialogContent>
-      <form onSubmit={handleSubmit}>
+      <form onSubmit={handleSubmit} className="contents">
         <DialogHeader>
           <DialogTitle>{existingOffer ? 'Edit Offer Terms' : 'Draft New Employment Offer'}</DialogTitle>
         </DialogHeader>

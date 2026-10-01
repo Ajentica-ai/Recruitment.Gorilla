@@ -286,6 +286,7 @@ export default function JobOpeningsTab() {
       <Dialog open={showModal} onOpenChange={(open) => { if (!open) { (() => setShowModal(false))(); } }}>
 <DialogContent className="sm:max-w-2xl">
         <form
+          className="contents"
           noValidate
           onSubmit={(e) => {
             e.preventDefault();

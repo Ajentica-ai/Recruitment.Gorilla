@@ -107,8 +107,18 @@ No `max-width` queries, and the phone is never the exception. Concretely:
   hard box — which clips every labelled cell after the first inside
   `.table-wrap`'s overflow, hiding most of the record on a phone. Row height
   comes from the cells' padding.
-- Modals are full-height sheets with a pinned footer in the base; Bootstrap's
-  centred dialog returns at `≥576`.
+- Modals (`components/ui/dialog.tsx`, Radix under the hood) are bottom sheets in
+  the base: pinned to the viewport edges, `max-h-[92dvh]`, with the primary
+  action full width and leading in the footer; the centred dialog returns at the
+  `sm` breakpoint (`≥640`). `DialogBody` is the only part that scrolls, which is
+  what keeps the header and footer pinned.
+  **A `<form>` wrapping `DialogHeader`/`DialogBody`/`DialogFooter` needs
+  `className="contents"`.** `DialogBody` scrolls via `flex-1 min-h-0`, and that
+  only works on a *direct* flex child of `DialogContent`. A plain form in between
+  is not a flex container, so the body stops scrolling, grows to its content and
+  pushes Save and Cancel below the fold, with no scrollbar to show anything was
+  cut off (issues #70, #81). `e2e/dialog-footer-visible.spec.ts` guards this.
+  The same applies to `SheetBody` in `components/ui/sheet.tsx`.
 - Verify at **360 / 430 / 768 / 1280** in both themes, checking for horizontal
   overflow.
 

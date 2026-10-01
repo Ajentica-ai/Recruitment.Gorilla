@@ -69,7 +69,7 @@ export default function OfferDecisionModal({
   return (
     <Dialog open={show} onOpenChange={(open) => { if (!open) { (onHide)(); } }}>
 <DialogContent>
-      <form onSubmit={handleSubmit}>
+      <form onSubmit={handleSubmit} className="contents">
         <DialogHeader>
           <DialogTitle>Record Candidate Offer Decision</DialogTitle>
         </DialogHeader>
