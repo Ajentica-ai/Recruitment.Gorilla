@@ -57,7 +57,7 @@ export default function EvaluationReportDrawer({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-[min(52rem,100vw)]">
+      <SheetContent className="sm:w-[min(52rem,100vw)]">
         <SheetHeader>
           <SheetTitle>Evaluation report</SheetTitle>
           <SheetDescription>

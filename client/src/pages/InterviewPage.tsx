@@ -200,7 +200,7 @@ export default function InterviewPage() {
 
       {/* Slide-over Candidate Profile & CV Drawer */}
       <Sheet open={showProfileDrawer} onOpenChange={setShowProfileDrawer}>
-        <SheetContent side="right" className="w-[min(35rem,100vw)]">
+        <SheetContent className="sm:w-[min(35rem,100vw)]">
         <SheetHeader>
           <SheetTitle className="flex items-center gap-2 font-semibold">
             <FileText size={18} className="text-brand" />

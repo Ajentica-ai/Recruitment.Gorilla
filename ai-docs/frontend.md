@@ -119,6 +119,18 @@ No `max-width` queries, and the phone is never the exception. Concretely:
   pushes Save and Cancel below the fold, with no scrollbar to show anything was
   cut off (issues #70, #81). `e2e/dialog-footer-visible.spec.ts` guards this.
   The same applies to `SheetBody` in `components/ui/sheet.tsx`.
+- Drawers (`components/ui/sheet.tsx`) follow the same shape as modals: a bottom
+  sheet below `sm` (`inset-x-0 bottom-0 max-h-[92dvh]`, rounded top, rising from
+  the bottom) and a full-height right-hand panel from `sm` up, default 28rem.
+  `SheetFooter` carries `DialogFooter`'s phone rules (safe-area bottom padding,
+  full-width actions). A full-width panel sliding in horizontally on a 390px
+  screen reads as a page navigation, so people reach for the browser back
+  button and it does not dismiss (issue #84); a sheet rising from the bottom
+  sets no such expectation. **There is no `side` prop.** `left`/`top`/`bottom`
+  were never used and are gone; the mobile navigation is a hand-rolled `<aside>`
+  in `shell/SidebarNav`, not a Sheet. Call sites override the panel width with a
+  **`sm:`-prefixed** class (`sm:w-[min(52rem,100vw)]`) so it does not fight the
+  phone branch. `e2e/drawer-mobile.spec.ts` guards the geometry.
 - Verify at **360 / 430 / 768 / 1280** in both themes, checking for horizontal
   overflow.
 
