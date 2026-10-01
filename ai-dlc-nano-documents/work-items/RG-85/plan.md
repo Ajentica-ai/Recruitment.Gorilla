@@ -1,4 +1,4 @@
-<!-- phase: WRAP-UP | branch: feature/RG-85/Form-dialogs-to-drawers | tasks: 7/7
+<!-- phase: DONE | branch: feature/RG-85/Form-dialogs-to-drawers | tasks: 7/7
      base: aae3a90 | updated: 2026-10-01
      next: summarise; nothing committed yet, push and PR need approval -->
 # Plan: Convert the four heavy form dialogs to drawers

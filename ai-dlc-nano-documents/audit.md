@@ -86,3 +86,6 @@
 - 2026-10-01T13:32Z [claude] RG-85 PHASE PLAN->CONSTRUCT @aae3a90: plan and branch approved together; 7 tasks, standard tier
 - 2026-10-01T13:42Z [claude] RG-85 REVISED @aae3a90: dialog-footer-visible retargeted to the chip editors; #85 moved its rubric and job-opening subjects to drawers
 - 2026-10-01T13:42Z [claude] RG-85 PHASE CONSTRUCT->WRAP-UP @aae3a90: 7/7; drawer-forms red then green; history handoff tested both paths; four forms checked at 390 and 1280 in both themes
+- 2026-10-01T14:31Z [claude] RG-85 SIDE-EFFECT @34e0791: pushed branch and opened PR #89 against develop (user approved)
+- 2026-10-01T14:31Z [claude] RG-85 SIDE-EFFECT @34e0791: commented on issue #85 with decisions and the two corrected claims (user approved)
+- 2026-10-01T14:31Z [claude] RG-85 DONE @34e0791: four forms converted to Sheet; history drawer returns after the status drawer; drawer-forms.spec.ts red then green
