@@ -74,3 +74,7 @@
 - 2026-10-01T09:55Z [claude] RG-84 REVISED @99f987f: PR #86 merged to develop before branching, so .env.e2e.example already carries the admin keys; 7 tasks -> 6
 - 2026-10-01T10:04Z [claude] RG-84 PHASE CONSTRUCT->WRAP-UP @99f987f: 7/7; drawer spec red then green; all three drawers checked at 390 and 1280 in both themes
 - 2026-10-01T10:04Z [claude] RG-84 DECISION @99f987f: responsive-card-header spec is red on clean develop too (data/role dependency); recorded as a follow-up, not fixed here
+- 2026-10-01T12:55Z [claude] RG-84 SIDE-EFFECT @9245848: pushed branch and opened PR #87 against develop (user approved)
+- 2026-10-01T12:55Z [claude] RG-84 SIDE-EFFECT @9245848: split the spec 2.1 commit onto chore/ai-dlc-nano-spec-2.1 and opened PR #88 (user approved)
+- 2026-10-01T12:55Z [claude] RG-84 SIDE-EFFECT @9245848: commented on issue #84 with decisions and the two corrected claims (user approved)
+- 2026-10-01T12:55Z [claude] RG-84 DONE @9245848: Sheet is a bottom sheet below sm and a right panel from sm; side prop removed; drawer-mobile.spec.ts red then green
