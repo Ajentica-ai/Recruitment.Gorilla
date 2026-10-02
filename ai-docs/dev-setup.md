@@ -112,17 +112,46 @@ tests** (real HTTP pipeline + JWT auth, asserting the `[Authorize]` attributes p
   a **transaction rolled back per test** (unit) or committed-then-dropped (integration). Data builders
   live in `Recruitment.Gorilla.Tests/Infrastructure/` (`TestData.cs`, `ApiFixture.cs`).
 
-### E2E smoke (Playwright, read-only)
+### E2E suite (Playwright)
 ```bash
 # 1. Start the dev stack (API :5000 + client :5173) as in §3.
 # 2. One-time browser download:
 cd client && npx playwright install chromium
-# 3. Run the read-only smoke (login → dashboard → candidates → detail):
-E2E_EMAIL='you@example.com' E2E_PASSWORD='…' npm run e2e
+# 3. Fill in credentials: copy e2e/.env.e2e.example to e2e/.env.e2e.
+# 4. Run everything:
+npm run e2e
 ```
-Runs against the **live dev stack** and only **reads** (creates nothing). Credentials come from
-`E2E_EMAIL` / `E2E_PASSWORD` — **no secret is committed**, and the spec **skips** when they're unset.
-Specs live in `client/e2e/`; Vitest ignores them (it only scans `src/`).
+Runs against the **live dev stack**. Credentials come from `e2e/.env.e2e`, which is gitignored:
+real environment variables still win, so CI can inject them. Specs live in `client/e2e/`; Vitest
+ignores them (it only scans `src/`).
+
+**A spec either passes or skips with a reason** (issue #83). Skips are expected and say what is
+missing, which is why a red run means something real:
+
+| Spec | Skips when |
+|---|---|
+| `smoke`, `dialog-footer-visible`, `drawer-*`, `rubric-editor-layout` | credentials are unset |
+| `analytics-and-upload`, `offer-management` | the signed-in user can see no candidates |
+| `responsive-card-header` | the dashboard has no cards; its interview leg also needs an interview the account is **assigned to** (not merely able to view), which it checks via `canEvaluate` |
+| `screenshot-interview` | `E2E_INTERVIEW_ID` is unset |
+| `compose` | nothing answers on `COMPOSE_BASE_URL` (it tests the Docker stack, not Vite) |
+
+Credentials worth knowing: `E2E_EMAIL` is a **Recruiter**, so candidate access is role-scoped and
+several specs skip for that account alone. The upload specs need `E2E_ADMIN_EMAIL`, because
+approving a draft means assigning an applied role and a Recruiter only sees roles assigned to them.
+
+**CV fixtures are generated, not committed.** `e2e/test-cvs/` is gitignored; the upload specs
+generate it on demand, or run `npm run e2e:cvs` yourself. The PDFs carry invented people with
+`.invalid` emails. `e2e/make-test-cvs.mjs` writes them by hand rather than pulling in a PDF
+library, and the filenames matter: `CVParserService.ParseNameAndTitleFromFileName` reads
+`First-Last-Title-Words.pdf`, so a numeric prefix would be parsed as the first name.
+
+Screenshots go under `client/test-results/screenshots` (gitignored); set `E2E_SHOT_DIR` to collect
+them elsewhere.
+
+**The upload specs write data** and do not clean it up: each run leaves drafts, and the approve
+steps create candidates. Fine on a local dev database, worth knowing before pointing them anywhere
+that matters.
 
 ## 5. LAN access (frontend only)
 Other PCs on the network use the **frontend only**; the backend stays private behind the proxy.

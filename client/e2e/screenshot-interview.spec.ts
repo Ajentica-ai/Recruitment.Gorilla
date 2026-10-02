@@ -1,15 +1,25 @@
 import { test } from '@playwright/test';
+import { ADMIN, shotPath } from './helpers';
+
+/** Which interview to photograph. Without one there is nothing to capture. */
+const interviewId = process.env.E2E_INTERVIEW_ID;
 
 test('capture interview page live', async ({ page }) => {
-  // Login
-  await page.goto('http://localhost:5173/login');
-  await page.fill('input[type="email"], input[name="email"]', 'admin@recruitmentgorilla.com');
-  await page.fill('input[type="password"]', 'admin');
+  test.skip(!ADMIN.password, 'Set E2E_ADMIN_PASSWORD or DEMO_PASSWORD.');
+  test.skip(
+    !interviewId,
+    'Set E2E_INTERVIEW_ID to an interview the account can open; none configured.',
+  );
+
+  // Relative, so PLAYWRIGHT_TEST_BASE_URL still decides where this points.
+  await page.goto('/login');
+  await page.fill('input[type="email"], input[name="email"]', ADMIN.email!);
+  await page.fill('input[type="password"]', ADMIN.password!);
   await page.click('button[type="submit"]');
   await page.waitForLoadState('networkidle');
 
   // Go to interviews 1
-  await page.goto('http://localhost:5173/interviews/1');
+  await page.goto(`/interviews/${interviewId}`);
   await page.waitForLoadState('networkidle');
   await page.waitForTimeout(1500);
 
@@ -21,7 +31,7 @@ test('capture interview page live', async ({ page }) => {
 
   // Take screenshot
   await page.screenshot({
-    path: 'C:/Users/user/.gemini/antigravity-ide/brain/4655deb6-8ac0-42bb-8a60-04a998094da6/interview_studio_live_dark.png',
+    path: shotPath('interview_studio_live_dark.png'),
     fullPage: true,
   });
 });

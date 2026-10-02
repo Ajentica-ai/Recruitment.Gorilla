@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { apiAuth, requireData } from './helpers';
 
 /**
  * Issue #72. `CardHeader` is one flex row and `CardAction` is `shrink-0`, so on a
@@ -8,8 +9,9 @@ import { test, expect } from '@playwright/test';
  *
  * Credentials come from the environment so no secret is committed.
  */
-const email = process.env.E2E_EMAIL;
-const password = process.env.E2E_PASSWORD;
+const email = process.env.E2E_ADMIN_EMAIL ?? process.env.E2E_EMAIL;
+const password =
+  process.env.E2E_ADMIN_PASSWORD ?? process.env.DEMO_PASSWORD ?? process.env.E2E_PASSWORD;
 
 /** Optional: an interview the logged-in user can open, for the chip-icon check. */
 const interviewId = process.env.E2E_INTERVIEW_ID;
@@ -32,9 +34,9 @@ const probeHeaders = (): HeaderProbe[] =>
   });
 
 test.describe('responsive card header (issue #72)', () => {
-  test.skip(!email || !password, 'Set E2E_EMAIL and E2E_PASSWORD to run this test.');
+  test.skip(!email || !password, 'Set E2E_ADMIN_EMAIL and E2E_ADMIN_PASSWORD to run this test.');
 
-  test('card titles never collapse or collide at phone widths', async ({ page }) => {
+  test('card titles never collapse or collide at phone widths', async ({ page, request }) => {
     // The dashboard alone does NOT cover this: its card actions are small enough
     // to fit, so it passed even against the unfixed code. The evaluation card is
     // the one with wide actions (a rubric badge plus a nowrap "Rated n of m"),
@@ -47,9 +49,32 @@ test.describe('responsive card header (issue #72)', () => {
     await page.locator('input[type="email"]').fill(email!);
     await page.locator('input[type="password"]').fill(password!);
     await page.getByRole('button', { name: 'Sign in' }).click();
-    await expect(page.locator('[data-slot="card-header"]').first()).toBeVisible();
+    await page.waitForLoadState('networkidle');
 
-    for (const path of ['/', `/interviews/${interviewId}`]) {
+    const dashboardHasCards = await page
+      .locator('[data-slot="card-header"]')
+      .first()
+      .isVisible()
+      .catch(() => false);
+    requireData(dashboardHasCards, 'dashboard cards (upload some CVs first)');
+
+    // The interview page renders the evaluation card, the surface whose wide
+    // actions this issue is about, only for an *assigned* interviewer. An Admin
+    // can open the page but sees "not an assigned interviewer" and no card.
+    // Asked over the API rather than by navigating: visiting that page can end
+    // the browser session, which then fails the dashboard leg too (#83).
+    const auth = await apiAuth(request, { email, password });
+    const interview = await request.get(`/api/interviews/${interviewId}`, { headers: auth });
+    const canEvaluate = interview.ok() ? ((await interview.json())?.canEvaluate ?? false) : false;
+    if (!canEvaluate) {
+      console.warn(
+        `skipping the interview leg: E2E_INTERVIEW_ID=${interviewId} is not one this account ` +
+          'is an assigned interviewer for, so the evaluation card does not render.',
+      );
+    }
+
+    const paths = canEvaluate ? ['/', `/interviews/${interviewId}`] : ['/'];
+    for (const path of paths) {
       await page.goto(path);
       await expect(page.locator('[data-slot="card-header"]').first()).toBeVisible();
 
@@ -75,11 +100,16 @@ test.describe('responsive card header (issue #72)', () => {
     await page.locator('input[type="password"]').fill(password!);
     await page.getByRole('button', { name: 'Sign in' }).click();
     // Wait for the app shell before navigating, or the goto races the redirect.
-    await expect(page.locator('[data-slot="card-header"]').first()).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Candidates' }).first()).toBeVisible();
 
     await page.goto(`/interviews/${interviewId}`);
     const chip = page.locator('.interview-chip').first();
-    await expect(chip).toBeVisible();
+    // The chip only exists when the account can actually open this interview.
+    // A role-scoped user who cannot is missing access, not a sized-wrong icon.
+    requireData(
+      await chip.isVisible().catch(() => false),
+      `an interview this account can open (E2E_INTERVIEW_ID=${interviewId})`,
+    );
 
     for (const width of [320, 390]) {
       await page.setViewportSize({ width, height: 1000 });

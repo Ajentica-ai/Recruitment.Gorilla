@@ -1,12 +1,21 @@
 import { test, expect } from '@playwright/test';
 import * as path from 'node:path';
+import { apiAuth, candidateCount, requireData, shotDir } from './helpers';
 
 const email = process.env.E2E_EMAIL || 'admin@recruitmentgorilla.com';
 const password = process.env.E2E_PASSWORD || 'admin';
-const screenshotDir = 'C:/Users/user/.gemini/antigravity-ide/brain/4655deb6-8ac0-42bb-8a60-04a998094da6';
+const screenshotDir = shotDir();
 
 test.describe('Offer Management End-to-End Test', () => {
-  test('Complete Offer Lifecycle Flow', async ({ page }) => {
+  test('Complete Offer Lifecycle Flow', async ({ page, request }) => {
+    // Same identity the browser signs in with, since candidate access is
+    // role-scoped.
+    const auth = await apiAuth(request, { email, password });
+    requireData(
+      (await candidateCount(request, auth)) > 0,
+      'at least one candidate to draft an offer against',
+    );
+
     // 1. Navigate to home & login
     await page.goto('/');
     await page.waitForLoadState('networkidle');

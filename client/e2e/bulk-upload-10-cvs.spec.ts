@@ -1,9 +1,11 @@
 import { test, expect } from '@playwright/test';
-import path from 'path';
-import fs from 'fs';
+import { ADMIN, ensureTestCvs, requireData, shotPath } from './helpers';
 
-const email = process.env.E2E_EMAIL ?? 'admin@recruitmentgorilla.com';
-const password = process.env.E2E_PASSWORD ?? 'admin';
+// Admin, not E2E_EMAIL's Recruiter: approving a draft requires assigning an
+// applied role, and a Recruiter only sees roles they are assigned to. With none,
+// the studio blocks the approval and this flow cannot complete (#83).
+const email = ADMIN.email ?? process.env.E2E_EMAIL;
+const password = ADMIN.password ?? process.env.E2E_PASSWORD;
 
 test.describe('Bulk Upload 10 CVs & Staging Review Workspace Test', () => {
   test.setTimeout(60000);
@@ -25,11 +27,11 @@ test.describe('Bulk Upload 10 CVs & Staging Review Workspace Test', () => {
     const batchInput = page.locator('#batch-name-input');
     await batchInput.fill('Q3 Senior Engineering Intake');
 
-    // 4. Attach 10 CV files
-    const cvDir = path.resolve('e2e/test-cvs');
-    const fileNames = fs.readdirSync(cvDir).filter((f) => f.endsWith('.pdf'));
-    expect(fileNames.length).toBe(10);
-    const filePaths = fileNames.map((f) => path.join(cvDir, f));
+    // 4. Attach 10 CV files. The fixtures are generated rather than committed,
+    //    so ask for them instead of asserting they were left behind (#83).
+    const available = ensureTestCvs();
+    requireData(available.length >= 10, '10 generated test CVs in e2e/test-cvs');
+    const filePaths = available.slice(0, 10);
 
     const fileInput = page.locator('input[type="file"]');
     await fileInput.setInputFiles(filePaths);
@@ -39,7 +41,7 @@ test.describe('Bulk Upload 10 CVs & Staging Review Workspace Test', () => {
 
     // 6. Screenshot upload completion banner
     await page.screenshot({
-      path: 'C:/Users/user/.gemini/antigravity-ide/brain/4655deb6-8ac0-42bb-8a60-04a998094da6/13_upload_completed_banner.png',
+      path: shotPath('13_upload_completed_banner.png'),
       fullPage: true,
     });
 
@@ -50,25 +52,28 @@ test.describe('Bulk Upload 10 CVs & Staging Review Workspace Test', () => {
     // 8. Screenshot Staging Review Studio with 10 pending drafts    // 8a. Capture light mode review studio
     await page.waitForTimeout(300);
     await page.screenshot({
-      path: 'C:/Users/user/.gemini/antigravity-ide/brain/4655deb6-8ac0-42bb-8a60-04a998094da6/14_draft_staging_studio_split_view.png',
+      path: shotPath('14_draft_staging_studio_split_view.png'),
       fullPage: true,
     });
 
-    // 8b. Click All tab and capture screenshot
-    await page.locator('button:has-text("All")').click();
-    await page.waitForTimeout(300);
-    await page.screenshot({
-      path: 'C:/Users/user/.gemini/antigravity-ide/brain/4655deb6-8ac0-42bb-8a60-04a998094da6/19_all_tab_screenshot.png',
-      fullPage: true,
-    });
+    // 8b. There is no "All" tab to screenshot. The workspace filter offers
+    //     Pending, Approved and Discarded only, and DraftReviewWorkspace says so
+    //     outright: "There is no 'all statuses' view here". The step that clicked
+    //     it is gone rather than retargeted, since at this point in the run every
+    //     draft is Pending and the other two tabs are empty (#83).
     // Click Pending tab back
-    await page.getByRole('button', { name: /^Pending \d+$/ }).click();
+    // The status filter is a Radix single ToggleGroup: its items are role=radio
+    // rather than buttons, the count badge sits flush against the label (the
+    // text reads "Pending42", no space), and the group wrapper is not in the
+    // accessibility tree at all, so getByRole('group') finds nothing. Matching
+    // on the item's own text is the one form that holds (#83).
+    await page.locator('[role="radio"]').filter({ hasText: /^Pending/ }).click();
 
     // 8c. Capture dark mode review studio
     await page.evaluate(() => document.documentElement.setAttribute('data-bs-theme', 'dark'));
     await page.waitForTimeout(300);
     await page.screenshot({
-      path: 'C:/Users/user/.gemini/antigravity-ide/brain/4655deb6-8ac0-42bb-8a60-04a998094da6/17_draft_staging_studio_dark_mode.png',
+      path: shotPath('17_draft_staging_studio_dark_mode.png'),
       fullPage: true,
     });
 
@@ -78,7 +83,7 @@ test.describe('Bulk Upload 10 CVs & Staging Review Workspace Test', () => {
     });
     await page.waitForTimeout(200);
     await page.screenshot({
-      path: 'C:/Users/user/.gemini/antigravity-ide/brain/4655deb6-8ac0-42bb-8a60-04a998094da6/18_draft_studio_experience_scrolled.png',
+      path: shotPath('18_draft_studio_experience_scrolled.png'),
       fullPage: true,
     });
     // Switch back to light mode
@@ -102,12 +107,14 @@ test.describe('Bulk Upload 10 CVs & Staging Review Workspace Test', () => {
     await approveBtn.click();
 
     // Verify toast appears
-    await expect(page.getByText(/Successfully created candidate/i)).toBeVisible({ timeout: 10000 });
+    await expect(
+      page.getByText(/Successfully created candidate/i).first(),
+    ).toBeVisible({ timeout: 10000 });
 
     // 11. Screenshot studio after approving candidate #1 and advancing to candidate #2
     await page.waitForTimeout(1000);
     await page.screenshot({
-      path: 'C:/Users/user/.gemini/antigravity-ide/brain/4655deb6-8ac0-42bb-8a60-04a998094da6/15_draft_studio_advanced_to_next.png',
+      path: shotPath('15_draft_studio_advanced_to_next.png'),
       fullPage: true,
     });
 
@@ -120,7 +127,7 @@ test.describe('Bulk Upload 10 CVs & Staging Review Workspace Test', () => {
     await page.goto('/candidates');
     await page.waitForTimeout(1000);
     await page.screenshot({
-      path: 'C:/Users/user/.gemini/antigravity-ide/brain/4655deb6-8ac0-42bb-8a60-04a998094da6/16_candidates_page_with_staged_approvals.png',
+      path: shotPath('16_candidates_page_with_staged_approvals.png'),
       fullPage: true,
     });
   });
