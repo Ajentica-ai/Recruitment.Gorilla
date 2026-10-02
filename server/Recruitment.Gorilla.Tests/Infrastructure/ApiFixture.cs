@@ -28,6 +28,7 @@ public sealed class ApiFixture : IAsyncLifetime
     public string RecruiterEmail { get; private set; } = "";
     public string InterviewerEmail { get; private set; } = "";
     public int AdminId { get; private set; }
+    public int RecruiterId { get; private set; }
     public int RoleId { get; private set; }
     public int CandidateId { get; private set; }
 
@@ -50,6 +51,7 @@ public sealed class ApiFixture : IAsyncLifetime
         RecruiterEmail = recruiter.Email;
         InterviewerEmail = interviewer.Email;
         AdminId = admin.Id;
+        RecruiterId = recruiter.Id;
 
         var role = new RoleAppliedOption
         {
@@ -118,6 +120,28 @@ public sealed class ApiFixture : IAsyncLifetime
         return candidate.Id;
     }
 
+    /// <summary>
+    /// Inserts a pending CV draft uploaded by <paramref name="uploaderUserId"/> under a server-style
+    /// stored name, and returns that name. No file is written; nothing here reads it from disk.
+    /// </summary>
+    public async Task<string> NewDraftAsync(int uploaderUserId, string fileType = "PDF", long fileSizeBytes = 2048)
+    {
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var extension = fileType == "PDF" ? ".pdf" : ".docx";
+        var draft = new CandidateDraft
+        {
+            OriginalFileName = $"cv{extension}",
+            StoredFileName = $"{Guid.NewGuid()}{extension}",
+            FileType = fileType,
+            FileSizeBytes = fileSizeBytes,
+            UploadedByUserId = uploaderUserId,
+        };
+        db.CandidateDrafts.Add(draft);
+        await db.SaveChangesAsync();
+        return draft.StoredFileName;
+    }
+
     /// <summary>Inserts a role and returns its id.</summary>
     public async Task<int> NewRoleAsync()
     {
@@ -149,6 +173,37 @@ public sealed class ApiFixture : IAsyncLifetime
         if (token is not null)
             req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
         return Client.SendAsync(req);
+    }
+
+    /// <summary>
+    /// Sends a request with a JSON body. Needed for gates on POST actions: without a valid body the
+    /// action answers 400 before authorization is the deciding factor, which proves nothing.
+    /// </summary>
+    public Task<HttpResponseMessage> SendAsync(HttpMethod method, string url, string? token, object body)
+    {
+        var req = new HttpRequestMessage(method, url) { Content = JsonContent.Create(body) };
+        if (token is not null)
+            req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        return Client.SendAsync(req);
+    }
+
+    /// <summary>Inserts an offer in the given status (committed) and returns its id.</summary>
+    public async Task<int> NewOfferAsync(int candidateId, string status = "Draft")
+    {
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var offer = new Offer
+        {
+            CandidateId = candidateId,
+            JobTitle = "Engineer",
+            BaseSalary = 90000,
+            Currency = "USD",
+            Status = status,
+            CreatedByUserId = AdminId,
+        };
+        db.Offers.Add(offer);
+        await db.SaveChangesAsync();
+        return offer.Id;
     }
 }
 

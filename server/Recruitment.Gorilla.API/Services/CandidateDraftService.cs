@@ -60,22 +60,34 @@ public class CandidateDraftService(
 
     private string? HashStoredFile(string storedFileName)
     {
-        var path = Path.Combine(env.ContentRootPath, "Uploads", storedFileName);
-        if (!File.Exists(path)) return null;
+        var path = UploadPaths.Resolve(env.ContentRootPath, storedFileName);
+        if (path is null || !File.Exists(path)) return null;
         using var stream = File.OpenRead(path);
         return ComputeFileHash(stream);
     }
 
+    /// <summary>
+    /// Restricts a draft query to the drafts the caller may see or act on: every draft for Admin and
+    /// Super Admin, otherwise only the ones the caller uploaded.
+    ///
+    /// Every read and write goes through this, not only the list. The list was scoped while the by-id
+    /// read, update, approve, discard and their bulk forms loaded drafts by id alone, so a Recruiter who
+    /// knew or guessed an id could read another user's parsed CV, or approve it and become the owner of
+    /// the candidate it produced.
+    ///
+    /// It fails closed. The old list check applied its filter only when the caller had a user id, so a
+    /// non-privileged caller without one fell through to every draft. Now that caller sees none.
+    /// </summary>
+    private IQueryable<CandidateDraft> ScopedDrafts()
+    {
+        if (currentUser.IsInAnyRole(Roles.SuperAdmin, Roles.Admin)) return db.CandidateDrafts;
+        if (currentUser.UserId is not int uploaderId) return db.CandidateDrafts.Where(_ => false);
+        return db.CandidateDrafts.Where(d => d.UploadedByUserId == uploaderId);
+    }
+
     public async Task<PagedDraftsResultDto> GetDraftsAsync(DraftsFilterQuery query)
     {
-        var baseQuery = db.CandidateDrafts.AsQueryable();
-
-        var isPrivileged = currentUser.IsInAnyRole(Roles.SuperAdmin, Roles.Admin);
-        // Scoping: recruiters only see drafts they uploaded
-        if (!isPrivileged && currentUser.UserId.HasValue)
-        {
-            baseQuery = baseQuery.Where(d => d.UploadedByUserId == currentUser.UserId.Value);
-        }
+        var baseQuery = ScopedDrafts();
 
         // Aggregate counts across statuses
         var totalPending = await baseQuery.CountAsync(d => d.Status == "Pending");
@@ -168,7 +180,7 @@ public class CandidateDraftService(
 
     public async Task<CandidateDraftDto?> GetDraftByIdAsync(int id)
     {
-        var d = await db.CandidateDrafts
+        var d = await ScopedDrafts()
             .Include(d => d.RoleAppliedOption)
             .Include(d => d.SourceOption)
             .Include(d => d.UploadedByUser)
@@ -228,13 +240,7 @@ public class CandidateDraftService(
 
     public async Task<List<DraftBatchSummaryDto>> GetBatchesAsync()
     {
-        var query = db.CandidateDrafts.AsQueryable();
-
-        var isPrivileged = currentUser.IsInAnyRole(Roles.SuperAdmin, Roles.Admin);
-        if (!isPrivileged && currentUser.UserId.HasValue)
-        {
-            query = query.Where(d => d.UploadedByUserId == currentUser.UserId.Value);
-        }
+        var query = ScopedDrafts();
 
         var flat = await query
             .Where(d => d.BatchId != null)
@@ -327,7 +333,7 @@ public class CandidateDraftService(
 
     public async Task<CandidateDraftDto?> UpdateDraftAsync(int id, UpdateCandidateDraftDto dto)
     {
-        var draft = await db.CandidateDrafts.FindAsync(id);
+        var draft = await ScopedDrafts().FirstOrDefaultAsync(d => d.Id == id);
         if (draft == null) return null;
 
         draft.FullName = dto.FullName?.Trim();
@@ -368,7 +374,7 @@ public class CandidateDraftService(
 
     public async Task<(Candidate? Candidate, string? Error)> ApproveDraftAsync(int id, ApproveCandidateDraftDto dto)
     {
-        var draft = await db.CandidateDrafts.FindAsync(id);
+        var draft = await ScopedDrafts().FirstOrDefaultAsync(d => d.Id == id);
         if (draft == null) return (null, "Draft not found.");
 
         var fullName = (dto.FullName ?? draft.FullName)?.Trim();
@@ -526,7 +532,7 @@ public class CandidateDraftService(
     {
         var approvedCandidateIds = new List<int>();
 
-        var drafts = await db.CandidateDrafts
+        var drafts = await ScopedDrafts()
             .Where(d => dto.DraftIds.Contains(d.Id) && d.Status == "Pending")
             .ToListAsync();
 
@@ -578,7 +584,7 @@ public class CandidateDraftService(
 
     public async Task<bool> DiscardDraftAsync(int id)
     {
-        var draft = await db.CandidateDrafts.FindAsync(id);
+        var draft = await ScopedDrafts().FirstOrDefaultAsync(d => d.Id == id);
         if (draft == null) return false;
 
         draft.Status = "Discarded";
@@ -591,7 +597,7 @@ public class CandidateDraftService(
 
     public async Task<int> BulkDiscardAsync(List<int> draftIds)
     {
-        var drafts = await db.CandidateDrafts
+        var drafts = await ScopedDrafts()
             .Where(d => draftIds.Contains(d.Id) && d.Status == "Pending")
             .ToListAsync();
 

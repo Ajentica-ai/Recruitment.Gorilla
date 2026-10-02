@@ -26,6 +26,7 @@ import {
 } from '../services/api';
 import { StatusBadge } from './StatusBadge';
 import { skillColorClass } from '../utils/skillColors';
+import { externalUrl } from '../utils/externalUrl';
 import SearchableDropdown, { SearchableMultiSelect } from './SearchableSelect';
 import type { CandidateDetail, UpdateCandidatePayload } from '../types';
 import { Button } from '@/components/ui/button';
@@ -354,14 +355,15 @@ export default function ReadOnlyCandidateProfile({
     setPreviewName(name);
   };
 
-  const hasLinks =
-    candidate.linkedInUrl ||
-    candidate.githubUrl ||
-    candidate.portfolioUrl ||
-    candidate.leetCodeUrl ||
-    candidate.codeforcesUrl ||
-    candidate.hackerRankUrl ||
-    candidate.gitLabUrl;
+  const hasLinks = [
+    candidate.linkedInUrl,
+    candidate.githubUrl,
+    candidate.portfolioUrl,
+    candidate.leetCodeUrl,
+    candidate.codeforcesUrl,
+    candidate.hackerRankUrl,
+    candidate.gitLabUrl,
+  ].some((url) => externalUrl(url));
 
   const summaryIsLong = (candidate.summary?.length ?? 0) > SUMMARY_COLLAPSE_THRESHOLD;
   const summaryCollapsed = summaryIsLong && !summaryExpanded;
@@ -554,50 +556,50 @@ export default function ReadOnlyCandidateProfile({
             </div>
           ) : hasLinks ? (
             <div className="profile-links flex flex-wrap gap-2">
-              {candidate.linkedInUrl && (
-                <a href={candidate.linkedInUrl} target="_blank" rel="noreferrer" className="profile-link profile-link--linkedin" title="LinkedIn Profile">
+              {externalUrl(candidate.linkedInUrl) && (
+                <a href={externalUrl(candidate.linkedInUrl)} target="_blank" rel="noreferrer" className="profile-link profile-link--linkedin" title="LinkedIn Profile">
                   <LinkedInIcon />
                   <span>LinkedIn</span>
                   <ExternalLink size={11} className="profile-link__arrow" />
                 </a>
               )}
-              {candidate.githubUrl && (
-                <a href={candidate.githubUrl} target="_blank" rel="noreferrer" className="profile-link profile-link--github" title="GitHub Profile">
+              {externalUrl(candidate.githubUrl) && (
+                <a href={externalUrl(candidate.githubUrl)} target="_blank" rel="noreferrer" className="profile-link profile-link--github" title="GitHub Profile">
                   <GitHubIcon />
                   <span>GitHub</span>
                   <ExternalLink size={11} className="profile-link__arrow" />
                 </a>
               )}
-              {candidate.leetCodeUrl && (
-                <a href={candidate.leetCodeUrl} target="_blank" rel="noreferrer" className="profile-link profile-link--leetcode" title="LeetCode Profile">
+              {externalUrl(candidate.leetCodeUrl) && (
+                <a href={externalUrl(candidate.leetCodeUrl)} target="_blank" rel="noreferrer" className="profile-link profile-link--leetcode" title="LeetCode Profile">
                   <LeetCodeIcon />
                   <span>LeetCode</span>
                   <ExternalLink size={11} className="profile-link__arrow" />
                 </a>
               )}
-              {candidate.codeforcesUrl && (
-                <a href={candidate.codeforcesUrl} target="_blank" rel="noreferrer" className="profile-link profile-link--codeforces" title="Codeforces Profile">
+              {externalUrl(candidate.codeforcesUrl) && (
+                <a href={externalUrl(candidate.codeforcesUrl)} target="_blank" rel="noreferrer" className="profile-link profile-link--codeforces" title="Codeforces Profile">
                   <CodeforcesIcon />
                   <span>Codeforces</span>
                   <ExternalLink size={11} className="profile-link__arrow" />
                 </a>
               )}
-              {candidate.hackerRankUrl && (
-                <a href={candidate.hackerRankUrl} target="_blank" rel="noreferrer" className="profile-link profile-link--hackerrank" title="HackerRank Profile">
+              {externalUrl(candidate.hackerRankUrl) && (
+                <a href={externalUrl(candidate.hackerRankUrl)} target="_blank" rel="noreferrer" className="profile-link profile-link--hackerrank" title="HackerRank Profile">
                   <HackerRankIcon />
                   <span>HackerRank</span>
                   <ExternalLink size={11} className="profile-link__arrow" />
                 </a>
               )}
-              {candidate.gitLabUrl && (
-                <a href={candidate.gitLabUrl} target="_blank" rel="noreferrer" className="profile-link profile-link--gitlab" title="GitLab Profile">
+              {externalUrl(candidate.gitLabUrl) && (
+                <a href={externalUrl(candidate.gitLabUrl)} target="_blank" rel="noreferrer" className="profile-link profile-link--gitlab" title="GitLab Profile">
                   <GitLabIcon />
                   <span>GitLab</span>
                   <ExternalLink size={11} className="profile-link__arrow" />
                 </a>
               )}
-              {candidate.portfolioUrl && (
-                <a href={candidate.portfolioUrl} target="_blank" rel="noreferrer" className="profile-link profile-link--portfolio" title="Portfolio Website">
+              {externalUrl(candidate.portfolioUrl) && (
+                <a href={externalUrl(candidate.portfolioUrl)} target="_blank" rel="noreferrer" className="profile-link profile-link--portfolio" title="Portfolio Website">
                   <Globe size={14} strokeWidth={2} />
                   <span>Portfolio</span>
                   <ExternalLink size={11} className="profile-link__arrow" />

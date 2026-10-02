@@ -168,6 +168,32 @@ public class CandidateService(AppDbContext db, IWebHostEnvironment env, Notifica
             .ToListAsync();
 
     /// <summary>
+    /// The CV a new candidate points at must be one the caller uploaded. Returns an error message or
+    /// null.
+    ///
+    /// The stored name arrives in the request body, and used to be saved as given. It has to be a name
+    /// the server issued (<see cref="UploadPaths.IsStoredName"/>), and it has to belong to a draft in the
+    /// caller's own scope: any draft for Admin and above, otherwise only the caller's own uploads. A
+    /// non-admin with no user id is refused rather than treated as unscoped. A name already attached to
+    /// a candidate is refused too, since deleting either candidate would remove the shared file.
+    /// Every refusal gives the same message, so it does not reveal whether another user holds the file.
+    /// </summary>
+    public async Task<string?> ValidateCvFileAsync(string? storedFileName, bool isPrivileged, int? userId)
+    {
+        const string invalid = "That CV file is not one you uploaded. Upload the CV again and retry.";
+
+        if (!UploadPaths.IsStoredName(storedFileName)) return invalid;
+        if (!isPrivileged && userId is null) return invalid;
+
+        var owned = await db.CandidateDrafts.AnyAsync(d =>
+            d.StoredFileName == storedFileName && (isPrivileged || d.UploadedByUserId == userId));
+        if (!owned) return invalid;
+
+        var attached = await db.CVFiles.AnyAsync(f => f.StoredFileName == storedFileName);
+        return attached ? invalid : null;
+    }
+
+    /// <summary>
     /// When a candidate is marked as referred, a reference name and a valid reference
     /// email are required. Returns an error message or null. Used by create and update.
     /// </summary>
@@ -422,17 +448,21 @@ public class CandidateService(AppDbContext db, IWebHostEnvironment env, Notifica
         foreach (var skillId in (dto.SkillOptionIds ?? []).Distinct())
             candidate.CandidateSkills.Add(new CandidateSkill { SkillOptionId = skillId });
 
+        // The file came through /api/cvupload, which recorded its details on the draft. Those are what
+        // the server saw, so they win over the copies in the request body (FileType sets the download's
+        // Content-Type, and the size feeds the duplicate check).
+        var upload = await db.CandidateDrafts
+            .Where(d => d.StoredFileName == dto.StoredFileName)
+            .Select(d => new { d.OriginalFileName, d.FileType, d.FileSizeBytes, d.FileHash })
+            .FirstOrDefaultAsync();
+
         candidate.CVFiles.Add(new CVFile
         {
-            OriginalFileName = dto.OriginalFileName,
+            OriginalFileName = upload?.OriginalFileName ?? dto.OriginalFileName,
             StoredFileName = dto.StoredFileName,
-            FileType = dto.FileType,
-            FileSizeBytes = dto.FileSizeBytes,
-            // The file came through /api/cvupload, which recorded its hash on the draft.
-            FileHash = await db.CandidateDrafts
-                .Where(d => d.StoredFileName == dto.StoredFileName)
-                .Select(d => d.FileHash)
-                .FirstOrDefaultAsync(),
+            FileType = upload?.FileType ?? dto.FileType,
+            FileSizeBytes = upload?.FileSizeBytes ?? dto.FileSizeBytes,
+            FileHash = upload?.FileHash,
         });
 
         candidate.StatusHistories.Add(new StatusHistory
@@ -456,8 +486,9 @@ public class CandidateService(AppDbContext db, IWebHostEnvironment env, Notifica
 
         if (file is null) return null;
 
-        var path = Path.Combine(env.ContentRootPath, "Uploads", file.StoredFileName);
-        if (!File.Exists(path)) return null;
+        // Contained to the uploads folder, so a stored name can only ever serve an uploaded CV.
+        var path = UploadPaths.Resolve(env.ContentRootPath, file.StoredFileName);
+        if (path is null || !File.Exists(path)) return null;
 
         var contentType = file.FileType == "PDF"
             ? "application/pdf"
@@ -481,10 +512,11 @@ public class CandidateService(AppDbContext db, IWebHostEnvironment env, Notifica
 
         foreach (var file in candidate.CVFiles)
         {
-            var path = Path.Combine(env.ContentRootPath, "Uploads", file.StoredFileName);
+            // Contained to the uploads folder, so deleting a candidate can only remove its own CV.
+            var path = UploadPaths.Resolve(env.ContentRootPath, file.StoredFileName);
             try
             {
-                if (File.Exists(path)) File.Delete(path);
+                if (path is not null && File.Exists(path)) File.Delete(path);
             }
             catch
             {

@@ -51,6 +51,8 @@ The core profile. Holds a **denormalized `CurrentStatus`** for fast list queries
 ### CVFile (`CVFiles`)
 One row per uploaded file. The physical file is on disk under `Uploads/` as `{GUID}{ext}`; the DB keeps the mapping and original name.
 
+**Stored names are issued by the server, never accepted from a client.** `CVUploadController` names every upload `{GUID}{ext}`, and `UploadPaths` (`Services/UploadPaths.cs`) is the one place that defines that shape. Creating a candidate takes the stored name from the request body, so `CandidatesController.Create` checks it with `CandidateService.ValidateCvFileAsync` before saving: it must be a name the server issued, and it must belong to a draft in the caller's own scope (any draft for Admin+, otherwise the caller's own uploads). Every path built from a stored name, to serve, delete or hash a file, goes through `UploadPaths.Resolve`, which refuses anything that would land outside `Uploads/`. That second check holds even for a bad name already in the database.
+
 | Field | Type | Notes |
 |---|---|---|
 | Id | int PK | |

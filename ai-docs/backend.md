@@ -49,13 +49,13 @@ ASP.NET Core Web API, .NET 10. Project root: `server/Recruitment.Gorilla.API/`.
 - **Known limitation:** this is best-effort. The admin always reviews/edits before saving. Robust LLM-based extraction is deferred to Phase 2 — if you implement it, send the extracted raw text to Claude and return structured JSON, keeping the human-review step.
 
 ## File storage
-Local disk under `Uploads/`, named `{GUID}{ext}` to avoid collisions; original name kept in `CVFile.OriginalFileName`. Download streams via `CandidatesController.GetCvFile` (`PhysicalFile(...)`) and requires auth. Deleting a candidate removes its files from disk.
+Local disk under `Uploads/`, named `{GUID}{ext}` to avoid collisions; original name kept in `CVFile.OriginalFileName`. Download streams via `CandidatesController.GetCvFile` (`PhysicalFile(...)`) and requires auth. Deleting a candidate removes its files from disk. Every path built from a stored name goes through `UploadPaths.Resolve`, which keeps it inside `Uploads/` (anything else is treated as a missing file). `POST /api/candidates` accepts only a stored name the server issued, belonging to a draft the caller uploaded (any draft for Admin and above) and not already attached to a candidate; otherwise it returns 400. The CV's original name, type and size are copied from that draft, not from the request body.
 
 ## Status options
 - Status labels are stored in the `StatusOptions` lookup table and served from `GET /api/status-options`.
 - Initial upload statuses come from `GET /api/status-options/initial`.
 - Valid next statuses for a candidate come from `GET /api/status-options/next/{candidateId}` and are backed by `StatusTransitions`.
-- `CandidatesController` validates initial statuses, transitions, and prerequisites before saving.
+- `CandidatesController` validates initial statuses, transitions, prerequisites, and (on create) the CV reference before saving.
 - Prerequisite details are stored on `StatusHistory`: task details, submission URL, interview date/time, and comments.
 - Future admin configuration can edit/add options and transitions against the same tables without changing candidate history storage.
 
@@ -90,7 +90,7 @@ log4net (`log4net.config`): console + daily rolling file under `Logs/`. App cate
 |---|---|---|---|
 | GET | `/api/dashboard/kpis` · `/status-breakdown` · `/applications-trend?days=` · `/job-openings` | required (any role) | **Org-wide** figures — every role sees the same numbers |
 | GET | `/api/dashboard` | required | **Owner-scoped** remainder: by-role/top-skill counts, upcoming interviews, recent activity |
-| GET | `/api/analytics` | CanWriteCandidate | Executive **operational analytics** (time-to-hire, stage velocity, funnel drop-off conversion, sourcing channel ROI, recruiter workload). Scoped to recruiter roles; filters `preset, from, to, roleId` |
+| GET | `/api/analytics` | CanWriteCandidate | Executive **operational analytics** (time-to-hire, stage velocity, funnel drop-off conversion, sourcing channel ROI, recruiter workload). Non-Admins are scoped to their assigned roles plus candidates they own; `roleId` narrows that scope (never widens it), and workload transition/interview counts only include candidates in scope. Filters `preset, from, to, roleId` |
 | GET | `/api/audit` | **Admin+** | Audit trail (newest-first), filters `actorUserId,entityType,entityId,action,from,to` + paging |
 | GET | `/api/interviews/assignable-users` | required | Active users assignable as interviewers |
 | GET | `/api/interviews/mine` | required | Interviews the caller is assigned to (+ their eval state) |

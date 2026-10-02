@@ -58,6 +58,48 @@ public class ControllerAuthorizationTests(ApiFixture fx)
         await AssertStatus(role, HttpMethod.Get, $"/api/candidates/{id}/evaluation-report", expected);
     }
 
+    // ---- Offers ----
+    // Creating an offer was role-gated but not scoped, so a Recruiter could raise one on any
+    // candidate. Reviewing one was open to every Recruiter. The UI offered review only to Admin+.
+
+    [Theory]
+    [InlineData("SuperAdmin", HttpStatusCode.Created)]
+    [InlineData("Admin", HttpStatusCode.Created)]
+    [InlineData("Recruiter", HttpStatusCode.NotFound)] // authorized, but this candidate is out of scope
+    [InlineData("Interviewer", HttpStatusCode.Forbidden)]
+    public async Task Create_offer(string role, HttpStatusCode expected)
+    {
+        var candidateId = await fx.NewCandidateAsync(fx.AdminId);
+        var resp = await fx.SendAsync(HttpMethod.Post, $"/api/candidates/{candidateId}/offers",
+            await TokenFor(role), new { baseSalary = 90000 });
+        Assert.Equal(expected, resp.StatusCode);
+    }
+
+    [Theory]
+    [InlineData("SuperAdmin", HttpStatusCode.OK)]
+    [InlineData("Admin", HttpStatusCode.OK)]
+    [InlineData("Recruiter", HttpStatusCode.Forbidden)]
+    [InlineData("Interviewer", HttpStatusCode.Forbidden)]
+    public async Task Review_offer(string role, HttpStatusCode expected)
+    {
+        // A fresh offer per case, since a successful review changes its status.
+        var candidateId = await fx.NewCandidateAsync(fx.AdminId);
+        var offerId = await fx.NewOfferAsync(candidateId, "PendingApproval");
+        var resp = await fx.SendAsync(HttpMethod.Post, $"/api/candidates/{candidateId}/offers/{offerId}/review",
+            await TokenFor(role), new { decision = "Approved" });
+        Assert.Equal(expected, resp.StatusCode);
+    }
+
+    [Fact]
+    public async Task Reviewing_an_offer_not_awaiting_approval_is_a_conflict()
+    {
+        var candidateId = await fx.NewCandidateAsync(fx.AdminId);
+        var offerId = await fx.NewOfferAsync(candidateId, "Draft");
+        var resp = await fx.SendAsync(HttpMethod.Post, $"/api/candidates/{candidateId}/offers/{offerId}/review",
+            await TokenFor("Admin"), new { decision = "Approved" });
+        Assert.Equal(HttpStatusCode.Conflict, resp.StatusCode);
+    }
+
     // ---- Email / SMTP settings: SuperAdmin only ----
 
     [Theory]

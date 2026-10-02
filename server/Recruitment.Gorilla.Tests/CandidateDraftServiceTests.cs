@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging.Abstractions;
+using Recruitment.Gorilla.API.Auth;
 using Recruitment.Gorilla.API.DTOs;
 using Recruitment.Gorilla.API.Models;
 using Recruitment.Gorilla.API.Services;
@@ -8,10 +9,26 @@ namespace Recruitment.Gorilla.Tests;
 
 public class CandidateDraftServiceTests(MySqlDatabaseFixture fixture) : DbTestBase(fixture)
 {
+    /// <summary>
+    /// The service as an Admin, who may see and act on every draft. The persistence tests below are
+    /// not about scoping, and used to run as an anonymous caller, which only worked because the draft
+    /// scope failed open for a caller without a user id. It fails closed now, so they say who they are.
+    /// </summary>
+    private CandidateDraftService AsAdmin() =>
+        CandidateDrafts(SignedIn(Data.AddUser(Roles.Admin).Id, Roles.Admin));
+
+    private CurrentUser NewRecruiter() => SignedIn(Data.AddUser(Roles.Recruiter).Id, Roles.Recruiter);
+
+    /// <summary>A pending draft uploaded by <paramref name="uploader"/>, who becomes its owner.</summary>
+    private async Task<CandidateDraft> DraftUploadedBy(CurrentUser uploader, string tag) =>
+        await CandidateDrafts(uploader).CreateDraftAsync(
+            $"{tag}.pdf", $"stored_{tag}_{Guid.NewGuid():N}.pdf", "PDF", 1000, $"batch_{tag}", null,
+            $"Owner {tag}", $"{tag}@test.com", null, null, null, null, null);
+
     [Fact]
     public async Task CreateDraft_and_GetDrafts_persists_in_database()
     {
-        var service = CandidateDrafts();
+        var service = AsAdmin();
         var draft = await service.CreateDraftAsync(
             "john_doe.pdf", "stored_123.pdf", "PDF", 50000,
             "batch_001", "Q3 Engineering",
@@ -31,7 +48,7 @@ public class CandidateDraftServiceTests(MySqlDatabaseFixture fixture) : DbTestBa
     [Fact]
     public async Task UpdateDraft_updates_fields_successfully()
     {
-        var service = CandidateDrafts();
+        var service = AsAdmin();
         var draft = await service.CreateDraftAsync(
             "jane_doe.pdf", "stored_456.pdf", "PDF", 45000,
             "batch_002", "Design Intake",
@@ -54,7 +71,7 @@ public class CandidateDraftServiceTests(MySqlDatabaseFixture fixture) : DbTestBa
     [Fact]
     public async Task ApproveDraft_creates_candidate_and_links_cvfile()
     {
-        var service = CandidateDrafts();
+        var service = AsAdmin();
         var role = Data.AddRole("Senior Developer");
 
         var draft = await service.CreateDraftAsync(
@@ -89,7 +106,7 @@ public class CandidateDraftServiceTests(MySqlDatabaseFixture fixture) : DbTestBa
     [Fact]
     public async Task Create_and_ApproveDraft_transfers_Education_Experience_and_Profiles()
     {
-        var service = CandidateDrafts();
+        var service = AsAdmin();
         var role = Data.AddRole("Full Stack Engineer BD Test");
 
         var educations = new List<ParsedEducation>
@@ -155,7 +172,7 @@ public class CandidateDraftServiceTests(MySqlDatabaseFixture fixture) : DbTestBa
     [Fact]
     public async Task DiscardDraft_marks_status_as_discarded()
     {
-        var service = CandidateDrafts();
+        var service = AsAdmin();
         var draft = await service.CreateDraftAsync(
             "discard_me.pdf", "stored_discard.pdf", "PDF", 20000,
             "batch_004", "Test Batch",
@@ -176,7 +193,7 @@ public class CandidateDraftServiceTests(MySqlDatabaseFixture fixture) : DbTestBa
     [Fact]
     public async Task FindDuplicateUpload_blocks_a_cv_that_is_pending_review()
     {
-        var service = CandidateDrafts();
+        var service = AsAdmin();
         var hash = HashOf($"cv-{Guid.NewGuid()}");
         await service.CreateDraftAsync(
             "pending.pdf", "stored_pending.pdf", "PDF", 1234, "batch_dup", null,
@@ -191,7 +208,7 @@ public class CandidateDraftServiceTests(MySqlDatabaseFixture fixture) : DbTestBa
     [Fact]
     public async Task FindDuplicateUpload_allows_a_cv_whose_draft_was_discarded()
     {
-        var service = CandidateDrafts();
+        var service = AsAdmin();
         var hash = HashOf($"cv-{Guid.NewGuid()}");
         var draft = await service.CreateDraftAsync(
             "discarded.pdf", "stored_discarded.pdf", "PDF", 1234, "batch_dup", null,
@@ -204,7 +221,7 @@ public class CandidateDraftServiceTests(MySqlDatabaseFixture fixture) : DbTestBa
     [Fact]
     public async Task FindDuplicateUpload_blocks_a_cv_already_attached_to_a_candidate()
     {
-        var service = CandidateDrafts();
+        var service = AsAdmin();
         var role = Data.AddRole("Duplicate Check Role");
         var hash = HashOf($"cv-{Guid.NewGuid()}");
         var draft = await service.CreateDraftAsync(
@@ -231,7 +248,7 @@ public class CandidateDraftServiceTests(MySqlDatabaseFixture fixture) : DbTestBa
         await File.WriteAllBytesAsync(path, content);
         try
         {
-            var service = CandidateDrafts();
+            var service = AsAdmin();
             var draft = await service.CreateDraftAsync(
                 "legacy.pdf", storedName, "PDF", content.Length, "batch_dup", null,
                 "Legacy Person", "legacy@test.com", null, null, null, null, null);
@@ -247,5 +264,117 @@ public class CandidateDraftServiceTests(MySqlDatabaseFixture fixture) : DbTestBa
         {
             File.Delete(path);
         }
+    }
+
+    // ---- Uploader scoping ----------------------------------------------------------------------
+    // The draft list was scoped to its uploader, but every by-id and bulk path loaded drafts by id
+    // alone. A Recruiter could read another user's parsed CV, edit it, discard it, or approve it and
+    // become the owner of the candidate it produced. Confirmed live for the read path.
+
+    [Fact]
+    public async Task A_recruiter_cannot_read_another_users_draft_by_id()
+    {
+        var owner = NewRecruiter();
+        var draft = await DraftUploadedBy(owner, "read");
+
+        Assert.Null(await CandidateDrafts(NewRecruiter()).GetDraftByIdAsync(draft.Id));
+        Assert.NotNull(await CandidateDrafts(owner).GetDraftByIdAsync(draft.Id));
+    }
+
+    [Fact]
+    public async Task An_admin_can_still_read_any_draft()
+    {
+        var draft = await DraftUploadedBy(NewRecruiter(), "admin-read");
+
+        Assert.NotNull(await AsAdmin().GetDraftByIdAsync(draft.Id));
+    }
+
+    [Fact]
+    public async Task A_recruiter_cannot_update_approve_or_discard_another_users_draft()
+    {
+        var owner = NewRecruiter();
+        var draft = await DraftUploadedBy(owner, "write");
+        var role = Data.AddRole("Scoping Write Role");
+        var intruder = CandidateDrafts(NewRecruiter());
+
+        var updated = await intruder.UpdateDraftAsync(draft.Id, new UpdateCandidateDraftDto(
+            "Hijacked", "hijack@test.com", null, null, null, null, null, null, null, null, null, null, null));
+        var (candidate, error) = await intruder.ApproveDraftAsync(draft.Id, new ApproveCandidateDraftDto(
+            "Hijacked", "hijack@test.com", null, null, "2 Years", null, null, null, null, null,
+            role.Id, null, null));
+        var discarded = await intruder.DiscardDraftAsync(draft.Id);
+
+        Assert.Null(updated);
+        Assert.Null(candidate);
+        Assert.Equal("Draft not found.", error);
+        Assert.False(discarded);
+
+        // And none of it landed: still pending, still the owner's data, and no candidate was made.
+        var stored = await CandidateDrafts(owner).GetDraftByIdAsync(draft.Id);
+        Assert.NotNull(stored);
+        Assert.Equal("Pending", stored.Status);
+        Assert.Equal("Owner write", stored.FullName);
+        Assert.False(Db.Candidates.Any(c => c.Email == "hijack@test.com"));
+    }
+
+    [Fact]
+    public async Task Bulk_approve_and_bulk_discard_skip_drafts_the_caller_did_not_upload()
+    {
+        var owner = NewRecruiter();
+        var intruderUser = NewRecruiter();
+        var ownersDraft = await DraftUploadedBy(owner, "bulk-owner");
+        var intrudersDraft = await DraftUploadedBy(intruderUser, "bulk-intruder");
+        var role = Data.AddRole("Scoping Bulk Role");
+        var intruder = CandidateDrafts(intruderUser);
+
+        var approved = await intruder.BulkApproveAsync(new BulkApproveDraftsDto([ownersDraft.Id], role.Id));
+        var discarded = await intruder.BulkDiscardAsync([ownersDraft.Id, intrudersDraft.Id]);
+
+        Assert.Empty(approved);
+        Assert.Equal(1, discarded); // only the intruder's own draft
+        Assert.Equal("Pending", (await CandidateDrafts(owner).GetDraftByIdAsync(ownersDraft.Id))!.Status);
+    }
+
+    [Fact]
+    public async Task Batch_list_shows_only_the_callers_own_batches()
+    {
+        var owner = NewRecruiter();
+        await DraftUploadedBy(owner, "batchscope");
+
+        var forOwner = await CandidateDrafts(owner).GetBatchesAsync();
+        var forOther = await CandidateDrafts(NewRecruiter()).GetBatchesAsync();
+
+        Assert.Contains(forOwner, b => b.BatchId == "batch_batchscope");
+        Assert.DoesNotContain(forOther, b => b.BatchId == "batch_batchscope");
+    }
+
+    [Fact]
+    public async Task Duplicate_cv_check_stays_global_across_users()
+    {
+        // Deliberately outside ScopedDrafts (#93): a CV pending in one user's queue must still
+        // block the same file from another user. Pinned here because the Admin-run duplicate
+        // tests above would pass even if the check were wrongly scoped.
+        var hash = HashOf($"cv-{Guid.NewGuid()}");
+        await CandidateDrafts(NewRecruiter()).CreateDraftAsync(
+            "shared.pdf", $"stored_shared_{Guid.NewGuid():N}.pdf", "PDF", 1234, "batch_shared", null,
+            "Shared Person", "shared@test.com", null, null, null, null, null, fileHash: hash);
+
+        var error = await CandidateDrafts(NewRecruiter()).FindDuplicateUploadAsync(hash, 1234);
+
+        Assert.Equal("This CV has already been uploaded and is waiting for review in Drafts.", error);
+    }
+
+    [Fact]
+    public async Task A_caller_with_no_user_id_sees_no_drafts()
+    {
+        // Fails closed. The old list check filtered only when the caller had a user id, so a
+        // non-admin caller without one fell through to every draft in the table.
+        var draft = await DraftUploadedBy(NewRecruiter(), "anonymous");
+        var anonymous = CandidateDrafts();
+
+        var list = await anonymous.GetDraftsAsync(new DraftsFilterQuery(BatchId: "batch_anonymous"));
+
+        Assert.DoesNotContain(list.Items, d => d.Id == draft.Id);
+        Assert.Null(await anonymous.GetDraftByIdAsync(draft.Id));
     }
 }
