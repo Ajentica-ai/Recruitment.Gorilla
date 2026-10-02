@@ -1,6 +1,6 @@
-<!-- phase: WRAP-UP | branch: feature/RG-93/Block-duplicate-cv-upload | tasks: 10/10
+<!-- phase: DONE | branch: feature/RG-93/Block-duplicate-cv-upload | tasks: 10/10
      base: 107fd68 | updated: 2026-10-02
-     next: push branch + open PR against develop (both gated) -->
+     next: none; PR #94 awaiting review -->
 # Plan: Block re-uploading the same CV
 Note: tasks 1-7 were written before this workflow started (uncommitted, on feature/block-duplicate-cv-upload).
 ## Tasks
