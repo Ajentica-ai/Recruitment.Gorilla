@@ -60,8 +60,8 @@ public class CandidateDraftService(
 
     private string? HashStoredFile(string storedFileName)
     {
-        var path = Path.Combine(env.ContentRootPath, "Uploads", storedFileName);
-        if (!File.Exists(path)) return null;
+        var path = UploadPaths.Resolve(env.ContentRootPath, storedFileName);
+        if (path is null || !File.Exists(path)) return null;
         using var stream = File.OpenRead(path);
         return ComputeFileHash(stream);
     }

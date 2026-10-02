@@ -146,6 +146,10 @@ generate it on demand, or run `npm run e2e:cvs` yourself. The PDFs carry invente
 library, and the filenames matter: `CVParserService.ParseNameAndTitleFromFileName` reads
 `First-Last-Title-Words.pdf`, so a numeric prefix would be parsed as the first name.
 
+**Seed candidates through `e2e/seed.ts`.** `POST /api/candidates` only accepts a CV the caller
+uploaded, so a spec cannot invent a stored file name. `seedCandidate` uploads a small unique PDF,
+creates the candidate from it, and discards the leftover draft.
+
 Screenshots go under `client/test-results/screenshots` (gitignored); set `E2E_SHOT_DIR` to collect
 them elsewhere.
 
