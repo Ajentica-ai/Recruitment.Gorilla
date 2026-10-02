@@ -64,10 +64,14 @@ public class OfferService(
         return MapToDto(offer);
     }
 
-    public async Task<OfferDto?> CreateOfferAsync(int candidateId, CreateOfferDto dto, int userId, string userName)
+    public async Task<OfferDto?> CreateOfferAsync(
+        int candidateId, CreateOfferDto dto, int? accessUserId, int userId, string userName)
     {
-        var candidate = await db.Candidates
-            .Include(c => c.RoleAppliedOption)
+        // Scoped like every sibling method, so an out-of-scope candidate reads as missing and the
+        // controller's "not found or access denied" is finally true. Before this, a Recruiter could
+        // raise an offer on any candidate by guessing its id, and so also push a Recommended one to
+        // Offer Preparation and read its name and email back in the response.
+        var candidate = await ApplyCandidateAccess(db.Candidates.Include(c => c.RoleAppliedOption), accessUserId)
             .FirstOrDefaultAsync(c => c.Id == candidateId);
 
         if (candidate is null) return null;
@@ -109,7 +113,7 @@ public class OfferService(
         await audit.RecordAsync("Offer.Created", "Offer", offer.Id,
             $"Created draft offer of {offer.Currency} {offer.BaseSalary:N2} for '{candidate.FullName}' (Candidate #{candidateId})");
 
-        return await GetOfferByIdAsync(offer.Id, null);
+        return await GetOfferByIdAsync(offer.Id, accessUserId);
     }
 
     public async Task<OfferDto?> UpdateOfferAsync(int offerId, UpdateOfferDto dto, int? accessUserId, int userId, string userName)
@@ -171,8 +175,12 @@ public class OfferService(
         // If specific approvers were provided, create approval records
         if (approverUserIds is { Count: > 0 })
         {
+            // Only Admin and above can review an offer, so only they can be named as approvers. A
+            // Recruiter or Interviewer named here would get a request they cannot act on, and their
+            // Pending row would stop any Admin approval from ever moving the offer to Approved.
             var validApprovers = await db.Users
-                .Where(u => approverUserIds.Contains(u.Id) && u.IsActive)
+                .Where(u => approverUserIds.Contains(u.Id) && u.IsActive &&
+                            u.Roles.Any(r => r.Role == Auth.Roles.Admin || r.Role == Auth.Roles.SuperAdmin))
                 .ToListAsync();
 
             foreach (var approver in validApprovers)
@@ -204,14 +212,31 @@ public class OfferService(
         return await GetOfferByIdAsync(offer.Id, null);
     }
 
-    public async Task<OfferDto?> ReviewApprovalAsync(int offerId, ReviewOfferApprovalDto dto, int approverUserId, string approverName)
+    /// <summary>
+    /// Records an approver's decision on an offer awaiting approval.
+    ///
+    /// Who may call this is decided at the controller, which allows Admin and above only, matching the
+    /// UI. That is also why the reviewer's approval row is still created on the fly: offers are
+    /// submitted from the UI with no named approvers, so there is never a pre-assigned row to require,
+    /// and requiring one would leave every offer unapprovable.
+    /// </summary>
+    public async Task<OfferDto?> ReviewApprovalAsync(
+        int offerId, int candidateId, ReviewOfferApprovalDto dto, int approverUserId, string approverName)
     {
         var offer = await db.Offers
             .Include(o => o.Candidate)
             .Include(o => o.Approvals)
             .FirstOrDefaultAsync(o => o.Id == offerId);
 
-        if (offer is null) return null;
+        // Checked before anything is written. The controller used to compare the candidate id only
+        // after SaveChangesAsync, so a mismatched URL still committed the review and its audit row.
+        if (offer is null || offer.CandidateId != candidateId) return null;
+
+        // Only an offer awaiting approval can be reviewed. Otherwise approving a Draft skips the submit
+        // step entirely, and rejecting an Extended or Accepted offer knocks it back to Draft.
+        if (offer.Status != "PendingApproval")
+            throw new InvalidOperationException(
+                $"Offer #{offerId} is '{offer.Status}', not awaiting approval, so it cannot be reviewed.");
 
         var isDecisionApproved = string.Equals(dto.Decision, "Approved", StringComparison.OrdinalIgnoreCase);
 

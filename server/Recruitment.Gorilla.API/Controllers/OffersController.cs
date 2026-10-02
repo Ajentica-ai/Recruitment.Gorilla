@@ -46,6 +46,7 @@ public class OffersController(
         var created = await offerService.CreateOfferAsync(
             candidateId,
             dto,
+            OwnerScope,
             currentUser.UserId ?? 0,
             currentUser.Name ?? string.Empty);
 
@@ -92,7 +93,10 @@ public class OffersController(
         return Ok(submitted);
     }
 
-    [Authorize(Roles = Roles.CanWriteCandidate)]
+    // Admin and above only. This used to be CanWriteCandidate, so any Recruiter, including one with no
+    // candidates of their own, could approve or reject any offer by walking the sequential offer ids,
+    // and could approve their own. The UI already offered Approve and Reject only to Admin and above.
+    [Authorize(Roles = Roles.AdminOrAbove)]
     [HttpPost("candidates/{candidateId}/offers/{offerId}/review")]
     public async Task<IActionResult> ReviewApproval(int candidateId, int offerId, [FromBody] ReviewOfferApprovalDto dto)
     {
@@ -102,13 +106,24 @@ public class OffersController(
             return BadRequest("Decision must be 'Approved' or 'Rejected'.");
         }
 
-        var reviewed = await offerService.ReviewApprovalAsync(
-            offerId,
-            dto,
-            currentUser.UserId ?? 0,
-            currentUser.Name ?? string.Empty);
+        OfferDto? reviewed;
+        try
+        {
+            reviewed = await offerService.ReviewApprovalAsync(
+                offerId,
+                candidateId,
+                dto,
+                currentUser.UserId ?? 0,
+                currentUser.Name ?? string.Empty);
+        }
+        catch (InvalidOperationException ex)
+        {
+            // An offer that is not awaiting approval. A conflict with its current state, not a server
+            // fault, so it is a 409 the client can show rather than a 500.
+            return Conflict(ex.Message);
+        }
 
-        if (reviewed is null || reviewed.CandidateId != candidateId)
+        if (reviewed is null)
             return NotFound();
 
         return Ok(reviewed);
