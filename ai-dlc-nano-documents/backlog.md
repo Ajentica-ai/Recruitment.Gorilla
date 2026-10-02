@@ -1,5 +1,7 @@
 # Backlog
 <!-- Out-of-scope findings, newest first. Delete a line when it is resolved. -->
+- [2026-10-02] Tests/ControllerAuthorizationTests - delete audit-row test flaky under full suite; 500ms poll too short (found: RG-101)
+- [2026-10-02] local dev - user-secrets DB password is stale, so dotnet run/test fail until reset (found: RG-50)
 - [2026-10-02] CVUploadController - duplicate check has no DB constraint; simultaneous identical uploads both pass (found: RG-93)
 - [2026-10-02] CVParserService - education institution truncates to one word ("University") from a full name (found: RG-83)
 - [2026-10-02] client/e2e - the upload specs create drafts and candidates every run and never clean up (found: RG-83)

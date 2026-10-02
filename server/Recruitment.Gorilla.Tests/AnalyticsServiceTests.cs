@@ -140,4 +140,76 @@ public class AnalyticsServiceTests(MySqlDatabaseFixture fixture) : DbTestBase(fi
         var summaryRole2 = await Analytics().GetSummaryAsync(new AnalyticsFilterQuery("30d", RoleId: role2.Id));
         Assert.Equal(1, summaryRole2.TotalCandidatesInPeriod);
     }
+
+    [Fact]
+    public async Task Workload_counts_only_activity_on_the_scoped_recruiters_candidates()
+    {
+        var recruiter = Data.AddUser("Recruiter");
+        var colleague = Data.AddUser("Recruiter");
+        var ownRole = Data.AddRole(recruiterUserIds: recruiter.Id);
+        var otherRole = Data.AddRole(recruiterUserIds: colleague.Id);
+
+        var inScope = Data.AddCandidate(roleId: ownRole.Id);
+        var outOfScope = Data.AddCandidate(roleId: otherRole.Id);
+        Db.StatusHistories.AddRange(
+            new StatusHistory { CandidateId = inScope.Id, Status = "Technical Assessment", ChangedBy = colleague.Name },
+            new StatusHistory { CandidateId = outOfScope.Id, Status = "Technical Assessment", ChangedBy = colleague.Name });
+        await Db.SaveChangesAsync();
+        Data.AddInterview(inScope.Id, colleague.Id);
+        Data.AddInterview(outOfScope.Id, colleague.Id);
+
+        var scoped = await Analytics().GetSummaryAsync(new AnalyticsFilterQuery("30d"), recruiter.Id);
+        var scopedRow = scoped.RecruiterWorkloads.Single(r => r.RecruiterUserId == colleague.Id);
+        Assert.Equal(1, scopedRow.TransitionsLogged);
+        Assert.Equal(1, scopedRow.InterviewsParticipated);
+
+        var admin = await Analytics().GetSummaryAsync(new AnalyticsFilterQuery("30d"));
+        var adminRow = admin.RecruiterWorkloads.Single(r => r.RecruiterUserId == colleague.Id);
+        Assert.Equal(2, adminRow.TransitionsLogged);
+        Assert.Equal(2, adminRow.InterviewsParticipated);
+    }
+
+    [Fact]
+    public async Task Recruiter_with_no_candidates_sees_no_colleague_activity()
+    {
+        var recruiter = Data.AddUser("Recruiter");
+        var colleague = Data.AddUser("Recruiter");
+        var otherRole = Data.AddRole(recruiterUserIds: colleague.Id);
+        var candidate = Data.AddCandidate(roleId: otherRole.Id);
+        Db.StatusHistories.Add(new StatusHistory { CandidateId = candidate.Id, Status = "Technical Assessment", ChangedBy = colleague.Name });
+        await Db.SaveChangesAsync();
+        Data.AddInterview(candidate.Id, colleague.Id);
+
+        var summary = await Analytics().GetSummaryAsync(new AnalyticsFilterQuery("all"), recruiter.Id);
+
+        Assert.Equal(0, summary.TotalCandidatesInPeriod);
+        Assert.All(summary.RecruiterWorkloads, r =>
+        {
+            Assert.Equal(0, r.TransitionsLogged);
+            Assert.Equal(0, r.InterviewsParticipated);
+        });
+    }
+
+    [Fact]
+    public async Task Role_filter_narrows_a_recruiters_scope_instead_of_replacing_it()
+    {
+        var recruiter = Data.AddUser("Recruiter");
+        var assignedRole = Data.AddRole(recruiterUserIds: recruiter.Id);
+        var unassignedRole = Data.AddRole();
+
+        Data.AddCandidate(roleId: assignedRole.Id);
+        Data.AddCandidate(roleId: unassignedRole.Id);
+        Data.AddCandidate(roleId: unassignedRole.Id);
+        Data.AddCandidate(ownerUserId: recruiter.Id, roleId: unassignedRole.Id);
+
+        var assigned = await Analytics().GetSummaryAsync(new AnalyticsFilterQuery("30d", RoleId: assignedRole.Id), recruiter.Id);
+        Assert.Equal(1, assigned.TotalCandidatesInPeriod);
+
+        // Only the candidate the recruiter owns; the other two in this role are out of scope.
+        var unassigned = await Analytics().GetSummaryAsync(new AnalyticsFilterQuery("30d", RoleId: unassignedRole.Id), recruiter.Id);
+        Assert.Equal(1, unassigned.TotalCandidatesInPeriod);
+
+        var admin = await Analytics().GetSummaryAsync(new AnalyticsFilterQuery("30d", RoleId: unassignedRole.Id));
+        Assert.Equal(3, admin.TotalCandidatesInPeriod);
+    }
 }

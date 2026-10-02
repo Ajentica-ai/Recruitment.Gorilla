@@ -1,9 +1,9 @@
 # AI-DLC Nano State
 - Active work item: none
 - Phase: -
-- Branch: fix/RG-102/Profile-links-relative-url
-- Base SHA: f59832e
-- Next step: RG-102 complete. PR open against develop, awaiting review.
+- Branch: fix/RG-101/Analytics-workload-scope
+- Base SHA: -
+- Next step: RG-101 complete, code uncommitted on its branch; commit/PR on user request.
 - Paused work items: none
-- Uncommitted code: no
-- Last updated: 2026-10-02T12:00Z by claude
+- Uncommitted code: yes
+- Last updated: 2026-10-02T14:18Z by claude
