@@ -338,6 +338,9 @@ mutations invalidate the `['config']` prefix so candidate forms refresh too.
 ### Status colors (`utils/statusColors.ts` + `components/StatusBadge.tsx`)
 `getStatusClass(status)` maps a status to a **tone** modifier class (`status--reject|success|interview|assessment|muted|uploaded|intake`). The colors are CSS design tokens in `index.css` (`--status-color` solid for the dot, `--status-tint` translucent for the badge background), with a `[data-bs-theme="dark"]` override block so a future dark theme just flips `data-bs-theme` on `<html>` — no component changes. Use the shared `StatusBadge` / `StatusDot` components (do not reintroduce per-call Bootstrap `bg-*` variants); applied to the candidate list, detail header, and `StatusTimeline`.
 
+### External links (`utils/externalUrl.ts`)
+Candidate profile links (LinkedIn, GitHub, portfolio, ...) and timeline submission links are stored as typed or extracted, often without a scheme (`linkedin.com/in/jane`). A bare value used as `href` resolves relative to the current page (`/candidates/linkedin.com/in/jane`), so always render these through `externalUrl(raw)`: it prefixes `https://` to bare links, passes `http(s)://` through, and returns `undefined` for any other scheme (`javascript:`, `data:`) so the link is not rendered.
+
 ### CV preview (`CvFilesCard` in `CandidateDetailPage`)
 Each CV file has **Preview** + **Download**. Preview calls `previewCvFile` (authenticated blob → object URL) and renders PDFs in an `<iframe>` (`.cv-preview-frame`); non-PDF types show a friendly fallback and keep Download. Object URLs are revoked on change/unmount.
 
