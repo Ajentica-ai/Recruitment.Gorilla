@@ -125,3 +125,7 @@
 - 2026-10-02T08:43Z [claude] RG-93 SIDE-EFFECT @31575a9: pushed branch and opened PR #94 against develop (user approved)
 - 2026-10-02T08:43Z [claude] RG-93 SIDE-EFFECT @31575a9: commented on issue #93 with decisions and verification (user approved)
 - 2026-10-02T08:43Z [claude] RG-93 DONE @31575a9: duplicate CVs blocked by content hash; 250/250 xUnit, 120 Vitest, e2e 409s verified
+- 2026-10-02T12:00Z [claude] RG-102 CREATED @f59832e: issue #102 opened for profile links resolving as in-app paths (user approved)
+- 2026-10-02T12:00Z [claude] RG-102 SIDE-EFFECT @f59832e: claimed #102, assigned tahmidsparrow, board status In Development
+- 2026-10-02T12:00Z [claude] RG-102 DECISION @f59832e: fast path, fix at render via externalUrl helper, no data migration (user confirmed)
+- 2026-10-02T12:00Z [claude] RG-102 BRANCH @f59832e: fix/RG-102/Profile-links-relative-url created off origin/develop (user confirmed)
