@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { ADMIN, ensureTestCvs, requireData, shotPath } from './helpers';
+import { ADMIN, freshTestCvs, requireData, shotPath } from './helpers';
 
 // Admin, not E2E_EMAIL's Recruiter: approving a draft requires assigning an
 // applied role, and a Recruiter only sees roles they are assigned to. With none,
@@ -27,10 +27,11 @@ test.describe('Bulk Upload 10 CVs & Staging Review Workspace Test', () => {
     const batchInput = page.locator('#batch-name-input');
     await batchInput.fill('Q3 Senior Engineering Intake');
 
-    // 4. Attach 10 CV files. The fixtures are generated rather than committed,
-    //    so ask for them instead of asserting they were left behind (#83).
-    const available = ensureTestCvs();
-    requireData(available.length >= 10, '10 generated test CVs in e2e/test-cvs');
+    // 4. Attach 10 CV files. A fresh salted set each run: since #93 the API
+    //    refuses any CV it has seen before, by content hash, so a reused set
+    //    would be rejected on every run after the first.
+    const available = freshTestCvs();
+    requireData(available.length >= 10, '10 freshly generated test CVs');
     const filePaths = available.slice(0, 10);
 
     const fileInput = page.locator('input[type="file"]');

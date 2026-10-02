@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { ADMIN, ensureTestCvs, requireData, shotPath } from './helpers';
+import { ADMIN, freshTestCvs, requireData, shotPath } from './helpers';
 
 // Admin, not E2E_EMAIL's Recruiter: approving a draft requires assigning an
 // applied role, and a Recruiter only sees roles they are assigned to. With none,
@@ -26,8 +26,10 @@ test.describe('End-to-End Candidate Education, Experience & Coding Profiles Test
 
     // 3. Attach technical CV. This spec asserts on one CV's parsed contents, so
     //    the generator writes that exact file: coding links, a Dhaka location,
-    //    the CS & Engineering degree and a CGPA (#83).
-    const testCvPath = ensureTestCvs().find((f) =>
+    //    the CS & Engineering degree and a CGPA (#83). Freshly salted, because
+    //    this spec approves the CV, and since #93 an approved CV's hash blocks
+    //    that file from ever being uploaded again.
+    const testCvPath = freshTestCvs().find((f) =>
       f.endsWith('Alex_Rivera_Senior_Backend_Engineer.pdf'),
     );
     requireData(Boolean(testCvPath), 'the generated Alex Rivera fixture CV');

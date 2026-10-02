@@ -15,14 +15,38 @@
  * The people in these CVs are invented. Emails use `.invalid`, which is
  * reserved by RFC 2606 and can never route anywhere.
  *
- *   node e2e/make-test-cvs.mjs          # writes 10 CVs
- *   node e2e/make-test-cvs.mjs --force  # overwrites existing ones
+ * Since #93 the API rejects a CV whose bytes match one it already holds, by
+ * content hash, against both pending drafts and every approved candidate's CV.
+ * Identical fixtures would therefore be refused on every run after the first,
+ * and permanently once a spec approves one. So the specs never reuse a file:
+ * each asks for a fresh set with its own salt, written as a PDF comment. A
+ * comment changes the bytes, and so the hash, without changing a single
+ * character of the text the parser extracts.
+ *
+ *   node e2e/make-test-cvs.mjs                    # unsalted set in e2e/test-cvs
+ *   node e2e/make-test-cvs.mjs --force            # overwrite that set
+ *   node e2e/make-test-cvs.mjs --salt X --out D   # salted set in D (what the specs use)
  */
 import fs from 'node:fs';
 import path from 'node:path';
 
-const OUT = path.resolve('e2e/test-cvs');
-const FORCE = process.argv.includes('--force');
+/** The value following a flag, e.g. `--out dir`, or undefined when absent. */
+const arg = (flag) => {
+  const i = process.argv.indexOf(flag);
+  return i === -1 ? undefined : process.argv[i + 1];
+};
+
+const OUT = path.resolve(arg('--out') ?? 'e2e/test-cvs');
+const SALT = arg('--salt');
+// A salted set exists to be unique, so there is nothing worth keeping from before.
+const FORCE = process.argv.includes('--force') || SALT !== undefined;
+
+if (SALT !== undefined && !/^[\w-]{1,64}$/.test(SALT)) {
+  // Written into the PDF verbatim, so keep it to characters a comment line can
+  // hold without escaping.
+  console.error(`--salt must be 1-64 letters, digits, '_' or '-'; got ${JSON.stringify(SALT)}`);
+  process.exit(2);
+}
 
 /** Invented candidates. Varied enough that parsing has something to chew on. */
 const PEOPLE = [
@@ -97,7 +121,10 @@ function buildPdf(lines) {
     '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>',
   ];
 
-  let pdf = '%PDF-1.4\n';
+  // Line two of a PDF is conventionally a comment, and comments are ignored by
+  // every reader and by text extraction alike. It goes in before any object, so
+  // the xref offsets below are measured with it already in place.
+  let pdf = `%PDF-1.4\n${SALT ? `%rg-fixture ${SALT}\n` : ''}`;
   const offsets = [];
   objects.forEach((obj, i) => {
     offsets.push(Buffer.byteLength(pdf, 'latin1'));

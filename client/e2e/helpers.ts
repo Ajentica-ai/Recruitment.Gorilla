@@ -1,5 +1,6 @@
 import { expect, test, type APIRequestContext, type Page } from '@playwright/test';
 import { execFileSync } from 'node:child_process';
+import { randomUUID } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -96,38 +97,37 @@ export async function candidateCount(
   return Array.isArray(body) ? body.length : (body?.items?.length ?? 0);
 }
 
-/** The CV fixtures live outside git, so a spec has to check before using them. */
-export function testCvDir(): string {
-  return path.resolve('e2e/test-cvs');
-}
-
-export function testCvFiles(): string[] {
-  const dir = testCvDir();
-  if (!fs.existsSync(dir)) return [];
-  return fs
-    .readdirSync(dir)
-    .filter((f) => f.toLowerCase().endsWith('.pdf'))
-    .sort()
-    .map((f) => path.join(dir, f));
-}
-
 /**
- * Make sure the CV fixtures exist, generating them if not.
+ * A fresh set of CV fixtures that no earlier upload has ever seen.
  *
- * `e2e/test-cvs/` is gitignored and always was: the note beside it in
- * `.gitignore` reads "generated test CVs". The generator was simply missing, so
- * the two upload specs could not run on any clone (#83). Running it here means
- * a fresh checkout needs no setup step beyond the credentials file.
+ * Since #93 the API refuses a CV whose bytes it already holds, matched by
+ * content hash against pending drafts and against every approved candidate's
+ * CV, which never goes away. Reusing one fixed set therefore fails on every run
+ * after the first, and two specs sharing a file in the same run collide with
+ * each other: bulk-upload's ten included the very CV education-experience
+ * uploads.
+ *
+ * So each call writes its own set into its own directory, with a unique salt
+ * that the generator puts in a PDF comment. That changes every file's hash and
+ * nothing the parser reads. The directory sits under `test-results/`, which is
+ * already gitignored and which Playwright clears itself.
  */
-export function ensureTestCvs(): string[] {
-  const existing = testCvFiles();
-  if (existing.length > 0) return existing;
+export function freshTestCvs(): string[] {
+  const salt = randomUUID();
+  const out = path.join('test-results', 'cvs', salt);
   try {
-    execFileSync(process.execPath, ['e2e/make-test-cvs.mjs'], { stdio: 'pipe' });
+    execFileSync(process.execPath, ['e2e/make-test-cvs.mjs', '--salt', salt, '--out', out], {
+      stdio: 'pipe',
+    });
   } catch (err) {
     // Reported by the caller's skip, so the reason reaches the test output
     // rather than disappearing.
     console.warn(`could not generate test CVs: ${(err as Error).message}`);
+    return [];
   }
-  return testCvFiles();
+  return fs
+    .readdirSync(out)
+    .filter((f) => f.toLowerCase().endsWith('.pdf'))
+    .sort()
+    .map((f) => path.join(out, f));
 }
