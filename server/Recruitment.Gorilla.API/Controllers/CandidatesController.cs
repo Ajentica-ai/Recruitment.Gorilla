@@ -96,6 +96,11 @@ public class CandidatesController(
         if (referenceError is not null)
             return BadRequest(referenceError);
 
+        var fileError = await candidateService.ValidateCvFileAsync(
+            dto.StoredFileName, currentUser.IsInAnyRole(Roles.SuperAdmin, Roles.Admin), currentUser.UserId);
+        if (fileError is not null)
+            return BadRequest(fileError);
+
         var (created, duplicate) = await candidateService.CreateAsync(dto, currentUser.UserId, currentUser.Name);
 
         if (duplicate is not null)

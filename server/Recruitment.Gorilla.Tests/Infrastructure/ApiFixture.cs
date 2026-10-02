@@ -28,6 +28,7 @@ public sealed class ApiFixture : IAsyncLifetime
     public string RecruiterEmail { get; private set; } = "";
     public string InterviewerEmail { get; private set; } = "";
     public int AdminId { get; private set; }
+    public int RecruiterId { get; private set; }
     public int RoleId { get; private set; }
     public int CandidateId { get; private set; }
 
@@ -50,6 +51,7 @@ public sealed class ApiFixture : IAsyncLifetime
         RecruiterEmail = recruiter.Email;
         InterviewerEmail = interviewer.Email;
         AdminId = admin.Id;
+        RecruiterId = recruiter.Id;
 
         var role = new RoleAppliedOption
         {
@@ -116,6 +118,28 @@ public sealed class ApiFixture : IAsyncLifetime
         db.Candidates.Add(candidate);
         await db.SaveChangesAsync();
         return candidate.Id;
+    }
+
+    /// <summary>
+    /// Inserts a pending CV draft uploaded by <paramref name="uploaderUserId"/> under a server-style
+    /// stored name, and returns that name. No file is written; nothing here reads it from disk.
+    /// </summary>
+    public async Task<string> NewDraftAsync(int uploaderUserId, string fileType = "PDF", long fileSizeBytes = 2048)
+    {
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var extension = fileType == "PDF" ? ".pdf" : ".docx";
+        var draft = new CandidateDraft
+        {
+            OriginalFileName = $"cv{extension}",
+            StoredFileName = $"{Guid.NewGuid()}{extension}",
+            FileType = fileType,
+            FileSizeBytes = fileSizeBytes,
+            UploadedByUserId = uploaderUserId,
+        };
+        db.CandidateDrafts.Add(draft);
+        await db.SaveChangesAsync();
+        return draft.StoredFileName;
     }
 
     /// <summary>Inserts a role and returns its id.</summary>
