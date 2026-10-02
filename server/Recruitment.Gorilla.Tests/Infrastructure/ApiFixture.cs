@@ -174,6 +174,37 @@ public sealed class ApiFixture : IAsyncLifetime
             req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
         return Client.SendAsync(req);
     }
+
+    /// <summary>
+    /// Sends a request with a JSON body. Needed for gates on POST actions: without a valid body the
+    /// action answers 400 before authorization is the deciding factor, which proves nothing.
+    /// </summary>
+    public Task<HttpResponseMessage> SendAsync(HttpMethod method, string url, string? token, object body)
+    {
+        var req = new HttpRequestMessage(method, url) { Content = JsonContent.Create(body) };
+        if (token is not null)
+            req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        return Client.SendAsync(req);
+    }
+
+    /// <summary>Inserts an offer in the given status (committed) and returns its id.</summary>
+    public async Task<int> NewOfferAsync(int candidateId, string status = "Draft")
+    {
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var offer = new Offer
+        {
+            CandidateId = candidateId,
+            JobTitle = "Engineer",
+            BaseSalary = 90000,
+            Currency = "USD",
+            Status = status,
+            CreatedByUserId = AdminId,
+        };
+        db.Offers.Add(offer);
+        await db.SaveChangesAsync();
+        return offer.Id;
+    }
 }
 
 [CollectionDefinition(Name)]
