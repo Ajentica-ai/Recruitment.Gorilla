@@ -110,3 +110,6 @@
 - 2026-10-01T21:00Z [claude] RG-83 DECISION @: deleted e2e-all-tab.spec.ts - its only subject (an All tab) was removed from the product and it asserted nothing (user confirmed)
 - 2026-10-01T21:00Z [claude] RG-83 DECISION @eff9d56: deleted e2e-all-tab.spec.ts - its only subject (an All tab) was removed from the product and it asserted nothing (user confirmed)
 - 2026-10-01T21:04Z [claude] RG-83 PHASE CONSTRUCT->WRAP-UP @eff9d56: suite goes from 10 failed/12 passed to 0 failed/17 passed/4 skipped, verified with no fixtures present
+- 2026-10-02T04:55Z [claude] RG-83 SIDE-EFFECT @dd6ba6a: pushed branch and opened PR #91 against develop (user approved)
+- 2026-10-02T04:55Z [claude] RG-83 SIDE-EFFECT @dd6ba6a: commented on issue #83 with the corrected counts and the two non-selector root causes (user approved)
+- 2026-10-02T04:55Z [claude] RG-83 DONE @dd6ba6a: e2e suite 0 failed / 17 passed / 4 skipped on a fresh clone; CV fixtures generated; e2e-all-tab deleted

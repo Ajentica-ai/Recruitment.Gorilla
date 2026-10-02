@@ -1,4 +1,4 @@
-<!-- phase: WRAP-UP | branch: fix/RG-83/E2e-suite-references | tasks: 7/7
+<!-- phase: DONE | branch: fix/RG-83/E2e-suite-references | tasks: 7/7
      base: eff9d56 | updated: 2026-10-02
      next: summarise; nothing committed yet, commit and push need approval -->
 # Plan: Make the E2E suite runnable on a fresh clone
