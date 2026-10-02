@@ -129,3 +129,5 @@
 - 2026-10-02T12:00Z [claude] RG-102 SIDE-EFFECT @f59832e: claimed #102, assigned tahmidsparrow, board status In Development
 - 2026-10-02T12:00Z [claude] RG-102 DECISION @f59832e: fast path, fix at render via externalUrl helper, no data migration (user confirmed)
 - 2026-10-02T12:00Z [claude] RG-102 BRANCH @f59832e: fix/RG-102/Profile-links-relative-url created off origin/develop (user confirmed)
+- 2026-10-02T12:01Z [claude] RG-102 SIDE-EFFECT @57b0c54: pushed branch and opened PR #105 against develop (user approved)
+- 2026-10-02T12:01Z [claude] RG-102 DONE @57b0c54: profile/submission links rendered via externalUrl; tsc clean, 135/135 Vitest, oxlint clean
