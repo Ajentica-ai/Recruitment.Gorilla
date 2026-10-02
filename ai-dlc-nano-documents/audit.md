@@ -131,3 +131,23 @@
 - 2026-10-02T12:00Z [claude] RG-102 BRANCH @f59832e: fix/RG-102/Profile-links-relative-url created off origin/develop (user confirmed)
 - 2026-10-02T12:01Z [claude] RG-102 SIDE-EFFECT @57b0c54: pushed branch and opened PR #105 against develop (user approved)
 - 2026-10-02T12:01Z [claude] RG-102 DONE @57b0c54: profile/submission links rendered via externalUrl; tsc clean, 135/135 Vitest, oxlint clean
+- 2026-10-02T12:39Z [claude] RG-50 SIDE-EFFECT @0d2beb9: board status Backlog to In Development; already assigned to tahmidsparrow
+- 2026-10-02T12:39Z [claude] RG-50 CREATED @0d2beb9: issue #50, Recruiter reaching Upload CVs and Candidates
+- 2026-10-02T12:40Z [claude] RG-50 DECISION @0d2beb9: Recruiter access to Upload CVs/Candidates is by design; verify scoping, then close
+- 2026-10-02T12:40Z [claude] RG-50 PHASE CLARIFY→PLAN @0d2beb9: plan drafted, e2e proof of Recruiter scoping
+- 2026-10-02T12:47Z [claude] RG-50 BRANCH @0d2beb9: fix/RG-50/Recruiter-access-scope-check off origin/develop in a worktree (user confirmed)
+- 2026-10-02T12:47Z [claude] RG-50 PHASE PLAN→CONSTRUCT @0d2beb9: plan approved
+- 2026-10-02T12:57Z [claude] RG-50 REVISED @0d2beb9: develop API cannot start (MySQL rejects secret); ran spec on pre-#103 API, red as expected
+- 2026-10-02T13:36Z [claude] RG-50 DECISION @0d2beb9: user gave local DB password; used per process via env vars only, user-secrets unchanged
+- 2026-10-02T13:36Z [claude] RG-50 REVISED @0d2beb9: fixed DbTestBase.SignedIn shared ambient context (4 #103 tests); dotnet test 299/299
+- 2026-10-02T13:39Z [claude] RG-50 SIDE-EFFECT @d9f85c1: pushed branch, opened PR #107, commented on and closed #50 (user confirmed)
+- 2026-10-02T13:39Z [claude] RG-50 DONE @d9f85c1: scoping proven red-then-green; 299/299 backend; archived 002-issue-76
+- 2026-10-02T13:58Z [claude] RG-101 CREATED @fee031b: issue #101 analytics workload scope leak (bug)
+- 2026-10-02T13:58Z [claude] RG-101 SIDE-EFFECT @fee031b: #101 assigned to tahmidsparrow, added to board, Status=In Development
+- 2026-10-02T13:59Z [claude] RG-101 DECISION @fee031b: workload counts filtered by scoped candidate ids for all callers (user confirmed)
+- 2026-10-02T13:59Z [claude] RG-101 DECISION @fee031b: fold in roleId bypass fix, roleId narrows Recruiter scope (user confirmed)
+- 2026-10-02T13:59Z [claude] RG-101 PHASE CLARIFY→PLAN @fee031b: plan drafted, 5 tasks, high-blast-radius tests
+- 2026-10-02T14:00Z [claude] RG-101 BRANCH @1b8af84: fix/RG-101/Analytics-workload-scope created off origin/develop (user confirmed)
+- 2026-10-02T14:00Z [claude] RG-101 PHASE PLAN→CONSTRUCT @1b8af84: plan approved by user
+- 2026-10-02T14:18Z [claude] RG-101 PHASE CONSTRUCT→WRAP-UP @1b8af84: 302 backend tests (1 known-flaky unrelated), 135 client, live Recruiter check clean
+- 2026-10-02T14:18Z [claude] RG-101 DONE @1b8af84: workload counts + roleId filter honour Recruiter scope; RG-36 archived; code uncommitted
