@@ -59,7 +59,10 @@ One row per uploaded file. The physical file is on disk under `Uploads/` as `{GU
 | StoredFileName | varchar(500) | `{GUID}.pdf`/`.docx` on disk |
 | FileType | varchar(10) | `"PDF"` or `"Word"` |
 | FileSizeBytes | bigint | |
+| FileHash | varchar(64)? | SHA-256 of the content (hex), indexed. Copied from the draft on approval. Null on rows stored before hashing existed until a same-size upload backfills it. |
 | UploadedAt | datetime | |
+
+**Duplicate CVs are blocked.** `CandidateDrafts.FileHash` holds the same hash. `POST /api/cvupload` returns **409** when an identical file is in a `Pending` draft or attached to a candidate (`CandidateDraftService.FindDuplicateUploadAsync`). Discarded drafts and deleted candidates do not block. The check is global, not owner-scoped, and its message names no candidate.
 
 ### StatusHistory (`StatusHistories`)
 **Append-only** audit log of status changes; never updated/deleted (except via candidate cascade). The timeline UI reads this newest-first.

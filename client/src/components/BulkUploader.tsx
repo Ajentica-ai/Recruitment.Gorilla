@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { useQuery } from '@tanstack/react-query';
-import { CheckCircle2, FileText, UploadCloud, XCircle } from 'lucide-react';
+import { CheckCircle2, Copy, FileText, UploadCloud, XCircle } from 'lucide-react';
 import { getActiveRoleOptions, uploadCV } from '../services/api';
 import { getCVUploadHubConnection, startCVUploadHub, type CVUploadProgressEvent } from '../services/signalr';
 import type { CVDraft } from '../types';
@@ -18,7 +18,7 @@ interface Props {
 
 interface FileProgressState {
   fileName: string;
-  status: 'queued' | 'parsing' | 'completed' | 'error';
+  status: 'queued' | 'parsing' | 'completed' | 'error' | 'duplicate';
   error?: string | null;
 }
 
@@ -34,6 +34,7 @@ export default function BulkUploader({ onDraftsParsed }: Props) {
   const [done, setDone] = useState(0);
   const [total, setTotal] = useState(0);
   const [errors, setErrors] = useState<string[]>([]);
+  const [duplicates, setDuplicates] = useState<string[]>([]);
   const [fileProgresses, setFileProgresses] = useState<FileProgressState[]>([]);
   const currentBatchId = useRef<string | null>(null);
 
@@ -49,7 +50,8 @@ export default function BulkUploader({ onDraftsParsed }: Props) {
       if (!active || !hub) return;
 
       const handleProgress = (event: CVUploadProgressEvent) => {
-        if (event.batchId === currentBatchId.current) {
+        // The upload's own response decides the final state; a duplicate arrives here as a generic error.
+        if (event.batchId === currentBatchId.current && event.status !== 'error') {
           setFileProgresses((prev) => {
             const next = [...prev];
             if (next[event.fileIndex]) {
@@ -93,6 +95,7 @@ export default function BulkUploader({ onDraftsParsed }: Props) {
 
       setBusy(true);
       setErrors([]);
+      setDuplicates([]);
       setDone(0);
       setTotal(files.length);
       setFileProgresses(
@@ -104,6 +107,7 @@ export default function BulkUploader({ onDraftsParsed }: Props) {
 
       const drafts: CVDraft[] = [];
       const failures: string[] = [];
+      const skipped: string[] = [];
 
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
@@ -129,13 +133,15 @@ export default function BulkUploader({ onDraftsParsed }: Props) {
             return next;
           });
         } catch (err: any) {
-          failures.push(file.name);
+          // 409 = the server already holds a CV with identical content.
+          const isDuplicate = err?.response?.status === 409;
+          (isDuplicate ? skipped : failures).push(file.name);
           setFileProgresses((prev) => {
             const next = [...prev];
             if (next[i])
               next[i] = {
                 fileName: file.name,
-                status: 'error',
+                status: isDuplicate ? 'duplicate' : 'error',
                 error: err?.response?.data || 'Failed to extract file',
               };
             return next;
@@ -146,6 +152,7 @@ export default function BulkUploader({ onDraftsParsed }: Props) {
       }
 
       setErrors(failures);
+      setDuplicates(skipped);
       setBusy(false);
       if (drafts.length > 0) onDraftsParsed(drafts, batchId);
     },
@@ -264,6 +271,12 @@ export default function BulkUploader({ onDraftsParsed }: Props) {
                       Extracted
                     </Badge>
                   )}
+                  {fp.status === 'duplicate' && (
+                    <Badge variant="warning" title={fp.error ?? undefined}>
+                      <Copy />
+                      Duplicate
+                    </Badge>
+                  )}
                   {fp.status === 'error' && (
                     <Badge variant="danger">
                       <XCircle />
@@ -275,6 +288,13 @@ export default function BulkUploader({ onDraftsParsed }: Props) {
             ))}
           </div>
         </div>
+      )}
+
+      {duplicates.length > 0 && (
+        <Alert variant="warning" className="mb-0">
+          Skipped {duplicates.length} duplicate CV{duplicates.length === 1 ? '' : 's'} that{' '}
+          {duplicates.length === 1 ? 'has' : 'have'} already been uploaded: {duplicates.join(', ')}
+        </Alert>
       )}
 
       {errors.length > 0 && (

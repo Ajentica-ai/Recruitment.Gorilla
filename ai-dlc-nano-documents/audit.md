@@ -113,3 +113,15 @@
 - 2026-10-02T04:55Z [claude] RG-83 SIDE-EFFECT @dd6ba6a: pushed branch and opened PR #91 against develop (user approved)
 - 2026-10-02T04:55Z [claude] RG-83 SIDE-EFFECT @dd6ba6a: commented on issue #83 with the corrected counts and the two non-selector root causes (user approved)
 - 2026-10-02T04:55Z [claude] RG-83 DONE @dd6ba6a: e2e suite 0 failed / 17 passed / 4 skipped on a fresh clone; CV fixtures generated; e2e-all-tab deleted
+- 2026-10-02T08:14Z [claude] RG-93 CREATED @4ab5938: block duplicate CV upload by content hash; code pre-written on feature/block-duplicate-cv-upload
+- 2026-10-02T08:14Z [claude] RG-93 SIDE-EFFECT @4ab5938: claimed #93 - assigned tahmidsparrow, board status In Development
+- 2026-10-02T08:14Z [claude] RG-93 PHASE INTAKE->PLAN @4ab5938: CLARIFY folded in as stated assumptions; plan 7/10, awaiting approval
+- 2026-10-02T08:17Z [claude] RG-93 DECISION @4ab5938: assumptions 1-5 in intent.md confirmed (user approved)
+- 2026-10-02T08:17Z [claude] RG-93 BRANCH @4ab5938: renamed feature/block-duplicate-cv-upload to feature/RG-93/Block-duplicate-cv-upload, upstream unset (user confirmed)
+- 2026-10-02T08:17Z [claude] RG-93 PHASE PLAN->CONSTRUCT @4ab5938: plan approved; tasks 1-7 pre-written, 8-10 remain
+- 2026-10-02T08:25Z [claude] RG-93 DECISION @4ab5938: ran tests/migration with root creds via env vars only; stored user-secret left unchanged
+- 2026-10-02T08:25Z [claude] RG-93 PHASE CONSTRUCT->WRAP-UP @4ab5938: 250/250 xUnit, 120 Vitest; AddCvFileHash applied; e2e same/renamed->409, discard->200
+- 2026-10-02T08:26Z [claude] RG-93 PHASE WRAP-UP @107fd68: committed 107fd68; race gap promoted to backlog; push + PR pending approval
+- 2026-10-02T08:43Z [claude] RG-93 SIDE-EFFECT @31575a9: pushed branch and opened PR #94 against develop (user approved)
+- 2026-10-02T08:43Z [claude] RG-93 SIDE-EFFECT @31575a9: commented on issue #93 with decisions and verification (user approved)
+- 2026-10-02T08:43Z [claude] RG-93 DONE @31575a9: duplicate CVs blocked by content hash; 250/250 xUnit, 120 Vitest, e2e 409s verified

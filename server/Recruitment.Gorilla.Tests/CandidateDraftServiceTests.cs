@@ -169,4 +169,83 @@ public class CandidateDraftServiceTests(MySqlDatabaseFixture fixture) : DbTestBa
         Assert.NotNull(fetched);
         Assert.Equal("Discarded", fetched.Status);
     }
+
+    private static string HashOf(string content) =>
+        CandidateDraftService.ComputeFileHash(new MemoryStream(System.Text.Encoding.UTF8.GetBytes(content)));
+
+    [Fact]
+    public async Task FindDuplicateUpload_blocks_a_cv_that_is_pending_review()
+    {
+        var service = CandidateDrafts();
+        var hash = HashOf($"cv-{Guid.NewGuid()}");
+        await service.CreateDraftAsync(
+            "pending.pdf", "stored_pending.pdf", "PDF", 1234, "batch_dup", null,
+            "Pending Person", "pending@test.com", null, null, null, null, null, fileHash: hash);
+
+        var error = await service.FindDuplicateUploadAsync(hash, 1234);
+
+        Assert.Equal("This CV has already been uploaded and is waiting for review in Drafts.", error);
+        Assert.Null(await service.FindDuplicateUploadAsync(HashOf($"other-{Guid.NewGuid()}"), 1234));
+    }
+
+    [Fact]
+    public async Task FindDuplicateUpload_allows_a_cv_whose_draft_was_discarded()
+    {
+        var service = CandidateDrafts();
+        var hash = HashOf($"cv-{Guid.NewGuid()}");
+        var draft = await service.CreateDraftAsync(
+            "discarded.pdf", "stored_discarded.pdf", "PDF", 1234, "batch_dup", null,
+            "Discarded Person", "discarded@test.com", null, null, null, null, null, fileHash: hash);
+        await service.DiscardDraftAsync(draft.Id);
+
+        Assert.Null(await service.FindDuplicateUploadAsync(hash, 1234));
+    }
+
+    [Fact]
+    public async Task FindDuplicateUpload_blocks_a_cv_already_attached_to_a_candidate()
+    {
+        var service = CandidateDrafts();
+        var role = Data.AddRole("Duplicate Check Role");
+        var hash = HashOf($"cv-{Guid.NewGuid()}");
+        var draft = await service.CreateDraftAsync(
+            "approved.pdf", "stored_approved.pdf", "PDF", 1234, "batch_dup", null,
+            "Approved Person", "approved@test.com", null, null, null, null, null, fileHash: hash);
+        var (candidate, _) = await service.ApproveDraftAsync(draft.Id, new ApproveCandidateDraftDto(
+            "Approved Person", "approved@test.com", null, null, "2 Years", null, null, null, null, null,
+            role.Id, null, null));
+        Assert.NotNull(candidate);
+
+        var error = await service.FindDuplicateUploadAsync(hash, 1234);
+
+        Assert.Equal("This CV has already been uploaded for an existing candidate.", error);
+    }
+
+    [Fact]
+    public async Task FindDuplicateUpload_hashes_files_stored_before_hashing_existed()
+    {
+        var content = System.Text.Encoding.UTF8.GetBytes($"legacy-cv-{Guid.NewGuid()}");
+        var storedName = $"{Guid.NewGuid()}.pdf";
+        var uploads = Path.Combine(Path.GetTempPath(), "Uploads");
+        Directory.CreateDirectory(uploads);
+        var path = Path.Combine(uploads, storedName);
+        await File.WriteAllBytesAsync(path, content);
+        try
+        {
+            var service = CandidateDrafts();
+            var draft = await service.CreateDraftAsync(
+                "legacy.pdf", storedName, "PDF", content.Length, "batch_dup", null,
+                "Legacy Person", "legacy@test.com", null, null, null, null, null);
+            Assert.Null(draft.FileHash);
+
+            var hash = CandidateDraftService.ComputeFileHash(new MemoryStream(content));
+            var error = await service.FindDuplicateUploadAsync(hash, content.Length);
+
+            Assert.Equal("This CV has already been uploaded and is waiting for review in Drafts.", error);
+            Assert.Equal(hash, draft.FileHash); // backfilled, so the next check is a plain lookup
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
 }

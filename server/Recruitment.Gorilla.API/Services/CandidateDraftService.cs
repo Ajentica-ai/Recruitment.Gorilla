@@ -1,3 +1,4 @@
+using System.Security.Cryptography;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Recruitment.Gorilla.API.Auth;
@@ -11,12 +12,59 @@ public class CandidateDraftService(
     AppDbContext db,
     AuditService audit,
     CurrentUser currentUser,
+    IWebHostEnvironment env,
     ILogger<CandidateDraftService> logger)
 {
     private static readonly JsonSerializerOptions JsonOpts = new()
     {
         PropertyNameCaseInsensitive = true
     };
+
+    /// <summary>SHA-256 of a file's content as uppercase hex (64 chars).</summary>
+    public static string ComputeFileHash(Stream content) => Convert.ToHexString(SHA256.HashData(content));
+
+    /// <summary>
+    /// Returns why a CV with this content can't be uploaded again, or null when it is new. A CV counts as
+    /// a duplicate while it sits in a Pending draft or is attached to a candidate; Discarded drafts and
+    /// deleted candidates free it up. Rows stored before hashing existed have no hash, so same-size ones
+    /// are hashed from disk here and the hash is saved for next time.
+    /// </summary>
+    public async Task<string?> FindDuplicateUploadAsync(string fileHash, long fileSizeBytes)
+    {
+        if (await db.CandidateDrafts.AnyAsync(d => d.Status == "Pending" && d.FileHash == fileHash))
+            return PendingDuplicateMessage;
+        if (await db.CVFiles.AnyAsync(f => f.FileHash == fileHash))
+            return CandidateDuplicateMessage;
+
+        var legacyDrafts = await db.CandidateDrafts
+            .Where(d => d.Status == "Pending" && d.FileHash == null && d.FileSizeBytes == fileSizeBytes)
+            .ToListAsync();
+        var legacyFiles = await db.CVFiles
+            .Where(f => f.FileHash == null && f.FileSizeBytes == fileSizeBytes)
+            .ToListAsync();
+        if (legacyDrafts.Count == 0 && legacyFiles.Count == 0) return null;
+
+        foreach (var d in legacyDrafts) d.FileHash = HashStoredFile(d.StoredFileName);
+        foreach (var f in legacyFiles) f.FileHash = HashStoredFile(f.StoredFileName);
+        await db.SaveChangesAsync();
+
+        if (legacyDrafts.Any(d => d.FileHash == fileHash)) return PendingDuplicateMessage;
+        if (legacyFiles.Any(f => f.FileHash == fileHash)) return CandidateDuplicateMessage;
+        return null;
+    }
+
+    private const string PendingDuplicateMessage =
+        "This CV has already been uploaded and is waiting for review in Drafts.";
+    private const string CandidateDuplicateMessage =
+        "This CV has already been uploaded for an existing candidate.";
+
+    private string? HashStoredFile(string storedFileName)
+    {
+        var path = Path.Combine(env.ContentRootPath, "Uploads", storedFileName);
+        if (!File.Exists(path)) return null;
+        using var stream = File.OpenRead(path);
+        return ComputeFileHash(stream);
+    }
 
     public async Task<PagedDraftsResultDto> GetDraftsAsync(DraftsFilterQuery query)
     {
@@ -231,7 +279,8 @@ public class CandidateDraftService(
         string? gitLab = null,
         List<ParsedEducation>? educations = null,
         List<ParsedExperience>? experiences = null,
-        int? roleAppliedOptionId = null)
+        int? roleAppliedOptionId = null,
+        string? fileHash = null)
     {
         var eduDtos = educations?.Select((e, idx) => new CandidateEducationDto(idx + 1, e.Degree, e.Institution, e.GraduationYear, e.Cgpa)).ToList();
         var expDtos = experiences?.Select((e, idx) => new CandidateExperienceDto(idx + 1, e.JobTitle, e.Company, e.Duration, e.Description)).ToList();
@@ -242,6 +291,7 @@ public class CandidateDraftService(
             StoredFileName = storedFileName,
             FileType = fileType,
             FileSizeBytes = fileSizeBytes,
+            FileHash = fileHash,
             BatchId = batchId,
             BatchName = batchName,
             FullName = fullName,
@@ -423,6 +473,7 @@ public class CandidateDraftService(
             OriginalFileName = draft.OriginalFileName,
             FileType = draft.FileType,
             FileSizeBytes = draft.FileSizeBytes,
+            FileHash = draft.FileHash,
             UploadedAt = DateTime.UtcNow
         };
         db.CVFiles.Add(cvFile);

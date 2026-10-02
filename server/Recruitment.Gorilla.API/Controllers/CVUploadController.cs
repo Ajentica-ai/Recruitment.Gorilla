@@ -57,6 +57,19 @@ public class CVUploadController(
             return BadRequest("File exceeds the 10 MB size limit.");
         }
 
+        string fileHash;
+        using (var hashStream = file.OpenReadStream())
+            fileHash = CandidateDraftService.ComputeFileHash(hashStream);
+
+        var duplicateError = await draftService.FindDuplicateUploadAsync(fileHash, file.Length);
+        if (duplicateError is not null)
+        {
+            logger.LogWarning("Rejected upload '{FileName}': duplicate of an already uploaded CV.", file.FileName);
+            await progressNotifier.NotifyProgressAsync(currentUser.UserId?.ToString(), bId, new CVUploadProgressEvent(
+                bId, idx, total, file.FileName, "error", 0, null, duplicateError));
+            return Conflict(duplicateError);
+        }
+
         // Notify client parsing has started
         await progressNotifier.NotifyProgressAsync(currentUser.UserId?.ToString(), bId, new CVUploadProgressEvent(
             bId, idx, total, file.FileName, "parsing", 30, null, null));
@@ -82,7 +95,8 @@ public class CVUploadController(
             bId, batchName, name, parsed.Email, parsed.Phone, parsed.LinkedIn, parsed.Github, parsed.Skills, parsed.Summary,
             parsed.Location, parsed.LeetCode, parsed.Codeforces, parsed.HackerRank, parsed.GitLab,
             parsed.Educations, parsed.Experiences,
-            roleAppliedOptionId: roleAppliedOptionId);
+            roleAppliedOptionId: roleAppliedOptionId,
+            fileHash: fileHash);
 
         var eduDtos = parsed.Educations.Select((e, i) => new CandidateEducationDto(i + 1, e.Degree, e.Institution, e.GraduationYear, e.Cgpa)).ToList();
         var expDtos = parsed.Experiences.Select((e, i) => new CandidateExperienceDto(i + 1, e.JobTitle, e.Company, e.Duration, e.Description)).ToList();

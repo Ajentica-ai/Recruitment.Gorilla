@@ -40,7 +40,7 @@ ASP.NET Core Web API, .NET 10. Project root: `server/Recruitment.Gorilla.API/`.
 - **Secrets in .NET user secrets** (not committed): `ConnectionStrings:DefaultConnection`, `Jwt:Key`, `Auth:PasswordHash`. Setup in [dev-setup.md](dev-setup.md).
 
 ## CV upload & parsing
-- `CVUploadController` (`POST /api/cvupload`): validates extension (`.pdf`/`.docx`) and size (≤10 MB), saves to `Uploads/{GUID}{ext}`, calls `CVParserService`, returns a `CVDraftDto` (pre-save draft for admin review — no DB record yet).
+- `CVUploadController` (`POST /api/cvupload`): validates extension (`.pdf`/`.docx`) and size (≤10 MB), rejects a file whose SHA-256 matches a CV already in a `Pending` draft or on a candidate (**409**, see `data-model.md` CVFile), saves to `Uploads/{GUID}{ext}`, calls `CVParserService`, persists a `CandidateDraft` (with `FileHash`), and returns a `CVDraftDto` for review.
 - `CVParserService.Parse` extracts text and pulls fields with regex/heuristics:
   - **PDF** via PdfPig (also reads hyperlink annotations to recover LinkedIn URLs shown as labels).
   - **Word** via DocumentFormat.OpenXml (paragraph text). Only `.docx` (not legacy `.doc`).
