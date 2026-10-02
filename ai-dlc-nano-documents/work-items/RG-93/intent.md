@@ -14,4 +14,4 @@
 ## Out of scope
 - Detecting near-duplicates (same person, different file) - the existing duplicate-email 409 covers that at save.
 ## Follow-ups
-- none yet
+- No DB unique constraint on FileHash: two identical uploads at the same instant can both pass (accepted, see Decisions)

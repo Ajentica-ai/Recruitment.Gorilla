@@ -121,3 +121,4 @@
 - 2026-10-02T08:17Z [claude] RG-93 PHASE PLAN->CONSTRUCT @4ab5938: plan approved; tasks 1-7 pre-written, 8-10 remain
 - 2026-10-02T08:25Z [claude] RG-93 DECISION @4ab5938: ran tests/migration with root creds via env vars only; stored user-secret left unchanged
 - 2026-10-02T08:25Z [claude] RG-93 PHASE CONSTRUCT->WRAP-UP @4ab5938: 250/250 xUnit, 120 Vitest; AddCvFileHash applied; e2e same/renamed->409, discard->200
+- 2026-10-02T08:26Z [claude] RG-93 PHASE WRAP-UP @107fd68: committed 107fd68; race gap promoted to backlog; push + PR pending approval
