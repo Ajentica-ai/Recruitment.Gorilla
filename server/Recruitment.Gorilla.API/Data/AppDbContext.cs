@@ -101,6 +101,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.Property(f => f.OriginalFileName).HasMaxLength(500).IsRequired();
             e.Property(f => f.StoredFileName).HasMaxLength(500).IsRequired();
             e.Property(f => f.FileType).HasMaxLength(10).IsRequired();
+            e.Property(f => f.FileHash).HasMaxLength(64);
+            e.HasIndex(f => f.FileHash);
             e.HasOne(f => f.Candidate)
              .WithMany(c => c.CVFiles)
              .HasForeignKey(f => f.CandidateId)
@@ -591,6 +593,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.Property(d => d.OriginalFileName).HasMaxLength(255).IsRequired();
             e.Property(d => d.StoredFileName).HasMaxLength(255).IsRequired();
             e.Property(d => d.FileType).HasMaxLength(20).HasDefaultValue("PDF");
+            e.Property(d => d.FileHash).HasMaxLength(64);
             e.Property(d => d.Status).HasMaxLength(50).HasDefaultValue("Pending");
             e.Property(d => d.BatchId).HasMaxLength(100);
             e.Property(d => d.BatchName).HasMaxLength(200);
@@ -599,6 +602,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.HasIndex(d => d.BatchId);
             e.HasIndex(d => d.UploadedByUserId);
             e.HasIndex(d => d.CreatedAt);
+            e.HasIndex(d => d.FileHash);
 
             e.HasOne(d => d.RoleAppliedOption)
              .WithMany()

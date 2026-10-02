@@ -428,6 +428,11 @@ public class CandidateService(AppDbContext db, IWebHostEnvironment env, Notifica
             StoredFileName = dto.StoredFileName,
             FileType = dto.FileType,
             FileSizeBytes = dto.FileSizeBytes,
+            // The file came through /api/cvupload, which recorded its hash on the draft.
+            FileHash = await db.CandidateDrafts
+                .Where(d => d.StoredFileName == dto.StoredFileName)
+                .Select(d => d.FileHash)
+                .FirstOrDefaultAsync(),
         });
 
         candidate.StatusHistories.Add(new StatusHistory

@@ -43,7 +43,7 @@ public abstract class DbTestBase : IDisposable
     protected EvaluationRubricService EvaluationRubrics() => new(Db, Audit());
     protected AnalyticsService Analytics() => new(Db);
     protected CandidateDraftService CandidateDrafts(CurrentUser? user = null) =>
-        new(Db, Audit(), user ?? new CurrentUser(new Microsoft.AspNetCore.Http.HttpContextAccessor()), NullLogger<CandidateDraftService>.Instance);
+        new(Db, Audit(), user ?? new CurrentUser(new Microsoft.AspNetCore.Http.HttpContextAccessor()), new TestWebHostEnvironment(), NullLogger<CandidateDraftService>.Instance);
 
     /// <summary>An EmailService whose transport is a no-op — never hits the network, never throws.</summary>
     protected static EmailService TestEmail(ISmtpTransport? transport = null) => new(
