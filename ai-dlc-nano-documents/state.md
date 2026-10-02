@@ -1,9 +1,9 @@
 # AI-DLC Nano State
 - Active work item: none
 - Phase: -
-- Branch: fix/RG-82/Rubric-section-header
-- Base SHA: ab8fbe6
-- Next step: RG-82 complete. PR #90 open against develop, awaiting review and merge. Issue #83 is the last of the five still open.
+- Branch: fix/RG-83/E2e-suite-references
+- Base SHA: eff9d56
+- Next step: RG-83 complete. PR #91 open against develop. All five issues from the modal review are done; next candidate is the popover-clipping cluster (#64, #65, #66, #69, #74).
 - Paused work items: none
 - Uncommitted code: no
-- Last updated: 2026-10-02T04:30Z by claude
+- Last updated: 2026-10-02T07:30Z by claude

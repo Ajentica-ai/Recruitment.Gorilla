@@ -99,3 +99,17 @@
 - 2026-10-01T18:48Z [claude] RG-82 SIDE-EFFECT @830b712: pushed branch and opened PR #90 against develop (user approved)
 - 2026-10-01T18:48Z [claude] RG-82 SIDE-EFFECT @830b712: commented on issue #82 with the measurements and the folded-in RG-85 finding (user approved)
 - 2026-10-01T18:48Z [claude] RG-82 DONE @830b712: section header wraps and the chip holds one line; criterion row rebalanced to 4/6/2; RG-85 backlog line resolved
+- 2026-10-01T18:55Z [claude] RG-83 CREATED @eff9d56: issue #83 - e2e suite has stale Bootstrap selectors, hardcoded screenshot paths and a missing fixture dir
+- 2026-10-01T18:55Z [claude] RG-83 SIDE-EFFECT @eff9d56: INTAKE claim skipped again - the assign and board-status writes stay refused by the harness permission layer
+- 2026-10-01T19:03Z [claude] RG-83 DECISION @eff9d56: scope is the whole suite - every spec passes or self-skips; 10 of 22 cases fail today (user confirmed)
+- 2026-10-01T19:03Z [claude] RG-83 DECISION @eff9d56: CV fixtures generated into the gitignored e2e/test-cvs rather than committed (user confirmed)
+- 2026-10-01T19:03Z [claude] RG-83 DECISION @eff9d56: empty-database specs self-skip with a reason instead of failing (user confirmed)
+- 2026-10-01T19:03Z [claude] RG-83 DECISION @eff9d56: survey found the hardcoded screenshot path in 7 specs and 19 places, not the 2 the issue names
+- 2026-10-01T19:20Z [claude] RG-83 BRANCH @eff9d56: fix/RG-83/E2e-suite-references created off develop (user confirmed)
+- 2026-10-01T19:20Z [claude] RG-83 PHASE PLAN->CONSTRUCT @eff9d56: plan and branch approved together; 7 tasks, standard tier
+- 2026-10-01T21:00Z [claude] RG-83 DECISION @: deleted e2e-all-tab.spec.ts - its only subject (an All tab) was removed from the product and it asserted nothing (user confirmed)
+- 2026-10-01T21:00Z [claude] RG-83 DECISION @eff9d56: deleted e2e-all-tab.spec.ts - its only subject (an All tab) was removed from the product and it asserted nothing (user confirmed)
+- 2026-10-01T21:04Z [claude] RG-83 PHASE CONSTRUCT->WRAP-UP @eff9d56: suite goes from 10 failed/12 passed to 0 failed/17 passed/4 skipped, verified with no fixtures present
+- 2026-10-02T04:55Z [claude] RG-83 SIDE-EFFECT @dd6ba6a: pushed branch and opened PR #91 against develop (user approved)
+- 2026-10-02T04:55Z [claude] RG-83 SIDE-EFFECT @dd6ba6a: commented on issue #83 with the corrected counts and the two non-selector root causes (user approved)
+- 2026-10-02T04:55Z [claude] RG-83 DONE @dd6ba6a: e2e suite 0 failed / 17 passed / 4 skipped on a fresh clone; CV fixtures generated; e2e-all-tab deleted

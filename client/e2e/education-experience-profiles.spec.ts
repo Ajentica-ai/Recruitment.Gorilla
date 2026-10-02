@@ -1,9 +1,11 @@
 import { test, expect } from '@playwright/test';
-import path from 'path';
-import fs from 'fs';
+import { ADMIN, ensureTestCvs, requireData, shotPath } from './helpers';
 
-const email = process.env.E2E_EMAIL ?? 'admin@recruitmentgorilla.com';
-const password = process.env.E2E_PASSWORD ?? 'admin';
+// Admin, not E2E_EMAIL's Recruiter: approving a draft requires assigning an
+// applied role, and a Recruiter only sees roles they are assigned to. With none,
+// the studio blocks the approval and this flow cannot complete (#83).
+const email = ADMIN.email ?? process.env.E2E_EMAIL;
+const password = ADMIN.password ?? process.env.E2E_PASSWORD;
 
 test.describe('End-to-End Candidate Education, Experience & Coding Profiles Test', () => {
   test.setTimeout(90000);
@@ -22,17 +24,20 @@ test.describe('End-to-End Candidate Education, Experience & Coding Profiles Test
     await page.goto('/upload');
     await expect(page).toHaveURL(/\/upload$/);
 
-    // 3. Attach technical CV
-    const cvDir = path.resolve('e2e/test-cvs');
-    const testCvPath = path.join(cvDir, 'Alex_Rivera_Senior_Backend_Engineer.pdf');
-    expect(fs.existsSync(testCvPath)).toBeTruthy();
+    // 3. Attach technical CV. This spec asserts on one CV's parsed contents, so
+    //    the generator writes that exact file: coding links, a Dhaka location,
+    //    the CS & Engineering degree and a CGPA (#83).
+    const testCvPath = ensureTestCvs().find((f) =>
+      f.endsWith('Alex_Rivera_Senior_Backend_Engineer.pdf'),
+    );
+    requireData(Boolean(testCvPath), 'the generated Alex Rivera fixture CV');
 
     const batchName = `BD Software Engineers Batch ${Date.now()}`;
     const batchInput = page.locator('#batch-name-input');
     await batchInput.fill(batchName);
 
     const fileInput = page.locator('input[type="file"]');
-    await fileInput.setInputFiles([testCvPath]);
+    await fileInput.setInputFiles([testCvPath!]);
 
     // 4. Wait for processing to complete and click Open Review Workspace
     const openReviewBtn = page.getByRole('button', { name: /Open Review Workspace/i });
@@ -99,7 +104,7 @@ test.describe('End-to-End Candidate Education, Experience & Coding Profiles Test
 
     // 10. Capture screenshot of Draft Staging Studio with rich extracted data
     await page.screenshot({
-      path: 'C:/Users/user/.gemini/antigravity-ide/brain/4655deb6-8ac0-42bb-8a60-04a998094da6/20_draft_studio_bd_profile_extracted.png',
+      path: shotPath('20_draft_studio_bd_profile_extracted.png'),
       fullPage: true,
     });
 
@@ -151,19 +156,24 @@ test.describe('End-to-End Candidate Education, Experience & Coding Profiles Test
 
     // 16. Capture screenshot of the full-width Candidate Profile
     await page.screenshot({
-      path: 'C:/Users/user/.gemini/antigravity-ide/brain/4655deb6-8ac0-42bb-8a60-04a998094da6/21_candidate_profile_education_experience_complete.png',
+      path: shotPath('21_candidate_profile_education_experience_complete.png'),
       fullPage: true,
     });
 
     // 17. Open Status History Slide-over Drawer
     await page.click('.btn-action-history');
-    await expect(page.locator('.history-drawer.show')).toBeVisible();
-    await page.waitForTimeout(500);
-    await expect(page.locator('.history-drawer .timeline')).toBeVisible();
+    // `.history-drawer.show` was react-bootstrap's offcanvas. The drawer is a
+    // Radix Sheet now, so there is no `.show` class and no `.history-drawer`.
+    const historyPanel = page.locator('[data-slot="sheet-content"]');
+    await expect(historyPanel).toBeVisible();
+    await historyPanel.evaluate((el) =>
+      Promise.all(el.getAnimations().map((a) => a.finished.catch(() => undefined))),
+    );
+    await expect(historyPanel.locator('.status-timeline, .timeline').first()).toBeVisible();
 
     // 18. Capture screenshot of the open Status History Drawer
     await page.screenshot({
-      path: 'C:/Users/user/.gemini/antigravity-ide/brain/4655deb6-8ac0-42bb-8a60-04a998094da6/22_candidate_status_history_drawer.png',
+      path: shotPath('22_candidate_status_history_drawer.png'),
     });
   });
 });

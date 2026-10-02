@@ -13,7 +13,16 @@ import { expect, test } from '@playwright/test';
  */
 const BASE = process.env.COMPOSE_BASE_URL ?? 'http://localhost:8090';
 
-test('the composed stack serves the app, the API and the hub', async ({ page }) => {
+test('the composed stack serves the app, the API and the hub', async ({ page, request }) => {
+  // This spec is about nginx, not Vite, so against the dev server it can only
+  // fail. Skip unless the composed stack is actually answering, rather than
+  // leaving a permanent red in a suite nobody then trusts (#83).
+  const up = await request
+    .get(`${BASE}/login`, { timeout: 3000 })
+    .then((r) => r.ok())
+    .catch(() => false);
+  test.skip(!up, `No composed stack at ${BASE}; run docker compose up -d --build first.`);
+
   test.setTimeout(180000);
   const errors: string[] = [];
   page.on('console', (m) => {
