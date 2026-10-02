@@ -43,12 +43,16 @@ public abstract class DbTestBase : IDisposable
     protected EvaluationRubricService EvaluationRubrics() => new(Db, Audit());
     protected AnalyticsService Analytics() => new(Db);
     protected CandidateDraftService CandidateDrafts(CurrentUser? user = null) =>
-        new(Db, Audit(), user ?? new CurrentUser(new Microsoft.AspNetCore.Http.HttpContextAccessor()), new TestWebHostEnvironment(), NullLogger<CandidateDraftService>.Instance);
+        new(Db, Audit(), user ?? new CurrentUser(new FixedHttpContextAccessor(null)), new TestWebHostEnvironment(), NullLogger<CandidateDraftService>.Instance);
 
     /// <summary>
     /// A <see cref="CurrentUser"/> signed in as <paramref name="userId"/> with the given roles, built
     /// from the same claims the API issues (<c>sub</c> for the id, one role claim each). Without one, a
     /// service sees an anonymous caller, which is the wrong thing to test anything scoped against.
+    ///
+    /// Each one holds its own context. The framework's HttpContextAccessor keeps the context in shared
+    /// ambient state, so with it every CurrentUser in a test became whoever signed in last, and a
+    /// test of one user against another quietly ran both as the same person.
     /// </summary>
     protected static CurrentUser SignedIn(int userId, params string[] roles)
     {
@@ -60,10 +64,15 @@ public abstract class DbTestBase : IDisposable
 
         var principal = new System.Security.Claims.ClaimsPrincipal(
             new System.Security.Claims.ClaimsIdentity(claims, authenticationType: "Test"));
-        return new CurrentUser(new Microsoft.AspNetCore.Http.HttpContextAccessor
-        {
-            HttpContext = new Microsoft.AspNetCore.Http.DefaultHttpContext { User = principal },
-        });
+        return new CurrentUser(new FixedHttpContextAccessor(
+            new Microsoft.AspNetCore.Http.DefaultHttpContext { User = principal }));
+    }
+
+    /// <summary>An accessor that returns the one context it was given, unaffected by any other.</summary>
+    private sealed class FixedHttpContextAccessor(Microsoft.AspNetCore.Http.HttpContext? context)
+        : Microsoft.AspNetCore.Http.IHttpContextAccessor
+    {
+        public Microsoft.AspNetCore.Http.HttpContext? HttpContext { get; set; } = context;
     }
 
     /// <summary>An EmailService whose transport is a no-op — never hits the network, never throws.</summary>

@@ -111,6 +111,9 @@ tests** (real HTTP pipeline + JWT auth, asserting the `[Authorize]` attributes p
 - Isolation/pattern: one migrated DB per run (xUnit collection fixture, classes run sequentially) +
   a **transaction rolled back per test** (unit) or committed-then-dropped (integration). Data builders
   live in `Recruitment.Gorilla.Tests/Infrastructure/` (`TestData.cs`, `ApiFixture.cs`).
+- A service test that depends on who is calling builds that caller with `DbTestBase.SignedIn(userId,
+  roles)`. Don't build a `CurrentUser` over the framework's `HttpContextAccessor`: it keeps the context
+  in shared ambient state, so every `CurrentUser` in the test becomes whoever signed in last.
 
 ### E2E suite (Playwright)
 ```bash
@@ -131,6 +134,7 @@ missing, which is why a red run means something real:
 | Spec | Skips when |
 |---|---|
 | `smoke`, `dialog-footer-visible`, `drawer-*`, `rubric-editor-layout` | credentials are unset |
+| `recruiter-scope` | either the Recruiter (`E2E_EMAIL`) or the Admin (`E2E_ADMIN_EMAIL`) credentials are unset |
 | `analytics-and-upload`, `offer-management` | the signed-in user can see no candidates |
 | `responsive-card-header` | the dashboard has no cards; its interview leg also needs an interview the account is **assigned to** (not merely able to view), which it checks via `canEvaluate` |
 | `screenshot-interview` | `E2E_INTERVIEW_ID` is unset |
@@ -148,7 +152,7 @@ library, and the filenames matter: `CVParserService.ParseNameAndTitleFromFileNam
 
 **Seed candidates through `e2e/seed.ts`.** `POST /api/candidates` only accepts a CV the caller
 uploaded, so a spec cannot invent a stored file name. `seedCandidate` uploads a small unique PDF,
-creates the candidate from it, and discards the leftover draft.
+creates the candidate from it, and discards the leftover draft. `uploadDraft` does just the upload, for a spec that needs a pending draft owned by a given user.
 
 Screenshots go under `client/test-results/screenshots` (gitignored); set `E2E_SHOT_DIR` to collect
 them elsewhere.

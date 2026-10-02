@@ -17,14 +17,7 @@ export async function seedCandidate(
   label = 'E2E Probe',
 ): Promise<number> {
   const tag = randomUUID();
-  const upload = await request.post('/api/cvupload', {
-    headers: auth,
-    multipart: {
-      file: { name: `probe-${tag}.pdf`, mimeType: 'application/pdf', buffer: minimalPdf(`${label} ${tag}`) },
-    },
-  });
-  expect(upload.ok(), `CV upload failed: ${upload.status()} ${await upload.text()}`).toBeTruthy();
-  const draft = await upload.json();
+  const draft = await uploadDraft(request, auth, `${label} ${tag}`);
 
   const initial = await (await request.get('/api/status-options/initial', { headers: auth })).json();
   const created = await request.post('/api/candidates', {
@@ -47,6 +40,34 @@ export async function seedCandidate(
 
   await request.post(`/api/candidate-drafts/${draft.id}/discard`, { headers: auth }).catch(() => {});
   return (await created.json()).id as number;
+}
+
+/** A CV draft as the upload endpoint returns it; only the fields the specs read. */
+export interface UploadedDraft {
+  id: number;
+  storedFileName: string;
+  originalFileName: string;
+  fileType: string;
+  fileSizeBytes: number;
+}
+
+/**
+ * Uploads a small unique PDF and returns the pending draft it creates, owned by whoever `auth`
+ * signs in as. The caller discards it when done.
+ */
+export async function uploadDraft(
+  request: APIRequestContext,
+  auth: Record<string, string>,
+  text = `E2E Probe ${randomUUID()}`,
+): Promise<UploadedDraft> {
+  const upload = await request.post('/api/cvupload', {
+    headers: auth,
+    multipart: {
+      file: { name: `probe-${randomUUID()}.pdf`, mimeType: 'application/pdf', buffer: minimalPdf(text) },
+    },
+  });
+  expect(upload.ok(), `CV upload failed: ${upload.status()} ${await upload.text()}`).toBeTruthy();
+  return upload.json();
 }
 
 /** A one-page PDF carrying a single line of text, unique per call so its hash is too. */
