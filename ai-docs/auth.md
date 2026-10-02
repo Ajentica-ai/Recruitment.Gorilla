@@ -14,6 +14,7 @@ Four roles in a strict hierarchy **SuperAdmin → Admin → Recruiter → Interv
 | **Delete** a job-opening role | ✅ | – | – | – |
 | View / browse candidates | all | all | **own OR assigned-role** | – |
 | Create / upload candidate | ✅ | ✅ | ✅ (becomes owner) | – |
+| CV **drafts**: view / edit / approve / discard (`/api/candidate-drafts/*`) | all | all | **own uploads only** | – |
 | Edit / change status candidate | ✅ (all) | ✅ (all) | **own OR assigned-role** | – |
 | **Delete** candidate | ✅ | ✅ | – | – |
 | Dashboard + assigned interviews + evaluations | ✅ | ✅ | ✅ | ✅ |
@@ -21,6 +22,7 @@ Four roles in a strict hierarchy **SuperAdmin → Admin → Recruiter → Interv
 | See **peers'** evaluations on an interview | all | all | – | **after submitting own (same interview, submitted only)** |
 
 - **Recruiter scoping** (`CandidateService.ApplyAccess`): a non-admin caller may access a candidate when they **own** it (`OwnerUserId`) **OR** are an assigned **recruiter of that candidate's role** (`RoleAppliedOption.Recruiters`, a many-to-many). This is creator-agnostic — an Admin-created candidate under a recruiter's role is visible to that recruiter, and a role can name **multiple** recruiters (all get access). Admin+ pass `null` (no filter). Applies to list / detail / CV stream / edit / change status.
+- **CV drafts are scoped to their uploader** (`CandidateDraftService.ScopedDrafts`): a non-admin sees and acts on only the drafts they uploaded, Admin+ on all. Every read and write goes through the one helper, list, by-id, update, approve, discard and both bulk forms, because the list alone used to be scoped while the by-id paths loaded drafts by id, so a Recruiter could read, edit, discard or approve another user's parsed CV and so become the owner of the candidate it produced. It **fails closed**: a non-admin caller with no user id sees no drafts, where the old list check fell through to all of them. The one deliberate exception is the duplicate-CV check, which is global by design (see `data-model.md`).
 - **Who may be assigned as a recruiter**: only users in `Roles.CanWriteCandidate` (Recruiter or higher). The scoping above grants nothing to an Interviewer, since `CandidatesController` excludes the role outright — so `ConfigurationService` **rejects** the assignment and the picker reads the narrower `GET /api/config/recruiter-options` rather than the interviewer list.
 - **Delete is Admin/SuperAdmin only** — `DELETE /api/candidates/{id}` is `[Authorize(Roles = Roles.AdminOrAbove)]`; Recruiters can't delete a candidate/CV at all (not even their own). The UI hides the delete button for non-admins.
 - **Interviewer** (bottom of the hierarchy; the former "Viewer", renamed) can **only** reach the dashboard, their assigned interviews (`/api/interviews/*`, `/api/notifications/*`), and evaluations. Candidate list/detail GETs are gated by `[Authorize(Roles = Roles.CanWriteCandidate)]`, and the UI hides those menu items/routes. They still see a candidate's read-only snapshot + CV **through** an interview they're assigned to.
