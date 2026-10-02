@@ -144,11 +144,17 @@ Credentials worth knowing: `E2E_EMAIL` is a **Recruiter**, so candidate access i
 several specs skip for that account alone. The upload specs need `E2E_ADMIN_EMAIL`, because
 approving a draft means assigning an applied role and a Recruiter only sees roles assigned to them.
 
-**CV fixtures are generated, not committed.** `e2e/test-cvs/` is gitignored; the upload specs
-generate it on demand, or run `npm run e2e:cvs` yourself. The PDFs carry invented people with
-`.invalid` emails. `e2e/make-test-cvs.mjs` writes them by hand rather than pulling in a PDF
+**CV fixtures are generated, not committed, and never reused.** The PDFs carry invented people
+with `.invalid` emails. `e2e/make-test-cvs.mjs` writes them by hand rather than pulling in a PDF
 library, and the filenames matter: `CVParserService.ParseNameAndTitleFromFileName` reads
 `First-Last-Title-Words.pdf`, so a numeric prefix would be parsed as the first name.
+
+Since #93 the API refuses a CV whose bytes it already holds, matched by content hash against pending
+drafts **and every approved candidate's CV**, which never goes away. So the upload specs call
+`freshTestCvs()`, which writes a new set under `client/test-results/cvs/<uuid>/` with that UUID as a
+salt in a PDF comment. The comment changes every file's hash and none of the text the parser reads, so
+no two runs, and no two specs in one run, ever upload the same bytes. `npm run e2e:cvs` still writes an
+unsalted set into `e2e/test-cvs/` for poking at by hand; the specs do not use it.
 
 **Seed candidates through `e2e/seed.ts`.** `POST /api/candidates` only accepts a CV the caller
 uploaded, so a spec cannot invent a stored file name. `seedCandidate` uploads a small unique PDF,
