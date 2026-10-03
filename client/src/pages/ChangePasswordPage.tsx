@@ -44,7 +44,7 @@ export default function ChangePasswordPage() {
       await changePassword({ currentPassword, newPassword });
       // Pull fresh claims (clears must_change_password) before navigating away.
       await refresh();
-      navigate('/candidates', { replace: true });
+      navigate('/', { replace: true });
     } catch (err) {
       setError(
         isAxiosError(err) && err.response?.status === 400
