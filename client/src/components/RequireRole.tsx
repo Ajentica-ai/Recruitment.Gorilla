@@ -5,7 +5,7 @@ import type { Role } from '../types';
 
 /**
  * Gates a route's children behind one or more roles. Users who lack every listed
- * role are redirected to the candidates list (their always-available landing page).
+ * role are redirected to the Dashboard, the one page every role can open.
  */
 export default function RequireRole({
   roles,
@@ -16,7 +16,7 @@ export default function RequireRole({
 }) {
   const { hasAnyRole } = useAuth();
   if (!hasAnyRole(...roles)) {
-    return <Navigate to="/candidates" replace />;
+    return <Navigate to="/" replace />;
   }
   return <>{children}</>;
 }

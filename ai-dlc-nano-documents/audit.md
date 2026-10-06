@@ -151,3 +151,14 @@
 - 2026-10-02T14:00Z [claude] RG-101 PHASE PLAN→CONSTRUCT @1b8af84: plan approved by user
 - 2026-10-02T14:18Z [claude] RG-101 PHASE CONSTRUCT→WRAP-UP @1b8af84: 302 backend tests (1 known-flaky unrelated), 135 client, live Recruiter check clean
 - 2026-10-02T14:18Z [claude] RG-101 DONE @1b8af84: workload counts + roleId filter honour Recruiter scope; RG-36 archived; code uncommitted
+- 2026-10-02T14:49Z [claude] RG-101 SIDE-EFFECT @bc6aeed: pushed fix/RG-101/Analytics-workload-scope, opened PR #108 to develop (user confirmed)
+- 2026-10-02T14:49Z [claude] RG-101 SIDE-EFFECT @bc6aeed: posted fix summary comment on #101 (user confirmed)
+- 2026-10-02T17:49Z [claude] RG-99 CREATED @bc6aeed: issue #99 Interviewer redirect to blank /candidates (bug)
+- 2026-10-02T17:49Z [claude] RG-99 SIDE-EFFECT @bc6aeed: #99 already assigned to tahmidsparrow; added to board, Status=In Development
+- 2026-10-02T17:49Z [claude] RG-99 DECISION @bc6aeed: fallback is Dashboard / for every role (user confirmed)
+- 2026-10-02T17:49Z [claude] RG-99 DECISION @bc6aeed: also fix ChangePasswordPage redirect; Dashboard View all out of scope (user confirmed)
+- 2026-10-02T17:49Z [claude] RG-99 PHASE CLARIFY→PLAN @bc6aeed: plan drafted, 5 tasks, standard tier
+- 2026-10-02T17:50Z [claude] RG-99 BRANCH @c872bea: fix/RG-99/Interviewer-landing-page created off origin/develop (user confirmed)
+- 2026-10-02T17:50Z [claude] RG-99 PHASE PLAN→CONSTRUCT @c872bea: plan approved by user
+- 2026-10-02T17:52Z [claude] RG-99 PHASE CONSTRUCT→WRAP-UP @c872bea: 140 client tests, tsc+lint clean, live Interviewer sign-in lands on Dashboard
+- 2026-10-02T17:52Z [claude] RG-99 DONE @c872bea: RequireRole, login default, password change land on /; RG-38 archived; code uncommitted

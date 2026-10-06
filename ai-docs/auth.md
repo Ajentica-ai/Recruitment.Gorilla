@@ -82,7 +82,7 @@ On startup (`Program.cs`, after `Migrate()`): if **no users exist**, seed a Supe
 - Axios `withCredentials: true` so the refresh cookie rides along on `/auth/*`.
 - Request interceptor attaches the in-memory access token; response interceptor runs a **single-flight** `/auth/refresh` on 401 and retries, else redirects to `/login`.
 - `AuthProvider` stores the full `AuthUser { name, email, roles, mustChangePassword }` from the login/refresh response (no JWT decode needed). It exposes `hasRole`, `hasAnyRole`, `isSuperAdmin`, `isAdminOrAbove`, `canWriteCandidates`, `mustChangePassword`, and `refresh()` (re-sync after changing password).
-- `components/RequireRole.tsx` guards routes (redirects to `/candidates` when the role is missing). Nav links and candidate write controls are gated by the same flags.
+- `components/RequireRole.tsx` guards routes (redirects to `/`, the Dashboard every role can open, when the role is missing). Sign-in with no saved destination and a completed password change also land on `/`. Nav links and candidate write controls are gated by the same flags.
 
 ## How to PROTECT a new endpoint
 The default-deny fallback already requires auth. To restrict by role, add `[Authorize(Roles = Roles.AdminOrAbove)]` (or another constant) on the controller/action. Only auth/login-style endpoints should be `[AllowAnonymous]`.
