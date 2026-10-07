@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { defineConfig, devices } from '@playwright/test';
 
-// Read-only E2E smoke against the already-running dev stack (client :5173 → proxy → API :5000 → MySQL).
+// Read-only E2E smoke against the already-running dev stack (client :5173 → proxy → API :5134 → MySQL).
 // Start the app first (npm run dev + the API), then: npm run e2e
 //
 // Credentials come from `e2e/.env.e2e`, which is gitignored — copy

@@ -164,3 +164,7 @@
 - 2026-10-02T17:52Z [claude] RG-99 DONE @c872bea: RequireRole, login default, password change land on /; RG-38 archived; code uncommitted
 - 2026-10-03T19:08Z [claude] RG-99 SIDE-EFFECT @cdaea47: pushed fix/RG-99/Interviewer-landing-page, opened PR #109 to develop (user confirmed)
 - 2026-10-03T19:08Z [claude] RG-99 SIDE-EFFECT @cdaea47: posted fix summary comment on #99 (user confirmed)
+- 2026-10-07T00:00Z [claude] RG-47 CREATED @b46d6da: issue #47 bug, View all link wrong target
+- 2026-10-07T00:00Z [claude] RG-47 SIDE-EFFECT @b46d6da: assigned rayhan-ajentica; board status NOT moved (gh lacks read:project)
+- 2026-10-07T00:00Z [claude] RG-47 BRANCH @b46d6da: fix/RG-47/View-all-job-openings-link created off develop (user confirmed)
+- 2026-10-07T00:00Z [claude] RG-47 DONE @b46d6da: link -> /jobs, hidden for non-/jobs roles; 142 tests, tsc+lint clean; uncommitted

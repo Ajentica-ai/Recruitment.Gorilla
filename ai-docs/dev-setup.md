@@ -68,14 +68,14 @@ dotnet ef database update     # creates the DB + tables if needed
 # Backend — localhost only (do NOT bind 0.0.0.0)
 cd server/Recruitment.Gorilla.API
 $env:ASPNETCORE_ENVIRONMENT="Development"      # loads user secrets, enables Swagger
-dotnet run --urls http://localhost:5000
+dotnet run --urls http://localhost:5134
 
 # Frontend
 cd client
 npm install
 npm run dev                                    # http://localhost:5173
 ```
-Login: **admin / admin**. Swagger: `http://localhost:5000/swagger`.
+Login: **admin / admin**. Swagger: `http://localhost:5134/swagger`.
 
 ## 4. Verify a change
 ```bash
@@ -117,7 +117,7 @@ tests** (real HTTP pipeline + JWT auth, asserting the `[Authorize]` attributes p
 
 ### E2E suite (Playwright)
 ```bash
-# 1. Start the dev stack (API :5000 + client :5173) as in §3.
+# 1. Start the dev stack (API :5134 + client :5173) as in §3.
 # 2. One-time browser download:
 cd client && npx playwright install chromium
 # 3. Fill in credentials: copy e2e/.env.e2e.example to e2e/.env.e2e.
@@ -170,7 +170,7 @@ that matters.
 ## 5. LAN access (frontend only)
 Other PCs on the network use the **frontend only**; the backend stays private behind the proxy.
 - Vite is exposed via `server.host: true` in `vite.config.ts` (or `npm run dev -- --host`). It prints a `Network:` URL like `http://<your-ip>:5173`.
-- The browser calls same-origin `/api`, which Vite proxies to `localhost:5000` — so **only port 5173** needs to be open.
+- The browser calls same-origin `/api`, which Vite proxies to `localhost:5134` — so **only port 5173** needs to be open.
 - Windows firewall (admin), works on a Public network too:
   ```powershell
   New-NetFirewallRule -DisplayName "RecruitmentGorilla Web 5173" -Direction Inbound -Protocol TCP -LocalPort 5173 -Action Allow -Profile Any
