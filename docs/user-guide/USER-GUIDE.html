@@ -532,7 +532,7 @@ record and a summary.</p>
 <hr>
 <h1 id="chapter-4-super-admin-guide">Chapter 4: Super Admin guide</h1>
 <p><em>You own the accounts. A Super Admin can do everything an Admin can, plus manage users, email
-settings and deleting job openings.</em></p>
+settings, deleting job openings and importing candidates from JSON.</em></p>
 <h2 id="41-what-super-admin-adds">4.1 What Super Admin adds</h2>
 <table>
 <thead>
@@ -552,6 +552,10 @@ settings and deleting job openings.</em></p>
 <tr>
 <td><strong>Delete</strong> a job opening</td>
 <td>Admins can only edit or deactivate openings</td>
+</tr>
+<tr>
+<td><strong>JSON + CVs</strong> import on Upload CVs</td>
+<td>import candidates from a filled-in JSON template plus their CVs</td>
 </tr>
 </tbody></table>
 <h2 id="42-managing-users">4.2 Managing users</h2>
@@ -586,10 +590,40 @@ Super Admin</strong>, so you cannot lock everyone out.</p>
 username, password, sender address and name, plus <strong>Email Delivery</strong> on or off and a test send.
 The app emails <strong>users</strong> only (interview invites, new accounts, password resets and changes),
 never candidates.</p>
-<h2 id="44-deleting-job-openings">4.4 Deleting job openings</h2>
+<h2 id="44-importing-candidates-from-json">4.4 Importing candidates from JSON</h2>
+<p>When you already have candidate details in structured form (an export from another system, a
+spreadsheet, or an AI assistant&#39;s summary of each CV), you can import them instead of relying on
+CV parsing. Every candidate still needs their CV, and every import still lands in the Review
+Staging Workspace for approval.</p>
+<ol>
+<li>Open <strong>Upload CVs</strong> and choose <strong>JSON + CVs</strong> (only Super Admins see this switch).</li>
+<li>Select <strong>Download JSON template</strong>. The comments at the top of the file are the instructions:
+the mandatory fields (<strong>cvFileName</strong>, <strong>fullName</strong>, <strong>email</strong>), the optional ones, and the job
+opening and source names you can use. They are current on the day you download the file.</li>
+<li>Fill in one entry per candidate, by hand or by giving the template and the CVs to an AI
+assistant. The comments are written so an assistant can follow them; the importer ignores
+them, so it does not matter whether they are kept.</li>
+<li>Set <strong>cvFileName</strong> to each CV&#39;s exact file name, for example <code>jane_doe.pdf</code>.</li>
+<li>Optionally enter a <strong>Batch label</strong> and a default <strong>Job opening</strong> for entries that name no role.</li>
+<li>Drop the JSON file together with all the CVs onto the drop area.</li>
+</ol>
+<p>The pre-check table shows every entry before anything is saved:</p>
+<ul>
+<li><strong>Ready</strong>: the entry will be imported.</li>
+<li><strong>Ready, check notes</strong>: it will be imported, but something needs attention in review, such as
+a role or source name that does not match (that field is left blank for you to pick) or an
+email that already belongs to a candidate.</li>
+<li><strong>Will be skipped</strong>: something is wrong, such as a missing mandatory field, an invalid email, or
+no CV with that file name. The reason is shown on the row.</li>
+</ul>
+<p>Select <strong>Import N candidates</strong>. Each entry becomes a <strong>Pending</strong> draft with its CV attached, filled
+in from the JSON. Then select <strong>Open Review Workspace</strong> and approve the drafts as in
+<a href="#23-adding-candidates-upload-cvs">2.3</a>. A CV the system already holds is marked <strong>Duplicate</strong> and
+not imported.</p>
+<h2 id="45-deleting-job-openings">4.5 Deleting job openings</h2>
 <p>Only Super Admins can delete an opening in Configuration. If candidates were ever filed under it,
 the opening is deactivated instead and the app shows how many candidates block deletion.</p>
-<h2 id="45-good-habits">4.5 Good habits</h2>
+<h2 id="46-good-habits">4.6 Good habits</h2>
 <ul>
 <li>Check <strong>Audit</strong> now and then for bursts of <code>Auth.LoginFailed</code> and unexpected user or role
 changes.</li>
@@ -643,6 +677,13 @@ locking.</li>
 <td align="center">Yes</td>
 <td align="center">Yes</td>
 <td align="center">Yes (becomes owner)</td>
+<td align="center">-</td>
+</tr>
+<tr>
+<td>Import candidates from JSON</td>
+<td align="center">Yes</td>
+<td align="center">-</td>
+<td align="center">-</td>
 <td align="center">-</td>
 </tr>
 <tr>
