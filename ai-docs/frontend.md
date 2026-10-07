@@ -294,7 +294,7 @@ Upcoming/Activity.
   `/candidates/:id`, `StatusBadge` pills).
 - **Active Job Openings** — `ActiveJobOpeningsTable`: Job ID (`JOB-00n`), posted date, title +
   priority badge, location, department, **End date** (+ a `.job-closing-soon` badge when within 7
-  days), applicants; "View All" → `/configuration`. Backend returns **open** roles only (past their
+  days), applicants; "View All" → `/jobs` (shown only to roles that can open it). Backend returns **open** roles only (past their
   End date drop off).
 
 Charts are added under **`recharts`** (the only chart dependency). New chart chrome/colors go through `chartColors.ts`, not hardcoded hex.
