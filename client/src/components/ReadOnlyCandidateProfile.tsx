@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import {
   Briefcase,
@@ -27,10 +27,10 @@ import {
 import { StatusBadge } from './StatusBadge';
 import { skillColorClass } from '../utils/skillColors';
 import { externalUrl } from '../utils/externalUrl';
+import CvPreviewDialog, { type CvPreview } from './CvPreviewDialog';
 import SearchableDropdown, { SearchableMultiSelect } from './SearchableSelect';
 import type { CandidateDetail, UpdateCandidatePayload } from '../types';
 import { Button } from '@/components/ui/button';
-import { Alert } from '@/components/ui/alert';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -160,8 +160,9 @@ export default function ReadOnlyCandidateProfile({
   canEdit = false,
   onSave,
 }: Props) {
-  const [preview, setPreview] = useState<{ url: string; contentType: string } | null>(null);
-  const [previewName, setPreviewName] = useState('');
+  const [preview, setPreview] = useState<CvPreview | null>(null);
+  const [loadingPreviewId, setLoadingPreviewId] = useState<number | null>(null);
+  const previewUrlRef = useRef<string | null>(null);
   const [summaryExpanded, setSummaryExpanded] = useState(false);
 
   // Inline editing state
@@ -348,11 +349,31 @@ export default function ReadOnlyCandidateProfile({
     }
   };
 
-  const openPreview = async (fileId: number, name: string) => {
-    if (preview) URL.revokeObjectURL(preview.url);
-    const p = await previewCvFile(candidate.id, fileId);
-    setPreview(p);
-    setPreviewName(name);
+  const revokePreviewUrl = () => {
+    if (previewUrlRef.current) {
+      URL.revokeObjectURL(previewUrlRef.current);
+      previewUrlRef.current = null;
+    }
+  };
+  useEffect(() => revokePreviewUrl, []);
+
+  const openPreview = async (fileId: number, fileName: string) => {
+    setLoadingPreviewId(fileId);
+    try {
+      revokePreviewUrl();
+      const { url, contentType } = await previewCvFile(candidate.id, fileId);
+      previewUrlRef.current = url;
+      setPreview({ url, contentType, fileName, fileId });
+    } catch {
+      // The Download button stays available as a fallback.
+    } finally {
+      setLoadingPreviewId(null);
+    }
+  };
+
+  const closePreview = () => {
+    revokePreviewUrl();
+    setPreview(null);
   };
 
   const hasLinks = [
@@ -1022,7 +1043,14 @@ export default function ReadOnlyCandidateProfile({
                     <span className="cv-file-item__size">{formatSize(f.fileSizeBytes)}</span>
                   </span>
                   <span className="flex gap-2 shrink-0">
-                    <Button size="sm" variant="outline" onClick={() => void openPreview(f.id, f.originalFileName)}>Preview</Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={loadingPreviewId !== null}
+                      onClick={() => void openPreview(f.id, f.originalFileName)}
+                    >
+                      {loadingPreviewId === f.id ? 'Loading…' : 'Preview'}
+                    </Button>
                     <Button size="sm" onClick={() => void downloadCvFile(candidate.id, f.id)}>
                       <DownloadIcon />
                       Download
@@ -1035,21 +1063,7 @@ export default function ReadOnlyCandidateProfile({
         )}
 
         {showCvFiles && preview && (
-          <div className="mt-4">
-            <div className="flex justify-between items-center mb-1">
-              <span className="text-[length:var(--text-sm)] text-muted-foreground truncate">{previewName}</span>
-              <Button size="sm" variant="link" className="p-0" onClick={() => { URL.revokeObjectURL(preview.url); setPreview(null); }}>Close</Button>
-            </div>
-            {preview.contentType.includes('pdf') ? (
-              <iframe
-                title="CV preview"
-                src={preview.url}
-                className="h-[480px] w-full rounded-[var(--radius-control)] border border-border bg-white"
-              />
-            ) : (
-              <Alert variant="info" className="mb-0">In-app preview isn't available for this file type. Use Download.</Alert>
-            )}
-          </div>
+          <CvPreviewDialog candidateId={candidate.id} preview={preview} onClose={closePreview} />
         )}
       </CardContent>
     </Card>
