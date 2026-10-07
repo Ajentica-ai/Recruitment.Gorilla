@@ -5,6 +5,7 @@ import EmptyState from '../common/EmptyState';
 import { Button } from '@/components/ui/button';
 import SectionCard from '../common/SectionCard';
 import type { JobOpening } from '../../types';
+import { useAuth } from '../../auth/AuthContext';
 
 const iconProps: LucideProps = {
   size: 15,
@@ -41,14 +42,18 @@ const priorityLabel = (p: string) => (p.toLowerCase() === 'high' ? 'High Priorit
  * forcing a seven-column table through a 360px viewport.
  */
 export default function ActiveJobOpeningsTable({ data }: { data: JobOpening[] }) {
+  // /jobs is limited to candidate-managing roles; others would be bounced back here.
+  const { canWriteCandidates } = useAuth();
   return (
     <SectionCard
       title="Active job openings"
       description="Roles still open for applications, soonest to close first."
       actions={
-        <Button asChild variant="outline" size="sm">
-          <Link to="/configuration">View all</Link>
-        </Button>
+        canWriteCandidates ? (
+          <Button asChild variant="outline" size="sm">
+            <Link to="/jobs">View all</Link>
+          </Button>
+        ) : undefined
       }
       flush={data.length > 0}
     >
