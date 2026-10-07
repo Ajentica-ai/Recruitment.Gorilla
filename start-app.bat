@@ -1,7 +1,7 @@
 @echo off
 REM ============================================================
 REM  Recruitment Gorilla - one-click launcher
-REM  Starts the backend API (port 5000) and the frontend dev
+REM  Starts the backend API (port 5134) and the frontend dev
 REM  server (port 5173), then opens the app in your browser.
 REM ============================================================
 
@@ -10,8 +10,8 @@ set "ROOT=%~dp0"
 
 echo Starting Recruitment Gorilla...
 
-REM --- Backend API (loopback only, port 5000) ---
-start "Recruitment Gorilla API" cmd /k "cd /d "%ROOT%server\Recruitment.Gorilla.API" && dotnet run --urls http://localhost:5000"
+REM --- Backend API (loopback only, port 5134) ---
+start "Recruitment Gorilla API" cmd /k "cd /d "%ROOT%server\Recruitment.Gorilla.API" && dotnet run --urls http://localhost:5134"
 
 REM --- Frontend (Vite dev server, fixed port 5173) ---
 start "Recruitment Gorilla Web" cmd /k "cd /d "%ROOT%client" && npm run dev -- --port 5173 --strictPort"

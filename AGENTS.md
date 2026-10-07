@@ -6,7 +6,7 @@ This file is the entry point for any AI agent (or new human contributor). Detail
 
 ## Golden rules
 1. **Follow the existing patterns.** This codebase has a consistent flow; match it rather than introducing new styles or libraries. The layered flow and conventions are in [`ai-docs/conventions.md`](ai-docs/conventions.md) and [`ai-docs/feature-playbook.md`](ai-docs/feature-playbook.md).
-2. **Never expose the backend to the network.** In local dev, only the frontend (Vite, port 5173) is reachable on the LAN; it proxies `/api` to the backend on `localhost:5000`. Under the container deployment (`Gorilla.Platform/deploy`), the equivalent rule is: application containers declare no `ports:` and are reachable only on the `gorilla` bridge network — only the gateway container publishes a host port. Keep whichever form applies to how you're running it. See [`ai-docs/architecture.md`](ai-docs/architecture.md).
+2. **Never expose the backend to the network.** In local dev, only the frontend (Vite, port 5173) is reachable on the LAN; it proxies `/api` to the backend on `localhost:5134`. Under the container deployment (`Gorilla.Platform/deploy`), the equivalent rule is: application containers declare no `ports:` and are reachable only on the `gorilla` bridge network — only the gateway container publishes a host port. Keep whichever form applies to how you're running it. See [`ai-docs/architecture.md`](ai-docs/architecture.md).
 3. **No secrets in source.** The DB connection string, `Jwt:Key`, and `Auth:PasswordHash` live in **.NET user secrets**, never in `appsettings.json` or commits. See [`ai-docs/dev-setup.md`](ai-docs/dev-setup.md).
 4. **Keep docs in sync.** If you change code, update the matching file in `ai-docs/`.
 5. **Commits:** do not add Claude/Anthropic (or any AI) as author or co-author. Commit only when asked. Branch off the default branch first if needed.
@@ -15,7 +15,7 @@ This file is the entry point for any AI agent (or new human contributor). Detail
 
 ## The flow in one picture
 ```
-Browser (5173)  ──/api──►  Vite dev proxy  ──►  ASP.NET Core API (localhost:5000)  ──►  MySQL
+Browser (5173)  ──/api──►  Vite dev proxy  ──►  ASP.NET Core API (localhost:5134)  ──►  MySQL
   React 19/TS                                    Controller → Service → AppDbContext (EF Core)
   TanStack Query                                 JWT auth (access token + httpOnly refresh cookie)
   react-bootstrap (Prism design system)
@@ -40,7 +40,7 @@ dotnet user-secrets set "Auth:PasswordHash" "<pbkdf2 hash>"   # hash of the defa
 dotnet ef database update
 
 # 3. Run (two terminals)
-cd server/Recruitment.Gorilla.API && $env:ASPNETCORE_ENVIRONMENT="Development"; dotnet run --urls http://localhost:5000
+cd server/Recruitment.Gorilla.API && $env:ASPNETCORE_ENVIRONMENT="Development"; dotnet run --urls http://localhost:5134
 cd client && npm install && npm run dev      # http://localhost:5173
 
 # 4. Verify a change

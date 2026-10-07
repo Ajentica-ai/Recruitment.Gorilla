@@ -19,5 +19,5 @@ npm run build     # production build
 npm run preview   # preview production build locally
 ```
 
-The frontend expects the backend API to be running at `http://localhost:5000`.
+The frontend expects the backend API to be running at `http://localhost:5134`.
 To change the API base URL, update `src/services/api.ts`.

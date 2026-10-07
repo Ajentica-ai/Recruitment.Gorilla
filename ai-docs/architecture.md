@@ -54,9 +54,9 @@ Browser (http://<host>:5173)
    │  React app makes same-origin calls to /api/...
    ▼
 Vite dev server (port 5173, exposed on LAN)
-   │  server.proxy forwards /api → http://localhost:5000   (vite.config.ts)
+   │  server.proxy forwards /api → http://localhost:5134   (vite.config.ts)
    ▼
-ASP.NET Core API (localhost:5000 ONLY — never bound to 0.0.0.0)
+ASP.NET Core API (localhost:5134 ONLY — never bound to 0.0.0.0)
    │  Controller → Service → AppDbContext (EF Core)
    ▼
 MySQL (localhost:3306, database "RecruitmentGorilla")
@@ -65,7 +65,7 @@ MySQL (localhost:3306, database "RecruitmentGorilla")
 ### Why the backend is localhost-only
 The API must **not** be reachable directly from other machines. Only the Vite frontend is exposed on the LAN; it proxies `/api` to the backend running on the same host. This means:
 - The browser always calls **same-origin `/api`** (see `client/src/services/api.ts`, `baseURL` built from `import.meta.env.BASE_URL` + `api`).
-- The backend runs with `--urls http://localhost:5000` (loopback only).
+- The backend runs with `--urls http://localhost:5134` (loopback only).
 - Firewall opens **only** port 5173.
 
 Do not change the frontend to call the backend by IP/port, and do not bind the backend to `0.0.0.0`.
