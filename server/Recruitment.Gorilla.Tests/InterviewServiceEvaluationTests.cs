@@ -162,6 +162,62 @@ public class InterviewServiceEvaluationTests(MySqlDatabaseFixture fixture) : DbT
         Assert.Equal(2, detail.AllEvaluations!.Count); // both the submitted and the draft
     }
 
+    // ----- The embedded candidate's status history (issue #116) -----
+
+    /// <summary>
+    /// A candidate with a completed earlier round, whose "Interview Completed" entry carries that
+    /// round's submitted verdict. Returns the round the caller under test is assigned to.
+    /// </summary>
+    private (int LaterInterviewId, int InterviewerId) CandidateWithACompletedEarlierRound()
+    {
+        var interviewer = Data.AddUser(Roles.Interviewer);
+        var candidate = Data.AddCandidate();
+        var earlier = Data.AddInterview(candidate.Id, Data.AddUser(Roles.Interviewer).Id);
+        Data.AddSubmittedEvaluation(earlier.Id, earlier.Interviewers.First().UserId, overallRating: 5);
+        Db.StatusHistories.Add(new StatusHistory
+        {
+            CandidateId = candidate.Id,
+            Status = "Interview Completed",
+            ChangedBy = "test",
+            Comment = "Panel were impressed.",
+            InterviewId = earlier.Id,
+        });
+        Db.SaveChanges();
+
+        var later = Data.AddInterview(candidate.Id, interviewer.Id);
+        return (later.Id, interviewer.Id);
+    }
+
+    [Fact]
+    public async Task Interviewer_does_not_receive_the_candidates_status_history()
+    {
+        var (laterId, interviewerId) = CandidateWithACompletedEarlierRound();
+
+        var detail = await Interviews().GetDetailAsync(laterId, interviewerId, isAdmin: false);
+
+        Assert.NotNull(detail);
+        // No timeline at all, so no earlier round's comments and no ratings or recommendations
+        // to anchor on before this interviewer has written their own.
+        Assert.Empty(detail!.Candidate.StatusHistory);
+        // What the read-only profile does render still arrives.
+        Assert.False(string.IsNullOrWhiteSpace(detail.Candidate.FullName));
+    }
+
+    [Fact]
+    public async Task Admin_still_receives_the_status_history_and_the_earlier_rounds_verdict()
+    {
+        var (laterId, _) = CandidateWithACompletedEarlierRound();
+        var admin = Data.AddUser(Roles.Admin); // not assigned to either round
+
+        var detail = await Interviews().GetDetailAsync(laterId, admin.Id, isAdmin: true);
+
+        Assert.NotNull(detail);
+        Assert.NotEmpty(detail!.Candidate.StatusHistory);
+        var completed = Assert.Single(detail.Candidate.StatusHistory, h => h.Status == "Interview Completed");
+        Assert.Equal("Panel were impressed.", completed.Comment);
+        Assert.Equal(5, Assert.Single(completed.EvaluationSummaries).OverallRating);
+    }
+
     // ----- Candidate evaluation report (Recruiter+, candidate-access-scoped) -----
 
     [Fact]
