@@ -315,18 +315,25 @@ public class CandidateDraftService(
             EducationJson = eduDtos is { Count: > 0 } ? JsonSerializer.Serialize(eduDtos) : null,
             ExperienceJson = expDtos is { Count: > 0 } ? JsonSerializer.Serialize(expDtos) : null,
             RoleAppliedOptionId = roleAppliedOptionId,
-            Status = "Pending",
-            UploadedByUserId = currentUser.UserId,
-            CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow
         };
+
+        return await AddDraftAsync(draft);
+    }
+
+    /// <summary>Saves a new draft as Pending, owned by the caller.</summary>
+    public async Task<CandidateDraft> AddDraftAsync(CandidateDraft draft)
+    {
+        draft.Status = "Pending";
+        draft.UploadedByUserId = currentUser.UserId;
+        draft.CreatedAt = DateTime.UtcNow;
+        draft.UpdatedAt = DateTime.UtcNow;
 
         db.CandidateDrafts.Add(draft);
         await db.SaveChangesAsync();
 
         logger.LogInformation(
             "Created CandidateDraft {DraftId} for file '{OriginalFileName}' in batch '{BatchId}'.",
-            draft.Id, originalFileName, batchId);
+            draft.Id, draft.OriginalFileName, draft.BatchId);
 
         return draft;
     }
