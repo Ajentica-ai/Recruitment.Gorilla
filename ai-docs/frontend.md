@@ -342,7 +342,7 @@ mutations invalidate the `['config']` prefix so candidate forms refresh too.
 Candidate profile links (LinkedIn, GitHub, portfolio, ...) and timeline submission links are stored as typed or extracted, often without a scheme (`linkedin.com/in/jane`). A bare value used as `href` resolves relative to the current page (`/candidates/linkedin.com/in/jane`), so always render these through `externalUrl(raw)`: it prefixes `https://` to bare links, passes `http(s)://` through, and returns `undefined` for any other scheme (`javascript:`, `data:`) so the link is not rendered.
 
 ### CV preview (`CvFilesCard` in `CandidateDetailPage`)
-Each CV file has **Preview** + **Download**. Preview calls `previewCvFile` (authenticated blob → object URL) and renders PDFs in an `<iframe>` (`.cv-preview-frame`); non-PDF types show a friendly fallback and keep Download. Object URLs are revoked on change/unmount.
+Each CV file has **Preview** + **Download**. Preview calls `previewCvFile` (authenticated blob → object URL) and opens the shared **`CvPreviewDialog`** (`components/CvPreviewDialog.tsx`), a near-full-window dialog that renders PDFs in an `<iframe>`; non-PDF types show a friendly fallback with Download. Both `CandidateDetailPage` and `ReadOnlyCandidateProfile` (the interview page's profile drawer) use it. The profile used to render the preview inline below the file list, which inside the drawer landed off-screen, so clicking Preview appeared to do nothing. Object URLs are revoked on change/unmount.
 
 ### Login
 `LoginPage` no longer hints credentials (placeholders removed, `autoComplete="off"`, no app-prefill).
