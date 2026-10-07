@@ -138,10 +138,10 @@ dotnet ef database update
 ```bash
 cd server/Recruitment.Gorilla.API
 $env:ASPNETCORE_ENVIRONMENT="Development"
-dotnet run --urls http://localhost:5000
+dotnet run --urls http://localhost:5134
 ```
 
-The API listens on `http://localhost:5000` (localhost only — it is not exposed to the network). Swagger: `http://localhost:5000/swagger`.
+The API listens on `http://localhost:5134` (localhost only — it is not exposed to the network). Swagger: `http://localhost:5134/swagger`.
 
 ### 5. Start the frontend
 
