@@ -4,6 +4,7 @@ import type {
   AuditLogEntry,
   AuditQuery,
   CVDraft,
+  ImportCandidateResult,
   CandidateDetail,
   CandidateEvaluationReport,
   CandidateSourceOption,
@@ -173,15 +174,18 @@ export const resetUserPassword = async (id: number, payload: ResetPasswordPayloa
  */
 export const downloadCvFile = async (candidateId: number, fileId: number): Promise<void> => {
   const res = await api.get(`/candidates/${candidateId}/cv/${fileId}`, { responseType: 'blob' });
+  saveBlob(res.data as Blob, res.headers['content-disposition'] as string | undefined, 'cv');
+};
 
-  let filename = 'cv';
-  const cd = res.headers['content-disposition'] as string | undefined;
-  if (cd) {
-    const m = /filename\*?=(?:UTF-8'')?"?([^";]+)"?/i.exec(cd);
+/** Saves a downloaded blob under the file name from its Content-Disposition, or the fallback. */
+function saveBlob(blob: Blob, contentDisposition: string | undefined, fallbackName: string): void {
+  let filename = fallbackName;
+  if (contentDisposition) {
+    const m = /filename\*?=(?:UTF-8'')?"?([^";]+)"?/i.exec(contentDisposition);
     if (m) filename = decodeURIComponent(m[1]);
   }
 
-  const url = URL.createObjectURL(res.data as Blob);
+  const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
   a.download = filename;
@@ -189,7 +193,7 @@ export const downloadCvFile = async (candidateId: number, fileId: number): Promi
   a.click();
   a.remove();
   URL.revokeObjectURL(url);
-};
+}
 
 export type CreateCandidateResult =
   | { kind: 'created'; candidate: CandidateDetail }
@@ -211,6 +215,34 @@ export const uploadCV = async (
   if (fileIndex != null) form.append('fileIndex', fileIndex.toString());
   if (totalFiles != null) form.append('totalFiles', totalFiles.toString());
   const { data } = await api.post<CVDraft>('/cvupload', form);
+  return data;
+};
+
+/** Super Admin only: the import template, whose comments explain how to fill it in. */
+export const downloadImportTemplate = async (): Promise<void> => {
+  const res = await api.get('/candidate-import/template', { responseType: 'blob' });
+  saveBlob(res.data as Blob, res.headers['content-disposition'] as string | undefined, 'candidate-import-template.json');
+};
+
+/** Super Admin only: one entry of a JSON import file, with the CV it names, becomes a Pending draft. */
+export const importJsonCandidate = async (
+  entry: Record<string, unknown>,
+  file: File,
+  batchId?: string,
+  fileIndex?: number,
+  totalFiles?: number,
+  batchName?: string,
+  roleAppliedOptionId?: number
+): Promise<ImportCandidateResult> => {
+  const form = new FormData();
+  form.append('entry', JSON.stringify(entry));
+  form.append('file', file);
+  if (batchId) form.append('batchId', batchId);
+  if (batchName) form.append('batchName', batchName);
+  if (roleAppliedOptionId != null) form.append('roleAppliedOptionId', roleAppliedOptionId.toString());
+  if (fileIndex != null) form.append('fileIndex', fileIndex.toString());
+  if (totalFiles != null) form.append('totalFiles', totalFiles.toString());
+  const { data } = await api.post<ImportCandidateResult>('/candidate-import', form);
   return data;
 };
 

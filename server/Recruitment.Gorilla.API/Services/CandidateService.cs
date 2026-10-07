@@ -1,4 +1,3 @@
-using System.Text.RegularExpressions;
 using Microsoft.EntityFrameworkCore;
 using Recruitment.Gorilla.API.Data;
 using Recruitment.Gorilla.API.DTOs;
@@ -8,9 +7,6 @@ namespace Recruitment.Gorilla.API.Services;
 
 public class CandidateService(AppDbContext db, IWebHostEnvironment env, NotificationService notificationService, IConfiguration config)
 {
-    private static readonly Regex EmailRegex =
-        new(@"^[\w.+-]+@[\w-]+\.[a-z]{2,}$", RegexOptions.IgnoreCase | RegexOptions.Compiled);
-
     private const string Uploaded = "Uploaded";
     private const string TechnicalAssessment = "Technical Assessment";
     private const string SubmissionReceived = "Submission Received";
@@ -208,7 +204,7 @@ public class CandidateService(AppDbContext db, IWebHostEnvironment env, Notifica
         if (referenceNameError is not null)
             return referenceNameError;
 
-        if (!EmailRegex.IsMatch(referenceEmail))
+        if (!EmailFormat.IsValid(referenceEmail))
             return "The reference email is not a valid email address.";
 
         return null;
@@ -226,7 +222,7 @@ public class CandidateService(AppDbContext db, IWebHostEnvironment env, Notifica
         if (nameError is not null)
             return nameError;
 
-        if (string.IsNullOrWhiteSpace(email) || !EmailRegex.IsMatch(email.Trim()))
+        if (!EmailFormat.IsValid(email))
             return "A valid email address is required.";
 
         if (string.IsNullOrWhiteSpace(relevantExperience))

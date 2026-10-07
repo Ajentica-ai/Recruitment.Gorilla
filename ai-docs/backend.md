@@ -5,12 +5,13 @@ ASP.NET Core Web API, .NET 10. Project root: `server/Recruitment.Gorilla.API/`.
 ## Structure
 | Folder | Purpose |
 |---|---|
-| `Controllers/` | HTTP endpoints (thin). `AuthController`, `CandidatesController`, `CVUploadController`, `StatusOptionsController`, `ConfigurationController`, `UsersController`, `DashboardController`, `InterviewsController`, `NotificationsController`. |
-| `Services/` | Business logic + EF access. `AuthService`, `CandidateService`, `CVParserService`, `StatusOptionService`, `ConfigurationService`, `UserService`, `DashboardService`, `InterviewService`, `NotificationService`. |
+| `Controllers/` | HTTP endpoints (thin). `AuthController`, `CandidatesController`, `CVUploadController`, `CandidateImportController`, `StatusOptionsController`, `ConfigurationController`, `UsersController`, `DashboardController`, `InterviewsController`, `NotificationsController`. |
+| `Services/` | Business logic + EF access. `AuthService`, `CandidateService`, `CVParserService`, `CvFileIntake`, `CandidateImportService`, `EmailFormat`, `StatusOptionService`, `ConfigurationService`, `UserService`, `DashboardService`, `InterviewService`, `NotificationService`. |
 | `Models/` | EF entities. |
 | `Data/AppDbContext.cs` | DbSets + Fluent config. |
 | `DTOs/` | Request/response `record`s. |
 | `Migrations/` | EF Core migrations (tracked in git). |
+| `Resources/` | Embedded resources (`candidate-import-template.jsonc`, the JSON import template). |
 | `Uploads/` | Stored CV files (gitignored). |
 | `Logs/` | log4net output (gitignored). |
 | `Program.cs` | Composition root: DI, auth, CORS, pipeline. |
@@ -40,12 +41,14 @@ ASP.NET Core Web API, .NET 10. Project root: `server/Recruitment.Gorilla.API/`.
 - **Secrets in .NET user secrets** (not committed): `ConnectionStrings:DefaultConnection`, `Jwt:Key`, `Auth:PasswordHash`. Setup in [dev-setup.md](dev-setup.md).
 
 ## CV upload & parsing
+- The file checks every uploaded CV goes through live in `CvFileIntake` (shared by the CV upload and the JSON import): extension, size, a file-signature check (`%PDF-` for PDF, the zip header for `.docx`, so a renamed file is a 400), the content-hash duplicate check, and saving under a server-issued name (a partial file is deleted if the write fails).
 - `CVUploadController` (`POST /api/cvupload`): validates extension (`.pdf`/`.docx`) and size (≤10 MB), rejects a file whose SHA-256 matches a CV already in a `Pending` draft or on a candidate (**409**, see `data-model.md` CVFile), saves to `Uploads/{GUID}{ext}`, calls `CVParserService`, persists a `CandidateDraft` (with `FileHash`), and returns a `CVDraftDto` for review.
 - `CVParserService.Parse` extracts text and pulls fields with regex/heuristics:
   - **PDF** via PdfPig (also reads hyperlink annotations to recover LinkedIn URLs shown as labels).
   - **Word** via DocumentFormat.OpenXml (paragraph text). Only `.docx` (not legacy `.doc`).
   - Email regex tolerates whitespace around `@`; name detection uses the leading ALL-CAPS run with double-space / clean-line fallbacks.
   - **LinkedIn and GitHub** URLs are pulled via the shared `MatchUrl` helper (visible text first, then hyperlink annotations); GitHub flows into `CVDraftDto.GithubUrl`.
+- **JSON import** (Super Admin only, [specs/json-candidate-import.md](specs/json-candidate-import.md)): `CandidateImportController` takes one candidate entry plus its CV per request. `CandidateImportService` parses the entry (comments, trailing commas, any key casing, numbers as text), validates it (errors reject it; an unknown role or source, a known email, or unknown keys only warn), and saves a Pending draft through `CandidateDraftService.AddDraftAsync` without parsing the CV. It also builds the downloadable template from the embedded `Resources/candidate-import-template.jsonc`, writing the open job openings and active sources into its comments.
 - **Known limitation:** this is best-effort. The admin always reviews/edits before saving. Robust LLM-based extraction is deferred to Phase 2 — if you implement it, send the extracted raw text to Claude and return structured JSON, keeping the human-review step.
 
 ## File storage
@@ -102,6 +105,8 @@ log4net (`log4net.config`): console + daily rolling file under `Logs/`. App cate
 | POST | `/api/auth/refresh` | anon (cookie) | Rotate refresh, new access token |
 | POST | `/api/auth/logout` | anon (cookie) | Revoke refresh, clear cookie |
 | POST | `/api/cvupload` | required | Upload CV → extracted draft |
+| GET | `/api/candidate-import/template` | **SuperAdmin** | The JSON import template as an attachment; its comments carry the fill-in instructions and today's open role and active source names |
+| POST | `/api/candidate-import` | **SuperAdmin** | Multipart `entry` (one candidate as JSON, comments allowed) + `file` (its CV) → Pending draft + `warnings`. 400 on an invalid entry, file, or `cvFileName` mismatch; 409 on a duplicate CV |
 | GET | `/api/candidates` | required | Paged list. Filters: `search` (name/email/**phone**), `status`, `roleId` (structured `RoleAppliedOptionId`), `skillIds` (**CSV**, ANY-of over `CandidateSkills`), `referred` (bool), `bucket` (`in-process`\|`recommended`\|`rejected`\|`new-this-week` — the dashboard's pipeline buckets, resolved through `CandidateBuckets` so they select exactly what the KPI tiles count; unknown values are ignored rather than rejected, so a stale link degrades to an unfiltered list instead of an empty one). `bucket` exists because `status` is a single exact match, while *Rejected* spans four statuses, *In process* is "not yet terminal", and *New this week* is a date window — without it those tiles had no destination reproducing their own count. Sorting: `sort` (whitelist `name`\|`status`\|`added`, default added) + `dir` (`asc`\|`desc`, default desc). All parameters are wrapped in a `CandidateListQuery` record and intersected with the caller's access scope |
 | POST | `/api/candidates` | required | Create (409 on duplicate email unless `allowDuplicate`) |
 | GET | `/api/candidates/{id}` | required | Detail + CV files + status history |

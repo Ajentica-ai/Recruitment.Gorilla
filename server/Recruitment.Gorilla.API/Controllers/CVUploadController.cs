@@ -12,14 +12,12 @@ namespace Recruitment.Gorilla.API.Controllers;
 public class CVUploadController(
     CVParserService parser,
     CandidateDraftService draftService,
+    CvFileIntake intake,
     IWebHostEnvironment env,
     ICVUploadProgressNotifier progressNotifier,
     CurrentUser currentUser,
     ILogger<CVUploadController> logger) : ControllerBase
 {
-    private static readonly HashSet<string> AllowedExtensions = [".pdf", ".docx"];
-    private const long MaxFileSizeBytes = 10 * 1024 * 1024; // 10 MB
-
     [HttpPost]
     public async Task<IActionResult> Upload(
         IFormFile file,
@@ -33,35 +31,16 @@ public class CVUploadController(
         var idx = fileIndex ?? 0;
         var total = totalFiles ?? 1;
 
-        if (file is null || file.Length == 0)
+        var invalid = CvFileIntake.Validate(file);
+        if (invalid is not null)
         {
+            logger.LogWarning("Rejected upload '{FileName}': {Reason}", file?.FileName, invalid);
             await progressNotifier.NotifyProgressAsync(currentUser.UserId?.ToString(), bId, new CVUploadProgressEvent(
-                bId, idx, total, "unknown", "error", 0, null, "No file provided."));
-            return BadRequest("No file provided.");
+                bId, idx, total, file?.FileName ?? "unknown", "error", 0, null, invalid));
+            return BadRequest(invalid);
         }
 
-        var ext = Path.GetExtension(file.FileName).ToLowerInvariant();
-        if (!AllowedExtensions.Contains(ext))
-        {
-            logger.LogWarning("Rejected upload '{FileName}': unsupported extension {Ext}.", file.FileName, ext);
-            await progressNotifier.NotifyProgressAsync(currentUser.UserId?.ToString(), bId, new CVUploadProgressEvent(
-                bId, idx, total, file.FileName, "error", 0, null, "Only PDF and Word (.docx) files are accepted."));
-            return BadRequest("Only PDF and Word (.docx) files are accepted.");
-        }
-
-        if (file.Length > MaxFileSizeBytes)
-        {
-            logger.LogWarning("Rejected upload '{FileName}': size {Size} exceeds limit.", file.FileName, file.Length);
-            await progressNotifier.NotifyProgressAsync(currentUser.UserId?.ToString(), bId, new CVUploadProgressEvent(
-                bId, idx, total, file.FileName, "error", 0, null, "File exceeds the 10 MB size limit."));
-            return BadRequest("File exceeds the 10 MB size limit.");
-        }
-
-        string fileHash;
-        using (var hashStream = file.OpenReadStream())
-            fileHash = CandidateDraftService.ComputeFileHash(hashStream);
-
-        var duplicateError = await draftService.FindDuplicateUploadAsync(fileHash, file.Length);
+        var (fileHash, duplicateError) = await intake.CheckDuplicateAsync(file);
         if (duplicateError is not null)
         {
             logger.LogWarning("Rejected upload '{FileName}': duplicate of an already uploaded CV.", file.FileName);
@@ -74,14 +53,9 @@ public class CVUploadController(
         await progressNotifier.NotifyProgressAsync(currentUser.UserId?.ToString(), bId, new CVUploadProgressEvent(
             bId, idx, total, file.FileName, "parsing", 30, null, null));
 
-        var fileType = ext == ".pdf" ? "PDF" : "Word";
-        var storedName = $"{Guid.NewGuid()}{ext}";
-        var uploadsPath = Path.Combine(env.ContentRootPath, "Uploads");
-        Directory.CreateDirectory(uploadsPath);
-        var fullPath = Path.Combine(uploadsPath, storedName);
-
-        using (var stream = System.IO.File.Create(fullPath))
-            await file.CopyToAsync(stream);
+        var stored = await intake.SaveAsync(file, fileHash);
+        var (storedName, fileType) = (stored.StoredFileName, stored.FileType);
+        var fullPath = UploadPaths.Resolve(env.ContentRootPath, storedName)!;
 
         var parsed = parser.Parse(fullPath, fileType);
         var name = parsed.Name;

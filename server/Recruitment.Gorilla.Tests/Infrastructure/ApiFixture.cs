@@ -1,11 +1,14 @@
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.Text;
 using System.Text.Json;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Recruitment.Gorilla.API.Auth;
 using Recruitment.Gorilla.API.Data;
 using Recruitment.Gorilla.API.Models;
+using Recruitment.Gorilla.API.Services;
 
 namespace Recruitment.Gorilla.Tests.Infrastructure;
 
@@ -185,6 +188,56 @@ public sealed class ApiFixture : IAsyncLifetime
         if (token is not null)
             req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
         return Client.SendAsync(req);
+    }
+
+    /// <summary>Sends a multipart form, as the upload and import endpoints expect, with an optional bearer token.</summary>
+    public Task<HttpResponseMessage> SendMultipartAsync(string url, string? token, MultipartFormDataContent form)
+    {
+        var req = new HttpRequestMessage(HttpMethod.Post, url) { Content = form };
+        if (token is not null)
+            req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        return Client.SendAsync(req);
+    }
+
+    /// <summary>
+    /// Deletes a file an upload test stored. The API under test writes into its real Uploads folder, so
+    /// every test that stores a CV removes it again.
+    /// </summary>
+    public void DeleteStoredUpload(string storedFileName)
+    {
+        var env = _factory.Services.GetRequiredService<IWebHostEnvironment>();
+        var path = UploadPaths.Resolve(env.ContentRootPath, storedFileName);
+        if (path is not null && File.Exists(path)) File.Delete(path);
+    }
+
+    /// <summary>
+    /// A one-page PDF carrying a single line of text that PdfPig can read. Unique text gives a unique
+    /// hash, so the duplicate-CV check never trips across tests. Mirrors minimalPdf in client/e2e/seed.ts.
+    /// </summary>
+    public static byte[] MinimalPdf(string text)
+    {
+        var safe = text.Replace("\\", "").Replace("(", "").Replace(")", "");
+        var content = $"BT /F1 12 Tf 56 760 Td ({safe}) Tj ET\n";
+        string[] objects =
+        [
+            "<< /Type /Catalog /Pages 2 0 R >>",
+            "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+            "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 5 0 R >> >> /Contents 4 0 R >>",
+            $"<< /Length {Encoding.Latin1.GetByteCount(content)} >>\nstream\n{content}endstream",
+            "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
+        ];
+        var pdf = new StringBuilder("%PDF-1.4\n");
+        var offsets = new List<int>();
+        for (var i = 0; i < objects.Length; i++)
+        {
+            offsets.Add(Encoding.Latin1.GetByteCount(pdf.ToString()));
+            pdf.Append($"{i + 1} 0 obj\n{objects[i]}\nendobj\n");
+        }
+        var xref = Encoding.Latin1.GetByteCount(pdf.ToString());
+        pdf.Append($"xref\n0 {objects.Length + 1}\n0000000000 65535 f \n");
+        foreach (var off in offsets) pdf.Append($"{off:D10} 00000 n \n");
+        pdf.Append($"trailer\n<< /Size {objects.Length + 1} /Root 1 0 R >>\nstartxref\n{xref}\n%%EOF\n");
+        return Encoding.Latin1.GetBytes(pdf.ToString());
     }
 
     /// <summary>Inserts an offer in the given status (committed) and returns its id.</summary>
