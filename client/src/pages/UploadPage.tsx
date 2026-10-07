@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { UploadCloud, Layers, CheckCircle2, ArrowRight } from 'lucide-react';
+import { UploadCloud, Layers, CheckCircle2, ArrowRight, FileText, FileJson } from 'lucide-react';
+import { useAuth } from '../auth/AuthContext';
 import BulkUploader from '../components/BulkUploader';
+import JsonImporter from '../components/JsonImporter';
 import DraftReviewWorkspace from '../components/drafts/DraftReviewWorkspace';
 import { Button } from '@/components/ui/button';
 import Page from '../components/common/Page';
@@ -10,7 +12,11 @@ import { getCandidateDrafts } from '../services/api';
 import type { CVDraft } from '../types';
 
 export default function UploadPage() {
+  const { isSuperAdmin } = useAuth();
   const [activeTab, setActiveTab] = useState<'upload' | 'review'>('upload');
+  // JSON import is Super Admin only; everyone else always gets the CV uploader.
+  const [intakeMode, setIntakeMode] = useState<'cv' | 'json'>('cv');
+  const showJsonImport = isSuperAdmin && intakeMode === 'json';
   const [lastUploadedBatchId, setLastUploadedBatchId] = useState<string | null>(null);
   const [lastBatchCount, setLastBatchCount] = useState<number>(0);
 
@@ -62,9 +68,40 @@ export default function UploadPage() {
       {/* Tab 1: Upload & Intake */}
       {activeTab === 'upload' && (
         <div className="page-stack">
-          <SectionCard title="Bulk CV Upload &amp; Document Intake">
-            <BulkUploader onDraftsParsed={handleParsed} />
-          </SectionCard>
+          {isSuperAdmin && (
+            <div className="segmented self-start" role="radiogroup" aria-label="Intake method">
+              <button
+                type="button"
+                role="radio"
+                aria-checked={intakeMode === 'cv'}
+                className={`segmented__item ${intakeMode === 'cv' ? 'segmented__item--active active' : ''}`}
+                onClick={() => setIntakeMode('cv')}
+              >
+                <FileText size={15} className="me-1.5 shrink-0" />
+                <span>CV files</span>
+              </button>
+              <button
+                type="button"
+                role="radio"
+                aria-checked={intakeMode === 'json'}
+                className={`segmented__item ${intakeMode === 'json' ? 'segmented__item--active active' : ''}`}
+                onClick={() => setIntakeMode('json')}
+              >
+                <FileJson size={15} className="me-1.5 shrink-0" />
+                <span>JSON + CVs</span>
+              </button>
+            </div>
+          )}
+
+          {showJsonImport ? (
+            <SectionCard title="Import Candidates from JSON">
+              <JsonImporter onDraftsParsed={handleParsed} />
+            </SectionCard>
+          ) : (
+            <SectionCard title="Bulk CV Upload &amp; Document Intake">
+              <BulkUploader onDraftsParsed={handleParsed} />
+            </SectionCard>
+          )}
 
           {/* Staging Handoff Banner */}
           {lastBatchCount > 0 && (

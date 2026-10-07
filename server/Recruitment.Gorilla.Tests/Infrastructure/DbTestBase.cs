@@ -44,6 +44,8 @@ public abstract class DbTestBase : IDisposable
     protected AnalyticsService Analytics() => new(Db);
     protected CandidateDraftService CandidateDrafts(CurrentUser? user = null) =>
         new(Db, Audit(), user ?? new CurrentUser(new FixedHttpContextAccessor(null)), new TestWebHostEnvironment(), NullLogger<CandidateDraftService>.Instance);
+    protected CandidateImportService CandidateImports(CurrentUser? user = null) =>
+        new(Db, CandidateDrafts(user), Candidates(), Audit());
 
     /// <summary>
     /// A <see cref="CurrentUser"/> signed in as <paramref name="userId"/> with the given roles, built

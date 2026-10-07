@@ -1,9 +1,9 @@
 # AI-DLC Nano State
 - Active work item: none
-- Phase: —
-- Branch: fix/RG-47/View-all-job-openings-link
-- Base SHA: —
-- Next step: RG-47 complete, code uncommitted on its branch; commit/PR on user request.
+- Phase: -
+- Branch: -
+- Base SHA: -
+- Next step: none. RG-47 complete and pushed (fix/RG-47/View-all-job-openings-link); PR open.
 - Paused work items: none
-- Uncommitted code: yes
+- Uncommitted code: no
 - Last updated: 2026-10-07T00:00Z by claude

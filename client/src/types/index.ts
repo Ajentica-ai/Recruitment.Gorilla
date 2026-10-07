@@ -39,6 +39,12 @@ export interface CVDraft {
   experiences?: CandidateExperience[] | null;
 }
 
+/** What POST /candidate-import returns: the Pending draft an entry became, and what to check in review. */
+export interface ImportCandidateResult {
+  draft: CVDraft;
+  warnings: string[];
+}
+
 export interface CandidateDraft {
   id: number;
   fullName: string | null;

@@ -119,6 +119,53 @@ public class ControllerAuthorizationTests(ApiFixture fx)
         Assert.Equal(HttpStatusCode.Unauthorized, anon.StatusCode);
     }
 
+    // ---- JSON candidate import: SuperAdmin only ----
+
+    [Theory]
+    [InlineData("SuperAdmin", HttpStatusCode.OK)]
+    [InlineData("Admin", HttpStatusCode.Forbidden)]
+    [InlineData("Recruiter", HttpStatusCode.Forbidden)]
+    [InlineData("Interviewer", HttpStatusCode.Forbidden)]
+    public Task Get_import_template(string role, HttpStatusCode expected) =>
+        AssertStatus(role, HttpMethod.Get, "/api/candidate-import/template", expected);
+
+    // A body that would import, so the role is what decides the answer. Admin and Recruiter can write
+    // candidates everywhere else; this endpoint is the one place they can't.
+    [Theory]
+    [InlineData("SuperAdmin", HttpStatusCode.OK)]
+    [InlineData("Admin", HttpStatusCode.Forbidden)]
+    [InlineData("Recruiter", HttpStatusCode.Forbidden)]
+    [InlineData("Interviewer", HttpStatusCode.Forbidden)]
+    public async Task Post_import_entry(string role, HttpStatusCode expected)
+    {
+        var name = $"auth_{Guid.NewGuid():N}.pdf";
+        var file = new ByteArrayContent(ApiFixture.MinimalPdf($"Auth {Guid.NewGuid()}"));
+        file.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/pdf");
+        var form = new MultipartFormDataContent
+        {
+            { new StringContent($$"""{ "cvFileName": "{{name}}", "fullName": "Auth Probe", "email": "{{Guid.NewGuid():N}}@test.com" }"""), "entry" },
+            { file, "file", name },
+        };
+
+        var resp = await fx.SendMultipartAsync("/api/candidate-import", await TokenFor(role), form);
+
+        Assert.Equal(expected, resp.StatusCode);
+        if (resp.IsSuccessStatusCode)
+        {
+            using var doc = JsonDocument.Parse(await resp.Content.ReadAsStringAsync());
+            fx.DeleteStoredUpload(doc.RootElement.GetProperty("draft").GetProperty("storedFileName").GetString()!);
+        }
+    }
+
+    [Fact]
+    public async Task Import_endpoints_refuse_anonymous_callers()
+    {
+        var template = await fx.SendAsync(HttpMethod.Get, "/api/candidate-import/template", token: null);
+        var import = await fx.SendMultipartAsync("/api/candidate-import", token: null, new MultipartFormDataContent());
+        Assert.Equal(HttpStatusCode.Unauthorized, template.StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, import.StatusCode);
+    }
+
     // ---- Configuration management: Admin+ ----
 
     [Theory]

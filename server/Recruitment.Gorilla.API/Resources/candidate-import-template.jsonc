@@ -1,0 +1,99 @@
+/*
+ * ==========================================================================
+ *  RECRUITMENT GORILLA: CANDIDATE IMPORT TEMPLATE
+ * ==========================================================================
+ *  Generated: {{GENERATED}}
+ *
+ *  These comments are instructions for the person, or the AI assistant,
+ *  preparing this file. The importer ignores every comment, so you may keep
+ *  them or delete them.
+ *
+ *  HOW TO USE
+ *   1. Add one object per candidate inside the "candidates" array. A file can
+ *      hold one candidate or many.
+ *   2. Every candidate needs a CV file (PDF or DOCX, at most 10 MB).
+ *   3. "cvFileName" must match the CV's file name exactly, including the
+ *      extension, for example "jane_doe.pdf". Each CV is used once.
+ *   4. In Recruitment Gorilla, open Upload CVs, choose "JSON + CVs", and drop
+ *      this file together with all the CVs it lists.
+ *   5. Each candidate becomes a Pending draft in the Review Workspace, where a
+ *      reviewer checks the details and approves it.
+ *
+ *  MANDATORY FIELDS (an entry without these is rejected)
+ *   - cvFileName : text, the CV's file name, e.g. "jane_doe.pdf"
+ *   - fullName   : text, the person's name, at most 100 characters, with no
+ *                  emoji or symbols
+ *   - email      : text, a valid email address, e.g. "jane.doe@example.com"
+ *
+ *  OPTIONAL FIELDS (use null, or leave the key out, when unknown)
+ *   - phone              : text, with country code, e.g. "+8801712345678"
+ *   - currentTitle       : text, the candidate's current job title
+ *   - relevantExperience : text, preferably one of:
+ *                          {{EXPERIENCE}}
+ *                          or a free value such as "4 Years"
+ *   - location           : text, e.g. "Dhaka"
+ *   - role               : the job opening applied for; must be one of the
+ *                          ALLOWED ROLE NAMES below, spelled the same way.
+ *                          Any other value is left blank for the reviewer.
+ *   - source             : where the candidate came from; must be one of the
+ *                          ALLOWED SOURCE NAMES below.
+ *   - sourceDetail       : text, extra detail about the source
+ *   - skills             : list of text, e.g. ["C#", "SQL", "React"]
+ *   - summary            : text, a short professional summary
+ *   - linkedInUrl, githubUrl, gitLabUrl, portfolioUrl, leetCodeUrl,
+ *     codeforcesUrl, hackerRankUrl : full URLs starting with https://
+ *   - educations  : list of { degree, institution, graduationYear, cgpa }.
+ *                   degree and institution are required in each item.
+ *   - experiences : list of { jobTitle, company, duration, description }.
+ *                   jobTitle and company are required in each item.
+ *                   duration is text, e.g. "Jan 2021 - Present".
+ *
+ *  ALLOWED ROLE NAMES (open job openings)
+{{ROLES}}
+ *
+ *  ALLOWED SOURCE NAMES
+{{SOURCES}}
+ *
+ *  RULES FOR AI ASSISTANTS FILLING THIS FILE
+ *   - Return the whole file as JSON in exactly this structure. Keep the key
+ *     names as written; do not rename keys or add new ones.
+ *   - Use only information found in the CV or the data you were given. Never
+ *     guess or invent values; use null when something is missing.
+ *   - Write every value as text (in quotes), except skills, educations and
+ *     experiences, which are lists.
+ *   - Use exactly one object per CV, and set cvFileName to that CV's file name.
+ *   - Copy role and source names exactly from the allowed lists above, or use
+ *     null when none fits.
+ * ==========================================================================
+ */
+{
+  "candidates": [
+    {
+      "cvFileName": "jane_doe.pdf",
+      "fullName": "Jane Doe",
+      "email": "jane.doe@example.com",
+      "phone": null,
+      "currentTitle": null,
+      "relevantExperience": null,
+      "location": null,
+      "role": null,
+      "source": null,
+      "sourceDetail": null,
+      "skills": [],
+      "summary": null,
+      "linkedInUrl": null,
+      "githubUrl": null,
+      "gitLabUrl": null,
+      "portfolioUrl": null,
+      "leetCodeUrl": null,
+      "codeforcesUrl": null,
+      "hackerRankUrl": null,
+      "educations": [
+        { "degree": null, "institution": null, "graduationYear": null, "cgpa": null }
+      ],
+      "experiences": [
+        { "jobTitle": null, "company": null, "duration": null, "description": null }
+      ]
+    }
+  ]
+}
