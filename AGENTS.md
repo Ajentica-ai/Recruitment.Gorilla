@@ -9,9 +9,10 @@ This file is the entry point for any AI agent (or new human contributor). Detail
 2. **Never expose the backend to the network.** In local dev, only the frontend (Vite, port 5173) is reachable on the LAN; it proxies `/api` to the backend on `localhost:5134`. Under the container deployment (`Gorilla.Platform/deploy`), the equivalent rule is: application containers declare no `ports:` and are reachable only on the `gorilla` bridge network — only the gateway container publishes a host port. Keep whichever form applies to how you're running it. See [`ai-docs/architecture.md`](ai-docs/architecture.md).
 3. **No secrets in source.** The DB connection string, `Jwt:Key`, and `Auth:PasswordHash` live in **.NET user secrets**, never in `appsettings.json` or commits. See [`ai-docs/dev-setup.md`](ai-docs/dev-setup.md).
 4. **Keep docs in sync.** If you change code, update the matching file in `ai-docs/`.
-5. **Commits:** do not add Claude/Anthropic (or any AI) as author or co-author. Commit only when asked. Branch off the default branch first if needed.
-6. **Confirm before destructive or outward-facing actions** (deleting data, pushing, exposing services).
-7. **Keep tests green.** Add/adjust tests for new business rules and every `[Authorize]` gate; run `dotnet test` + `npm test` before finishing. Patterns + how-to: [`ai-docs/dev-setup.md`](ai-docs/dev-setup.md) §4b and [`ai-docs/conventions.md`](ai-docs/conventions.md).
+5. **No AI attribution anywhere in this repo.** Not in commit messages, PR titles/descriptions, code comments, or docs: no `Co-Authored-By` trailer for Claude/Anthropic or any AI tool, no "Generated with Claude Code" (or similar) line, no robot emoji, no statement that a change, comment, or doc was written by AI. Commit only when asked. Branch off the default branch first if needed.
+6. **No em-dash characters (U+2014)** in code, comments, commit messages, PR text, or docs. Use a comma, a colon, parentheses, or rewrite the sentence.
+7. **Confirm before destructive or outward-facing actions** (deleting data, pushing, exposing services).
+8. **Keep tests green.** Add/adjust tests for new business rules and every `[Authorize]` gate; run `dotnet test` + `npm test` before finishing. Patterns + how-to: [`ai-docs/dev-setup.md`](ai-docs/dev-setup.md) §4b and [`ai-docs/conventions.md`](ai-docs/conventions.md).
 
 ## The flow in one picture
 ```
