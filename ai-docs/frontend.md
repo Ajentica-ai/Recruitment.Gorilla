@@ -12,7 +12,7 @@ React 19 + TypeScript + Vite. Root: `client/`.
 | `src/services/api.ts` | Typed Axios layer + auth interceptors (the only HTTP caller). |
 | `src/types/index.ts` | Shared types mirroring API DTOs. |
 | `src/pages/` | `DashboardPage`, `LoginPage`, `UploadPage`, `CandidatesPage`, `CandidateDetailPage`, `CandidateEvaluationReportPage`, `InterviewPage`, `ConfigurationPage`, `UsersPage`, `AuditLogPage`, `ChangePasswordPage`. |
-| `src/pages/configuration/` | The Configuration tabs: `JobOpeningsTab`, `OptionChipsTab`, `EmailSettingsTab`, `SlackSettingsTab`. |
+| `src/pages/configuration/` | The Configuration tabs: `JobOpeningsTab`, `OptionChipsTab`, `EmailSettingsTab`, `EmailDeliveryTab`, `SlackSettingsTab`. |
 | `src/components/shell/` | App chrome: `AppShell` (layout + sidebar state, skip link, `<main>`), `SidebarNav`, `TopbarTitle`, **`UserMenu`** (topbar avatar → account menu). |
 | `src/components/ui/` | Shared primitives: **`Page`**, **`SectionCard`**, `PageHeader`, `Pagination`, `EmptyState`, `ConfirmModal`, **`Loading`** (`LoadingPanel`, `Skeleton*`), `Tabs` + `useTabs`. |
 | `src/components/` | `BulkUploader`, `JsonImporter`, `drafts/DraftReviewWorkspace`, `CandidateForm`, `StatusTimeline`, `SearchableSelect`, `StatusBadge`, **`ThemeMenu`**, `ToastStack`, `RequireRole`, `NotificationBell`, `ReadOnlyCandidateProfile`, `EvaluationForm`. |
@@ -337,6 +337,14 @@ mutations invalidate the `['config']` prefix so candidate forms refresh too.
   a **Send test email** button defaulting to the current user's email. Backed by
   `getEmailSettings`/`saveEmailSettings`/`sendTestEmail` (`/config/email*`); the
   password is never returned by the API.
+- **Email delivery** (`EmailDeliveryTab`, `isSuperAdmin` only) — a read-only,
+  paged log of every outbound email (queued time, recipient, subject, a status
+  `Badge`, attempts, last error), filterable by status via a `Segmented`
+  control. A row's overflow menu (`RowActions`) offers **Resend** for a
+  `Failed`/`Unknown` row only, behind a `ConfirmModal` that warns about a
+  possible duplicate when the status is `Unknown`. Backed by
+  `getEmailOutbox`/`resendEmail` (`/config/email/outbox*`); the HTML body is
+  never returned by the API.
 - **Slack** (`SlackSettingsTab`, `isSuperAdmin` only) — a bot token
   (`PasswordInput`, write-only; placeholder "leave blank to keep" when
   `botTokenSet`), an Enabled toggle, a per-category checklist (one `CheckboxField`
@@ -447,6 +455,8 @@ their tabs are absent, not disabled, for everyone else.
   removing a skill can deactivate it across every candidate tagged with it, the
   chips sit a few pixels apart, and there is no undo.
 - **Email** — grouped into Server / Credentials / Sender fieldsets.
+- **Email delivery** — a status-filterable log table with a per-row Resend
+  action, mirroring the shape of the Audit log page.
 - **Slack** — bot token field, delivery toggle, and a per-category checklist
   (which notification types also go to Slack), plus the test-message sidebar.
 - **`sortOrder` is not in the UI.** It is still sent — auto-assigned `last + 1`

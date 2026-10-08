@@ -31,3 +31,25 @@ public record UpsertEmailSettingsDto(
 public record TestEmailRequestDto(string ToEmail);
 
 public record TestEmailResultDto(bool Ok, string? Error);
+
+/// <summary>
+/// One row of the email delivery log. Deliberately omits the HTML body (it can contain account
+/// details) — only what's needed to see what was sent, to whom, and whether it worked.
+/// </summary>
+public record OutboundEmailDto(
+    long Id,
+    string ToEmail,
+    string ToName,
+    string Subject,
+    string Status,
+    string? Provider,
+    int Attempts,
+    string? LastError,
+    string? ProviderMessageId,
+    DateTime NextAttemptAt,
+    DateTime CreatedAt,
+    DateTime? SentAt,
+    DateTime UpdatedAt
+);
+
+public record ResendEmailResultDto(bool Ok, string? Error);
