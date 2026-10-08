@@ -25,6 +25,11 @@ interface AuthContextValue {
   /** Bottom of the hierarchy: holds no SuperAdmin/Admin/Recruiter role (dashboard + assigned interviews only). */
   isInterviewerOnly: boolean;
   mustChangePassword: boolean;
+  /**
+   * True once the user has chosen to log out, until the next sign-in. Lets the route guard tell
+   * that apart from an expired session: only the latter should remember the page to return to.
+   */
+  loggedOut: boolean;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -41,6 +46,7 @@ function toUser(res: LoginResult): AuthUser {
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loggedOut, setLoggedOut] = useState(false);
 
   // On first load, try to restore a session from the httpOnly refresh cookie.
   useEffect(() => {
@@ -68,11 +74,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       login: async (payload) => {
         const res = await apiLogin(payload);
         const u = toUser(res);
+        setLoggedOut(false);
         setUser(u);
         return u;
       },
       logout: async () => {
-        await apiLogout();
+        setLoggedOut(true);
+        try {
+          await apiLogout();
+        } catch (err) {
+          setLoggedOut(false);
+          throw err;
+        }
         setUser(null);
       },
       refresh: async () => {
@@ -86,8 +99,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       canWriteCandidates: hasAnyRole('SuperAdmin', 'Admin', 'Recruiter'),
       isInterviewerOnly: user !== null && !hasAnyRole('SuperAdmin', 'Admin', 'Recruiter'),
       mustChangePassword: user?.mustChangePassword ?? false,
+      loggedOut,
     };
-  }, [user, loading]);
+  }, [user, loading, loggedOut]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
