@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Recruitment.Gorilla.API.Models;
+using Recruitment.Gorilla.API.Services;
 
 namespace Recruitment.Gorilla.API.Data;
 
@@ -147,11 +148,15 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         modelBuilder.Entity<EmailSetting>(e =>
         {
             e.HasKey(s => s.Id);
+            e.Property(s => s.Provider).HasMaxLength(16).IsRequired().HasDefaultValue(EmailProviders.Smtp);
             e.Property(s => s.Host).HasMaxLength(200).IsRequired();
             e.Property(s => s.User).HasMaxLength(200);
             e.Property(s => s.PasswordEncrypted).HasMaxLength(1000);
             e.Property(s => s.FromAddress).HasMaxLength(200).IsRequired();
             e.Property(s => s.FromName).HasMaxLength(200).IsRequired();
+            e.Property(s => s.ApiBaseUrl).HasMaxLength(500);
+            e.Property(s => s.ApiKeyEncrypted).HasMaxLength(1000);
+            e.Property(s => s.AllowedRecipientDomains).HasMaxLength(500);
         });
 
         modelBuilder.Entity<SlackSetting>(e =>

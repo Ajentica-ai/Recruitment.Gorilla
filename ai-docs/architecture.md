@@ -43,9 +43,10 @@ Recruitment.Gorilla/
 | Frontend | React + TypeScript + Vite | 19 / Vite 8 |
 | UI | react-bootstrap 2 + Bootstrap 5, Fluent theme | — |
 | Routing | react-router-dom | 7 |
-| Background Queues | System.Threading.Channels (Email, AuditLog & Slack) | .NET 10 |
+| Background Queues | System.Threading.Channels (AuditLog & Slack); Email is a DB-backed outbox, polled by a BackgroundService | .NET 10 |
 | Real-time WebSockets | Microsoft.AspNetCore.SignalR & @microsoft/signalr | 10.0.x / 8.0.x |
 | Slack notifications | Slack Web API over `HttpClient` (no SDK) | — |
+| Email (HTTP API provider) | A company HR notification service over `HttpClient` (no SDK); SMTP via MailKit remains the other provider | — |
 
 > EF Core packages are pinned to **9.0.0** to stay inside Pomelo 9.x's compatibility window. Do not bump them independently.
 

@@ -61,6 +61,20 @@ builder.Services.AddScoped<ICVUploadProgressNotifier, CVUploadProgressNotifier>(
 builder.Services.AddSignalR();
 builder.Services.Configure<SmtpOptions>(builder.Configuration.GetSection("Smtp"));
 builder.Services.AddScoped<ISmtpTransport, MailKitSmtpTransport>();
+builder.Services.Configure<EmailApiOptions>(builder.Configuration.GetSection("EmailApi"));
+builder.Services.Configure<EmailProviderOptions>(builder.Configuration.GetSection("Email"));
+builder.Services.AddHttpClient<IEmailApiTransport, HttpEmailApiTransport>((sp, http) =>
+{
+    // The base URL itself is admin-editable at any time, so it's resolved per request rather than
+    // baked into this HttpClient; only the timeout is fixed at startup (config-only, not stored on
+    // the settings row — see EmailApiOptions).
+    var options = sp.GetRequiredService<IOptions<EmailApiOptions>>().Value;
+    http.Timeout = TimeSpan.FromSeconds(options.TimeoutSeconds);
+})
+    // No automatic redirects: .NET forwards custom headers (including X-API-Key) and, for 307/308,
+    // the request body across a redirect. A compromised or misconfigured notification service could
+    // otherwise redirect the key and the email content to a host nobody approved.
+    .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler { AllowAutoRedirect = false });
 builder.Services.AddSingleton<SecretProtector>();
 builder.Services.AddScoped<IEmailSettingsResolver, EmailSettingsResolver>();
 builder.Services.AddScoped<EmailSettingsService>();

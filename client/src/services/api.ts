@@ -11,6 +11,7 @@ import type {
   ChangePasswordPayload,
   EmailSettings,
   UpsertEmailSettings,
+  TestEmailResult,
   OutboundEmail,
   OutboundEmailQuery,
   ResendEmailResult,
@@ -502,8 +503,8 @@ export const saveEmailSettings = async (payload: UpsertEmailSettings): Promise<E
   return data;
 };
 
-export const sendTestEmail = async (toEmail: string): Promise<{ ok: boolean; error: string | null }> => {
-  const { data } = await api.post<{ ok: boolean; error: string | null }>('/config/email/test', { toEmail });
+export const sendTestEmail = async (toEmail: string): Promise<TestEmailResult> => {
+  const { data } = await api.post<TestEmailResult>('/config/email/test', { toEmail });
   return data;
 };
 

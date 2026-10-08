@@ -34,6 +34,14 @@ public class EmailDeliveryException(string code, EmailOutcome outcome, TimeSpan?
     public EmailOutcome Outcome { get; } = outcome;
     public TimeSpan? RetryAfter { get; } = retryAfter;
 
+    /// <summary>
+    /// Which provider attempted this send. Not a constructor parameter: a throw deep inside a
+    /// transport doesn't always have it to hand, so <see cref="EmailDispatcher.SendAsync"/> (the one
+    /// place that resolves the provider before delegating to either transport) fills it in as the
+    /// exception passes back through, rather than every throw site needing to know or pass it along.
+    /// </summary>
+    public string? Provider { get; set; }
+
     // Keeps the short, stable `code` for logs/metrics but doesn't drop the underlying reason: an
     // admin reading "Email delivery error: smtp_auth_failed" on the test-email button has no more
     // information than before the outbox existed; the transport's own message (e.g. "5.7.8 Username
@@ -46,36 +54,74 @@ public class EmailDeliveryException(string code, EmailOutcome outcome, TimeSpan?
 public record EmailSendRequest(
     string ToEmail, string ToName, string Subject, string HtmlBody, CalendarAttachment? Calendar, string Reference);
 
+/// <summary>Which provider actually attempted the send, and the id it gave back, if any.</summary>
+public record EmailSendResult(string Provider, string? MessageId);
+
 /// <summary>
 /// Sends one email over the network right now, through whichever provider is configured. Throws
 /// <see cref="EmailDeliveryException"/> on failure; never retries itself (that's
-/// <see cref="Background.EmailOutboxProcessor"/>'s job). Returns a provider message id when the provider
-/// gives one (plain SMTP gives none).
+/// <see cref="Background.EmailOutboxProcessor"/>'s job).
 /// </summary>
 public interface IEmailDispatcher
 {
-    Task<string?> SendAsync(EmailSendRequest request, CancellationToken ct = default);
+    Task<EmailSendResult> SendAsync(EmailSendRequest request, CancellationToken ct = default);
+
+    /// <summary>
+    /// Checks whether a previously attempted send actually went through, for a provider that can
+    /// report delivery status. Only meaningful for the HTTP API provider: a plain SMTP send never
+    /// produces an <see cref="EmailOutcome.Ambiguous"/> result in the first place, so this path is
+    /// never actually exercised by it; it still answers (<see cref="EmailApiDeliveryStatus.Unsupported"/>)
+    /// rather than throw, so the caller's logic doesn't need a provider-specific branch.
+    /// </summary>
+    Task<EmailApiStatusResult> CheckStatusAsync(string reference, CancellationToken ct = default);
 }
 
 /// <summary>
-/// The SMTP-only dispatcher. Resolves the effective SMTP settings at send time (DB row if configured
-/// in-app, else the <c>Smtp</c> config fallback, see <see cref="IEmailSettingsResolver"/>), builds the
-/// MIME message (optionally attaching the interview <c>.ics</c> invite as a <c>text/calendar</c> part)
-/// and hands it to <see cref="ISmtpTransport"/>.
+/// Resolves the active provider at send time (DB row if configured in-app, else config, see
+/// <see cref="IEmailSettingsResolver"/>) and sends through it: SMTP via <see cref="ISmtpTransport"/>,
+/// or the HTTP notification API via <see cref="IEmailApiTransport"/>.
 /// </summary>
-public class EmailDispatcher(IEmailSettingsResolver settings, ISmtpTransport transport) : IEmailDispatcher
+public class EmailDispatcher(IEmailSettingsResolver settings, ISmtpTransport smtpTransport, IEmailApiTransport apiTransport)
+    : IEmailDispatcher
 {
-    public async Task<string?> SendAsync(EmailSendRequest request, CancellationToken ct = default)
+    public async Task<EmailSendResult> SendAsync(EmailSendRequest request, CancellationToken ct = default)
     {
         var options = await settings.ResolveAsync();
+        try
+        {
+            var messageId = options.Provider == EmailProviders.HttpApi
+                ? await SendViaApiAsync(request, options.Api, ct)
+                : await SendViaSmtpAsync(request, options.Smtp, ct);
+            return new EmailSendResult(options.Provider, messageId);
+        }
+        catch (EmailDeliveryException ex)
+        {
+            // This is the one place that already knows which provider was resolved for this attempt,
+            // regardless of which of the two private methods below actually threw.
+            ex.Provider ??= options.Provider;
+            throw;
+        }
+    }
+
+    public async Task<EmailApiStatusResult> CheckStatusAsync(string reference, CancellationToken ct = default)
+    {
+        var options = await settings.ResolveAsync();
+        if (options.Provider != EmailProviders.HttpApi || string.IsNullOrWhiteSpace(options.Api.BaseUrl))
+            return new EmailApiStatusResult(EmailApiDeliveryStatus.Unsupported);
+
+        return await apiTransport.GetStatusAsync(reference, options.Api, ct);
+    }
+
+    private async Task<string?> SendViaSmtpAsync(EmailSendRequest request, SmtpOptions options, CancellationToken ct)
+    {
         if (string.IsNullOrWhiteSpace(options.Host) || string.IsNullOrWhiteSpace(options.FromAddress))
             throw new EmailDeliveryException("not_configured", EmailOutcome.Permanent);
 
-        var message = Build(request, options);
+        var message = BuildSmtpMessage(request, options);
 
         try
         {
-            await transport.SendAsync(message, options, ct);
+            await smtpTransport.SendAsync(message, options, ct);
             return null; // plain SMTP has no delivery id to report back
         }
         catch (AuthenticationException ex)
@@ -94,8 +140,52 @@ public class EmailDispatcher(IEmailSettingsResolver settings, ISmtpTransport tra
         }
     }
 
-    private static MimeMessage Build(EmailSendRequest request, SmtpOptions options)
+    private async Task<string?> SendViaApiAsync(EmailSendRequest request, EmailApiOptions api, CancellationToken ct)
     {
+        if (string.IsNullOrWhiteSpace(api.BaseUrl) || string.IsNullOrWhiteSpace(api.ApiKey))
+            throw new EmailDeliveryException("not_configured", EmailOutcome.Permanent);
+
+        if (!IsAllowedRecipient(request.ToEmail, api.AllowedRecipientDomains))
+            throw new EmailDeliveryException("recipient_domain_not_allowed", EmailOutcome.Permanent);
+
+        // The contract this service was given has no attachment field yet (SupportsAttachments stays
+        // false until one is confirmed), so the calendar invite, when there is one, is never attached
+        // here; the note in the body is adjusted to match so it never claims an attachment that isn't
+        // there, and the Google/Outlook links above it still work either way.
+        var willAttach = request.Calendar is not null && api.SupportsAttachments;
+        var html = ApplyCalendarNote(request.HtmlBody, willAttach);
+        var text = HtmlToText.Convert(html);
+
+        var apiRequest = new EmailApiSendRequest(request.ToEmail, request.Subject, text, html, api.FromName, request.Reference);
+        return await apiTransport.SendAsync(apiRequest, api, ct);
+    }
+
+    /// <summary>True when no allow-list is configured, or the recipient's domain is on it. Checked
+    /// before the API is ever called, not left for the service to reject.</summary>
+    private static bool IsAllowedRecipient(string email, string allowedDomainsCsv)
+    {
+        if (string.IsNullOrWhiteSpace(allowedDomainsCsv)) return true;
+
+        // MailAddress.TryCreate, plus requiring the round-tripped address to match the input exactly,
+        // rejects the forms that would otherwise let the text after the last '@' look like an allowed
+        // domain while carrying another address or a header-injection attempt alongside it (e.g.
+        // "evil@other.com@ajentica.ai", or a comma/semicolon-separated second recipient).
+        if (!System.Net.Mail.MailAddress.TryCreate(email, out var parsed) || parsed.Address != email)
+            return false;
+
+        return allowedDomainsCsv
+            .Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
+            .Any(d => string.Equals(d, parsed.Host, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static string ApplyCalendarNote(string html, bool attached) => html.Replace(
+        EmailTemplates.CalendarNotePlaceholder,
+        attached ? "Or open the attached invite (interview.ics) in any calendar app." : "");
+
+    private static MimeMessage BuildSmtpMessage(EmailSendRequest request, SmtpOptions options)
+    {
+        var html = ApplyCalendarNote(request.HtmlBody, request.Calendar is not null);
+
         var message = new MimeMessage();
         message.From.Add(new MailboxAddress(options.FromName, options.FromAddress));
         message.To.Add(new MailboxAddress(request.ToName, request.ToEmail));
@@ -103,7 +193,7 @@ public class EmailDispatcher(IEmailSettingsResolver settings, ISmtpTransport tra
 
         if (request.Calendar is null)
         {
-            message.Body = new TextPart("html") { Text = request.HtmlBody };
+            message.Body = new TextPart("html") { Text = html };
         }
         else
         {
@@ -126,7 +216,7 @@ public class EmailDispatcher(IEmailSettingsResolver settings, ISmtpTransport tra
 
             message.Body = new Multipart("mixed")
             {
-                new TextPart("html") { Text = request.HtmlBody },
+                new TextPart("html") { Text = html },
                 calendarPart,
             };
         }

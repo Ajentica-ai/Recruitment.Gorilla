@@ -21,7 +21,7 @@ public class ConfigurationController(
     AuditService audit,
     ILogger<ConfigurationController> logger) : ControllerBase
 {
-    // ----- Email / SMTP settings (SuperAdmin only — sensitive credentials) -----
+    // ----- Email settings (SuperAdmin only — sensitive credentials) -----
 
     [Authorize(Roles = Roles.SuperAdmin)]
     [HttpGet("email")]
@@ -31,12 +31,31 @@ public class ConfigurationController(
     [HttpPut("email")]
     public async Task<IActionResult> SaveEmailSettings([FromBody] UpsertEmailSettingsDto dto)
     {
-        if (string.IsNullOrWhiteSpace(dto.Host)) return BadRequest("SMTP host is required.");
-        if (string.IsNullOrWhiteSpace(dto.FromAddress)) return BadRequest("From address is required.");
-        if (dto.Port is < 1 or > 65535) return BadRequest("Port must be between 1 and 65535.");
+        if (dto.Provider is not (EmailProviders.Smtp or EmailProviders.HttpApi))
+            return BadRequest($"Unknown provider '{dto.Provider}'.");
 
-        await emailSettings.SaveAsync(dto, currentUser.UserId);
-        logger.LogInformation("SMTP settings updated by user {UserId}.", currentUser.UserId);
+        if (dto.Provider != EmailProviders.HttpApi)
+        {
+            if (string.IsNullOrWhiteSpace(dto.Host)) return BadRequest("SMTP host is required.");
+            if (string.IsNullOrWhiteSpace(dto.FromAddress)) return BadRequest("From address is required.");
+            if (dto.Port is < 1 or > 65535) return BadRequest("Port must be between 1 and 65535.");
+        }
+
+        // Matches the EmailSetting column lengths (AppDbContext) — caught here as a clear 400 rather
+        // than surfacing as a 500 from a DbUpdateException once EF tries to save an over-long value.
+        // ApiKey is capped well under ApiKeyEncrypted's 1000 chars to leave room for the AES-GCM
+        // nonce/tag and base64 overhead the encrypted form adds on top of the plaintext.
+        if ((dto.ApiBaseUrl?.Length ?? 0) > 500) return BadRequest("The Notification API base URL is too long.");
+        if ((dto.AllowedRecipientDomains?.Length ?? 0) > 500) return BadRequest("Allowed recipient domains is too long.");
+        if ((dto.ApiKey?.Length ?? 0) > 500) return BadRequest("The API key is too long.");
+
+        // The Notification API base URL's format (and the host-change-without-a-new-key rule) is
+        // validated in EmailSettingsService.SaveAsync: it must hold regardless of which provider this
+        // particular save is for, since ApiBaseUrl/ApiKeyEncrypted are shared state on the one row.
+        var (ok, error) = await emailSettings.SaveAsync(dto, currentUser.UserId);
+        if (!ok) return BadRequest(error);
+
+        logger.LogInformation("Email settings updated by user {UserId}.", currentUser.UserId);
         return Ok(await emailSettings.GetAsync());
     }
 
@@ -47,10 +66,10 @@ public class ConfigurationController(
         if (string.IsNullOrWhiteSpace(dto.ToEmail)) return BadRequest("A recipient email is required.");
         try
         {
-            await emailService.SendTestAsync(dto.ToEmail.Trim(), dto.ToEmail.Trim(),
-                "Recruitment Gorilla — SMTP test",
-                "<p>✅ This is a test email from Recruitment Gorilla. Your SMTP settings are working.</p>");
-            return Ok(new TestEmailResultDto(true, null));
+            var result = await emailService.SendTestAsync(dto.ToEmail.Trim(), dto.ToEmail.Trim(),
+                "Recruitment Gorilla email test",
+                "<p>This is a test email from Recruitment Gorilla. Your email settings are working.</p>");
+            return Ok(new TestEmailResultDto(true, null, result.MessageId));
         }
         catch (Exception ex)
         {

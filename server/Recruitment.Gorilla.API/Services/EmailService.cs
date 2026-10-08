@@ -28,6 +28,42 @@ public interface ISmtpTransport
     Task SendAsync(MimeKit.MimeMessage message, SmtpOptions options, CancellationToken ct = default);
 }
 
+/// <summary>The two email providers the admin can choose between at Configuration -> Email.</summary>
+public static class EmailProviders
+{
+    public const string Smtp = "Smtp";
+    public const string HttpApi = "HttpApi";
+}
+
+/// <summary>
+/// Connection settings for the HTTP notification API provider. Bound from the "EmailApi" config
+/// section as the fallback, and produced (decrypted) from the DB row by
+/// <see cref="EmailSettingsService"/> when configured in-app. <see cref="TimeoutSeconds"/> and
+/// <see cref="SupportsAttachments"/> are config-only (not admin-editable): the first is an operational
+/// tuning knob, the second depends on a capability the service either does or doesn't have.
+/// </summary>
+public class EmailApiOptions
+{
+    public string BaseUrl { get; set; } = string.Empty;
+    public string? ApiKey { get; set; }
+    public string FromName { get; set; } = "Recruitment Gorilla";
+    /// <summary>Comma-separated recipient domains the API is allowed to send to (e.g. "ajentica.ai").</summary>
+    public string AllowedRecipientDomains { get; set; } = string.Empty;
+    public int TimeoutSeconds { get; set; } = 15;
+    /// <summary>True once the service confirms it accepts an attachment; false drops the calendar
+    /// invite from the send rather than silently failing against an API that doesn't support it.</summary>
+    public bool SupportsAttachments { get; set; }
+}
+
+/// <summary>The effective settings <see cref="IEmailSettingsResolver"/> resolves at send time: which
+/// provider is active, plus that provider's own options (the other one is left at its defaults).</summary>
+public class EmailDeliveryOptions
+{
+    public string Provider { get; set; } = EmailProviders.Smtp;
+    public SmtpOptions Smtp { get; set; } = new();
+    public EmailApiOptions Api { get; set; } = new();
+}
+
 public class MailKitSmtpTransport : ISmtpTransport
 {
     public async Task SendAsync(MimeKit.MimeMessage message, SmtpOptions options, CancellationToken ct = default)
@@ -89,9 +125,10 @@ public class EmailService(
 
     /// <summary>
     /// Send that surfaces the outcome: for the admin "send test" flow, where the caller needs to know
-    /// whether delivery actually worked. Bypasses the outbox entirely: it's a one-off diagnostic send,
-    /// not a transactional notification that needs retrying.
+    /// whether delivery actually worked (and, for the HTTP API provider, the message id it returned).
+    /// Bypasses the outbox entirely: it's a one-off diagnostic send, not a transactional notification
+    /// that needs retrying.
     /// </summary>
-    public Task SendTestAsync(string toEmail, string toName, string subject, string htmlBody) =>
+    public Task<EmailSendResult> SendTestAsync(string toEmail, string toName, string subject, string htmlBody) =>
         dispatcher.SendAsync(new EmailSendRequest(toEmail, toName, subject, htmlBody, null, Guid.NewGuid().ToString()));
 }
