@@ -168,3 +168,7 @@
 - 2026-10-07T00:00Z [claude] RG-47 SIDE-EFFECT @b46d6da: assigned rayhan-ajentica; board status NOT moved (gh lacks read:project)
 - 2026-10-07T00:00Z [claude] RG-47 BRANCH @b46d6da: fix/RG-47/View-all-job-openings-link created off develop (user confirmed)
 - 2026-10-07T00:00Z [claude] RG-47 DONE @b46d6da: link -> /jobs, hidden for non-/jobs roles; 142 tests, tsc+lint clean; uncommitted
+- 2026-10-08T00:00Z [claude] RG-49 CREATED @51946a6: issue #49 bug; already assigned; repro: stale login 'from' after logout
+- 2026-10-08T00:00Z [claude] RG-49 SIDE-EFFECT @51946a6: already assigned to rayhan-ajentica; board status not moved (gh lacks read:project)
+- 2026-10-08T00:00Z [claude] RG-49 PHASE PLAN→CONSTRUCT @51946a6: plan approved by user; branch fix/RG-49/Logout-keeps-previous-page off origin/develop (user confirmed)
+- 2026-10-08T00:00Z [claude] RG-49 DONE @51946a6: AuthContext.loggedOut; guard omits from on logout; 165 tests, tsc+lint clean, browser 7/7; uncommitted
