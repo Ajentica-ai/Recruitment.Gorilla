@@ -168,3 +168,6 @@
 - 2026-10-07T00:00Z [claude] RG-47 SIDE-EFFECT @b46d6da: assigned rayhan-ajentica; board status NOT moved (gh lacks read:project)
 - 2026-10-07T00:00Z [claude] RG-47 BRANCH @b46d6da: fix/RG-47/View-all-job-openings-link created off develop (user confirmed)
 - 2026-10-07T00:00Z [claude] RG-47 DONE @b46d6da: link -> /jobs, hidden for non-/jobs roles; 142 tests, tsc+lint clean; uncommitted
+- 2026-10-08T00:00Z [claude] RG-48 CREATED @9909c42: issue #48 bug, Interviewer View all redirect; already assigned to rayhan-ajentica
+- 2026-10-08T00:00Z [claude] RG-48 DECISION @9909c42: verified in Edge via Playwright: Interviewer sees no View all; Admin/Recruiter land on /jobs (RG-47 branch)
+- 2026-10-08T00:00Z [claude] RG-48 DONE @9909c42: no code; covered by RG-47 merged in PR #117
