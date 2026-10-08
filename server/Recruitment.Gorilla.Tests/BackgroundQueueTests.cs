@@ -24,7 +24,8 @@ public class BackgroundQueueTests(MySqlDatabaseFixture fixture) : DbTestBase(fix
             Db,
             new EmailDispatcher(
                 new FixedEmailSettingsResolver(new SmtpOptions { Host = "smtp.test.local", FromAddress = "test@test.local" }),
-                new NoOpSmtpTransport()),
+                new NoOpSmtpTransport(),
+                new NoOpEmailApiTransport()),
             NullLogger<EmailService>.Instance,
             signal);
 
@@ -180,11 +181,14 @@ internal sealed class CapturingDispatcher : IEmailDispatcher
 {
     public List<EmailSendRequest> Sent { get; } = [];
 
-    public Task<string?> SendAsync(EmailSendRequest request, CancellationToken ct = default)
+    public Task<EmailSendResult> SendAsync(EmailSendRequest request, CancellationToken ct = default)
     {
         Sent.Add(request);
-        return Task.FromResult<string?>(null);
+        return Task.FromResult(new EmailSendResult(EmailProviders.Smtp, null));
     }
+
+    public Task<EmailApiStatusResult> CheckStatusAsync(string reference, CancellationToken ct = default) =>
+        Task.FromResult(new EmailApiStatusResult(EmailApiDeliveryStatus.Unsupported));
 }
 
 /// <summary>

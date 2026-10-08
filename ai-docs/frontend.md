@@ -331,12 +331,20 @@ mutations invalidate the `['config']` prefix so candidate forms refresh too.
   deleted or (having candidates) deactivated.
 - **Interview types** work exactly like Skills — used as multi-select tags on
   the interview schedule form and shown as coloured badges.
-- **Email / SMTP** (`EmailSettingsTab`, `isSuperAdmin` only) — host, port,
-  username, password (`type=password`, write-only; placeholder "leave blank to
-  keep" when `passwordSet`), from-address/name, STARTTLS + Enabled toggles, plus
-  a **Send test email** button defaulting to the current user's email. Backed by
-  `getEmailSettings`/`saveEmailSettings`/`sendTestEmail` (`/config/email*`); the
-  password is never returned by the API.
+- **Email** (`EmailSettingsTab`, `isSuperAdmin` only) — a `Segmented` provider
+  choice ("SMTP server" / "Notification API") at the top of the form.
+  **SMTP**: host, port, username, password (`type=password`, write-only;
+  placeholder "leave blank to keep" when `passwordSet`), from-address/name,
+  STARTTLS toggle, plus the existing quick-setup presets. **Notification
+  API**: base URL, API key (write-only; placeholder "leave blank to keep"
+  when `apiKeySet`), allowed recipient domains, and the shared From Display
+  Name (the address itself is fixed by the service). Both share an Enabled
+  toggle and a **Send test email** button defaulting to the current user's
+  email, showing the returned message id for a successful API send. A save
+  failure's server message (e.g. "base URL's host changed, enter the key
+  again") is read from the response body and shown inline. Backed by
+  `getEmailSettings`/`saveEmailSettings`/`sendTestEmail` (`/config/email*`);
+  neither secret is ever returned by the API.
 - **Email delivery** (`EmailDeliveryTab`, `isSuperAdmin` only): a read-only,
   paged log of every outbound email (queued time, recipient, subject, a status
   `Badge`, attempts, last error), filterable by status via a `Segmented`
@@ -454,7 +462,9 @@ their tabs are absent, not disabled, for everyone else.
   **× now opens a `ConfirmModal`** rather than firing the delete immediately:
   removing a skill can deactivate it across every candidate tagged with it, the
   chips sit a few pixels apart, and there is no undo.
-- **Email** — grouped into Server / Credentials / Sender fieldsets.
+- **Email** — a provider switch (SMTP / Notification API) over grouped
+  fieldsets, SMTP's Server / Credentials / Sender or the API's Connection /
+  Sender.
 - **Email delivery**: a status-filterable log table with a per-row Resend
   action, mirroring the shape of the Audit log page.
 - **Slack** — bot token field, delivery toggle, and a per-category checklist

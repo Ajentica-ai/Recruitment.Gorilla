@@ -89,7 +89,8 @@ public abstract class DbTestBase : IDisposable
         Db,
         new EmailDispatcher(
             new FixedEmailSettingsResolver(new SmtpOptions { Host = "smtp.test.local", FromAddress = "test@test.local" }),
-            transport ?? new NoOpSmtpTransport()),
+            transport ?? new NoOpSmtpTransport(),
+            new NoOpEmailApiTransport()),
         NullLogger<EmailService>.Instance);
 
     /// <summary>
@@ -122,18 +123,34 @@ internal sealed class NoOpSmtpTransport : ISmtpTransport
     public Task SendAsync(MimeMessage message, SmtpOptions options, CancellationToken ct = default) => Task.CompletedTask;
 }
 
-/// <summary>Returns fixed SMTP options: lets tests build an EmailDispatcher without a DB-backed resolver.</summary>
+/// <summary>Returns a fixed SMTP configuration (provider defaults to Smtp): lets tests build an
+/// EmailDispatcher without a DB-backed resolver.</summary>
 internal sealed class FixedEmailSettingsResolver(SmtpOptions options) : IEmailSettingsResolver
 {
-    public Task<SmtpOptions> ResolveAsync() => Task.FromResult(options);
+    public Task<EmailDeliveryOptions> ResolveAsync() =>
+        Task.FromResult(new EmailDeliveryOptions { Provider = EmailProviders.Smtp, Smtp = options });
+}
+
+/// <summary>Never actually called by any test using <see cref="FixedEmailSettingsResolver"/> (it always
+/// resolves the Smtp provider), but EmailDispatcher's constructor needs one regardless.</summary>
+internal sealed class NoOpEmailApiTransport : IEmailApiTransport
+{
+    public Task<string?> SendAsync(EmailApiSendRequest request, EmailApiOptions options, CancellationToken ct = default) =>
+        Task.FromResult<string?>(null);
+
+    public Task<EmailApiStatusResult> GetStatusAsync(string reference, EmailApiOptions options, CancellationToken ct = default) =>
+        Task.FromResult(new EmailApiStatusResult(EmailApiDeliveryStatus.Unsupported));
 }
 
 /// <summary>A dispatcher that "succeeds" without doing anything: the default for
 /// <see cref="DbTestBase.OutboxProcessor"/> when a test doesn't care how the send turns out.</summary>
 internal sealed class FixedEmailDispatcher : IEmailDispatcher
 {
-    public Task<string?> SendAsync(EmailSendRequest request, CancellationToken ct = default) =>
-        Task.FromResult<string?>(null);
+    public Task<EmailSendResult> SendAsync(EmailSendRequest request, CancellationToken ct = default) =>
+        Task.FromResult(new EmailSendResult(EmailProviders.Smtp, null));
+
+    public Task<EmailApiStatusResult> CheckStatusAsync(string reference, CancellationToken ct = default) =>
+        Task.FromResult(new EmailApiStatusResult(EmailApiDeliveryStatus.Unsupported));
 }
 
 /// <summary>

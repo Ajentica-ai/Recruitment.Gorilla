@@ -22,26 +22,64 @@ public class EmailOutboxTests(MySqlDatabaseFixture fixture) : DbTestBase(fixture
     private sealed class FixedOutcomeDispatcher(EmailOutcome outcome, string code = "test_failure") : IEmailDispatcher
     {
         public int Calls;
-        public Task<string?> SendAsync(EmailSendRequest request, CancellationToken ct = default)
+        public Task<EmailSendResult> SendAsync(EmailSendRequest request, CancellationToken ct = default)
         {
             Calls++;
             throw new EmailDeliveryException(code, outcome);
         }
+
+        public Task<EmailApiStatusResult> CheckStatusAsync(string reference, CancellationToken ct = default) =>
+            Task.FromResult(new EmailApiStatusResult(EmailApiDeliveryStatus.Unsupported));
     }
 
     private sealed class SucceedingDispatcher(string? messageId = "msg-1") : IEmailDispatcher
     {
         public int Calls;
-        public Task<string?> SendAsync(EmailSendRequest request, CancellationToken ct = default)
+        public Task<EmailSendResult> SendAsync(EmailSendRequest request, CancellationToken ct = default)
         {
             Calls++;
-            return Task.FromResult(messageId);
+            return Task.FromResult(new EmailSendResult(EmailProviders.Smtp, messageId));
         }
+
+        public Task<EmailApiStatusResult> CheckStatusAsync(string reference, CancellationToken ct = default) =>
+            Task.FromResult(new EmailApiStatusResult(EmailApiDeliveryStatus.Unsupported));
+    }
+
+    /// <summary>A dispatcher whose CheckStatusAsync answer is fixed, and whose SendAsync (the resend
+    /// path) succeeds and records how many times it was actually called.</summary>
+    private sealed class StatusCheckDispatcher(EmailApiDeliveryStatus status, string? messageId = null) : IEmailDispatcher
+    {
+        public int SendCalls;
+
+        public Task<EmailSendResult> SendAsync(EmailSendRequest request, CancellationToken ct = default)
+        {
+            SendCalls++;
+            return Task.FromResult(new EmailSendResult(EmailProviders.HttpApi, "resent-msg"));
+        }
+
+        public Task<EmailApiStatusResult> CheckStatusAsync(string reference, CancellationToken ct = default) =>
+            Task.FromResult(new EmailApiStatusResult(status, messageId));
+    }
+
+    /// <summary>Simulates CheckStatusAsync failing before it even reaches the provider (e.g. the stored
+    /// API key fails to decrypt): the part of the status-check path that genuinely can throw.</summary>
+    private sealed class ThrowingStatusCheckDispatcher : IEmailDispatcher
+    {
+        public int SendCalls;
+
+        public Task<EmailSendResult> SendAsync(EmailSendRequest request, CancellationToken ct = default)
+        {
+            SendCalls++;
+            return Task.FromResult(new EmailSendResult(EmailProviders.HttpApi, "resent-msg"));
+        }
+
+        public Task<EmailApiStatusResult> CheckStatusAsync(string reference, CancellationToken ct = default) =>
+            throw new InvalidOperationException("could not decrypt the stored API key");
     }
 
     private async Task<OutboundEmail> AddRowAsync(
         string status = OutboundEmailStatus.Pending, DateTime? nextAttemptAt = null,
-        DateTime? lockedUntil = null, int attempts = 0, DateTime? updatedAt = null)
+        DateTime? lockedUntil = null, int attempts = 0, DateTime? updatedAt = null, bool needsStatusCheck = false)
     {
         var row = new OutboundEmail
         {
@@ -53,6 +91,7 @@ public class EmailOutboxTests(MySqlDatabaseFixture fixture) : DbTestBase(fixture
             Attempts = attempts,
             NextAttemptAt = nextAttemptAt ?? DateTime.UtcNow.AddMinutes(-1),
             LockedUntil = lockedUntil,
+            NeedsStatusCheck = needsStatusCheck,
             UpdatedAt = updatedAt ?? DateTime.UtcNow,
         };
         Db.OutboundEmails.Add(row);
@@ -173,6 +212,92 @@ public class EmailOutboxTests(MySqlDatabaseFixture fixture) : DbTestBase(fixture
 
         Assert.Equal(0, dispatcher.Calls);
         Assert.Equal(OutboundEmailStatus.Pending, (await ReloadAsync(row.Id)).Status);
+    }
+
+    // ----- Status-check-before-resend (an Ambiguous outcome recovering via the HTTP API provider) -----
+
+    [Fact]
+    public async Task ProcessDueAsync_marks_Sent_when_the_status_check_confirms_delivery()
+    {
+        var row = await AddRowAsync(needsStatusCheck: true);
+        var dispatcher = new StatusCheckDispatcher(EmailApiDeliveryStatus.Sent, "already-sent-msg");
+
+        await OutboxProcessor(dispatcher).ProcessDueAsync();
+
+        var reloaded = await ReloadAsync(row.Id);
+        Assert.Equal(OutboundEmailStatus.Sent, reloaded.Status);
+        Assert.Equal("already-sent-msg", reloaded.ProviderMessageId);
+        Assert.False(reloaded.NeedsStatusCheck);
+        Assert.Equal(0, dispatcher.SendCalls); // confirmed already sent: never resent
+    }
+
+    [Fact]
+    public async Task ProcessDueAsync_resends_when_the_status_check_confirms_it_never_arrived()
+    {
+        var row = await AddRowAsync(needsStatusCheck: true);
+        var dispatcher = new StatusCheckDispatcher(EmailApiDeliveryStatus.NotFound);
+
+        await OutboxProcessor(dispatcher).ProcessDueAsync();
+
+        var reloaded = await ReloadAsync(row.Id);
+        Assert.Equal(OutboundEmailStatus.Sent, reloaded.Status); // the resend (via SendAsync) succeeded
+        Assert.Equal(1, dispatcher.SendCalls);
+    }
+
+    [Fact]
+    public async Task ProcessDueAsync_resends_when_the_status_check_confirms_it_failed()
+    {
+        var row = await AddRowAsync(needsStatusCheck: true);
+        var dispatcher = new StatusCheckDispatcher(EmailApiDeliveryStatus.Failed);
+
+        await OutboxProcessor(dispatcher).ProcessDueAsync();
+
+        Assert.Equal(1, dispatcher.SendCalls);
+    }
+
+    [Fact]
+    public async Task ProcessDueAsync_reschedules_another_check_while_the_status_is_still_pending()
+    {
+        var time = new FakeTimeProvider(new DateTimeOffset(2026, 1, 1, 12, 0, 0, TimeSpan.Zero));
+        var row = await AddRowAsync(needsStatusCheck: true, nextAttemptAt: time.Now.UtcDateTime.AddMinutes(-1));
+        var dispatcher = new StatusCheckDispatcher(EmailApiDeliveryStatus.Pending);
+
+        await OutboxProcessor(dispatcher, time).ProcessDueAsync();
+
+        var reloaded = await ReloadAsync(row.Id);
+        Assert.Equal(OutboundEmailStatus.Pending, reloaded.Status);
+        Assert.True(reloaded.NeedsStatusCheck);
+        Assert.Equal(0, dispatcher.SendCalls);
+        Assert.Equal(time.Now.UtcDateTime.AddMinutes(5), reloaded.NextAttemptAt);
+    }
+
+    [Fact]
+    public async Task ProcessDueAsync_marks_Unknown_when_the_provider_cannot_answer_the_status_check()
+    {
+        var row = await AddRowAsync(needsStatusCheck: true);
+        var dispatcher = new StatusCheckDispatcher(EmailApiDeliveryStatus.Unsupported);
+
+        await OutboxProcessor(dispatcher).ProcessDueAsync();
+
+        var reloaded = await ReloadAsync(row.Id);
+        Assert.Equal(OutboundEmailStatus.Unknown, reloaded.Status);
+        Assert.False(reloaded.NeedsStatusCheck);
+        Assert.Equal(0, dispatcher.SendCalls); // never guesses: left for an admin to resend by hand
+    }
+
+    [Fact]
+    public async Task ProcessDueAsync_marks_Unknown_rather_than_crash_when_the_status_check_itself_throws()
+    {
+        var row = await AddRowAsync(needsStatusCheck: true);
+        var dispatcher = new ThrowingStatusCheckDispatcher();
+
+        await OutboxProcessor(dispatcher).ProcessDueAsync();
+
+        var reloaded = await ReloadAsync(row.Id);
+        Assert.Equal(OutboundEmailStatus.Unknown, reloaded.Status);
+        Assert.False(reloaded.NeedsStatusCheck);
+        Assert.Null(reloaded.LockedUntil);
+        Assert.Equal(0, dispatcher.SendCalls);
     }
 
     [Fact]

@@ -27,6 +27,9 @@ public class EmailOutboxProcessor(
     /// <summary>How long a claimed row is considered "being sent" before another pass treats it as crashed.</summary>
     private static readonly TimeSpan LockDuration = TimeSpan.FromMinutes(2);
 
+    /// <summary>How long after an Ambiguous outcome before checking whether it actually sent.</summary>
+    private static readonly TimeSpan StatusCheckDelay = TimeSpan.FromMinutes(5);
+
     public async Task ProcessDueAsync(CancellationToken ct = default)
     {
         var now = time.GetUtcNow().UtcDateTime;
@@ -40,11 +43,18 @@ public class EmailOutboxProcessor(
             .Select(e => new { e.Id, e.Status })
             .ToListAsync(ct);
 
-        foreach (var row in due)
+        foreach (var item in due)
         {
             if (ct.IsCancellationRequested) break;
-            if (await ClaimAsync(row.Id, row.Status, now, ct))
-                await SendOneAsync(row.Id, ct);
+            if (!await ClaimAsync(item.Id, item.Status, now, ct)) continue;
+
+            var row = await db.OutboundEmails.FirstOrDefaultAsync(e => e.Id == item.Id, ct);
+            if (row is null) continue; // claimed then vanished (shouldn't happen outside tests)
+
+            if (row.NeedsStatusCheck)
+                await CheckStatusThenActAsync(row, ct);
+            else
+                await SendOneAsync(row, ct);
         }
     }
 
@@ -64,12 +74,76 @@ public class EmailOutboxProcessor(
         return updated == 1;
     }
 
-    private async Task SendOneAsync(long id, CancellationToken ct)
+    /// <summary>
+    /// A previous attempt came back Ambiguous (an HTTP provider's send can time out without saying
+    /// whether it reached the recipient); asks the provider directly rather than guessing before
+    /// deciding whether a resend is safe.
+    /// </summary>
+    private async Task CheckStatusThenActAsync(OutboundEmail row, CancellationToken ct)
     {
-        var row = await db.OutboundEmails.FirstOrDefaultAsync(e => e.Id == id, ct);
-        if (row is null) return; // claimed then vanished (shouldn't happen outside tests), nothing to do
+        EmailApiStatusResult result;
+        try
+        {
+            result = await dispatcher.CheckStatusAsync(row.Reference, ct);
+        }
+        catch (Exception ex)
+        {
+            // CheckStatusAsync itself resolves settings (a DB read plus a decrypt) before ever reaching
+            // IEmailApiTransport.GetStatusAsync, which is the part documented to never throw; a failure
+            // this early is treated the same as an unanswerable check, not let escape and interrupt the
+            // rest of this batch or leave the row claimed until its lock expires.
+            row.LockedUntil = null;
+            row.Status = OutboundEmailStatus.Unknown;
+            row.NeedsStatusCheck = false;
+            row.UpdatedAt = time.GetUtcNow().UtcDateTime;
+            logger.LogError(ex, "Unexpected error checking delivery status for email {Id} to {ToEmail}.", row.Id, row.ToEmail);
+            await db.SaveChangesAsync(ct);
+            return;
+        }
 
-        row.Provider ??= SmtpProvider;
+        var now = time.GetUtcNow().UtcDateTime;
+        row.LockedUntil = null;
+
+        switch (result.Status)
+        {
+            case EmailApiDeliveryStatus.Sent:
+                row.Status = OutboundEmailStatus.Sent;
+                row.ProviderMessageId = result.MessageId ?? row.ProviderMessageId;
+                row.SentAt = now;
+                row.NeedsStatusCheck = false;
+                row.LastError = null;
+                row.UpdatedAt = now;
+                await db.SaveChangesAsync(ct);
+                return;
+
+            case EmailApiDeliveryStatus.Failed:
+            case EmailApiDeliveryStatus.NotFound:
+                // Confirmed not delivered: safe to resend with the same Reference (an idempotency-aware
+                // provider will recognize it even if the original attempt turns out to have landed after all).
+                row.NeedsStatusCheck = false;
+                await SendOneAsync(row, ct);
+                return;
+
+            case EmailApiDeliveryStatus.Pending:
+                row.Status = OutboundEmailStatus.Pending;
+                row.NextAttemptAt = now + StatusCheckDelay;
+                break;
+
+            case EmailApiDeliveryStatus.Unsupported:
+            default:
+                // The provider can't tell us either way: don't risk a duplicate by guessing, let an
+                // admin resend by hand once they've confirmed it one way or the other.
+                row.Status = OutboundEmailStatus.Unknown;
+                row.NeedsStatusCheck = false;
+                break;
+        }
+
+        row.UpdatedAt = now;
+        await db.SaveChangesAsync(ct);
+    }
+
+    private async Task SendOneAsync(OutboundEmail row, CancellationToken ct)
+    {
         row.Attempts++;
 
         try
@@ -77,11 +151,12 @@ public class EmailOutboxProcessor(
             var calendar = row.CalendarContent is null ? null
                 : new CalendarAttachment(row.CalendarFileName!, row.CalendarContent, row.CalendarMethod!);
 
-            var messageId = await dispatcher.SendAsync(
+            var result = await dispatcher.SendAsync(
                 new EmailSendRequest(row.ToEmail, row.ToName, row.Subject, row.HtmlBody, calendar, row.Reference), ct);
 
             row.Status = OutboundEmailStatus.Sent;
-            row.ProviderMessageId = messageId;
+            row.Provider = result.Provider;
+            row.ProviderMessageId = result.MessageId;
             row.SentAt = time.GetUtcNow().UtcDateTime;
             row.LockedUntil = null;
             row.NeedsStatusCheck = false;
@@ -89,12 +164,15 @@ public class EmailOutboxProcessor(
         }
         catch (EmailDeliveryException ex)
         {
+            row.Provider = ex.Provider ?? row.Provider ?? SmtpProvider;
             Apply(row, ex.Outcome, ex.Code, ex.RetryAfter);
             logger.LogWarning(ex, "Email {Id} to {ToEmail} failed ({Outcome}).", row.Id, row.ToEmail, ex.Outcome);
         }
         catch (Exception ex)
         {
-            // An unclassified failure is treated as retryable rather than silently dropped.
+            // An unclassified failure never got far enough to say which provider it was, so this
+            // only ever overwrites a row that didn't already have one recorded.
+            row.Provider ??= SmtpProvider;
             Apply(row, EmailOutcome.Retry, "unexpected_error", null);
             logger.LogError(ex, "Unexpected error sending email {Id} to {ToEmail}.", row.Id, row.ToEmail);
         }
@@ -116,11 +194,9 @@ public class EmailOutboxProcessor(
                 break;
 
             case EmailOutcome.Ambiguous:
-                // Not reached by the SMTP dispatcher today (a plain SMTP send either goes through or it
-                // doesn't): kept ready for a provider whose send can time out without telling you which.
                 row.Status = OutboundEmailStatus.Pending;
                 row.NeedsStatusCheck = true;
-                row.NextAttemptAt = time.GetUtcNow().UtcDateTime + TimeSpan.FromMinutes(5);
+                row.NextAttemptAt = time.GetUtcNow().UtcDateTime + StatusCheckDelay;
                 break;
 
             case EmailOutcome.Retry:

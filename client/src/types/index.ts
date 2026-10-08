@@ -691,19 +691,26 @@ export interface NotificationList {
 }
 
 // ----- Email / SMTP settings (SuperAdmin) -----
+export type EmailProvider = 'Smtp' | 'HttpApi';
+
 export interface EmailSettings {
+  provider: EmailProvider;
   host: string;
   port: number;
   user: string | null;
   fromAddress: string;
   fromName: string;
   useStartTls: boolean;
+  apiBaseUrl: string;
+  allowedRecipientDomains: string;
   enabled: boolean;
   passwordSet: boolean;
+  apiKeySet: boolean;
   updatedAt: string | null;
 }
 
 export interface UpsertEmailSettings {
+  provider: EmailProvider;
   host: string;
   port: number;
   user: string | null;
@@ -711,7 +718,16 @@ export interface UpsertEmailSettings {
   fromAddress: string;
   fromName: string;
   useStartTls: boolean;
+  apiBaseUrl: string | null;
+  apiKey: string | null; // write-only; blank keeps the stored key
+  allowedRecipientDomains: string | null;
   enabled: boolean;
+}
+
+export interface TestEmailResult {
+  ok: boolean;
+  error: string | null;
+  messageId?: string | null;
 }
 
 // ----- Email delivery log (SuperAdmin) -----

@@ -80,17 +80,23 @@ public class EmailServiceTests(MySqlDatabaseFixture fixture) : DbTestBase(fixtur
 
     private sealed class RecordingDispatcher(Action onSend) : IEmailDispatcher
     {
-        public Task<string?> SendAsync(EmailSendRequest request, CancellationToken ct = default)
+        public Task<EmailSendResult> SendAsync(EmailSendRequest request, CancellationToken ct = default)
         {
             onSend();
-            return Task.FromResult<string?>(null);
+            return Task.FromResult(new EmailSendResult(EmailProviders.Smtp, null));
         }
+
+        public Task<EmailApiStatusResult> CheckStatusAsync(string reference, CancellationToken ct = default) =>
+            Task.FromResult(new EmailApiStatusResult(EmailApiDeliveryStatus.Unsupported));
     }
 
     private sealed class ThrowingDispatcher : IEmailDispatcher
     {
-        public Task<string?> SendAsync(EmailSendRequest request, CancellationToken ct = default) =>
+        public Task<EmailSendResult> SendAsync(EmailSendRequest request, CancellationToken ct = default) =>
             throw new EmailDeliveryException("test_failure", EmailOutcome.Permanent);
+
+        public Task<EmailApiStatusResult> CheckStatusAsync(string reference, CancellationToken ct = default) =>
+            Task.FromResult(new EmailApiStatusResult(EmailApiDeliveryStatus.Unsupported));
     }
 }
 
@@ -111,7 +117,7 @@ public class EmailServiceFailureTests(MySqlDatabaseFixture fixture)
 
         var service = new EmailService(
             db,
-            new EmailDispatcher(new NeverCalledResolver(), new NeverCalledTransport()),
+            new EmailDispatcher(new NeverCalledResolver(), new NeverCalledTransport(), new NoOpEmailApiTransport()),
             NullLogger<EmailService>.Instance);
 
         var ex = await Record.ExceptionAsync(() => service.SendAsync("a@b.com", "A", "Subject", "<p>x</p>"));
@@ -121,7 +127,7 @@ public class EmailServiceFailureTests(MySqlDatabaseFixture fixture)
 
     private sealed class NeverCalledResolver : IEmailSettingsResolver
     {
-        public Task<SmtpOptions> ResolveAsync() => throw new InvalidOperationException("should never be reached");
+        public Task<EmailDeliveryOptions> ResolveAsync() => throw new InvalidOperationException("should never be reached");
     }
 
     private sealed class NeverCalledTransport : ISmtpTransport

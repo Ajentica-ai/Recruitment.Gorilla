@@ -92,8 +92,11 @@ public class NotificationServiceTests(MySqlDatabaseFixture fixture) : DbTestBase
 
     private sealed class ThrowingDispatcher(EmailOutcome outcome) : IEmailDispatcher
     {
-        public Task<string?> SendAsync(EmailSendRequest request, CancellationToken ct = default) =>
+        public Task<EmailSendResult> SendAsync(EmailSendRequest request, CancellationToken ct = default) =>
             throw new EmailDeliveryException("test_failure", outcome);
+
+        public Task<EmailApiStatusResult> CheckStatusAsync(string reference, CancellationToken ct = default) =>
+            Task.FromResult(new EmailApiStatusResult(EmailApiDeliveryStatus.Unsupported));
     }
 
     [Fact]
