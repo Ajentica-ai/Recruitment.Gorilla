@@ -12,7 +12,7 @@ React 19 + TypeScript + Vite. Root: `client/`.
 | `src/services/api.ts` | Typed Axios layer + auth interceptors (the only HTTP caller). |
 | `src/types/index.ts` | Shared types mirroring API DTOs. |
 | `src/pages/` | `DashboardPage`, `LoginPage`, `UploadPage`, `CandidatesPage`, `CandidateDetailPage`, `CandidateEvaluationReportPage`, `InterviewPage`, `ConfigurationPage`, `UsersPage`, `AuditLogPage`, `ChangePasswordPage`. |
-| `src/pages/configuration/` | The Configuration tabs: `JobOpeningsTab`, `OptionChipsTab`, `EmailSettingsTab`. |
+| `src/pages/configuration/` | The Configuration tabs: `JobOpeningsTab`, `OptionChipsTab`, `EmailSettingsTab`, `SlackSettingsTab`. |
 | `src/components/shell/` | App chrome: `AppShell` (layout + sidebar state, skip link, `<main>`), `SidebarNav`, `TopbarTitle`, **`UserMenu`** (topbar avatar → account menu). |
 | `src/components/ui/` | Shared primitives: **`Page`**, **`SectionCard`**, `PageHeader`, `Pagination`, `EmptyState`, `ConfirmModal`, **`Loading`** (`LoadingPanel`, `Skeleton*`), `Tabs` + `useTabs`. |
 | `src/components/` | `BulkUploader`, `JsonImporter`, `drafts/DraftReviewWorkspace`, `CandidateForm`, `StatusTimeline`, `SearchableSelect`, `StatusBadge`, **`ThemeMenu`**, `ToastStack`, `RequireRole`, `NotificationBell`, `ReadOnlyCandidateProfile`, `EvaluationForm`. |
@@ -337,6 +337,14 @@ mutations invalidate the `['config']` prefix so candidate forms refresh too.
   a **Send test email** button defaulting to the current user's email. Backed by
   `getEmailSettings`/`saveEmailSettings`/`sendTestEmail` (`/config/email*`); the
   password is never returned by the API.
+- **Slack** (`SlackSettingsTab`, `isSuperAdmin` only) — a bot token
+  (`PasswordInput`, write-only; placeholder "leave blank to keep" when
+  `botTokenSet`), an Enabled toggle, a per-category checklist (one `CheckboxField`
+  per `NotificationCategory`: Interview assigned, Evaluation submitted, Assigned
+  to job opening), a **Send test message** button defaulting to the current
+  user's email, and a short setup note (scopes, how recipients are matched by
+  email). Backed by `getSlackSettings`/`saveSlackSettings`/`sendTestSlack`
+  (`/config/slack*`); the token is never returned by the API.
 
 ### Status colors (`utils/statusColors.ts` + `components/StatusBadge.tsx`)
 `getStatusClass(status)` maps a status to a **tone** modifier class (`status--reject|success|interview|assessment|muted|uploaded|intake`). The colors are CSS design tokens in `index.css` (`--status-color` solid for the dot, `--status-tint` translucent for the badge background), with a `[data-bs-theme="dark"]` override block so a future dark theme just flips `data-bs-theme` on `<html>` — no component changes. Use the shared `StatusBadge` / `StatusDot` components (do not reintroduce per-call Bootstrap `bg-*` variants); applied to the candidate list, detail header, and `StatusTimeline`.
@@ -417,9 +425,9 @@ Each CV file has **Preview** + **Download**. Preview calls `previewCvFile` (auth
   before putting white text on a coloured fill.
 
 ### Configuration page (`pages/ConfigurationPage.tsx` + `pages/configuration/`)
-Four tabs rather than four stacked cards, with the active tab in the query
-string (`?tab=skills`) via `useTabs`. Email is Super Admin only and its tab is
-absent, not disabled, for everyone else.
+Several tabs rather than stacked cards, with the active tab in the query
+string (`?tab=skills`) via `useTabs`. Email and Slack are Super Admin only and
+their tabs are absent, not disabled, for everyone else.
 - **Job openings** — full-width rows (`.job-row`), not a table: identity on the
   left, then status + a days-left figure, then the closing date with a progress
   bar through the posting window, then delete and a chevron. The row itself is
@@ -439,6 +447,8 @@ absent, not disabled, for everyone else.
   removing a skill can deactivate it across every candidate tagged with it, the
   chips sit a few pixels apart, and there is no undo.
 - **Email** — grouped into Server / Credentials / Sender fieldsets.
+- **Slack** — bot token field, delivery toggle, and a per-category checklist
+  (which notification types also go to Slack), plus the test-message sidebar.
 - **`sortOrder` is not in the UI.** It is still sent — auto-assigned `last + 1`
   on create, preserved on edit. Don't surface it again; if reordering is needed
   it should be drag-and-drop.

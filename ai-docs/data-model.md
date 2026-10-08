@@ -254,7 +254,13 @@ Internal sign-off workflow for offers before candidate extension.
 | CreatedAt | datetime | UTC |
 
 ### Notification (`Notifications`)
-Per-user in-app notification (e.g. interview assignment, offer approval request). `Id`, `UserId` (FK → User, cascade), `Title` varchar(200), `Message` varchar(500), `LinkUrl` varchar(300)? (client route), `IsRead` bool (index `(UserId, IsRead)`), `CreatedAt`. In-app and transactional email dispatched via `NotificationService`.
+Per-user in-app notification (e.g. interview assignment, offer approval request). `Id`, `UserId` (FK → User, cascade), `Title` varchar(200), `Message` varchar(500), `LinkUrl` varchar(300)? (client route), `IsRead` bool (index `(UserId, IsRead)`), `CreatedAt`. In-app, transactional email, and Slack DM all dispatched via `NotificationService.NotifyAsync` (see [backend.md](backend.md)).
+
+### SlackSetting (`SlackSettings`)
+Single-row (`Id = 1`) Slack bot configuration, managed at Configuration → Slack (SuperAdmin). `BotTokenEncrypted` varchar(1000)? (base64(nonce|tag|ciphertext) via `SecretProtector`, never plaintext), `Enabled` bool, `UpdatedAt`, `UpdatedByUserId` int?. No row, or `Enabled=false`, means "not configured here" — falls back to the `Slack:BotToken` config/user-secret.
+
+### NotificationChannelSetting (`NotificationChannelSettings`)
+Per-category routing for notification channels beyond in-app/email. `Category` varchar(64) (PK — one of `NotificationCategories`: `InterviewAssigned`, `EvaluationSubmitted`, `RecruiterAssigned`), `SlackEnabled` bool. A missing row means every extra channel is off for that category. Named generically so a future channel (e.g. Teams) can be added as another column rather than a parallel table.
 
 ## Key design rules
 - **Status choices come from `StatusOptions`** and valid next steps come from `StatusTransitions`. Keep `Candidate.CurrentStatus` and `StatusHistory.Status` as strings for readable history and low-risk future edits. Seed includes `Uploaded → Call for Interview`.

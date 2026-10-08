@@ -33,9 +33,9 @@ rough **effort**. This is advisory — turn any item into a `specs/` spec before
 ## Highest-impact product gaps
 
 ### 1. Email / real communication 🔴 (M)
-- **Now:** notifications are **in-app only** (`Services/NotificationService.cs`, the navbar bell). No email to candidates or interviewers.
-- **Why:** recruiting *is* communication — invites, status updates, rejections, interviewer assignments. Biggest user-facing gap.
-- **Start with:** transactional email (interview-assigned → interviewer; status-change → candidate) behind a template system; make in-app `Notification` and email share one dispatch path.
+- **Now:** in-app (navbar bell), transactional email, and Slack DMs all share one dispatch path (`Services/NotificationService.cs`) — interview-assigned, evaluation-submitted, and recruiter-assigned-to-job-opening reach the **internal team** (interviewers, recruiters, admins). Still **no outbound communication to candidates** (invites, status updates, rejections).
+- **Why:** recruiting *is* communication — invites, status updates, rejections. Biggest remaining user-facing gap.
+- **Start with:** candidate-facing transactional email (status-change → candidate) behind a template system, reusing the existing dispatch path.
 
 ### 2. Real interview scheduling 🔴 (M–L)
 - **Now:** "Interview Scheduled" is a raw `datetime-local` + assigned users (`CandidateService.AddStatusAsync` → `Interview`). Interviewer notes + a re-schedule loop exist.

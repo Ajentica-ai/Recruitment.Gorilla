@@ -32,6 +32,11 @@ dotnet user-secrets set "Encryption:Key" "<random base64 key>"
 dotnet user-secrets set "Smtp:User" "notifications@yourdomain.com"
 dotnet user-secrets set "Smtp:Password" "<16-char app password>"
 dotnet user-secrets set "Smtp:FromAddress" "notifications@yourdomain.com"
+
+# Outbound Slack — OPTIONAL fallback, same pattern as Smtp above. Slack is normally configured
+# in-app (Configuration → Slack, SuperAdmin) and stored encrypted in the DB. This is only used
+# when no DB row exists (or it's disabled). If neither is set, SlackService skips sending.
+dotnet user-secrets set "Slack:BotToken" "<xoxb-... bot token>"
 ```
 **SMTP is configured in-app** by a SuperAdmin at **Configuration → Email / SMTP** (host, port,
 username, password, from-address, STARTTLS, enabled) with a **Send test email** button; the password
@@ -40,7 +45,16 @@ client. The `Smtp:*` config/`appsettings` values (`Smtp:Host`/`Smtp:Port`/`Smtp:
 `smtp.gmail.com`/`587`/`Recruitment Gorilla`) are a **fallback** only. Gmail/Workspace app passwords
 require 2-Step Verification; `App:ClientBaseUrl` (default `http://localhost:5173`) builds absolute
 links in emails — set it to your real frontend origin in other environments. In Docker, provide
-`Encryption__Key` (and any fallback `Smtp__*`) as environment variables.
+`Encryption__Key` (and any fallback `Smtp__*`/`Slack__BotToken`) as environment variables.
+
+**Slack is configured in-app** the same way, at **Configuration → Slack** (SuperAdmin): a bot
+token, an Enabled toggle, and a per-category checklist of which notifications also go to Slack
+(the rest stay in-app/email only) — plus a **Send test message** button. Create the bot at
+api.slack.com/apps with the scopes `chat:write`, `users:read`, `users:read.email`, install it to
+your workspace, and paste the Bot User OAuth Token (`xoxb-...`). Recipients are matched by their
+Recruitment Gorilla **email address** via Slack's `users.lookupByEmail`, so a user only gets a DM
+if that same email exists in the Slack workspace — there is no separate Slack user mapping to
+maintain. See [specs/slack-notifications.md](specs/slack-notifications.md).
 
 ### Generate a JWT key + password hash (PowerShell)
 ```powershell

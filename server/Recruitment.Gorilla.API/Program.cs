@@ -4,6 +4,7 @@ using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Recruitment.Gorilla.API.Auth;
 using Recruitment.Gorilla.API.Authorization;
@@ -66,6 +67,18 @@ builder.Services.AddSingleton<SecretProtector>();
 builder.Services.AddScoped<IEmailSettingsResolver, EmailSettingsResolver>();
 builder.Services.AddScoped<EmailSettingsService>();
 builder.Services.AddScoped<EmailService>();
+builder.Services.Configure<SlackOptions>(builder.Configuration.GetSection("Slack"));
+builder.Services.AddHttpClient<ISlackTransport, HttpSlackTransport>((sp, http) =>
+{
+    var options = sp.GetRequiredService<IOptions<SlackOptions>>().Value;
+    http.BaseAddress = new Uri(options.ApiBaseUrl);
+    http.Timeout = TimeSpan.FromSeconds(options.TimeoutSeconds);
+});
+builder.Services.AddScoped<ISlackSettingsResolver, SlackSettingsResolver>();
+builder.Services.AddScoped<SlackSettingsService>();
+builder.Services.AddScoped<SlackService>();
+builder.Services.AddSingleton<ISlackQueue, SlackQueue>();
+builder.Services.AddHostedService<SlackQueueWorker>();
 builder.Services.AddSingleton<IAuthorizationHandler, PasswordChangedHandler>();
 
 var jwtKey = builder.Configuration["Jwt:Key"]

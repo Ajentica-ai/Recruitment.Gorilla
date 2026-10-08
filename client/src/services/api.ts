@@ -11,6 +11,8 @@ import type {
   ChangePasswordPayload,
   EmailSettings,
   UpsertEmailSettings,
+  SlackSettings,
+  UpsertSlackSettings,
   CreateCandidatePayload,
   CreateUserPayload,
   DashboardData,
@@ -499,6 +501,22 @@ export const saveEmailSettings = async (payload: UpsertEmailSettings): Promise<E
 
 export const sendTestEmail = async (toEmail: string): Promise<{ ok: boolean; error: string | null }> => {
   const { data } = await api.post<{ ok: boolean; error: string | null }>('/config/email/test', { toEmail });
+  return data;
+};
+
+// ----- Configuration: Slack settings (SuperAdmin) -----
+export const getSlackSettings = async (): Promise<SlackSettings> => {
+  const { data } = await api.get<SlackSettings>('/config/slack');
+  return data;
+};
+
+export const saveSlackSettings = async (payload: UpsertSlackSettings): Promise<SlackSettings> => {
+  const { data } = await api.put<SlackSettings>('/config/slack', payload);
+  return data;
+};
+
+export const sendTestSlack = async (toEmail: string): Promise<{ ok: boolean; error: string | null }> => {
+  const { data } = await api.post<{ ok: boolean; error: string | null }>('/config/slack/test', { toEmail });
   return data;
 };
 

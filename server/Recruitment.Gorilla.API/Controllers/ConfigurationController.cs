@@ -1,3 +1,4 @@
+using System.Net.Mail;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Recruitment.Gorilla.API.Auth;
@@ -13,6 +14,8 @@ public class ConfigurationController(
     ConfigurationService config,
     EmailSettingsService emailSettings,
     EmailService emailService,
+    SlackSettingsService slackSettings,
+    SlackService slackService,
     CurrentUser currentUser,
     AuditService audit,
     ILogger<ConfigurationController> logger) : ControllerBase
@@ -55,6 +58,42 @@ public class ConfigurationController(
         }
     }
 
+    // ----- Slack settings (SuperAdmin only — sensitive credentials) -----
+
+    [Authorize(Roles = Roles.SuperAdmin)]
+    [HttpGet("slack")]
+    public async Task<IActionResult> GetSlackSettings() => Ok(await slackSettings.GetAsync());
+
+    [Authorize(Roles = Roles.SuperAdmin)]
+    [HttpPut("slack")]
+    public async Task<IActionResult> SaveSlackSettings([FromBody] UpsertSlackSettingsDto dto)
+    {
+        var (ok, error) = await slackSettings.SaveAsync(dto, currentUser.UserId);
+        if (!ok) return BadRequest(error);
+
+        logger.LogInformation("Slack settings updated by user {UserId}.", currentUser.UserId);
+        return Ok(await slackSettings.GetAsync());
+    }
+
+    [Authorize(Roles = Roles.SuperAdmin)]
+    [HttpPost("slack/test")]
+    public async Task<IActionResult> SendTestSlackMessage([FromBody] TestSlackRequestDto dto)
+    {
+        var toEmail = dto.ToEmail?.Trim();
+        if (string.IsNullOrWhiteSpace(toEmail)) return BadRequest("A recipient email is required.");
+        if (!MailAddress.TryCreate(toEmail, out _)) return BadRequest("That doesn't look like a valid email address.");
+        try
+        {
+            await slackService.SendTestAsync(toEmail);
+            return Ok(new TestSlackResultDto(true, null));
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Test Slack DM to {ToEmail} failed.", toEmail);
+            return Ok(new TestSlackResultDto(false, ex.Message));
+        }
+    }
+
     // ----- Role Applied -----
 
     /// <summary>
@@ -72,7 +111,7 @@ public class ConfigurationController(
     [HttpPost("roles")]
     public async Task<IActionResult> CreateRole([FromBody] UpsertRoleAppliedOptionDto dto)
     {
-        var (created, conflict, error) = await config.CreateRoleAsync(dto);
+        var (created, conflict, error) = await config.CreateRoleAsync(dto, currentUser.UserId);
         if (error is not null) return BadRequest(error);
         if (conflict) return Conflict("A role with that name already exists.");
 
@@ -84,7 +123,7 @@ public class ConfigurationController(
     [HttpPut("roles/{id:int}")]
     public async Task<IActionResult> UpdateRole(int id, [FromBody] UpsertRoleAppliedOptionDto dto)
     {
-        var (updated, notFound, conflict, error) = await config.UpdateRoleAsync(id, dto);
+        var (updated, notFound, conflict, error) = await config.UpdateRoleAsync(id, dto, currentUser.UserId);
         if (error is not null) return BadRequest(error);
         if (notFound) return NotFound();
         if (conflict) return Conflict("A role with that name already exists.");

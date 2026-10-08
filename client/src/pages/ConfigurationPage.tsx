@@ -19,6 +19,7 @@ import { useTabs } from '../components/common/useTabs';
 import JobOpeningsTab from './configuration/JobOpeningsTab';
 import OptionChipsTab, { type OptionApi } from './configuration/OptionChipsTab';
 import EmailSettingsTab from './configuration/EmailSettingsTab';
+import SlackSettingsTab from './configuration/SlackSettingsTab';
 import EvaluationRubricsTab from './configuration/EvaluationRubricsTab';
 
 const skillsApi: OptionApi = {
@@ -47,8 +48,8 @@ const sourcesApi: OptionApi = {
  * stacked cards on one long scroll. The active tab lives in the query string,
  * so a refresh keeps your place and a section can be linked to.
  *
- * Email is Super Admin only; the tab is absent for everyone else rather than
- * present-and-failing, matching how the sidebar handles role-gated routes.
+ * Email and Slack are Super Admin only; the tabs are absent for everyone else
+ * rather than present-and-failing, matching how the sidebar handles role-gated routes.
  */
 export default function ConfigurationPage() {
   const { isSuperAdmin } = useAuth();
@@ -59,6 +60,7 @@ export default function ConfigurationPage() {
     { id: 'sources', label: 'Candidate sources' },
     { id: 'interview-types', label: 'Interview types' },
     ...(isSuperAdmin ? [{ id: 'email', label: 'Email' }] : []),
+    ...(isSuperAdmin ? [{ id: 'slack', label: 'Slack' }] : []),
     { id: 'jobs', label: 'Job openings' },
   ];
 
@@ -119,6 +121,12 @@ export default function ConfigurationPage() {
       {active === 'email' && isSuperAdmin && (
         <TabPanel id="email">
           <EmailSettingsTab />
+        </TabPanel>
+      )}
+
+      {active === 'slack' && isSuperAdmin && (
+        <TabPanel id="slack">
+          <SlackSettingsTab />
         </TabPanel>
       )}
     </Page>

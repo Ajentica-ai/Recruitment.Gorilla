@@ -714,6 +714,27 @@ export interface UpsertEmailSettings {
   enabled: boolean;
 }
 
+// ----- Slack settings (SuperAdmin) -----
+export interface SlackCategorySetting {
+  key: string;
+  label: string;
+  slackEnabled: boolean;
+}
+
+export interface SlackSettings {
+  enabled: boolean;
+  botTokenSet: boolean;
+  configFallback: boolean;
+  updatedAt: string | null;
+  categories: SlackCategorySetting[];
+}
+
+export interface UpsertSlackSettings {
+  botToken: string | null; // write-only; blank keeps the stored token
+  enabled: boolean;
+  categories: { key: string; slackEnabled: boolean }[];
+}
+
 // ----- Offers & Compensation -----
 export interface OfferApproval {
   id: number;

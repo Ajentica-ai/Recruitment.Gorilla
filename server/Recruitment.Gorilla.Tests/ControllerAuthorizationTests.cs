@@ -119,6 +119,27 @@ public class ControllerAuthorizationTests(ApiFixture fx)
         Assert.Equal(HttpStatusCode.Unauthorized, anon.StatusCode);
     }
 
+    // ---- Slack settings: SuperAdmin only ----
+
+    [Theory]
+    [InlineData("SuperAdmin", HttpStatusCode.OK)]
+    [InlineData("Admin", HttpStatusCode.Forbidden)]
+    [InlineData("Recruiter", HttpStatusCode.Forbidden)]
+    [InlineData("Interviewer", HttpStatusCode.Forbidden)]
+    public Task Get_slack_settings(string role, HttpStatusCode expected) =>
+        AssertStatus(role, HttpMethod.Get, "/api/config/slack", expected);
+
+    [Fact]
+    public async Task Slack_settings_write_is_super_admin_only()
+    {
+        await AssertStatus("Admin", HttpMethod.Put, "/api/config/slack", HttpStatusCode.Forbidden);
+        await AssertStatus("Recruiter", HttpMethod.Put, "/api/config/slack", HttpStatusCode.Forbidden);
+        await AssertStatus("Admin", HttpMethod.Post, "/api/config/slack/test", HttpStatusCode.Forbidden);
+        await AssertStatus("Interviewer", HttpMethod.Post, "/api/config/slack/test", HttpStatusCode.Forbidden);
+        var anon = await fx.SendAsync(HttpMethod.Get, "/api/config/slack", token: null);
+        Assert.Equal(HttpStatusCode.Unauthorized, anon.StatusCode);
+    }
+
     // ---- JSON candidate import: SuperAdmin only ----
 
     [Theory]

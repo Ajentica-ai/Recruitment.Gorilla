@@ -58,10 +58,16 @@ services:
       Jwt__Issuer: RecruitmentGorilla
       Jwt__Audience: RecruitmentGorilla
 
-      # Encrypts the SMTP password at rest. It MUST stay the same across
-      # restarts and rebuilds: change it and every stored secret becomes
-      # undecryptable, which surfaces much later as email quietly failing.
+      # Encrypts the SMTP password and Slack bot token at rest. It MUST stay
+      # the same across restarts and rebuilds: change it and every stored
+      # secret becomes undecryptable, which surfaces much later as email or
+      # Slack quietly failing.
       Encryption__Key: ${ENCRYPTION_KEY:-dev-only-encryption-key-change-me-0123456789}
+
+      # Optional fallback bot token, used only if Slack isn't configured from
+      # the admin control panel (Configuration → Slack). Leave blank to manage
+      # it entirely in-app instead.
+      Slack__BotToken: ${SLACK_BOT_TOKEN:-}
 
       # An array index, so AllowedOrigins:[0]. Same-origin through nginx means
       # CORS is not exercised in this setup, but a wrong value here is the kind

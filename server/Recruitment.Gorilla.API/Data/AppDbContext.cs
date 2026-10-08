@@ -27,6 +27,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<Notification> Notifications => Set<Notification>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
     public DbSet<EmailSetting> EmailSettings => Set<EmailSetting>();
+    public DbSet<SlackSetting> SlackSettings => Set<SlackSetting>();
+    public DbSet<NotificationChannelSetting> NotificationChannelSettings => Set<NotificationChannelSetting>();
     public DbSet<Offer> Offers => Set<Offer>();
     public DbSet<OfferApproval> OfferApprovals => Set<OfferApproval>();
     public DbSet<EvaluationRubric> EvaluationRubrics => Set<EvaluationRubric>();
@@ -149,6 +151,18 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.Property(s => s.PasswordEncrypted).HasMaxLength(1000);
             e.Property(s => s.FromAddress).HasMaxLength(200).IsRequired();
             e.Property(s => s.FromName).HasMaxLength(200).IsRequired();
+        });
+
+        modelBuilder.Entity<SlackSetting>(e =>
+        {
+            e.HasKey(s => s.Id);
+            e.Property(s => s.BotTokenEncrypted).HasMaxLength(1000);
+        });
+
+        modelBuilder.Entity<NotificationChannelSetting>(e =>
+        {
+            e.HasKey(s => s.Category);
+            e.Property(s => s.Category).HasMaxLength(64);
         });
 
         modelBuilder.Entity<RefreshToken>(e =>

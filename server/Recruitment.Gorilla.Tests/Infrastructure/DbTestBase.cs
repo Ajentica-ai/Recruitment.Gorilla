@@ -34,9 +34,9 @@ public abstract class DbTestBase : IDisposable
 
     // Service factories bound to the transactional context.
     protected CandidateService Candidates() => new(Db, new TestWebHostEnvironment(), Notifications(), TestConfig());
-    protected ConfigurationService Config() => new(Db);
+    protected ConfigurationService Config() => new(Db, Notifications());
     protected InterviewService Interviews() => new(Db, Candidates(), Notifications());
-    protected NotificationService Notifications() => new(Db, TestEmail());
+    protected NotificationService Notifications() => new(Db, TestEmail(), TestSlack());
     protected AuditService Audit() =>
         new(Db, new CurrentUser(new Microsoft.AspNetCore.Http.HttpContextAccessor()), NullLogger<AuditService>.Instance);
     protected OfferService Offers() => new(Db, Candidates(), Notifications(), Audit(), NullLogger<OfferService>.Instance);
@@ -83,6 +83,17 @@ public abstract class DbTestBase : IDisposable
         transport ?? new NoOpSmtpTransport(),
         NullLogger<EmailService>.Instance);
 
+    /// <summary>
+    /// A SlackService that, by default, has every category routed off (the <see cref="FakeSlackSettingsResolver"/>
+    /// default has no token), so existing tests that exercise notification triggers never touch Slack.
+    /// Pass a resolver/transport to test the Slack-enabled path.
+    /// </summary>
+    protected static SlackService TestSlack(ISlackTransport? transport = null, ISlackSettingsResolver? resolver = null) => new(
+        resolver ?? new FakeSlackSettingsResolver(),
+        transport ?? new NoOpSlackTransport(),
+        TestConfig(),
+        NullLogger<SlackService>.Instance);
+
     protected static IConfiguration TestConfig() => new ConfigurationBuilder()
         .AddInMemoryCollection(new Dictionary<string, string?> { ["App:ClientBaseUrl"] = "http://localhost:5173" })
         .Build();
@@ -106,6 +117,30 @@ internal sealed class NoOpSmtpTransport : ISmtpTransport
 internal sealed class FixedEmailSettingsResolver(SmtpOptions options) : IEmailSettingsResolver
 {
     public Task<SmtpOptions> ResolveAsync() => Task.FromResult(options);
+}
+
+/// <summary>
+/// A settings resolver tests can configure directly, without a DB-backed row. With no token given,
+/// every category resolves disabled (matching "Slack not configured" — the default for a test that
+/// isn't specifically exercising Slack).
+/// </summary>
+internal sealed class FakeSlackSettingsResolver(string? token = null, params string[] enabledCategories) : ISlackSettingsResolver
+{
+    private readonly HashSet<string> _enabled = [.. enabledCategories];
+
+    public Task<string?> ResolveTokenAsync() => Task.FromResult(token);
+
+    public Task<bool> IsCategoryEnabledAsync(string category) =>
+        Task.FromResult(token is not null && _enabled.Contains(category));
+}
+
+/// <summary>A transport that should never be called — the default FakeSlackSettingsResolver disables
+/// every category, so this only fires if a test wires Slack on without also supplying a real fake.</summary>
+internal sealed class NoOpSlackTransport : ISlackTransport
+{
+    public Task<System.Text.Json.JsonElement> CallAsync(
+        string token, string method, IReadOnlyDictionary<string, string> form, CancellationToken ct = default) =>
+        throw new SlackApiException("not_configured", isTransient: false);
 }
 
 /// <summary>Minimal IWebHostEnvironment for CandidateService (only ContentRootPath is used, for CV file paths).</summary>

@@ -678,7 +678,8 @@ public class CandidateService(AppDbContext db, IWebHostEnvironment env, Notifica
 
                 await notificationService.NotifyAsync(
                     uid, "Interview assigned", $"You have been assigned to interview {candidate.FullName}.",
-                    $"/interviews/{interview.Id}", emailSubject, emailHtml, calendar);
+                    $"/interviews/{interview.Id}", emailSubject, emailHtml, calendar,
+                    category: NotificationCategories.InterviewAssigned);
             }
         }
 

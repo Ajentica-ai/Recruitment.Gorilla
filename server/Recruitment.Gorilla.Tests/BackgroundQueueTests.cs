@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using MimeKit;
@@ -76,6 +77,87 @@ public class BackgroundQueueTests(MySqlDatabaseFixture fixture) : DbTestBase(fix
         var count = Db.AuditLogs.Count(a => a.Action == actionName);
         Assert.Equal(1, count);
     }
+
+    [Fact]
+    public async Task SlackQueue_EnqueuesAndWorkerProcessesSuccessfully()
+    {
+        var queue = new SlackQueue(100);
+        var transport = new ScriptedSlackTransport(_ => null);
+        var slackService = new SlackService(
+            new FakeSlackSettingsResolver("xoxb-test", NotificationCategories.InterviewAssigned),
+            transport, TestConfig(), NullLogger<SlackService>.Instance, queue);
+
+        var worker = new SlackQueueWorker(queue, BuildScopeFactory(slackService), NullLogger<SlackQueueWorker>.Instance);
+
+        using var cts = new CancellationTokenSource();
+        await worker.StartAsync(cts.Token);
+
+        await slackService.EnqueueAsync(NotificationCategories.InterviewAssigned, "a@b.com", "Title", "Body", null);
+        await Task.Delay(200);
+
+        await cts.CancelAsync();
+        await worker.StopAsync(CancellationToken.None);
+
+        Assert.Single(transport.PostedTexts);
+    }
+
+    [Fact]
+    public async Task SlackQueueWorker_retries_a_transient_failure_then_succeeds()
+    {
+        var queue = new SlackQueue(100);
+        // Rate-limited on the first lookup attempt, then succeeds — Slack's documented retry contract.
+        var transport = new ScriptedSlackTransport(attempt => attempt == 1
+            ? new SlackApiException("ratelimited", isTransient: true, retryAfter: TimeSpan.FromMilliseconds(100))
+            : null);
+        var slackService = new SlackService(
+            new FakeSlackSettingsResolver("xoxb-test", NotificationCategories.InterviewAssigned),
+            transport, TestConfig(), NullLogger<SlackService>.Instance, queue);
+
+        var worker = new SlackQueueWorker(queue, BuildScopeFactory(slackService), NullLogger<SlackQueueWorker>.Instance);
+
+        using var cts = new CancellationTokenSource();
+        await worker.StartAsync(cts.Token);
+
+        await slackService.EnqueueAsync(NotificationCategories.InterviewAssigned, "a@b.com", "Title", "Body", null);
+        await Task.Delay(500); // first attempt + ~100ms retry-after + the retry itself
+
+        await cts.CancelAsync();
+        await worker.StopAsync(CancellationToken.None);
+
+        Assert.Equal(2, transport.Attempts);
+        Assert.Single(transport.PostedTexts);
+    }
+
+    [Fact]
+    public async Task SlackQueueWorker_does_not_retry_a_permanent_failure()
+    {
+        var queue = new SlackQueue(100);
+        var transport = new ScriptedSlackTransport(_ => new SlackApiException("invalid_auth", isTransient: false));
+        var slackService = new SlackService(
+            new FakeSlackSettingsResolver("xoxb-test", NotificationCategories.InterviewAssigned),
+            transport, TestConfig(), NullLogger<SlackService>.Instance, queue);
+
+        var worker = new SlackQueueWorker(queue, BuildScopeFactory(slackService), NullLogger<SlackQueueWorker>.Instance);
+
+        using var cts = new CancellationTokenSource();
+        await worker.StartAsync(cts.Token);
+
+        await slackService.EnqueueAsync(NotificationCategories.InterviewAssigned, "a@b.com", "Title", "Body", null);
+        await Task.Delay(300);
+
+        await cts.CancelAsync();
+        await worker.StopAsync(CancellationToken.None);
+
+        Assert.Equal(1, transport.Attempts);
+        Assert.Empty(transport.PostedTexts);
+    }
+
+    private static IServiceScopeFactory BuildScopeFactory(SlackService slackService)
+    {
+        var services = new ServiceCollection();
+        services.AddSingleton(slackService);
+        return services.BuildServiceProvider().GetRequiredService<IServiceScopeFactory>();
+    }
 }
 
 internal sealed class CapturingSmtpTransport : ISmtpTransport
@@ -86,5 +168,30 @@ internal sealed class CapturingSmtpTransport : ISmtpTransport
     {
         SentMessages.Add(message);
         return Task.CompletedTask;
+    }
+}
+
+/// <summary>
+/// A fake Slack transport whose users.lookupByEmail call is scripted per attempt (1-based), so tests
+/// can force a transient failure on the first try and success on the retry, or a permanent failure
+/// that should never be retried.
+/// </summary>
+internal sealed class ScriptedSlackTransport(Func<int, Exception?> onLookupAttempt) : ISlackTransport
+{
+    public int Attempts;
+    public List<string> PostedTexts { get; } = [];
+
+    public Task<JsonElement> CallAsync(
+        string token, string method, IReadOnlyDictionary<string, string> form, CancellationToken ct = default)
+    {
+        if (method == "users.lookupByEmail")
+        {
+            Attempts++;
+            if (onLookupAttempt(Attempts) is { } ex) throw ex;
+            return Task.FromResult(JsonDocument.Parse("""{"ok":true,"user":{"id":"U1"}}""").RootElement);
+        }
+
+        PostedTexts.Add(form["text"]);
+        return Task.FromResult(JsonDocument.Parse("""{"ok":true}""").RootElement);
     }
 }
