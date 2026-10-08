@@ -99,6 +99,51 @@ public class ConfigurationServiceTests(MySqlDatabaseFixture fixture) : DbTestBas
     }
 
     [Fact]
+    public async Task CreateRole_notifies_newly_assigned_recruiters_but_not_the_actor()
+    {
+        var actor = Data.AddUser(Roles.Admin);
+        var r1 = Data.AddUser(Roles.Recruiter);
+
+        var (created, _, error) = await Config().CreateRoleAsync(
+            RoleDto($"R-{Guid.NewGuid():N}", actor.Id, r1.Id), actorUserId: actor.Id);
+
+        Assert.Null(error);
+        Assert.False(await Db.Notifications.AnyAsync(n => n.UserId == actor.Id)); // the actor isn't notified of their own change
+        var notification = await Db.Notifications.SingleAsync(n => n.UserId == r1.Id);
+        Assert.Equal("Assigned to job opening", notification.Title);
+        Assert.Contains(created!.Name, notification.Message);
+        Assert.Equal("/jobs", notification.LinkUrl);
+    }
+
+    [Fact]
+    public async Task UpdateRole_notifies_only_the_newly_added_recruiters()
+    {
+        var r1 = Data.AddUser(Roles.Recruiter);
+        var r2 = Data.AddUser(Roles.Recruiter);
+        var (created, _, _) = await Config().CreateRoleAsync(RoleDto($"R-{Guid.NewGuid():N}", r1.Id));
+
+        // Clear the create-time notification so only the update's notifications are asserted below.
+        Db.Notifications.RemoveRange(Db.Notifications.Where(n => n.UserId == r1.Id));
+        await Db.SaveChangesAsync();
+
+        await Config().UpdateRoleAsync(created!.Id, RoleDto(created.Name, r1.Id, r2.Id));
+
+        Assert.False(await Db.Notifications.AnyAsync(n => n.UserId == r1.Id)); // already assigned — not re-notified
+        Assert.True(await Db.Notifications.AnyAsync(n => n.UserId == r2.Id)); // newly added — notified
+    }
+
+    [Fact]
+    public async Task UpdateRole_does_not_notify_recruiters_when_the_opening_is_inactive()
+    {
+        var r1 = Data.AddUser(Roles.Recruiter);
+        var (created, _, _) = await Config().CreateRoleAsync(RoleDto($"R-{Guid.NewGuid():N}"));
+
+        await Config().UpdateRoleAsync(created!.Id, RoleDto(created.Name, r1.Id) with { IsActive = false });
+
+        Assert.False(await Db.Notifications.AnyAsync(n => n.UserId == r1.Id));
+    }
+
+    [Fact]
     public async Task GetAssignedRoles_returns_only_the_users_roles()
     {
         var r1 = Data.AddUser(Roles.Recruiter);

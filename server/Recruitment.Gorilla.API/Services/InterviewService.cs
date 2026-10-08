@@ -348,7 +348,8 @@ public class InterviewService(AppDbContext db, CandidateService candidateService
                 recipientId,
                 "Evaluation submitted",
                 $"{submitterName} submitted an interview evaluation for {candidate.FullName}.",
-                $"/candidates/{candidate.Id}/evaluations");
+                $"/candidates/{candidate.Id}/evaluations",
+                category: NotificationCategories.EvaluationSubmitted);
     }
 
     private static InterviewEvaluationDto ToDto(InterviewEvaluation e) =>

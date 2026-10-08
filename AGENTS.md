@@ -35,6 +35,7 @@ dotnet user-secrets set "ConnectionStrings:DefaultConnection" "Server=localhost;
 dotnet user-secrets set "Jwt:Key" "<random 32+ byte base64>"
 dotnet user-secrets set "Encryption:Key" "<32+ char random string>"
 dotnet user-secrets set "Auth:PasswordHash" "<pbkdf2 hash>"   # hash of the default password, admin
+dotnet user-secrets set "Slack:BotToken" "<xoxb-... bot token>"   # optional — Slack can also be configured from Configuration → Slack
 
 # 2. Database
 dotnet ef database update

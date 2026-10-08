@@ -7,27 +7,35 @@ namespace Recruitment.Gorilla.API.Services;
 
 /// <summary>
 /// Per-user in-app notifications (list, unread count, mark read) and the shared dispatch path for
-/// pairing an in-app notification with the matching transactional email.
+/// pairing an in-app notification with the matching transactional email and/or Slack DM.
 /// </summary>
-public class NotificationService(AppDbContext db, EmailService emailService)
+public class NotificationService(AppDbContext db, EmailService emailService, SlackService slackService)
 {
     /// <summary>
-    /// Records the in-app notification and, when an email subject/body is supplied and the user has
-    /// an email address, sends the matching email. The single entry point new triggers should use so
-    /// in-app and email notifications never drift apart.
+    /// Records the in-app notification and, when an email subject/body is supplied and/or
+    /// <paramref name="category"/> names a Slack-routable notification category, sends the matching
+    /// email and/or Slack DM to the user's email address. The single entry point new triggers should
+    /// use so in-app, email and Slack notifications never drift apart.
     /// </summary>
     public async Task NotifyAsync(
         int userId, string title, string message, string? linkUrl,
-        string? emailSubject = null, string? emailHtmlBody = null, CalendarAttachment? calendar = null)
+        string? emailSubject = null, string? emailHtmlBody = null, CalendarAttachment? calendar = null,
+        string? category = null)
     {
         db.Notifications.Add(new Notification { UserId = userId, Title = title, Message = message, LinkUrl = linkUrl });
         await db.SaveChangesAsync();
 
-        if (emailSubject is null || emailHtmlBody is null) return;
+        var sendEmail = emailSubject is not null && emailHtmlBody is not null;
+        if (!sendEmail && category is null) return;
 
         var user = await db.Users.FindAsync(userId);
-        if (user is not null && !string.IsNullOrWhiteSpace(user.Email))
-            await emailService.SendAsync(user.Email, user.Name, emailSubject, emailHtmlBody, calendar);
+        if (user is null || string.IsNullOrWhiteSpace(user.Email)) return;
+
+        if (sendEmail)
+            await emailService.SendAsync(user.Email, user.Name, emailSubject!, emailHtmlBody!, calendar);
+
+        if (category is not null)
+            await slackService.EnqueueAsync(category, user.Email, title, message, linkUrl);
     }
 
     public async Task<NotificationListDto> GetMineAsync(int userId, int take = 15)

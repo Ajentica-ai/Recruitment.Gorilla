@@ -11,7 +11,7 @@ namespace Recruitment.Gorilla.API.Services;
 /// Returned outcomes use a small result type so controllers can map to HTTP
 /// (null name conflict, not found) without throwing.
 /// </summary>
-public class ConfigurationService(AppDbContext db)
+public class ConfigurationService(AppDbContext db, NotificationService notificationService)
 {
     // ----- Role Applied options -----
 
@@ -63,7 +63,8 @@ public class ConfigurationService(AppDbContext db)
         return roles.Select(r => ToDto(r, counts.GetValueOrDefault(r.Id, 0))).ToList();
     }
 
-    public async Task<(RoleAppliedOptionDto? Created, bool Conflict, string? Error)> CreateRoleAsync(UpsertRoleAppliedOptionDto dto)
+    public async Task<(RoleAppliedOptionDto? Created, bool Conflict, string? Error)> CreateRoleAsync(
+        UpsertRoleAppliedOptionDto dto, int? actorUserId = null)
     {
         if (ValidateRole(dto) is string error) return (null, false, error);
         if (await ValidateRecruitersAsync(dto.RecruiterUserIds) is string recErr) return (null, false, recErr);
@@ -91,10 +92,15 @@ public class ConfigurationService(AppDbContext db)
         await LoadRecruitersAsync(entity);
         if (entity.EvaluationRubricId is not null)
             await db.Entry(entity).Reference(r => r.EvaluationRubric).LoadAsync();
+
+        if (entity.IsActive)
+            await NotifyNewRecruitersAsync(entity.Name, entity.Recruiters.Select(r => r.UserId), actorUserId);
+
         return (ToDto(entity), false, null);
     }
 
-    public async Task<(RoleAppliedOptionDto? Updated, bool NotFound, bool Conflict, string? Error)> UpdateRoleAsync(int id, UpsertRoleAppliedOptionDto dto)
+    public async Task<(RoleAppliedOptionDto? Updated, bool NotFound, bool Conflict, string? Error)> UpdateRoleAsync(
+        int id, UpsertRoleAppliedOptionDto dto, int? actorUserId = null)
     {
         if (ValidateRole(dto) is string error) return (null, false, false, error);
         if (await ValidateRecruitersAsync(dto.RecruiterUserIds) is string recErr) return (null, false, false, recErr);
@@ -119,16 +125,38 @@ public class ConfigurationService(AppDbContext db)
         entity.Priority = Clean(dto.Priority);
         entity.EndDate = dto.EndDate;
         entity.EvaluationRubricId = dto.EvaluationRubricId;
-        // Replace the recruiter assignments with the new selection.
+        // Replace the recruiter assignments with the new selection, but remember who was on it
+        // before so we only notify recruiters newly added by this update, not everyone again.
+        var oldRecruiterIds = entity.Recruiters.Select(r => r.UserId).ToHashSet();
+        var newRecruiterIds = (dto.RecruiterUserIds ?? []).Distinct().ToList();
         entity.Recruiters.Clear();
-        foreach (var uid in (dto.RecruiterUserIds ?? []).Distinct())
+        foreach (var uid in newRecruiterIds)
             entity.Recruiters.Add(new RoleRecruiter { UserId = uid });
         entity.UpdatedAt = DateTime.UtcNow;
         await db.SaveChangesAsync();
         await LoadRecruitersAsync(entity);
         if (entity.EvaluationRubricId is not null)
             await db.Entry(entity).Reference(r => r.EvaluationRubric).LoadAsync();
+
+        if (entity.IsActive)
+            await NotifyNewRecruitersAsync(entity.Name, newRecruiterIds.Where(uid => !oldRecruiterIds.Contains(uid)), actorUserId);
+
         return (ToDto(entity), false, false, null);
+    }
+
+    /// <summary>
+    /// Notifies each newly-assigned recruiter (in-app plus Slack) that they were added to a job
+    /// opening. Skips the person who made the change and anyone when the opening isn't active.
+    /// </summary>
+    private async Task NotifyNewRecruitersAsync(string roleName, IEnumerable<int> recruiterUserIds, int? actorUserId)
+    {
+        foreach (var uid in recruiterUserIds)
+        {
+            if (uid == actorUserId) continue;
+            await notificationService.NotifyAsync(
+                uid, "Assigned to job opening", $"You were added as a recruiter on '{roleName}'.",
+                "/jobs", category: NotificationCategories.RecruiterAssigned);
+        }
     }
 
     private static List<RoleRecruiter> BuildRecruiters(List<int>? ids) =>

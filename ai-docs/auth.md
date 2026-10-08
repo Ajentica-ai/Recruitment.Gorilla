@@ -10,6 +10,7 @@ Four roles in a strict hierarchy **SuperAdmin → Admin → Recruiter → Interv
 | Manage users & assign roles (`/api/users`) | ✅ | – | – | – |
 | Configuration: roles/skills (`/api/config/*`) | ✅ | ✅ | – | – |
 | **Email / SMTP settings** (`/api/config/email*`) | ✅ | – | – | – |
+| **Slack settings** (`/api/config/slack*`) | ✅ | – | – | – |
 | Audit trail (`/api/audit`, `/audit` page) | ✅ | ✅ | – | – |
 | **Delete** a job-opening role | ✅ | – | – | – |
 | View / browse candidates | all | all | **own OR assigned-role** | – |
