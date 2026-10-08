@@ -32,6 +32,7 @@ public sealed class ApiFixture : IAsyncLifetime
     public string InterviewerEmail { get; private set; } = "";
     public int AdminId { get; private set; }
     public int RecruiterId { get; private set; }
+    public int InterviewerId { get; private set; }
     public int RoleId { get; private set; }
     public int CandidateId { get; private set; }
 
@@ -55,6 +56,7 @@ public sealed class ApiFixture : IAsyncLifetime
         InterviewerEmail = interviewer.Email;
         AdminId = admin.Id;
         RecruiterId = recruiter.Id;
+        InterviewerId = interviewer.Id;
 
         var role = new RoleAppliedOption
         {
@@ -238,6 +240,40 @@ public sealed class ApiFixture : IAsyncLifetime
         foreach (var off in offsets) pdf.Append($"{off:D10} 00000 n \n");
         pdf.Append($"trailer\n<< /Size {objects.Length + 1} /Root 1 0 R >>\nstartxref\n{xref}\n%%EOF\n");
         return Encoding.Latin1.GetBytes(pdf.ToString());
+    }
+
+    /// <summary>
+    /// Inserts a candidate carrying a status history plus an interview on it, and returns the
+    /// interview id. The history is the point: it is what the interview endpoint must not hand to
+    /// an interviewer (issue #116).
+    /// </summary>
+    public async Task<int> NewInterviewWithHistoryAsync(bool assignInterviewer = true)
+    {
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+        var candidate = new Candidate
+        {
+            FullName = $"Cand-{Guid.NewGuid():N}",
+            Email = $"{Guid.NewGuid():N}@test.local",
+            RelevantExperience = "3 Years",
+            CurrentStatus = "Interview Scheduled",
+        };
+        candidate.StatusHistories.Add(new StatusHistory { Status = "Uploaded", ChangedBy = "test" });
+        candidate.StatusHistories.Add(new StatusHistory
+        {
+            Status = "Interview Scheduled",
+            ChangedBy = "test",
+            Comment = "Focus on test design.",
+        });
+        db.Candidates.Add(candidate);
+        await db.SaveChangesAsync();
+
+        var interview = new Interview { CandidateId = candidate.Id, ScheduledAt = DateTime.UtcNow.AddDays(1) };
+        if (assignInterviewer) interview.Interviewers.Add(new InterviewInterviewer { UserId = InterviewerId });
+        db.Interviews.Add(interview);
+        await db.SaveChangesAsync();
+        return interview.Id;
     }
 
     /// <summary>Inserts an offer in the given status (committed) and returns its id.</summary>

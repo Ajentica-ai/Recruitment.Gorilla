@@ -220,8 +220,11 @@ when the endpoint returns data. Criterion rows with the mean, the spread, and a 
 ## 8. Security & auth
 
 **Admin+ only, and this is a real constraint rather than a default.** `InterviewService.GetDetailAsync`
-already returns `AllEvaluations` to Admin+ and `null` to everyone else, deliberately keeping peer
-scores private between interviewers. An average leaks the same information: an interviewer who knows
+releases peer scores on a tight rule: Admin+ see every evaluation, while an interviewer sees their
+peers' submitted ones **only once they have submitted and locked their own**, so nobody is anchored by
+a colleague before writing their own verdict. It also withholds the candidate's status history from
+non-admins, because `StatusHistoryDto.EvaluationSummaries` carries other rounds' ratings and
+recommendations (issue #116). An average leaks the same information: an interviewer who knows
 their own score and the mean over two evaluations can derive their colleague's exactly. Gating the
 roll-up at Admin+ preserves the existing privacy property. If it is ever opened to interviewers, it
 must be suppressed below ~3 evaluations — and even then it only shrinks the leak, so Admin+ is the

@@ -57,7 +57,9 @@ public class InterviewService(AppDbContext db, CandidateService candidateService
 
     /// <summary>
     /// Interview detail if the caller may see it (assigned interviewer or Admin+), else null.
-    /// Admin+ additionally get every interviewer's evaluation.
+    /// Admin+ additionally get every interviewer's evaluation, and the candidate's status history;
+    /// for everyone else the history is stripped, because it carries other rounds' ratings and
+    /// recommendations (issue #116).
     /// </summary>
     public async Task<InterviewDetailDto?> GetDetailAsync(int id, int userId, bool isAdmin)
     {
@@ -76,6 +78,13 @@ public class InterviewService(AppDbContext db, CandidateService candidateService
 
         var candidate = await candidateService.GetByIdAsync(interview.CandidateId);
         if (candidate is null) return null;
+
+        // The interview page renders a read-only profile and never the timeline, so none of this is
+        // missed. Shipping it handed an interviewer every status comment and, through
+        // StatusHistoryDto.EvaluationSummaries, the rating and recommendation from every completed
+        // round, including ones they were never assigned to. That is the anchoring the peer rule
+        // below is there to prevent, so it has to go before the caller is a non-admin.
+        if (!isAdmin) candidate = candidate with { StatusHistory = [] };
 
         var interviewers = interview.Interviewers
             .OrderBy(ii => ii.User.Name)
