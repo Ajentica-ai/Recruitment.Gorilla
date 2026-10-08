@@ -28,7 +28,7 @@ public class BackgroundQueueTests(MySqlDatabaseFixture fixture) : DbTestBase(fix
             NullLogger<EmailService>.Instance,
             signal);
 
-        // The worker opens its own scope per cycle — registering this test's transactional Db as the
+        // The worker opens its own scope per cycle: registering this test's transactional Db as the
         // resolved AppDbContext is what lets it see the (uncommitted, rolled-back-on-dispose) row this
         // test writes, the same trick BackgroundQueueTests already uses for the audit log worker below.
         var services = new ServiceCollection();

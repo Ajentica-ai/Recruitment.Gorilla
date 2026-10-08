@@ -8,7 +8,7 @@ namespace Recruitment.Gorilla.API.Services.Background;
 /// <summary>
 /// Claims and sends due <see cref="OutboundEmail"/> rows. Called on an interval by
 /// <see cref="EmailOutboxWorker"/> in production, and directly in tests against a transactional
-/// <see cref="AppDbContext"/> (same pattern as the rest of the service layer — see
+/// <see cref="AppDbContext"/> (same pattern as the rest of the service layer, see
 /// <c>Recruitment.Gorilla.Tests.Infrastructure.DbTestBase</c>).
 /// </summary>
 public class EmailOutboxProcessor(
@@ -50,7 +50,7 @@ public class EmailOutboxProcessor(
 
     /// <summary>
     /// Atomically moves one row from its current status to Sending, so two worker instances racing on
-    /// the same due row never both send it — the loser's update matches zero rows. A plain EF read then
+    /// the same due row never both send it: the loser's update matches zero rows. A plain EF read then
     /// write would have the same race the check is meant to close, so this goes straight to the database.
     /// </summary>
     private async Task<bool> ClaimAsync(long id, string fromStatus, DateTime now, CancellationToken ct)
@@ -67,7 +67,7 @@ public class EmailOutboxProcessor(
     private async Task SendOneAsync(long id, CancellationToken ct)
     {
         var row = await db.OutboundEmails.FirstOrDefaultAsync(e => e.Id == id, ct);
-        if (row is null) return; // claimed then vanished (shouldn't happen outside tests) — nothing to do
+        if (row is null) return; // claimed then vanished (shouldn't happen outside tests), nothing to do
 
         row.Provider ??= SmtpProvider;
         row.Attempts++;
@@ -117,7 +117,7 @@ public class EmailOutboxProcessor(
 
             case EmailOutcome.Ambiguous:
                 // Not reached by the SMTP dispatcher today (a plain SMTP send either goes through or it
-                // doesn't) — kept ready for a provider whose send can time out without telling you which.
+                // doesn't): kept ready for a provider whose send can time out without telling you which.
                 row.Status = OutboundEmailStatus.Pending;
                 row.NeedsStatusCheck = true;
                 row.NextAttemptAt = time.GetUtcNow().UtcDateTime + TimeSpan.FromMinutes(5);
@@ -143,7 +143,7 @@ public class EmailOutboxProcessor(
     private static string Truncate(string value, int maxLength) =>
         value.Length <= maxLength ? value : value[..maxLength];
 
-    /// <summary>Deletes terminal rows past retention — called once an hour by <see cref="EmailOutboxWorker"/>.</summary>
+    /// <summary>Deletes terminal rows past retention, called once an hour by <see cref="EmailOutboxWorker"/>.</summary>
     public async Task PurgeOldAsync(TimeSpan retention, CancellationToken ct = default)
     {
         var cutoff = time.GetUtcNow().UtcDateTime - retention;

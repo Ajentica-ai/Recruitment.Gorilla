@@ -82,7 +82,7 @@ public abstract class DbTestBase : IDisposable
 
     /// <summary>
     /// An EmailService bound to this test's transactional context, with a no-op transport by default.
-    /// <see cref="EmailService.SendAsync"/> only writes the <c>OutboundEmails</c> row — nothing reaches
+    /// <see cref="EmailService.SendAsync"/> only writes the <c>OutboundEmails</c> row; nothing reaches
     /// the network unless the test also runs it through <see cref="OutboxProcessor"/>.
     /// </summary>
     protected EmailService TestEmail(ISmtpTransport? transport = null) => new(
@@ -122,13 +122,13 @@ internal sealed class NoOpSmtpTransport : ISmtpTransport
     public Task SendAsync(MimeMessage message, SmtpOptions options, CancellationToken ct = default) => Task.CompletedTask;
 }
 
-/// <summary>Returns fixed SMTP options — lets tests build an EmailDispatcher without a DB-backed resolver.</summary>
+/// <summary>Returns fixed SMTP options: lets tests build an EmailDispatcher without a DB-backed resolver.</summary>
 internal sealed class FixedEmailSettingsResolver(SmtpOptions options) : IEmailSettingsResolver
 {
     public Task<SmtpOptions> ResolveAsync() => Task.FromResult(options);
 }
 
-/// <summary>A dispatcher that "succeeds" without doing anything — the default for
+/// <summary>A dispatcher that "succeeds" without doing anything: the default for
 /// <see cref="DbTestBase.OutboxProcessor"/> when a test doesn't care how the send turns out.</summary>
 internal sealed class FixedEmailDispatcher : IEmailDispatcher
 {

@@ -8,7 +8,7 @@ using Recruitment.Gorilla.Tests.Infrastructure;
 namespace Recruitment.Gorilla.Tests;
 
 /// <summary>
-/// EmailService.SendAsync: writes a durable <see cref="OutboundEmail"/> row and returns — it never
+/// EmailService.SendAsync: writes a durable <see cref="OutboundEmail"/> row and returns; it never
 /// talks to the network itself (that's <see cref="EmailDispatcher"/>, exercised by
 /// <see cref="EmailDispatcherTests"/>, and <see cref="Recruitment.Gorilla.API.Services.Background.EmailOutboxProcessor"/>,
 /// exercised by <c>EmailOutboxTests</c>).
@@ -104,8 +104,8 @@ public class EmailServiceFailureTests(MySqlDatabaseFixture fixture)
     [Fact]
     public async Task SendAsync_swallows_a_database_failure_and_never_throws()
     {
-        // A context that's already disposed fails every operation immediately and deterministically —
-        // no real outage needs simulating to prove SendAsync never lets a save failure escape.
+        // A context that's already disposed fails every operation immediately and deterministically,
+        // so no real outage needs simulating to prove SendAsync never lets a save failure escape.
         var db = fixture.NewContext();
         await db.DisposeAsync();
 

@@ -2,8 +2,8 @@ namespace Recruitment.Gorilla.API.Services.Background;
 
 /// <summary>
 /// Drives the email outbox: wakes on a signal from <see cref="EmailService.SendAsync"/> (the fast path
-/// for a freshly queued email) or every 30 seconds regardless — so a scheduled retry, or anything the
-/// signal missed (a worker that was mid-cycle when it fired), still gets picked up — then asks
+/// for a freshly queued email) or every 30 seconds regardless, so a scheduled retry, or anything the
+/// signal missed (a worker that was mid-cycle when it fired), still gets picked up, then asks
 /// <see cref="EmailOutboxProcessor"/> to send whatever is due. Runs the hourly purge of old terminal
 /// rows from the same loop, the way <c>AuditLogBatchWorker</c> interleaves its own housekeeping.
 /// </summary>

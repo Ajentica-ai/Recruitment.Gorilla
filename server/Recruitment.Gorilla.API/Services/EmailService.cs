@@ -45,7 +45,7 @@ public class MailKitSmtpTransport : ISmtpTransport
 /// <summary>
 /// Entry point callers use to send transactional email (interview assignment, password/account
 /// notices). <see cref="SendAsync"/> never throws and never blocks on the network: it writes a durable
-/// <see cref="OutboundEmail"/> row and returns — the actual send, retried as needed, happens later in
+/// <see cref="OutboundEmail"/> row and returns: the actual send, retried as needed, happens later in
 /// <see cref="EmailOutboxProcessor"/>, so an API restart never loses a pending email.
 /// <see cref="SendTestAsync"/> is the one path that still sends immediately through
 /// <see cref="IEmailDispatcher"/> and lets failures propagate, for the admin "send test" button, which
@@ -77,7 +77,7 @@ public class EmailService(
             });
             await db.SaveChangesAsync();
 
-            // Best-effort nudge — if nothing is listening (or the channel is already full), the
+            // Best-effort nudge: if nothing is listening (or the channel is already full), the
             // worker's own polling interval picks the row up regardless, just a bit later.
             signal?.Notify();
         }
@@ -88,7 +88,7 @@ public class EmailService(
     }
 
     /// <summary>
-    /// Send that surfaces the outcome — for the admin "send test" flow, where the caller needs to know
+    /// Send that surfaces the outcome: for the admin "send test" flow, where the caller needs to know
     /// whether delivery actually worked. Bypasses the outbox entirely: it's a one-off diagnostic send,
     /// not a transactional notification that needs retrying.
     /// </summary>

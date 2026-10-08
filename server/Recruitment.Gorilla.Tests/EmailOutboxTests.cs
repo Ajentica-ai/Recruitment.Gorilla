@@ -61,8 +61,8 @@ public class EmailOutboxTests(MySqlDatabaseFixture fixture) : DbTestBase(fixture
         // Detach: the processor under test shares this same Db instance (the point of DbTestBase's
         // transactional-context pattern), and a tracking query for this row would otherwise return
         // this very (now stale) in-memory instance instead of reflecting the processor's own bulk
-        // ExecuteUpdateAsync claim — EF Core's identity resolution, not a production concern, since a
-        // real worker always processes through its own freshly scoped DbContext.
+        // ExecuteUpdateAsync claim (EF Core's identity resolution, not a production concern, since a
+        // real worker always processes through its own freshly scoped DbContext).
         Db.Entry(row).State = EntityState.Detached;
         return row;
     }
@@ -123,7 +123,7 @@ public class EmailOutboxTests(MySqlDatabaseFixture fixture) : DbTestBase(fixture
     [Fact]
     public async Task ProcessDueAsync_gives_up_once_every_retry_delay_is_exhausted()
     {
-        // Three prior failed attempts already used up every entry in RetryDelays — this run is the
+        // Three prior failed attempts already used up every entry in RetryDelays, so this run is the
         // (RetryDelays.Length + 1)th, so it should give up rather than schedule yet another retry.
         var row = await AddRowAsync(attempts: EmailOutboxProcessor.RetryDelays.Length);
         var dispatcher = new FixedOutcomeDispatcher(EmailOutcome.Retry);

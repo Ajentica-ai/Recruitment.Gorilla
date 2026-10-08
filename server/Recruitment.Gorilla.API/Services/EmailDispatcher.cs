@@ -9,12 +9,12 @@ namespace Recruitment.Gorilla.API.Services;
 /// </summary>
 public enum EmailOutcome
 {
-    /// <summary>Safe to retry — the send clearly never reached the provider, or the provider said so.</summary>
+    /// <summary>Safe to retry: the send clearly never reached the provider, or the provider said so.</summary>
     Retry,
     /// <summary>
     /// The send may or may not have gone through (e.g. a timeout after the request left, or a stale
     /// in-flight row recovered after a crash). Resend only after checking delivery status, where that's
-    /// possible — never blindly, since that risks a duplicate.
+    /// possible, never blindly, since that risks a duplicate.
     /// </summary>
     Ambiguous,
     /// <summary>Retrying would fail the same way every time (bad credentials, rejected recipient, ...).</summary>
@@ -34,7 +34,7 @@ public class EmailDeliveryException(string code, EmailOutcome outcome, TimeSpan?
     public EmailOutcome Outcome { get; } = outcome;
     public TimeSpan? RetryAfter { get; } = retryAfter;
 
-    // Keeps the short, stable `code` for logs/metrics but doesn't drop the underlying reason — an
+    // Keeps the short, stable `code` for logs/metrics but doesn't drop the underlying reason: an
     // admin reading "Email delivery error: smtp_auth_failed" on the test-email button has no more
     // information than before the outbox existed; the transport's own message (e.g. "5.7.8 Username
     // and Password not accepted") is what actually tells them what to fix.
@@ -48,8 +48,8 @@ public record EmailSendRequest(
 
 /// <summary>
 /// Sends one email over the network right now, through whichever provider is configured. Throws
-/// <see cref="EmailDeliveryException"/> on failure; never retries itself — that's
-/// <see cref="Background.EmailOutboxProcessor"/>'s job. Returns a provider message id when the provider
+/// <see cref="EmailDeliveryException"/> on failure; never retries itself (that's
+/// <see cref="Background.EmailOutboxProcessor"/>'s job). Returns a provider message id when the provider
 /// gives one (plain SMTP gives none).
 /// </summary>
 public interface IEmailDispatcher
@@ -59,7 +59,7 @@ public interface IEmailDispatcher
 
 /// <summary>
 /// The SMTP-only dispatcher. Resolves the effective SMTP settings at send time (DB row if configured
-/// in-app, else the <c>Smtp</c> config fallback — see <see cref="IEmailSettingsResolver"/>), builds the
+/// in-app, else the <c>Smtp</c> config fallback, see <see cref="IEmailSettingsResolver"/>), builds the
 /// MIME message (optionally attaching the interview <c>.ics</c> invite as a <c>text/calendar</c> part)
 /// and hands it to <see cref="ISmtpTransport"/>.
 /// </summary>
@@ -89,7 +89,7 @@ public class EmailDispatcher(IEmailSettingsResolver settings, ISmtpTransport tra
         }
         catch (Exception ex)
         {
-            // Connection refused/timeout, a transient 4xx, DNS failure, etc. — worth retrying.
+            // Connection refused/timeout, a transient 4xx, DNS failure, etc.: worth retrying.
             throw new EmailDeliveryException("smtp_transient", EmailOutcome.Retry, inner: ex);
         }
     }
