@@ -2,7 +2,7 @@ namespace Recruitment.Gorilla.API.Models;
 
 /// <summary>
 /// Terminal and in-flight delivery states for an <see cref="OutboundEmail"/> row. Plain string
-/// constants (the project's convention for small status sets — see <c>Offer.Status</c>,
+/// constants (the project's convention for small status sets: see <c>Offer.Status</c>,
 /// <c>NotificationCategories</c>) rather than an enum, so values are self-describing in the database
 /// and in the delivery-log API without a lookup table.
 /// </summary>
@@ -17,7 +17,7 @@ public static class OutboundEmailStatus
     public const string Failed = "Failed";
     /// <summary>
     /// The send's outcome could not be determined (e.g. the provider's delivery status can't be
-    /// checked) — an admin resends by hand rather than risk a duplicate.
+    /// checked), so an admin resends by hand rather than risk a duplicate.
     /// </summary>
     public const string Unknown = "Unknown";
 }
@@ -32,7 +32,7 @@ public class OutboundEmail
 {
     public long Id { get; set; }
 
-    /// <summary>Stable per email — doubles as the idempotency key sent to a provider that supports one.</summary>
+    /// <summary>Stable per email: doubles as the idempotency key sent to a provider that supports one.</summary>
     public string Reference { get; set; } = Guid.NewGuid().ToString();
 
     public string ToEmail { get; set; } = string.Empty;

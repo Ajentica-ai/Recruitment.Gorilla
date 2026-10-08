@@ -37,10 +37,10 @@ const fmt = (iso: string | null) =>
 const canResend = (status: OutboundEmailStatus) => status === 'Failed' || status === 'Unknown';
 
 /**
- * Every outbound transactional email — interview invites, account/password notices, admin test
- * sends — durably queued and retried by the server-side outbox worker (see ai-docs/backend.md).
+ * Every outbound transactional email (interview invites, account/password notices, admin test
+ * sends), durably queued and retried by the server-side outbox worker (see ai-docs/backend.md).
  * Read-only plus a Resend action; the body is never shown here (it can contain account details, and
- * the API never returns it — see OutboundEmailDto).
+ * the API never returns it, see OutboundEmailDto).
  */
 export default function EmailDeliveryTab() {
   const [status, setStatus] = useState<OutboundEmailStatus | 'all'>('all');
@@ -78,7 +78,7 @@ export default function EmailDeliveryTab() {
           type="single"
           value={status}
           onValueChange={(v) => {
-            if (!v) return; // Radix single mode allows deselecting — ignore it, "all" stays the floor.
+            if (!v) return; // Radix single mode allows deselecting; ignore it, "all" stays the floor.
             setStatus(v as OutboundEmailStatus | 'all');
             setPage(1);
           }}
@@ -172,7 +172,7 @@ export default function EmailDeliveryTab() {
         {toResend?.status === 'Unknown' && (
           <>
             {' '}
-            Its last attempt's outcome is unknown — it may already have been delivered, so this could
+            Its last attempt's outcome is unknown, it may already have been delivered, so this could
             send a duplicate.
           </>
         )}

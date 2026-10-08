@@ -8,7 +8,7 @@ namespace Recruitment.Gorilla.API.Services;
 
 /// <summary>
 /// Read/write access to the email delivery log for the admin control panel (SuperAdmin). Never
-/// returns the HTML body — it can contain account details — only the metadata needed to see what was
+/// returns the HTML body (it can contain account details), only the metadata needed to see what was
 /// sent, to whom, and whether it worked.
 /// </summary>
 public class EmailOutboxService(AppDbContext db, AuditService audit, IEmailOutboxSignal? signal = null)
@@ -52,7 +52,7 @@ public class EmailOutboxService(AppDbContext db, AuditService audit, IEmailOutbo
 
         // OutboundEmail.Id is a bigint but AuditLog.EntityId is only int, so EntityId is left null
         // (it's a rarely-filtered-on convenience field, not the source of truth) and the id is kept
-        // in Summary instead — no cast, so no overflow risk at any row count, however large.
+        // in Summary instead: no cast, so no overflow risk at any row count, however large.
         await audit.RecordAsync("Email.Resent", "OutboundEmail", entityId: null, summary: $"Resent email to {row.ToEmail} (#{row.Id})");
         return (true, false, null);
     }

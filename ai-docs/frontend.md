@@ -337,7 +337,7 @@ mutations invalidate the `['config']` prefix so candidate forms refresh too.
   a **Send test email** button defaulting to the current user's email. Backed by
   `getEmailSettings`/`saveEmailSettings`/`sendTestEmail` (`/config/email*`); the
   password is never returned by the API.
-- **Email delivery** (`EmailDeliveryTab`, `isSuperAdmin` only) — a read-only,
+- **Email delivery** (`EmailDeliveryTab`, `isSuperAdmin` only): a read-only,
   paged log of every outbound email (queued time, recipient, subject, a status
   `Badge`, attempts, last error), filterable by status via a `Segmented`
   control. A row's overflow menu (`RowActions`) offers **Resend** for a
@@ -455,7 +455,7 @@ their tabs are absent, not disabled, for everyone else.
   removing a skill can deactivate it across every candidate tagged with it, the
   chips sit a few pixels apart, and there is no undo.
 - **Email** — grouped into Server / Credentials / Sender fieldsets.
-- **Email delivery** — a status-filterable log table with a per-row Resend
+- **Email delivery**: a status-filterable log table with a per-row Resend
   action, mirroring the shape of the Audit log page.
 - **Slack** — bot token field, delivery toggle, and a per-category checklist
   (which notification types also go to Slack), plus the test-message sidebar.

@@ -42,7 +42,7 @@ public class NotificationServiceTests(MySqlDatabaseFixture fixture) : DbTestBase
         Assert.Equal("Interview assigned", notification.Title);
         Assert.Equal("/interviews/1", notification.LinkUrl);
 
-        // The email isn't sent inline — it's durably queued for the outbox worker to pick up.
+        // The email isn't sent inline: it's durably queued for the outbox worker to pick up.
         var queued = await Db.OutboundEmails.SingleAsync(e => e.ToEmail == user.Email);
         Assert.Equal("Interview assigned: Jane Doe", queued.Subject);
         Assert.Equal(OutboundEmailStatus.Pending, queued.Status);
@@ -65,7 +65,7 @@ public class NotificationServiceTests(MySqlDatabaseFixture fixture) : DbTestBase
     {
         var user = Data.AddUser("Interviewer");
 
-        // A transport that would fail every send proves NotifyAsync never tries to deliver inline —
+        // A transport that would fail every send proves NotifyAsync never tries to deliver inline:
         // queuing only ever touches the database, so this never gets a chance to throw here.
         await new NotificationService(Db, TestEmail(new ThrowingTransport()), TestSlack()).NotifyAsync(
             user.Id, "Title", "Message", null, "Subject", "<p>x</p>");
