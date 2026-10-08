@@ -55,8 +55,6 @@ builder.Services.AddScoped<CandidateDraftService>();
 builder.Services.AddScoped<CvFileIntake>();
 builder.Services.AddScoped<CandidateImportService>();
 builder.Services.AddScoped<AuditService>();
-builder.Services.AddSingleton<IEmailQueue, EmailQueue>();
-builder.Services.AddHostedService<EmailQueueWorker>();
 builder.Services.AddSingleton<IAuditLogQueue, AuditLogQueue>();
 builder.Services.AddHostedService<AuditLogBatchWorker>();
 builder.Services.AddScoped<ICVUploadProgressNotifier, CVUploadProgressNotifier>();
@@ -66,7 +64,13 @@ builder.Services.AddScoped<ISmtpTransport, MailKitSmtpTransport>();
 builder.Services.AddSingleton<SecretProtector>();
 builder.Services.AddScoped<IEmailSettingsResolver, EmailSettingsResolver>();
 builder.Services.AddScoped<EmailSettingsService>();
+builder.Services.AddScoped<IEmailDispatcher, EmailDispatcher>();
 builder.Services.AddScoped<EmailService>();
+builder.Services.AddScoped<EmailOutboxService>();
+builder.Services.AddSingleton(TimeProvider.System);
+builder.Services.AddScoped<EmailOutboxProcessor>();
+builder.Services.AddSingleton<IEmailOutboxSignal, EmailOutboxSignal>();
+builder.Services.AddHostedService<EmailOutboxWorker>();
 builder.Services.Configure<SlackOptions>(builder.Configuration.GetSection("Slack"));
 builder.Services.AddHttpClient<ISlackTransport, HttpSlackTransport>((sp, http) =>
 {

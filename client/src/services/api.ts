@@ -11,6 +11,9 @@ import type {
   ChangePasswordPayload,
   EmailSettings,
   UpsertEmailSettings,
+  OutboundEmail,
+  OutboundEmailQuery,
+  ResendEmailResult,
   SlackSettings,
   UpsertSlackSettings,
   CreateCandidatePayload,
@@ -501,6 +504,17 @@ export const saveEmailSettings = async (payload: UpsertEmailSettings): Promise<E
 
 export const sendTestEmail = async (toEmail: string): Promise<{ ok: boolean; error: string | null }> => {
   const { data } = await api.post<{ ok: boolean; error: string | null }>('/config/email/test', { toEmail });
+  return data;
+};
+
+// ----- Configuration: Email delivery log (SuperAdmin) -----
+export const getEmailOutbox = async (query: OutboundEmailQuery): Promise<PagedResult<OutboundEmail>> => {
+  const { data } = await api.get<PagedResult<OutboundEmail>>('/config/email/outbox', { params: query });
+  return data;
+};
+
+export const resendEmail = async (id: number): Promise<ResendEmailResult> => {
+  const { data } = await api.post<ResendEmailResult>(`/config/email/outbox/${id}/resend`);
   return data;
 };
 

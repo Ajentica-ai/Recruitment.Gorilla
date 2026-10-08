@@ -8,6 +8,7 @@ using Microsoft.Extensions.Options;
 using MimeKit;
 using Recruitment.Gorilla.API.Data;
 using Recruitment.Gorilla.API.Services;
+using Recruitment.Gorilla.API.Services.Background;
 
 namespace Recruitment.Gorilla.Tests.Infrastructure;
 
@@ -42,6 +43,8 @@ public abstract class DbTestBase : IDisposable
     protected OfferService Offers() => new(Db, Candidates(), Notifications(), Audit(), NullLogger<OfferService>.Instance);
     protected EvaluationRubricService EvaluationRubrics() => new(Db, Audit());
     protected AnalyticsService Analytics() => new(Db);
+    protected EmailOutboxProcessor OutboxProcessor(IEmailDispatcher? dispatcher = null, TimeProvider? time = null) =>
+        new(Db, dispatcher ?? new FixedEmailDispatcher(), time ?? TimeProvider.System, NullLogger<EmailOutboxProcessor>.Instance);
     protected CandidateDraftService CandidateDrafts(CurrentUser? user = null) =>
         new(Db, Audit(), user ?? new CurrentUser(new FixedHttpContextAccessor(null)), new TestWebHostEnvironment(), NullLogger<CandidateDraftService>.Instance);
     protected CandidateImportService CandidateImports(CurrentUser? user = null) =>
@@ -77,10 +80,16 @@ public abstract class DbTestBase : IDisposable
         public Microsoft.AspNetCore.Http.HttpContext? HttpContext { get; set; } = context;
     }
 
-    /// <summary>An EmailService whose transport is a no-op — never hits the network, never throws.</summary>
-    protected static EmailService TestEmail(ISmtpTransport? transport = null) => new(
-        new FixedEmailSettingsResolver(new SmtpOptions { Host = "smtp.test.local", FromAddress = "test@test.local" }),
-        transport ?? new NoOpSmtpTransport(),
+    /// <summary>
+    /// An EmailService bound to this test's transactional context, with a no-op transport by default.
+    /// <see cref="EmailService.SendAsync"/> only writes the <c>OutboundEmails</c> row — nothing reaches
+    /// the network unless the test also runs it through <see cref="OutboxProcessor"/>.
+    /// </summary>
+    protected EmailService TestEmail(ISmtpTransport? transport = null) => new(
+        Db,
+        new EmailDispatcher(
+            new FixedEmailSettingsResolver(new SmtpOptions { Host = "smtp.test.local", FromAddress = "test@test.local" }),
+            transport ?? new NoOpSmtpTransport()),
         NullLogger<EmailService>.Instance);
 
     /// <summary>
@@ -113,10 +122,18 @@ internal sealed class NoOpSmtpTransport : ISmtpTransport
     public Task SendAsync(MimeMessage message, SmtpOptions options, CancellationToken ct = default) => Task.CompletedTask;
 }
 
-/// <summary>Returns fixed SMTP options — lets tests build an EmailService without a DB-backed resolver.</summary>
+/// <summary>Returns fixed SMTP options — lets tests build an EmailDispatcher without a DB-backed resolver.</summary>
 internal sealed class FixedEmailSettingsResolver(SmtpOptions options) : IEmailSettingsResolver
 {
     public Task<SmtpOptions> ResolveAsync() => Task.FromResult(options);
+}
+
+/// <summary>A dispatcher that "succeeds" without doing anything — the default for
+/// <see cref="DbTestBase.OutboxProcessor"/> when a test doesn't care how the send turns out.</summary>
+internal sealed class FixedEmailDispatcher : IEmailDispatcher
+{
+    public Task<string?> SendAsync(EmailSendRequest request, CancellationToken ct = default) =>
+        Task.FromResult<string?>(null);
 }
 
 /// <summary>

@@ -14,6 +14,7 @@ public class ConfigurationController(
     ConfigurationService config,
     EmailSettingsService emailSettings,
     EmailService emailService,
+    EmailOutboxService emailOutbox,
     SlackSettingsService slackSettings,
     SlackService slackService,
     CurrentUser currentUser,
@@ -56,6 +57,32 @@ public class ConfigurationController(
             logger.LogWarning(ex, "Test email to {ToEmail} failed.", dto.ToEmail);
             return Ok(new TestEmailResultDto(false, ex.Message));
         }
+    }
+
+    // ----- Email delivery log (SuperAdmin only) -----
+
+    [Authorize(Roles = Roles.SuperAdmin)]
+    [HttpGet("email/outbox")]
+    public async Task<IActionResult> GetEmailOutbox(
+        [FromQuery] string? status, [FromQuery] int page = 1, [FromQuery] int pageSize = 50)
+    {
+        // The upper bound keeps (page-1)*pageSize well clear of int overflow further down in
+        // EmailOutboxService.QueryAsync, however large pageSize is within its own 200 cap.
+        if (page is < 1 or > 1_000_000) page = 1;
+        if (pageSize is < 1 or > 200) pageSize = 50;
+        return Ok(await emailOutbox.QueryAsync(status, page, pageSize));
+    }
+
+    [Authorize(Roles = Roles.SuperAdmin)]
+    [HttpPost("email/outbox/{id:long}/resend")]
+    public async Task<IActionResult> ResendEmail(long id)
+    {
+        var (ok, notFound, error) = await emailOutbox.ResendAsync(id);
+        if (notFound) return NotFound();
+        if (!ok) return BadRequest(error);
+
+        logger.LogInformation("Email {Id} queued for resend by user {UserId}.", id, currentUser.UserId);
+        return Ok(new ResendEmailResultDto(true, null));
     }
 
     // ----- Slack settings (SuperAdmin only — sensitive credentials) -----

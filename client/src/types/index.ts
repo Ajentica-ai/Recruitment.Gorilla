@@ -714,6 +714,36 @@ export interface UpsertEmailSettings {
   enabled: boolean;
 }
 
+// ----- Email delivery log (SuperAdmin) -----
+export type OutboundEmailStatus = 'Pending' | 'Sending' | 'Sent' | 'Failed' | 'Unknown';
+
+export interface OutboundEmail {
+  id: number;
+  toEmail: string;
+  toName: string;
+  subject: string;
+  status: OutboundEmailStatus;
+  provider: string | null;
+  attempts: number;
+  lastError: string | null;
+  providerMessageId: string | null;
+  nextAttemptAt: string;
+  createdAt: string;
+  sentAt: string | null;
+  updatedAt: string;
+}
+
+export interface OutboundEmailQuery {
+  status?: OutboundEmailStatus;
+  page?: number;
+  pageSize?: number;
+}
+
+export interface ResendEmailResult {
+  ok: boolean;
+  error: string | null;
+}
+
 // ----- Slack settings (SuperAdmin) -----
 export interface SlackCategorySetting {
   key: string;

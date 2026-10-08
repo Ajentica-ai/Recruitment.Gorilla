@@ -1,5 +1,8 @@
 using System.Text.Json;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using MimeKit;
 using Recruitment.Gorilla.API.Models;
@@ -13,27 +16,36 @@ namespace Recruitment.Gorilla.Tests;
 public class BackgroundQueueTests(MySqlDatabaseFixture fixture) : DbTestBase(fixture)
 {
     [Fact]
-    public async Task EmailQueue_EnqueuesAndWorkerProcessesSuccessfully()
+    public async Task EmailOutboxWorker_processes_a_queued_email_via_the_signal()
     {
-        var queue = new EmailQueue(100);
-        var fakeTransport = new CapturingSmtpTransport();
+        var signal = new EmailOutboxSignal();
+        var fakeDispatcher = new CapturingDispatcher();
         var emailService = new EmailService(
-            new FixedEmailSettingsResolver(new SmtpOptions { Host = "smtp.test.local", FromAddress = "test@test.local" }),
-            fakeTransport,
+            Db,
+            new EmailDispatcher(
+                new FixedEmailSettingsResolver(new SmtpOptions { Host = "smtp.test.local", FromAddress = "test@test.local" }),
+                new NoOpSmtpTransport()),
             NullLogger<EmailService>.Instance,
-            queue);
+            signal);
 
+        // The worker opens its own scope per cycle — registering this test's transactional Db as the
+        // resolved AppDbContext is what lets it see the (uncommitted, rolled-back-on-dispose) row this
+        // test writes, the same trick BackgroundQueueTests already uses for the audit log worker below.
         var services = new ServiceCollection();
-        services.AddSingleton(emailService);
+        services.AddSingleton(Db);
+        services.AddSingleton<IEmailDispatcher>(fakeDispatcher);
+        services.AddSingleton(TimeProvider.System);
+        services.AddSingleton<ILogger<EmailOutboxProcessor>>(NullLogger<EmailOutboxProcessor>.Instance);
+        services.AddScoped<EmailOutboxProcessor>();
         var sp = services.BuildServiceProvider();
         var scopeFactory = sp.GetRequiredService<IServiceScopeFactory>();
 
-        var worker = new EmailQueueWorker(queue, scopeFactory, NullLogger<EmailQueueWorker>.Instance);
+        var worker = new EmailOutboxWorker(
+            signal, scopeFactory, new ConfigurationBuilder().Build(), NullLogger<EmailOutboxWorker>.Instance);
 
         using var cts = new CancellationTokenSource();
         var workerTask = worker.StartAsync(cts.Token);
 
-        // Enqueue email via EmailService
         await emailService.SendAsync("candidate@example.com", "John Doe", "Interview Scheduled", "<p>Hello</p>");
 
         // Wait briefly for worker to consume
@@ -42,8 +54,11 @@ public class BackgroundQueueTests(MySqlDatabaseFixture fixture) : DbTestBase(fix
         await cts.CancelAsync();
         await worker.StopAsync(CancellationToken.None);
 
-        Assert.Single(fakeTransport.SentMessages);
-        Assert.Equal("Interview Scheduled", fakeTransport.SentMessages[0].Subject);
+        Assert.Single(fakeDispatcher.Sent);
+        Assert.Equal("Interview Scheduled", fakeDispatcher.Sent[0].Subject);
+
+        var row = await Db.OutboundEmails.SingleAsync(e => e.ToEmail == "candidate@example.com");
+        Assert.Equal(OutboundEmailStatus.Sent, row.Status);
     }
 
     [Fact]
@@ -160,14 +175,15 @@ public class BackgroundQueueTests(MySqlDatabaseFixture fixture) : DbTestBase(fix
     }
 }
 
-internal sealed class CapturingSmtpTransport : ISmtpTransport
+/// <summary>Records every email the outbox processor hands it, without touching the network.</summary>
+internal sealed class CapturingDispatcher : IEmailDispatcher
 {
-    public List<MimeMessage> SentMessages { get; } = [];
+    public List<EmailSendRequest> Sent { get; } = [];
 
-    public Task SendAsync(MimeMessage message, SmtpOptions options, CancellationToken ct = default)
+    public Task<string?> SendAsync(EmailSendRequest request, CancellationToken ct = default)
     {
-        SentMessages.Add(message);
-        return Task.CompletedTask;
+        Sent.Add(request);
+        return Task.FromResult<string?>(null);
     }
 }
 

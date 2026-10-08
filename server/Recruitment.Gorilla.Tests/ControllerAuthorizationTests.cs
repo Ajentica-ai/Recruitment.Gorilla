@@ -119,6 +119,33 @@ public class ControllerAuthorizationTests(ApiFixture fx)
         Assert.Equal(HttpStatusCode.Unauthorized, anon.StatusCode);
     }
 
+    // ---- Email delivery log: SuperAdmin only ----
+
+    [Theory]
+    [InlineData("SuperAdmin", HttpStatusCode.OK)]
+    [InlineData("Admin", HttpStatusCode.Forbidden)]
+    [InlineData("Recruiter", HttpStatusCode.Forbidden)]
+    [InlineData("Interviewer", HttpStatusCode.Forbidden)]
+    public Task Get_email_outbox(string role, HttpStatusCode expected) =>
+        AssertStatus(role, HttpMethod.Get, "/api/config/email/outbox", expected);
+
+    [Fact]
+    public async Task Resending_an_email_is_super_admin_only()
+    {
+        await AssertStatus("Admin", HttpMethod.Post, "/api/config/email/outbox/1/resend", HttpStatusCode.Forbidden);
+        await AssertStatus("Recruiter", HttpMethod.Post, "/api/config/email/outbox/1/resend", HttpStatusCode.Forbidden);
+        await AssertStatus("Interviewer", HttpMethod.Post, "/api/config/email/outbox/1/resend", HttpStatusCode.Forbidden);
+        var anon = await fx.SendAsync(HttpMethod.Post, "/api/config/email/outbox/1/resend", token: null);
+        Assert.Equal(HttpStatusCode.Unauthorized, anon.StatusCode);
+    }
+
+    [Fact]
+    public async Task Resending_an_unknown_email_is_not_found()
+    {
+        var resp = await fx.SendAsync(HttpMethod.Post, "/api/config/email/outbox/999999999/resend", await TokenFor("SuperAdmin"));
+        Assert.Equal(HttpStatusCode.NotFound, resp.StatusCode);
+    }
+
     // ---- Slack settings: SuperAdmin only ----
 
     [Theory]

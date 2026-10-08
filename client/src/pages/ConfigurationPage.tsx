@@ -19,6 +19,7 @@ import { useTabs } from '../components/common/useTabs';
 import JobOpeningsTab from './configuration/JobOpeningsTab';
 import OptionChipsTab, { type OptionApi } from './configuration/OptionChipsTab';
 import EmailSettingsTab from './configuration/EmailSettingsTab';
+import EmailDeliveryTab from './configuration/EmailDeliveryTab';
 import SlackSettingsTab from './configuration/SlackSettingsTab';
 import EvaluationRubricsTab from './configuration/EvaluationRubricsTab';
 
@@ -60,6 +61,7 @@ export default function ConfigurationPage() {
     { id: 'sources', label: 'Candidate sources' },
     { id: 'interview-types', label: 'Interview types' },
     ...(isSuperAdmin ? [{ id: 'email', label: 'Email' }] : []),
+    ...(isSuperAdmin ? [{ id: 'email-delivery', label: 'Email delivery' }] : []),
     ...(isSuperAdmin ? [{ id: 'slack', label: 'Slack' }] : []),
     { id: 'jobs', label: 'Job openings' },
   ];
@@ -121,6 +123,12 @@ export default function ConfigurationPage() {
       {active === 'email' && isSuperAdmin && (
         <TabPanel id="email">
           <EmailSettingsTab />
+        </TabPanel>
+      )}
+
+      {active === 'email-delivery' && isSuperAdmin && (
+        <TabPanel id="email-delivery">
+          <EmailDeliveryTab />
         </TabPanel>
       )}
 
