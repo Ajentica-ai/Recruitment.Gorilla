@@ -13,12 +13,15 @@ their CV.
 ## 1.2 Your interviews
 
 When you are assigned to an interview you get a **notification** in the app and an **email with
-a calendar invite**. The interview also appears under **My interviews** on your Dashboard:
+a calendar invite**. The interview also appears under **Up next** on your Dashboard:
 
 ![Interviewer dashboard](images/01-dashboard-interviewer.png)
 
-- Each row shows the candidate, the job opening, the date and time (in red when it is less than
-  24 hours away) and your evaluation state: **Pending**, **Draft** or **Submitted**.
+- Upcoming interviews are grouped by day. Each row shows the time (with how long until it starts,
+  for today), the candidate, the job opening and your evaluation state: **Pending**, **Draft** or
+  **Submitted**.
+- Interviews that have already happened but still need your evaluation are listed first, under
+  **Awaiting evaluation**. Once you submit, they drop off.
 - Select a row to open the interview page.
 
 ## 1.3 The interview page

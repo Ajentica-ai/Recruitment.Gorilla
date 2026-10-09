@@ -13,6 +13,15 @@
 > "Closing soon" badge and hides roles past their End date. See
 > `job-openings-and-role-hierarchy.md` and the reference docs.
 
+> **Revision (2026-10-10, RG-134, issue #134):** the page was redesigned action-first and mobile-first.
+> The donut is replaced by a stacked pipeline bar with drill-through stage rows; "My interviews" and
+> "Upcoming interviews" merge into one **Up next** card (Mine / Team); the job openings table became
+> **Open roles** cards sorted by closing date; by-role and top skills share one **Insights** card;
+> recent activity groups by day and folds runs of changes. The API gained additive fields only:
+> `DashboardKpisDto.NewPrevWeek / RecommendedThisWeek / RejectedThisWeek` and
+> `GET /api/dashboard/applications-summary`. The current layout is documented in
+> `ai-docs/frontend.md` (Dashboard section); this spec's component names below are historical.
+
 ## 1. Summary
 A dashboard landing page (`/`) that summarizes the pipeline for the signed-in user: KPI stat cards, a pipeline funnel + status donut, an applications trend, by-role/top-skill breakdowns, upcoming interviews, a recent-activity feed, and an **Active Job Openings** table. Job openings reuse the existing "Roles applied" lookup (each active role is an open position with posting metadata); applicants are derived by role.
 

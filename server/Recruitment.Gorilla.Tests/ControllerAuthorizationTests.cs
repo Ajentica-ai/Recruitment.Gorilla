@@ -323,6 +323,7 @@ public class ControllerAuthorizationTests(ApiFixture fx)
     {
         await AssertStatus(role, HttpMethod.Get, "/api/interviews/types", HttpStatusCode.OK);
         await AssertStatus(role, HttpMethod.Get, "/api/dashboard/kpis", HttpStatusCode.OK);
+        await AssertStatus(role, HttpMethod.Get, "/api/dashboard/applications-summary?days=7", HttpStatusCode.OK);
     }
 
     // ---- User guide: any authenticated role, content cut to the caller's edition ----
@@ -350,6 +351,7 @@ public class ControllerAuthorizationTests(ApiFixture fx)
     [InlineData("/api/candidates/source-options")]
     [InlineData("/api/interviews/types")]
     [InlineData("/api/dashboard/kpis")]
+    [InlineData("/api/dashboard/applications-summary")]
     [InlineData("/api/audit")]
     [InlineData("/api/user-guide")]
     public async Task Protected_endpoints_reject_anonymous(string url)

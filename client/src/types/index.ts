@@ -538,6 +538,19 @@ export interface DashboardKpis {
   newThisWeek: number;
   referredCount: number;
   referredPercent: number;
+  /** Created in the 7 days before `newThisWeek`'s window. */
+  newPrevWeek: number;
+  /** Now in the positive bucket and first entered it in the last 7 days. */
+  recommendedThisWeek: number;
+  /** Now in the negative bucket and first entered it in the last 7 days. */
+  rejectedThisWeek: number;
+}
+
+/** Totals behind the applications trend: its own window and the equally long one before it. */
+export interface ApplicationsSummary {
+  days: number;
+  total: number;
+  previousTotal: number;
 }
 
 export interface StatusCount {

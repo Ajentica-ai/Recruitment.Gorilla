@@ -64,9 +64,10 @@ Local disk under `Uploads/`, named `{GUID}{ext}` to avoid collisions; original n
 
 ## Dashboard aggregation
 - `DashboardController` is `[Authorize]` (all roles). It splits into **org-wide** endpoints (no owner scope — every role sees the same figures) and one **owner-scoped** endpoint:
-  - `GET /api/dashboard/kpis` → `DashboardService.GetKpisAsync()` — total/in-process/recommended/rejected/new-this-week/referred, bucketed from a single `GroupBy(CurrentStatus)`. **The terminal sets live in `Services/CandidateBuckets.cs`**, shared with the candidate list so a KPI tile and the list it links to cannot disagree — don't re-declare them locally.
+  - `GET /api/dashboard/kpis` → `DashboardService.GetKpisAsync()`: total/in-process/recommended/rejected/new-this-week/referred, bucketed from a single `GroupBy(CurrentStatus)`, plus the weekly change fields: `NewPrevWeek` (created in [now-14d, now-7d)) and `RecommendedThisWeek` / `RejectedThisWeek` (candidates now in that bucket whose **first** status-history entry into it is within the last 7 days, so moving Recommended to Offer Extended is not a new arrival; `EnteredBucketSinceAsync`). **The terminal sets live in `Services/CandidateBuckets.cs`**, shared with the candidate list so a KPI tile and the list it links to cannot disagree: don't re-declare them locally.
   - `GET /api/dashboard/status-breakdown` → `GetStatusBreakdownAsync()` ordered by `StatusOptions.SortOrder`.
   - `GET /api/dashboard/applications-trend?days=` → `GetApplicationsTrendAsync(days)`; `days ∈ {7,30,90}` (else 30); groups `CreatedAt.Date` and **zero-fills** missing days in C#.
+  - `GET /api/dashboard/applications-summary?days=` → `GetApplicationsSummaryAsync(days)` → `ApplicationsSummaryDto(Days, Total, PreviousTotal)`: the trend's own window (same clamp and UTC-day start, so `Total` equals the sum of the trend points) and the equally long window before it. Drives the dashboard's "N new, +M vs prior period" headline.
   - `GET /api/dashboard/job-openings` → `GetJobOpeningsAsync()` — **open** roles only (`IsActive && EndDate >= now`) projected to `JobOpeningDto` (incl. `EndDate`), applicant counts derived by role.
   - `GET /api/dashboard?roleId=` → `GetScopedAsync(accessUserId, roleFilterId)` — the candidate-centric remainder (**by-role, top-skills, upcoming interviews, recent activity**), scoped with the same access predicate as candidates (null for Admin+, else owned **OR** assigned-role-recruiter); an optional `roleId` narrows to one role. The frontend only calls this for `canWriteCandidates` roles, and offers Recruiters a role filter over their assigned roles + All.
 - **Upcoming interviews** come from the `Interviews` table (`ScheduledAt >= now` **and** candidate still `Interview Scheduled`) — not `StatusHistory.InterviewAt` — so completed/rejected or re-scheduled candidates don't linger or duplicate.
@@ -110,7 +111,7 @@ log4net (`log4net.config`): console + daily rolling file under `Logs/`. App cate
 ## API surface (current)
 | Method | Route | Auth | Purpose |
 |---|---|---|---|
-| GET | `/api/dashboard/kpis` · `/status-breakdown` · `/applications-trend?days=` · `/job-openings` | required (any role) | **Org-wide** figures — every role sees the same numbers |
+| GET | `/api/dashboard/kpis` · `/status-breakdown` · `/applications-trend?days=` · `/applications-summary?days=` · `/job-openings` | required (any role) | **Org-wide** figures: every role sees the same numbers |
 | GET | `/api/dashboard` | required | **Owner-scoped** remainder: by-role/top-skill counts, upcoming interviews, recent activity |
 | GET | `/api/analytics` | CanWriteCandidate | Executive **operational analytics** (time-to-hire, stage velocity, funnel drop-off conversion, sourcing channel ROI, recruiter workload). Non-Admins are scoped to their assigned roles plus candidates they own; `roleId` narrows that scope (never widens it), and workload transition/interview counts only include candidates in scope. Filters `preset, from, to, roleId` |
 | GET | `/api/audit` | **Admin+** | Audit trail (newest-first), filters `actorUserId,entityType,entityId,action,from,to` + paging |

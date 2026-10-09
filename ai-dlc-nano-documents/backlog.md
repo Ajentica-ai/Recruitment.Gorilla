@@ -1,6 +1,7 @@
 # Backlog
 <!-- Out-of-scope findings, newest first. Delete a line when it is resolved. -->
-- [2026-10-02] client/DashboardPage - Recent activity 'View all' links Interviewers to /candidates (found: RG-99)
+- [2026-10-10] client/CountBarChart - Insights bar chart keeps a fixed tall height even with one bar (found: RG-134)
+- [2026-10-10] client/DashboardPage - KPI figures are org-wide but a Recruiter's drill-through list is owner-scoped (found: RG-134)
 - [2026-10-02] Tests/ControllerAuthorizationTests - delete audit-row test flaky under full suite; 500ms poll too short (found: RG-101)
 - [2026-10-02] local dev - user-secrets DB password is stale, so dotnet run/test fail until reset (found: RG-50)
 - [2026-10-02] CVUploadController - duplicate check has no DB constraint; simultaneous identical uploads both pass (found: RG-93)

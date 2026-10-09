@@ -43,6 +43,7 @@ public abstract class DbTestBase : IDisposable
     protected OfferService Offers() => new(Db, Candidates(), Notifications(), Audit(), NullLogger<OfferService>.Instance);
     protected EvaluationRubricService EvaluationRubrics() => new(Db, Audit());
     protected AnalyticsService Analytics() => new(Db);
+    protected DashboardService Dashboard() => new(Db);
     protected EmailOutboxProcessor OutboxProcessor(IEmailDispatcher? dispatcher = null, TimeProvider? time = null) =>
         new(Db, dispatcher ?? new FixedEmailDispatcher(), time ?? TimeProvider.System, NullLogger<EmailOutboxProcessor>.Instance);
     protected CandidateDraftService CandidateDrafts(CurrentUser? user = null) =>

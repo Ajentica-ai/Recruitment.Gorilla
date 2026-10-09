@@ -28,6 +28,10 @@ public class DashboardController(DashboardService dashboardService, CurrentUser 
     public async Task<IActionResult> GetApplicationsTrend([FromQuery] int days = 30) =>
         Ok(await dashboardService.GetApplicationsTrendAsync(days));
 
+    [HttpGet("applications-summary")]
+    public async Task<IActionResult> GetApplicationsSummary([FromQuery] int days = 30) =>
+        Ok(await dashboardService.GetApplicationsSummaryAsync(days));
+
     [HttpGet("job-openings")]
     public async Task<IActionResult> GetJobOpenings() =>
         Ok(await dashboardService.GetJobOpeningsAsync());

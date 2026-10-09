@@ -1,11 +1,7 @@
-// Resolves chart colors from the app's existing status design tokens so chart
-// segments match the StatusBadge pills exactly and flip with the light/dark theme.
-//
-// The status tones live as CSS variables in index.css (--status-color per tone,
-// with [data-bs-theme='dark'] overrides). We read the *computed* value off a
-// probe element carrying the tone class, rather than duplicating hex codes here.
-
-import { getStatusTone, type StatusTone } from './statusColors';
+// Resolves chart colors from the app's design tokens so Recharts (which needs
+// concrete values, not var()) matches the rest of the UI and flips with the
+// light/dark theme. Status-coloured graphics (the dashboard pipeline bar) are
+// plain CSS on the .status--* tones and don't need this.
 
 /**
  * Reads a design token off :root, resolved for the active theme. Recharts needs
@@ -19,44 +15,17 @@ function token(name: string, fallback: string): string {
   return value || fallback;
 }
 
-/** Brand single-hue used for single-series magnitude charts (role, skills, trend).
+/** Brand single-hue used for single-series magnitude charts (roles, skills).
  *
  *  A single hue, deliberately: these charts rank nominal categories, where the
  *  bar's length already carries the value and a per-category colour would only
- *  restate it in a second, worse encoding. Colour is reserved for the charts
- *  that genuinely need to distinguish series — the status donut, which uses the
- *  pipeline tones so a segment matches its badge exactly. */
+ *  restate it in a second, worse encoding. Colour is reserved for graphics that
+ *  genuinely need to distinguish series, such as the dashboard pipeline bar,
+ *  which uses the status tones so a segment matches its badge exactly. */
 export const ACCENT: Record<'light' | 'dark', string> = {
-  light: '#7c5cfc', // Violet — matches --primary
-  dark: '#8b6dff', // Violet — matches --primary
+  light: '#7c5cfc', // Violet, matches --primary
+  dark: '#8b6dff', // Violet, matches --primary
 };
-
-/**
- * Reads the resolved `--status-color` hex for a tone under the current theme.
- * A hidden probe is appended to <body> (inside the html[data-bs-theme] scope) so
- * the dark-mode overrides apply. Falls back to the muted grey if resolution fails.
- */
-function resolveTone(tone: StatusTone): string {
-  const probe = document.createElement('span');
-  probe.className = `status--${tone}`;
-  probe.style.display = 'none';
-  document.body.appendChild(probe);
-  const value = getComputedStyle(probe).getPropertyValue('--status-color').trim();
-  probe.remove();
-  return value || '#94a3b8';
-}
-
-/**
- * Builds a { status -> hex } map for the given statuses under the current theme.
- * Call from a component with `theme` in the dependency list so it recomputes on toggle.
- */
-export function statusColorMap(statuses: string[]): Record<string, string> {
-  const map: Record<string, string> = {};
-  for (const status of statuses) {
-    map[status] = resolveTone(getStatusTone(status));
-  }
-  return map;
-}
 
 /** Convenience: the accent hue for the active theme. */
 export const accentFor = (theme: 'light' | 'dark'): string => ACCENT[theme];
