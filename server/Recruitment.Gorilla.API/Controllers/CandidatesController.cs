@@ -101,7 +101,10 @@ public class CandidatesController(
         if (fileError is not null)
             return BadRequest(fileError);
 
-        var (created, duplicate) = await candidateService.CreateAsync(dto, currentUser.UserId, currentUser.Name);
+        var (created, duplicate, roleError) = await candidateService.CreateAsync(
+            dto, currentUser.UserId, currentUser.Name, WriteOwnerScope);
+        if (roleError is not null)
+            return BadRequest(roleError);
 
         if (duplicate is not null)
         {
@@ -227,7 +230,8 @@ public class CandidatesController(
         if (lockError is not null)
             return BadRequest(lockError);
 
-        var updated = await candidateService.UpdateAsync(id, dto, WriteOwnerScope);
+        var (updated, roleError) = await candidateService.UpdateAsync(id, dto, WriteOwnerScope);
+        if (roleError is not null) return BadRequest(roleError);
         if (updated is null) return NotFound();
 
         await audit.RecordAsync("Candidate.Updated", "Candidate", id,

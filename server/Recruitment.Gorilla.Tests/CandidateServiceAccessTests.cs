@@ -130,4 +130,129 @@ public class CandidateServiceAccessTests(MySqlDatabaseFixture fixture) : DbTestB
         // Admin (null scope) can delete any.
         Assert.True(await Candidates().DeleteAsync(underRoleNotOwned.Id, null));
     }
+
+    // ---- Role assignment enforcement on create/update (#97): a Recruiter may only file or ----
+    // ---- reassign a candidate to a role they are an assigned recruiter of. ----
+
+    private static CreateCandidateDto NewCandidateDto(int? roleId) => new(
+        FullName: "Jane Doe",
+        Email: $"{Guid.NewGuid():N}@test.local",
+        Phone: null,
+        CurrentTitle: null,
+        RelevantExperience: "3 Years",
+        Skills: null,
+        Summary: null,
+        LinkedInUrl: null,
+        GithubUrl: null,
+        PortfolioUrl: null,
+        AppliedRole: null,
+        IsReferred: false,
+        ReferenceName: null,
+        ReferenceEmail: null,
+        ReferenceEmployeeId: null,
+        RoleAppliedOptionId: roleId,
+        SkillOptionIds: null,
+        StoredFileName: $"{Guid.NewGuid():N}.pdf",
+        OriginalFileName: "resume.pdf",
+        FileType: "PDF",
+        FileSizeBytes: 1000,
+        InitialStatus: "Uploaded",
+        InitialStatusComment: null);
+
+    [Fact]
+    public async Task Recruiter_cannot_create_a_candidate_under_an_unassigned_role()
+    {
+        var recruiter = Data.AddUser(Roles.Recruiter);
+        var otherRole = Data.AddRole();
+
+        var (created, duplicate, error) = await Candidates().CreateAsync(
+            NewCandidateDto(otherRole.Id), recruiter.Id, recruiter.Name, scopeUserId: recruiter.Id);
+
+        Assert.Null(created);
+        Assert.Null(duplicate);
+        Assert.Equal("You are not assigned to this job opening.", error);
+    }
+
+    [Fact]
+    public async Task Recruiter_can_create_a_candidate_under_their_assigned_role()
+    {
+        var recruiter = Data.AddUser(Roles.Recruiter);
+        var assignedRole = Data.AddRole(recruiterUserIds: recruiter.Id);
+
+        var (created, _, error) = await Candidates().CreateAsync(
+            NewCandidateDto(assignedRole.Id), recruiter.Id, recruiter.Name, scopeUserId: recruiter.Id);
+
+        Assert.Null(error);
+        Assert.NotNull(created);
+    }
+
+    [Fact]
+    public async Task Admin_can_create_a_candidate_under_any_role()
+    {
+        var admin = Data.AddUser(Roles.Admin);
+        var otherRole = Data.AddRole();
+
+        var (created, _, error) = await Candidates().CreateAsync(
+            NewCandidateDto(otherRole.Id), admin.Id, "Admin", scopeUserId: null);
+
+        Assert.Null(error);
+        Assert.NotNull(created);
+    }
+
+    [Fact]
+    public async Task Recruiter_cannot_reassign_a_candidate_to_an_unassigned_role()
+    {
+        var recruiter = Data.AddUser(Roles.Recruiter);
+        var owned = Data.AddCandidate(ownerUserId: recruiter.Id);
+        var otherRole = Data.AddRole();
+
+        var dto = new UpdateCandidateDto(
+            owned.FullName, owned.Email, null, null, "3 Years", null, null, null, null, null, null,
+            IsReferred: false, null, null, null,
+            RoleAppliedOptionId: otherRole.Id, SkillOptionIds: null);
+
+        var (updated, error) = await Candidates().UpdateAsync(owned.Id, dto, recruiter.Id);
+
+        Assert.Null(updated);
+        Assert.Equal("You are not assigned to this job opening.", error);
+    }
+
+    [Fact]
+    public async Task Recruiter_can_update_other_fields_without_touching_an_unassigned_current_role()
+    {
+        var recruiter = Data.AddUser(Roles.Recruiter);
+        var otherRole = Data.AddRole(); // recruiter is NOT assigned to this one
+        // Owned by the recruiter (candidate access via ownership), filed under a role they aren't on.
+        var candidate = Data.AddCandidate(ownerUserId: recruiter.Id, roleId: otherRole.Id);
+
+        var dto = new UpdateCandidateDto(
+            "Updated Name", candidate.Email, null, null, "4 Years", null, null, null, null, null, null,
+            IsReferred: false, null, null, null,
+            RoleAppliedOptionId: otherRole.Id, SkillOptionIds: null); // role left unchanged
+
+        var (updated, error) = await Candidates().UpdateAsync(candidate.Id, dto, recruiter.Id);
+
+        Assert.Null(error);
+        Assert.NotNull(updated);
+        Assert.Equal("Updated Name", updated!.FullName);
+    }
+
+    [Fact]
+    public async Task Recruiter_can_clear_a_candidates_role_with_no_assignment_check()
+    {
+        var recruiter = Data.AddUser(Roles.Recruiter);
+        var assignedRole = Data.AddRole(recruiterUserIds: recruiter.Id);
+        var candidate = Data.AddCandidate(ownerUserId: recruiter.Id, roleId: assignedRole.Id);
+
+        var dto = new UpdateCandidateDto(
+            candidate.FullName, candidate.Email, null, null, "3 Years", null, null, null, null, null, null,
+            IsReferred: false, null, null, null,
+            RoleAppliedOptionId: null, SkillOptionIds: null);
+
+        var (updated, error) = await Candidates().UpdateAsync(candidate.Id, dto, recruiter.Id);
+
+        Assert.Null(error);
+        Assert.NotNull(updated);
+        Assert.Null(updated!.RoleAppliedOptionId);
+    }
 }
