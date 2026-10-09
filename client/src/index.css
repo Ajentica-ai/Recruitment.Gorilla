@@ -2623,6 +2623,16 @@ a.list-row__title:hover {
   cursor: default;
 }
 
+.dropzone--disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.dropzone--disabled:hover {
+  border-color: var(--border-strong);
+  background: var(--surface-muted);
+}
+
 .dropzone__progress {
   display: flex;
   flex-direction: column;

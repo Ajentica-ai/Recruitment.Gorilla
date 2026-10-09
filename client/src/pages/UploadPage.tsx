@@ -12,11 +12,11 @@ import { getCandidateDrafts } from '../services/api';
 import type { CVDraft } from '../types';
 
 export default function UploadPage() {
-  const { isSuperAdmin } = useAuth();
+  const { isAdminOrAbove } = useAuth();
   const [activeTab, setActiveTab] = useState<'upload' | 'review'>('upload');
-  // JSON import is Super Admin only; everyone else always gets the CV uploader.
+  // JSON import is Admin and Super Admin only; everyone else always gets the CV uploader.
   const [intakeMode, setIntakeMode] = useState<'cv' | 'json'>('cv');
-  const showJsonImport = isSuperAdmin && intakeMode === 'json';
+  const showJsonImport = isAdminOrAbove && intakeMode === 'json';
   const [lastUploadedBatchId, setLastUploadedBatchId] = useState<string | null>(null);
   const [lastBatchCount, setLastBatchCount] = useState<number>(0);
 
@@ -68,7 +68,7 @@ export default function UploadPage() {
       {/* Tab 1: Upload & Intake */}
       {activeTab === 'upload' && (
         <div className="page-stack">
-          {isSuperAdmin && (
+          {isAdminOrAbove && (
             <div className="segmented self-start" role="radiogroup" aria-label="Intake method">
               <button
                 type="button"

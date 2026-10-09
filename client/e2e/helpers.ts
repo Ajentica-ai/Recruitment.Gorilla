@@ -84,6 +84,21 @@ export function requireData(present: boolean, what: string): void {
   test.skip(!present, `Needs ${what} in the dev database; none found.`);
 }
 
+/**
+ * An open job opening the signed-in caller may use for a CV upload or import, or `undefined` if
+ * none exists: an Admin+ sees every active, open opening; a Recruiter only the ones they are
+ * assigned to. A CV upload and a JSON import both now require one.
+ */
+export async function openRoleId(
+  request: APIRequestContext,
+  auth: Record<string, string>,
+): Promise<number | undefined> {
+  const res = await request.get('/api/candidates/role-options', { headers: auth });
+  if (!res.ok()) return undefined;
+  const roles = await res.json();
+  return Array.isArray(roles) && roles.length > 0 ? roles[0].id : undefined;
+}
+
 /** How many candidates the signed-in user can see. */
 export async function candidateCount(
   request: APIRequestContext,

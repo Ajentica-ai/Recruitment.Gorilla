@@ -1,5 +1,6 @@
 import { expect, type APIRequestContext } from '@playwright/test';
 import { randomUUID } from 'node:crypto';
+import { openRoleId, requireData } from './helpers';
 
 /**
  * Seeds a throwaway candidate the way the app itself does: upload a CV, then create the candidate
@@ -54,16 +55,25 @@ export interface UploadedDraft {
 /**
  * Uploads a small unique PDF and returns the pending draft it creates, owned by whoever `auth`
  * signs in as. The caller discards it when done.
+ *
+ * A job opening is now required. Without one given, this resolves the first opening `auth` may
+ * use (an Admin+'s first active opening, or a Recruiter's first assigned one) and skips the test
+ * if there isn't one, rather than failing on an unrelated 400.
  */
 export async function uploadDraft(
   request: APIRequestContext,
   auth: Record<string, string>,
   text = `E2E Probe ${randomUUID()}`,
+  roleId?: number,
 ): Promise<UploadedDraft> {
+  const resolvedRoleId = roleId ?? (await openRoleId(request, auth));
+  requireData(resolvedRoleId !== undefined, 'an open job opening the signed-in user may use');
+
   const upload = await request.post('/api/cvupload', {
     headers: auth,
     multipart: {
       file: { name: `probe-${randomUUID()}.pdf`, mimeType: 'application/pdf', buffer: minimalPdf(text) },
+      roleAppliedOptionId: String(resolvedRoleId),
     },
   });
   expect(upload.ok(), `CV upload failed: ${upload.status()} ${await upload.text()}`).toBeTruthy();

@@ -13,15 +13,17 @@ namespace Recruitment.Gorilla.Tests;
 [Collection(ApiCollection.Name)]
 public class CandidateImportApiTests(ApiFixture fx)
 {
-    private static MultipartFormDataContent Form(string entryJson, byte[] bytes, string fileName)
+    private static MultipartFormDataContent Form(string entryJson, byte[] bytes, string fileName, int? roleId)
     {
         var file = new ByteArrayContent(bytes);
         file.Headers.ContentType = new MediaTypeHeaderValue("application/pdf");
-        return new MultipartFormDataContent
+        var form = new MultipartFormDataContent
         {
             { new StringContent(entryJson), "entry" },
             { file, "file", fileName },
         };
+        if (roleId is int id) form.Add(new StringContent(id.ToString()), "roleAppliedOptionId");
+        return form;
     }
 
     private static string Entry(string cvFileName) => $$"""
@@ -35,9 +37,9 @@ public class CandidateImportApiTests(ApiFixture fx)
         """;
 
     private async Task<(HttpResponseMessage Response, JsonElement Body)> ImportAsync(
-        string token, string entryJson, byte[] bytes, string fileName)
+        string token, string entryJson, byte[] bytes, string fileName, int? roleId = null)
     {
-        var resp = await fx.SendMultipartAsync("/api/candidate-import", token, Form(entryJson, bytes, fileName));
+        var resp = await fx.SendMultipartAsync("/api/candidate-import", token, Form(entryJson, bytes, fileName, roleId ?? fx.RoleId));
         var text = await resp.Content.ReadAsStringAsync();
         var body = resp.IsSuccessStatusCode ? JsonDocument.Parse(text).RootElement.Clone() : default;
         if (resp.IsSuccessStatusCode)
@@ -110,6 +112,28 @@ public class CandidateImportApiTests(ApiFixture fx)
     }
 
     [Fact]
+    public async Task Import_without_a_job_opening_is_rejected()
+    {
+        var resp = await fx.SendMultipartAsync("/api/candidate-import", await SuperAdmin(),
+            Form(Entry("no_role.pdf"), ApiFixture.MinimalPdf($"Import {Guid.NewGuid()}"), "no_role.pdf", roleId: null));
+
+        Assert.Equal(HttpStatusCode.BadRequest, resp.StatusCode);
+        Assert.Contains("job opening", await resp.Content.ReadAsStringAsync());
+    }
+
+    [Fact]
+    public async Task Import_for_a_closed_job_opening_is_rejected()
+    {
+        var closedRoleId = await fx.NewRoleAsync(endDate: DateTime.UtcNow.AddDays(-1));
+
+        var (resp, _) = await ImportAsync(await SuperAdmin(), Entry("closed_role.pdf"),
+            ApiFixture.MinimalPdf($"Import {Guid.NewGuid()}"), "closed_role.pdf", closedRoleId);
+
+        Assert.Equal(HttpStatusCode.BadRequest, resp.StatusCode);
+        Assert.Contains("not open", await resp.Content.ReadAsStringAsync());
+    }
+
+    [Fact]
     public async Task Template_downloads_as_a_json_attachment()
     {
         var resp = await fx.SendAsync(HttpMethod.Get, "/api/candidate-import/template", await SuperAdmin());
@@ -121,13 +145,20 @@ public class CandidateImportApiTests(ApiFixture fx)
         Assert.Contains("MANDATORY FIELDS", await resp.Content.ReadAsStringAsync());
     }
 
+    private static MultipartFormDataContent UploadForm(byte[] bytes, string fileName, int? roleId)
+    {
+        var file = new ByteArrayContent(bytes);
+        file.Headers.ContentType = new MediaTypeHeaderValue("application/pdf");
+        var form = new MultipartFormDataContent { { file, "file", fileName } };
+        if (roleId is int id) form.Add(new StringContent(id.ToString()), "roleAppliedOptionId");
+        return form;
+    }
+
     // The CV upload now goes through the shared intake; it had no multipart test before.
     [Fact]
     public async Task Cv_upload_still_stores_and_parses_a_pdf()
     {
-        var file = new ByteArrayContent(ApiFixture.MinimalPdf($"Upload {Guid.NewGuid()}"));
-        file.Headers.ContentType = new MediaTypeHeaderValue("application/pdf");
-        var form = new MultipartFormDataContent { { file, "file", "upload_probe.pdf" } };
+        var form = UploadForm(ApiFixture.MinimalPdf($"Upload {Guid.NewGuid()}"), "upload_probe.pdf", fx.RoleId);
 
         var resp = await fx.SendMultipartAsync("/api/cvupload", await fx.LoginAsync(fx.AdminEmail), form);
 
@@ -137,5 +168,53 @@ public class CandidateImportApiTests(ApiFixture fx)
         fx.DeleteStoredUpload(storedName);
         Assert.Equal("PDF", doc.RootElement.GetProperty("fileType").GetString());
         Assert.True(doc.RootElement.GetProperty("id").GetInt32() > 0);
+    }
+
+    [Fact]
+    public async Task Cv_upload_without_a_job_opening_is_rejected()
+    {
+        var form = UploadForm(ApiFixture.MinimalPdf($"Upload {Guid.NewGuid()}"), "no_role.pdf", roleId: null);
+
+        var resp = await fx.SendMultipartAsync("/api/cvupload", await fx.LoginAsync(fx.AdminEmail), form);
+
+        Assert.Equal(HttpStatusCode.BadRequest, resp.StatusCode);
+        Assert.Contains("job opening", await resp.Content.ReadAsStringAsync());
+    }
+
+    [Fact]
+    public async Task Cv_upload_for_a_closed_job_opening_is_rejected()
+    {
+        var closedRoleId = await fx.NewRoleAsync(endDate: DateTime.UtcNow.AddDays(-1));
+        var form = UploadForm(ApiFixture.MinimalPdf($"Upload {Guid.NewGuid()}"), "closed_role.pdf", closedRoleId);
+
+        var resp = await fx.SendMultipartAsync("/api/cvupload", await fx.LoginAsync(fx.AdminEmail), form);
+
+        Assert.Equal(HttpStatusCode.BadRequest, resp.StatusCode);
+        Assert.Contains("not open", await resp.Content.ReadAsStringAsync());
+    }
+
+    [Fact]
+    public async Task Cv_upload_by_a_recruiter_for_an_unassigned_opening_is_rejected()
+    {
+        var unassignedRoleId = await fx.NewRoleAsync(); // no recruiters attached
+        var form = UploadForm(ApiFixture.MinimalPdf($"Upload {Guid.NewGuid()}"), "unassigned_role.pdf", unassignedRoleId);
+
+        var resp = await fx.SendMultipartAsync("/api/cvupload", await fx.LoginAsync(fx.RecruiterEmail), form);
+
+        Assert.Equal(HttpStatusCode.BadRequest, resp.StatusCode);
+        Assert.Contains("not assigned", await resp.Content.ReadAsStringAsync());
+    }
+
+    [Fact]
+    public async Task Cv_upload_by_a_recruiter_for_an_assigned_opening_succeeds()
+    {
+        var assignedRoleId = await fx.NewRoleAsync(recruiterUserIds: [fx.RecruiterId]);
+        var form = UploadForm(ApiFixture.MinimalPdf($"Upload {Guid.NewGuid()}"), "assigned_role.pdf", assignedRoleId);
+
+        var resp = await fx.SendMultipartAsync("/api/cvupload", await fx.LoginAsync(fx.RecruiterEmail), form);
+
+        Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
+        using var doc = JsonDocument.Parse(await resp.Content.ReadAsStringAsync());
+        fx.DeleteStoredUpload(doc.RootElement.GetProperty("storedFileName").GetString()!);
     }
 }

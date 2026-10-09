@@ -225,13 +225,13 @@ export const uploadCV = async (
   return data;
 };
 
-/** Super Admin only: the import template, whose comments explain how to fill it in. */
+/** Admin and Super Admin only: the import template, whose comments explain how to fill it in. */
 export const downloadImportTemplate = async (): Promise<void> => {
   const res = await api.get('/candidate-import/template', { responseType: 'blob' });
   saveBlob(res.data as Blob, res.headers['content-disposition'] as string | undefined, 'candidate-import-template.json');
 };
 
-/** Super Admin only: one entry of a JSON import file, with the CV it names, becomes a Pending draft. */
+/** Admin and Super Admin only: one entry of a JSON import file, with the CV it names, becomes a Pending draft. */
 export const importJsonCandidate = async (
   entry: Record<string, unknown>,
   file: File,

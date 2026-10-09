@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { CheckCircle2, Copy, FileText, UploadCloud, XCircle } from 'lucide-react';
 import { getActiveRoleOptions, uploadCV } from '../services/api';
 import { getCVUploadHubConnection, startCVUploadHub, type CVUploadProgressEvent } from '../services/signalr';
+import { jobStatus } from '../utils/jobStatus';
 import type { CVDraft } from '../types';
 import { Alert } from '@/components/ui/alert';
 import { Spinner } from '@/components/ui/spinner';
@@ -38,10 +39,12 @@ export default function BulkUploader({ onDraftsParsed }: Props) {
   const [fileProgresses, setFileProgresses] = useState<FileProgressState[]>([]);
   const currentBatchId = useRef<string | null>(null);
 
-  const { data: roles = [] } = useQuery({
+  const { data: allRoles = [] } = useQuery({
     queryKey: ['active-role-options'],
     queryFn: getActiveRoleOptions,
   });
+  // A job opening must be selected to upload; only ones still open are offerable.
+  const roles = allRoles.filter((r) => jobStatus(r) === 'open' || jobStatus(r) === 'closing-soon');
 
   useEffect(() => {
     let active = true;
@@ -80,7 +83,7 @@ export default function BulkUploader({ onDraftsParsed }: Props) {
 
   const onDrop = useCallback(
     async (files: File[]) => {
-      if (files.length === 0) return;
+      if (files.length === 0 || selectedRoleId == null) return;
       const batchId = `batch_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
       currentBatchId.current = batchId;
 
@@ -162,7 +165,7 @@ export default function BulkUploader({ onDraftsParsed }: Props) {
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
     accept: ACCEPTED,
-    disabled: busy,
+    disabled: busy || selectedRoleId == null,
   });
 
   const className = [
@@ -170,6 +173,7 @@ export default function BulkUploader({ onDraftsParsed }: Props) {
     'dropzone',
     isDragActive && 'dropzone--active',
     busy && 'dropzone--busy',
+    selectedRoleId == null && !busy && 'dropzone--disabled',
   ]
     .filter(Boolean)
     .join(' ');
@@ -198,12 +202,13 @@ export default function BulkUploader({ onDraftsParsed }: Props) {
           <NativeSelect
             id="job-role-select"
             size="sm"
+            required
             value={selectedRoleId ?? ''}
             disabled={busy}
             onChange={(e) => setSelectedRoleId(e.target.value ? Number(e.target.value) : null)}
             aria-label="Target Job Opening"
           >
-            <option value="">Select Job Opening (Optional)…</option>
+            <option value="">Select Job Opening…</option>
             {roles.map((r) => (
               <option key={r.id} value={r.id}>
                 {r.name}
@@ -228,6 +233,16 @@ export default function BulkUploader({ onDraftsParsed }: Props) {
               aria-label={`Parsed ${done} of ${total} files`}
             />
           </div>
+        ) : selectedRoleId == null ? (
+          <>
+            <span className="empty-state__icon">
+              <UploadCloud size={20} strokeWidth={1.75} aria-hidden="true" />
+            </span>
+            <div className="empty-state-title">Choose a job opening first</div>
+            <div className="empty-state-description">
+              Select the job opening these CVs are for, then drag &amp; drop or click to browse.
+            </div>
+          </>
         ) : (
           <>
             <span className="empty-state__icon">

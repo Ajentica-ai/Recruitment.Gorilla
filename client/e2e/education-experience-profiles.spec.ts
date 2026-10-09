@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { ADMIN, freshTestCvs, requireData, shotPath } from './helpers';
+import { ADMIN, apiAuth, freshTestCvs, requireData, shotPath } from './helpers';
 
 // Admin, not E2E_EMAIL's Recruiter: approving a draft requires assigning an
 // applied role, and a Recruiter only sees roles they are assigned to. With none,
@@ -12,7 +12,13 @@ test.describe('End-to-End Candidate Education, Experience & Coding Profiles Test
 
   test('Uploads BD Technical CV → Staging Studio parses Education, CGPA, Experience, Coding Links → Approved Candidate Profile renders rich sections', async ({
     page,
+    request,
   }) => {
+    // 0. A job opening must be selected before the dropzone accepts files now.
+    const auth = await apiAuth(request, { email, password });
+    const roles = await (await request.get('/api/candidates/role-options', { headers: auth })).json();
+    requireData(Array.isArray(roles) && roles.length > 0, 'an open job opening');
+
     // 1. Log in
     await page.goto('/');
     await page.locator('input[type="email"]').fill(email);
@@ -37,6 +43,7 @@ test.describe('End-to-End Candidate Education, Experience & Coding Profiles Test
     const batchName = `BD Software Engineers Batch ${Date.now()}`;
     const batchInput = page.locator('#batch-name-input');
     await batchInput.fill(batchName);
+    await page.locator('#job-role-select').selectOption({ index: 1 });
 
     const fileInput = page.locator('input[type="file"]');
     await fileInput.setInputFiles([testCvPath!]);

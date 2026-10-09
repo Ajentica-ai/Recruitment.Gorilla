@@ -55,12 +55,13 @@ public class CandidateDraftServiceTests(MySqlDatabaseFixture fixture) : DbTestBa
             "Jane D", "jane@test.com", null, null, null, null, null
         );
 
-        var updated = await service.UpdateDraftAsync(draft.Id, new UpdateCandidateDraftDto(
+        var (updated, error) = await service.UpdateDraftAsync(draft.Id, new UpdateCandidateDraftDto(
             "Jane Doe", "jane.doe@updated.com", "+1 555 222", "Lead Designer",
             "5 Years", "Figma, React", "Product Designer Bio",
             "linkedin.com/in/janedoe", null, null, null, null, null
         ));
 
+        Assert.Null(error);
         Assert.NotNull(updated);
         Assert.Equal("Jane Doe", updated.FullName);
         Assert.Equal("jane.doe@updated.com", updated.Email);
@@ -297,7 +298,7 @@ public class CandidateDraftServiceTests(MySqlDatabaseFixture fixture) : DbTestBa
         var role = Data.AddRole("Scoping Write Role");
         var intruder = CandidateDrafts(NewRecruiter());
 
-        var updated = await intruder.UpdateDraftAsync(draft.Id, new UpdateCandidateDraftDto(
+        var (updated, updateError) = await intruder.UpdateDraftAsync(draft.Id, new UpdateCandidateDraftDto(
             "Hijacked", "hijack@test.com", null, null, null, null, null, null, null, null, null, null, null));
         var (candidate, error) = await intruder.ApproveDraftAsync(draft.Id, new ApproveCandidateDraftDto(
             "Hijacked", "hijack@test.com", null, null, "2 Years", null, null, null, null, null,
@@ -305,6 +306,7 @@ public class CandidateDraftServiceTests(MySqlDatabaseFixture fixture) : DbTestBa
         var discarded = await intruder.DiscardDraftAsync(draft.Id);
 
         Assert.Null(updated);
+        Assert.Null(updateError);
         Assert.Null(candidate);
         Assert.Equal("Draft not found.", error);
         Assert.False(discarded);
@@ -376,5 +378,128 @@ public class CandidateDraftServiceTests(MySqlDatabaseFixture fixture) : DbTestBa
 
         Assert.DoesNotContain(list.Items, d => d.Id == draft.Id);
         Assert.Null(await anonymous.GetDraftByIdAsync(draft.Id));
+    }
+
+    // ---- Scoping by assigned job opening: a Recruiter can act on a draft they didn't upload, as
+    // long as it's for an opening they are assigned to. ----
+
+    [Fact]
+    public async Task A_recruiter_can_see_and_approve_a_draft_for_their_assigned_opening()
+    {
+        var recruiterUser = Data.AddUser(Roles.Recruiter);
+        var recruiter = SignedIn(recruiterUser.Id, Roles.Recruiter);
+        var role = Data.AddRole("Assigned Opening", null, recruiterUser.Id);
+
+        var draft = await AsAdmin().CreateDraftAsync(
+            "assigned.pdf", $"stored_assigned_{Guid.NewGuid():N}.pdf", "PDF", 1000, "batch_assigned", null,
+            "Assigned Candidate", "assigned@test.com", null, null, null, null, null,
+            roleAppliedOptionId: role.Id);
+
+        var asRecruiter = CandidateDrafts(recruiter);
+        Assert.NotNull(await asRecruiter.GetDraftByIdAsync(draft.Id));
+
+        var (candidate, error) = await asRecruiter.ApproveDraftAsync(draft.Id, new ApproveCandidateDraftDto(
+            "Assigned Candidate", "assigned@test.com", null, null, "2 Years", null, null, null, null, null,
+            role.Id, null, null));
+
+        Assert.Null(error);
+        Assert.NotNull(candidate);
+    }
+
+    [Fact]
+    public async Task A_recruiter_cannot_see_a_draft_for_an_opening_they_are_not_assigned_to()
+    {
+        var recruiter = NewRecruiter();
+        var unassignedRole = Data.AddRole("Unassigned Opening");
+
+        var draft = await AsAdmin().CreateDraftAsync(
+            "unassigned.pdf", $"stored_unassigned_{Guid.NewGuid():N}.pdf", "PDF", 1000, "batch_unassigned", null,
+            "Unassigned Candidate", "unassigned@test.com", null, null, null, null, null,
+            roleAppliedOptionId: unassignedRole.Id);
+
+        Assert.Null(await CandidateDrafts(recruiter).GetDraftByIdAsync(draft.Id));
+    }
+
+    // ---- Approve validates the job opening itself (existence, active, not expired) ----
+
+    [Fact]
+    public async Task ApproveDraft_rejects_a_missing_role()
+    {
+        var service = AsAdmin();
+        var draft = await service.CreateDraftAsync(
+            "norole.pdf", "stored_norole.pdf", "PDF", 1000, "batch_norole", null,
+            "No Role Candidate", "norole@test.com", null, null, null, null, null);
+
+        var (candidate, error) = await service.ApproveDraftAsync(draft.Id, new ApproveCandidateDraftDto(
+            "No Role Candidate", "norole@test.com", null, null, "2 Years", null, null, null, null, null,
+            null, null, null));
+
+        Assert.Null(candidate);
+        Assert.Equal("Select a job opening.", error);
+    }
+
+    [Fact]
+    public async Task ApproveDraft_rejects_an_inactive_role()
+    {
+        var service = AsAdmin();
+        var role = new RoleAppliedOption
+        {
+            Name = $"Inactive-{Guid.NewGuid():N}", SortOrder = 1, IsActive = false,
+            EndDate = DateTime.UtcNow.AddDays(30),
+        };
+        Db.RoleAppliedOptions.Add(role);
+        await Db.SaveChangesAsync();
+
+        var draft = await service.CreateDraftAsync(
+            "inactive.pdf", "stored_inactive.pdf", "PDF", 1000, "batch_inactive", null,
+            "Inactive Role Candidate", "inactive@test.com", null, null, null, null, null);
+
+        var (candidate, error) = await service.ApproveDraftAsync(draft.Id, new ApproveCandidateDraftDto(
+            "Inactive Role Candidate", "inactive@test.com", null, null, "2 Years", null, null, null, null, null,
+            role.Id, null, null));
+
+        Assert.Null(candidate);
+        Assert.Equal("The selected job opening is not open.", error);
+    }
+
+    [Fact]
+    public async Task ApproveDraft_rejects_an_expired_role()
+    {
+        var service = AsAdmin();
+        var role = Data.AddRole($"Expired-{Guid.NewGuid():N}", DateTime.UtcNow.AddDays(-1));
+
+        var draft = await service.CreateDraftAsync(
+            "expired.pdf", "stored_expired.pdf", "PDF", 1000, "batch_expired", null,
+            "Expired Role Candidate", "expired@test.com", null, null, null, null, null);
+
+        var (candidate, error) = await service.ApproveDraftAsync(draft.Id, new ApproveCandidateDraftDto(
+            "Expired Role Candidate", "expired@test.com", null, null, "2 Years", null, null, null, null, null,
+            role.Id, null, null));
+
+        Assert.Null(candidate);
+        Assert.Equal("The selected job opening is not open.", error);
+    }
+
+    [Fact]
+    public async Task A_recruiter_cannot_move_a_draft_to_an_opening_they_are_not_assigned_to()
+    {
+        var recruiterUser = Data.AddUser(Roles.Recruiter);
+        var recruiter = SignedIn(recruiterUser.Id, Roles.Recruiter);
+        var draft = await DraftUploadedBy(recruiter, "switch");
+        var unassignedRole = Data.AddRole("Not Mine");
+
+        var asRecruiter = CandidateDrafts(recruiter);
+
+        var (updated, updateError) = await asRecruiter.UpdateDraftAsync(draft.Id, new UpdateCandidateDraftDto(
+            draft.FullName, draft.Email, null, null, null, null, null, null, null, null,
+            unassignedRole.Id, null, null));
+        Assert.Null(updated);
+        Assert.Equal("You are not assigned to this job opening.", updateError);
+
+        var (candidate, approveError) = await asRecruiter.ApproveDraftAsync(draft.Id, new ApproveCandidateDraftDto(
+            draft.FullName, draft.Email, null, null, "2 Years", null, null, null, null, null,
+            unassignedRole.Id, null, null));
+        Assert.Null(candidate);
+        Assert.Equal("You are not assigned to this job opening.", approveError);
     }
 }

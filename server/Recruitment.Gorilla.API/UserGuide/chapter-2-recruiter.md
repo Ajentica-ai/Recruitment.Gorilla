@@ -15,6 +15,9 @@ You can work with a candidate when **either** is true:
 This rule applies everywhere: the candidate list, profiles, CV files, status changes, offers,
 Analytics and your Dashboard. You **cannot delete** candidates; ask an Admin.
 
+The same rule covers **drafts** waiting in the Review Workspace (2.3): you see and can approve a
+draft you uploaded yourself, or one anyone uploaded for a job opening you're assigned to.
+
 ## 2.2 Your dashboard
 
 Your Dashboard adds **Candidates** and **Upload CVs** shortcuts at the top:
@@ -34,8 +37,9 @@ Adding candidates has two steps: **upload** the CVs, then **review** what was ex
 **Step 1: Upload & Intake**
 
 1. Open **Upload CVs**.
-2. Optionally enter a **Batch label** (for example "QA intake October") and pick the
-   **Job opening** the CVs are for.
+2. Optionally enter a **Batch label** (for example "QA intake October"). Pick the
+   **Job opening** the CVs are for — this is required, and the drop area stays locked until
+   you choose one.
 3. Drag PDF or Word (.docx) files onto the drop area, or select it to browse. Each file can be
    up to 10 MB, and you can drop many at once.
 
@@ -63,7 +67,7 @@ marked **Duplicate**.
 - Tick several drafts to **Approve Selected** or **Discard Selected** at once.
 
 Required to approve: **Full name**, a valid **Email**, and a **Role applied for** that is
-active and not past its end date.
+active, not past its end date, and (for you) one you're assigned to.
 
 ## 2.4 The candidate list
 
