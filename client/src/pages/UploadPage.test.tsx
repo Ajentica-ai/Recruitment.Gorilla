@@ -4,10 +4,10 @@ import { describe, expect, it, vi } from 'vitest';
 import { renderWithProviders } from '../test/renderWithProviders';
 import UploadPage from './UploadPage';
 
-let isSuperAdmin = false;
+let isAdminOrAbove = false;
 
 vi.mock('../auth/AuthContext', () => ({
-  useAuth: () => ({ isSuperAdmin }),
+  useAuth: () => ({ isAdminOrAbove }),
 }));
 
 vi.mock('../components/BulkUploader', () => ({ default: () => <div>CV uploader</div> }));
@@ -18,8 +18,8 @@ vi.mock('../services/api', () => ({
 }));
 
 describe('UploadPage intake switch', () => {
-  it('lets a Super Admin switch to the JSON importer', async () => {
-    isSuperAdmin = true;
+  it('lets an Admin (or Super Admin) switch to the JSON importer', async () => {
+    isAdminOrAbove = true;
     renderWithProviders(<UploadPage />);
 
     expect(screen.getByText('CV uploader')).toBeInTheDocument();
@@ -27,8 +27,8 @@ describe('UploadPage intake switch', () => {
     expect(screen.getByText('JSON importer')).toBeInTheDocument();
   });
 
-  it('shows no switch and only the CV uploader to anyone else', () => {
-    isSuperAdmin = false;
+  it('shows no switch and only the CV uploader to a Recruiter', () => {
+    isAdminOrAbove = false;
     renderWithProviders(<UploadPage />);
 
     expect(screen.queryByRole('radio', { name: /JSON \+ CVs/ })).not.toBeInTheDocument();

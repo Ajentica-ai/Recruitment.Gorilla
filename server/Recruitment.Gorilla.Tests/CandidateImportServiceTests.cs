@@ -207,6 +207,24 @@ public class CandidateImportServiceTests(MySqlDatabaseFixture fixture) : DbTestB
     }
 
     [Fact]
+    public async Task Validate_falls_back_to_the_batch_role_when_the_named_role_does_not_resolve()
+    {
+        var batchRole = Data.AddRole();
+        var service = AsSuperAdmin(out _);
+
+        var json = JsonSerializer.Serialize(new
+        {
+            cvFileName = "a.pdf", fullName = "Jane Doe", email = UniqueEmail(), role = $"Nope {Guid.NewGuid():N}",
+        });
+        var result = await service.ValidateAsync(Parse(json), batchRole.Id);
+
+        Assert.Empty(result.Errors);
+        Assert.Equal(batchRole.Id, result.RoleAppliedOptionId);
+        Assert.Single(result.Warnings);
+        Assert.Contains("using the batch's job opening instead", result.Warnings[0]);
+    }
+
+    [Fact]
     public async Task Validate_warns_about_an_email_already_on_a_candidate()
     {
         var existing = Data.AddCandidate();

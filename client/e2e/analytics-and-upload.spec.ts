@@ -74,7 +74,11 @@ test.describe('Analytics & Real-time Bulk Upload E2E (Issues #20 & #19)', () => 
     await uploadLink.click();
     await expect(page).toHaveURL(/\/upload$/);
 
-    // 8. Verify Dropzone & background parser instructions
+    // 8. Verify Dropzone & background parser instructions. A job opening must be
+    //    chosen before the normal dropzone prompt replaces the "choose one first" state.
+    const roles = await (await request.get('/api/candidates/role-options', { headers: auth })).json();
+    requireData(Array.isArray(roles) && roles.length > 0, 'an open job opening');
+    await page.locator('#job-role-select').selectOption({ index: 1 });
     await expect(page.getByText(/Drag & drop CVs here, or click to browse/i)).toBeVisible();
     await expect(page.getByText(/PDF or Word \(\.docx\)/i)).toBeVisible();
   });

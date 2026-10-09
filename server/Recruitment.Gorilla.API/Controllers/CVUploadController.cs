@@ -40,6 +40,14 @@ public class CVUploadController(
             return BadRequest(invalid);
         }
 
+        if (await draftService.ValidateJobOpeningForCallerAsync(roleAppliedOptionId, required: true) is string roleError)
+        {
+            logger.LogWarning("Rejected upload '{FileName}': {Reason}", file.FileName, roleError);
+            await progressNotifier.NotifyProgressAsync(currentUser.UserId?.ToString(), bId, new CVUploadProgressEvent(
+                bId, idx, total, file.FileName, "error", 0, null, roleError));
+            return BadRequest(roleError);
+        }
+
         var (fileHash, duplicateError) = await intake.CheckDuplicateAsync(file);
         if (duplicateError is not null)
         {

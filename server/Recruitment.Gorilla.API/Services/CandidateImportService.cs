@@ -200,11 +200,18 @@ public class CandidateImportService(
             // Names are not unique: a reopened position can share its name with a closed one, so prefer an open match.
             var matches = await db.RoleAppliedOptions.Where(r => r.Name.ToLower() == roleName.ToLower()).ToListAsync();
             var role = matches.FirstOrDefault(r => r.IsActive && r.EndDate >= now) ?? matches.FirstOrDefault();
-            if (role is null) warnings.Add($"No job opening is named '{Shorten(roleName)}'; pick the role in review.");
-            else if (!role.IsActive) warnings.Add($"Job opening '{role.Name}' is not active; pick the role in review.");
-            else if (role.EndDate < now) warnings.Add($"Job opening '{role.Name}' closed on {role.EndDate:yyyy-MM-dd}; pick the role in review.");
+
+            string? problem = null;
+            if (role is null) problem = $"No job opening is named '{Shorten(roleName)}'";
+            else if (!role.IsActive) problem = $"Job opening '{role.Name}' is not active";
+            else if (role.EndDate < now) problem = $"Job opening '{role.Name}' closed on {role.EndDate:yyyy-MM-dd}";
             else return role.Id;
-            return null;
+
+            // The entry's own role didn't resolve: fall back to the batch's default opening (required at
+            // the controller) rather than leaving the entry with no role at all.
+            warnings.Add(defaultRoleId is int
+                ? $"{problem}; using the batch's job opening instead."
+                : $"{problem}; pick the role in review.");
         }
 
         if (defaultRoleId is int id)

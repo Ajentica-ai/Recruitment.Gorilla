@@ -8,8 +8,9 @@
 | Assigned interviews and evaluations | Yes | Yes | Yes | Yes |
 | Analytics, Jobs | Yes | Yes | own scope | - |
 | View and browse candidates | all | all | own or assigned opening | assigned interviews only |
-| Upload CVs and create candidates | Yes | Yes | Yes (becomes owner) | - |
-| Import candidates from JSON | Yes | - | - | - |
+| Upload CVs (job opening required) and create candidates | Yes | Yes | Yes (becomes owner) | - |
+| Import candidates from JSON (job opening required) | Yes | Yes | - | - |
+| Review and approve drafts | all | all | own uploads or assigned opening | - |
 | Edit candidates, change status | all | all | own or assigned opening | - |
 | Evaluation report | all | all | own or assigned opening | - |
 | Draft and extend offers | Yes | Yes | own or assigned opening | - |
@@ -51,6 +52,11 @@ Admin to add you as a recruiter of that opening (Configuration > Job openings).
 
 **The "Role applied for" list is empty when I review a draft.**
 You have no assigned openings yet, or the opening has closed. Ask an Admin.
+
+**The Upload CVs drop area won't accept files.**
+Pick a **Job opening** first — it's required now, not optional, and the drop area stays locked
+until you choose one. If the list is empty, you have no open openings assigned to you; ask an
+Admin.
 
 **I can't edit a candidate or change their status.**
 Check for the "Job opening closed" banner. Once the opening's Closes date passes, it locks for
