@@ -22,6 +22,7 @@ import type {
   CreateUserPayload,
   DashboardData,
   DashboardKpis,
+  ApplicationsSummary,
   StatusCount,
   TrendPoint,
   JobOpening,
@@ -326,6 +327,12 @@ export const getStatusBreakdown = async (): Promise<StatusCount[]> => {
 
 export const getApplicationsTrend = async (days = 30): Promise<TrendPoint[]> => {
   const { data } = await api.get<TrendPoint[]>('/dashboard/applications-trend', { params: { days } });
+  return data;
+};
+
+// The trend's headline: totals for the same window and the one before it.
+export const getApplicationsSummary = async (days = 30): Promise<ApplicationsSummary> => {
+  const { data } = await api.get<ApplicationsSummary>('/dashboard/applications-summary', { params: { days } });
   return data;
 };
 

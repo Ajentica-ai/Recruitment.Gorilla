@@ -20,13 +20,17 @@ draft you uploaded yourself, or one anyone uploaded for a job opening you're ass
 
 ## 2.2 Your dashboard
 
-Your Dashboard adds **Candidates** and **Upload CVs** shortcuts at the top:
+Your Dashboard adds **Candidates** and **Upload CVs** shortcuts at the top (on a phone, a floating
+**Upload CVs** button at the bottom right). **Up next** gets a **Mine / Team** switch: *Team* lists
+upcoming interviews across your candidates. Select a stage under **Pipeline**, or an open role,
+to open those candidates:
 
 ![Recruiter dashboard](images/02-dashboard-recruiter.png)
 
 Further down, **My pipeline** is scoped to your candidates, with a **Role** filter for one of your
-job openings: candidates by role, top skills, offer metrics, upcoming interviews and recent
-activity.
+job openings: **Insights** (candidates by role, or top skills), **Offers** and **Recent
+activity**. Several changes in a row to the same candidate are grouped into one line; select
+*N changes* to see each one.
 
 ![Recruiter dashboard: active job openings and My pipeline](images/02-dashboard-recruiter-pipeline.png)
 

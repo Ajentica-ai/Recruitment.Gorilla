@@ -57,14 +57,21 @@ The **top bar** shows the page title and a one-line description, and on the righ
 
 ## 0.4 The Dashboard
 
-Everyone lands on the **Dashboard**. At the top, a greeting with "needs your attention" chips,
-such as *1 evaluation to complete*, *Next interview: ...* or *3 unread notifications*. Below it:
+Everyone lands on the **Dashboard**. It starts with what needs you today: a greeting with
+"needs your attention" chips, such as *1 evaluation to complete*, *Next interview 15:00* or
+*3 unread notifications*. Beside the date, **Updated ... ago** shows how fresh the figures are;
+select it to refresh them. Below it:
 
+- **Up next**: interviews you have finished but not yet evaluated, then your upcoming interviews
+  grouped by day.
 - Six organization-wide counts: **Total**, **In process**, **Recommended**, **Rejected**,
-  **New this week** and **Referred**. Recruiters and above can select a count to open the
-  matching candidate list.
-- **My interviews**: the interviews you are assigned to.
-- **Status breakdown** and **Applications** over 7, 30 or 90 days.
-- **Active job openings**: open roles with their end date and number of applicants.
+  **New this week** and **Referred**, each with its change this week. Recruiters and above can
+  select a count to open the matching candidate list. On a phone, swipe the counts sideways.
+- **Pipeline**: how many candidates sit at each stage. **Active** hides the first stage
+  (Uploaded) so the later stages are easier to read.
+- **Applications**: new candidates per day over 7, 30 or 90 days, with the change against the
+  period before. Select a bar to read that day.
+- **Open roles**: open job openings, soonest to close first, with their closing date and number
+  of applicants.
 
 Recruiters and above also get a **My pipeline** section. See [2.2](#22-your-dashboard).

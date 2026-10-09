@@ -16,7 +16,7 @@ React 19 + TypeScript + Vite. Root: `client/`.
 | `src/components/shell/` | App chrome: `AppShell` (layout + sidebar state, skip link, `<main>`), `SidebarNav`, `TopbarTitle`, **`UserMenu`** (topbar avatar → account menu). |
 | `src/components/ui/` | Shared primitives: **`Page`**, **`SectionCard`**, `PageHeader`, `Pagination`, `EmptyState`, `ConfirmModal`, **`Loading`** (`LoadingPanel`, `Skeleton*`), `Tabs` + `useTabs`. |
 | `src/components/` | `BulkUploader`, `JsonImporter`, `drafts/DraftReviewWorkspace`, `CandidateForm`, `StatusTimeline`, `SearchableSelect`, `StatusBadge`, **`ThemeMenu`**, `ToastStack`, `RequireRole`, `NotificationBell`, `ReadOnlyCandidateProfile`, `EvaluationForm`. |
-| `src/components/dashboard/` | Dashboard widgets: `KpiCard`, `kpiIcons`, `StatusDonutChart`, `TrendChart`, `CountBarChart`, `ActiveJobOpeningsTable`, `MyInterviewsCard`, `DashboardHero`. |
+| `src/components/dashboard/` | Dashboard widgets: `DashboardHero`, `QuickActionFab`, `UpNextCard` (+ `upNextGroups.tsx`), `KpiStrip`, `KpiCard`, `kpiIcons`, `PipelineCard`, `TrendChart`, `ActiveJobOpeningsCard` (+ `jobOrder.ts`), `PipelineInsightsCard`, `CountBarChart`, `OfferMetricsCard`, `ActivityFeed` (+ `activityGroups.ts`). See the Dashboard section. |
 | `src/utils/` | `statusColors.ts` (status → tone class); `chartColors.ts` (chart colors from status tokens + chrome read off the design tokens); `evaluationCriteria.ts` (interview-form catalog — keys match the backend); `skillColors.ts` (stable hash of a skill name → badge class); `jobStatus.ts` (job-opening lifecycle); `initials.ts`. |
 | `src/styles/tokens.css` | **Design tokens — the single source of visual truth.** |
 | `src/index.css` | Bootstrap bridge → Prism semantic layer → app-specific components. |
@@ -267,57 +267,51 @@ sidebar; mobile: an accordion) is built from the same headings. Print / Save as 
 [specs/in-app-user-guide.md](specs/in-app-user-guide.md).
 
 ### Dashboard (`pages/DashboardPage.tsx`, route `/`)
-**One `useQuery` per section** (no single payload), rendered as react-bootstrap `Row`/`Col`/`Card`:
-the org-wide queries `['dashboard','kpis']`, `['dashboard','status-breakdown']`,
-`['dashboard','trend',days]`, `['dashboard','job-openings']` render **for every role**; the
-owner-scoped `['dashboard','scoped']` (`enabled: canWriteCandidates`) feeds the candidate-centric
-sections and renders only for candidate-managing roles. An **Interviewer** therefore sees the same
-KPIs / charts / openings as an Admin, plus their My-Interviews card, but not By-role/Top-skills/
-Upcoming/Activity.
-- **Hero kicker** — `components/dashboard/DashboardHero`: greeting + user name + date and
-  **pending-task chips** from `['my-interviews']` / `['notifications']`. Styled
-  `.dashboard-hero-kicker` + `.hero-chip` (`anim-fade-up`, dark + reduced-motion).
-  The chips are strictly *the signed-in user's own outstanding work*. A chip counting
-  candidates in process was **removed**: it is a pipeline statistic rather than a task, it
-  already exists as the "In process" KPI card directly below, and it made the row read as a
-  mix of "things you must do" and "things that are true". `DashboardHero` therefore takes no
-  props — don't reintroduce `inProcessCount`.
-- **KPI cards** — six `components/dashboard/KpiCard`s (accent icon chip, big value, sub-label + %,
-  thin progress bar; `.kpi--<tone>` tokens, light + dark, reduced-motion). Icons inline in
-  `kpiIcons.tsx`.
-  **All six drill through** to the candidate list showing exactly what they count, rendering as a
-  `<Link>` with a persistent arrow in the action corner. Total → `/candidates`, Referred →
-  `?referred=1`, the other four → `?bucket=in-process|recommended|rejected|new-this-week`, which the
-  API resolves through `CandidateBuckets` — the same definitions the dashboard sums, so a tile and
-  its list cannot disagree. (`status` alone could not express them: *Rejected* spans four statuses,
-  *In process* is "not yet terminal", *New this week* is a date window.)
-  **Only pass `to` when the destination reproduces the tile's figure exactly** — a stat that opens a
-  list with a different total is worse than one that does not open. Interviewers get no links,
-  since they can see the figures but not the list.
-  The arrow is **persistent, not hover-only**: a cue that appears only under the pointer cannot tell
-  you the tile is a link before you find it. It sits beside the icon rather than inline with the
-  label (where a longer label wrapped it onto its own line) or in the foot (where it truncated the
-  sub-label).
-  `CandidatesPage` surfaces an arriving bucket as a removable `.filter-chip` — it is an active
-  filter that none of the visible controls represent, so without it the short list looks like a bug.
-- **Charts** (recharts) — `StatusDonutChart` (colored from the status tokens via
-  `utils/chartColors.ts` so it matches `StatusBadge`) beside `TrendChart` (area) with a **7D/30D/90D
-  range toggle** (`btn-group` → `trendDays` state → query key + `getApplicationsTrend(days)`), and
-  two `CountBarChart`s (by role, top skills). (The redundant pipeline funnel was removed — the donut
-  is the single status visual.) Charts read `useTheme()` so colors flip with the theme.
-- **Lists** — upcoming interviews and recent activity (`ListGroup`, names link to
-  `/candidates/:id`, `StatusBadge` pills).
-- **Active Job Openings** — `ActiveJobOpeningsTable`: Job ID (`JOB-00n`), posted date, title +
-  priority badge, location, department, **End date** (+ a `.job-closing-soon` badge when within 7
-  days), applicants; "View All" → `/jobs` (shown only to roles that can open it). Backend returns **open** roles only (past their
-  End date drop off).
+**Action-first and mobile-first** (RG-134). Top to bottom: what needs you today, the pipeline
+figures, pipeline health, open roles, then the owner-scoped "My pipeline" block. Signed-off mockup
+screenshots: branch `assets/dashboard-redesign-mockups`, `docs/mockups/dashboard-redesign/`.
 
-Charts are added under **`recharts`** (the only chart dependency). New chart chrome/colors go through `chartColors.ts`, not hardcoded hex.
+**One `useQuery` per section**, every one under the `['dashboard']` key (plus the shared
+`['my-interviews']` and `['notifications']`), all with `staleTime: 60s`. A status change elsewhere
+invalidates `['dashboard']`, and the hero's refresh control invalidates all three keys. Org-wide
+queries render **for every role**: `['dashboard','kpis']`, `['dashboard','status-breakdown']`,
+`['dashboard','trend',days]` (plus `['dashboard','trend',30]` for the sparkline),
+`['dashboard','trend-summary',days]`, `['dashboard','job-openings']`. The owner-scoped
+`['dashboard','scoped',roleId|'all']` and `['dashboard','offer-metrics']` are
+`enabled: canWriteCandidates`.
+
+Layout uses `.dash-row` (one column, `5fr / 7fr` from 1200px) and `.dash-pair` (two columns on a
+tablet, stacked again beside the activity feed on a desktop). On a phone the KPI tiles and open
+roles are `.snap-strip`s: sideways scroll-snap strips that bleed to the page edge so the next item
+peeks in (keyboard-scrollable: `tabIndex` + label). All dashboard CSS is in the "Dashboard layout
+(RG-134)" block of `index.css`, `min-width` queries only.
+
+| Section | Component | Notes |
+|---|---|---|
+| Hero | `DashboardHero` | Date, **"Updated Xm ago" refresh** (`.dash-refresh`), greeting, a lede built from your own work, task chips (`.hero-chip-row--scroll`: one sideways row on a phone). Chips are strictly *your* outstanding work; don't add pipeline statistics. "N evaluations to complete" counts `awaitingEvaluation()` (past, not submitted), the same set as Up next. Candidates / Upload CVs buttons from 768px; below that writers get `QuickActionFab` (`.quick-fab`, fixed, safe-area aware) and the page adds `.dash-page--fab` bottom room. |
+| Up next | `UpNextCard` (+ `upNextGroups.tsx`) | Replaces My interviews and Upcoming interviews. **Mine** (`['my-interviews']`): an "Awaiting evaluation" group (past, not submitted, links `/interviews/:id`), then upcoming by day (Today / Tomorrow / weekday), "in 1h 20m" highlighted today, eval-state badge. Submitted past interviews drop out. **Team** = `scoped.upcomingInterviews` (links `/candidates/:id`); the toggle only exists when the page passes `team` (writers). Shows 5 rows, then "Show all". Empty = one `.slim-empty` line. |
+| KPI tiles | `KpiStrip` → `KpiCard` | Six tiles; phone strip with dots, 3 x 2 from 768px (stays 3 x 2 beside Up next on desktop). `KpiCard` takes `delta` (▲/▼ glyph + number + label, `goodWhenUp` tints a rise green; the link name says "up 3 vs last week") and `spark` (14 daily bars, this week highlighted). Figures count up via `hooks/useCountUp` (off under reduced motion; the real figure is in an `sr-only` span). |
+| Pipeline | `PipelineCard` | Replaces the donut (72 of 82 at Uploaded made every other slice a sliver). 100% stacked `.pipeline-bar` (segments use the `.status--*` tones via `getStatusClass`, pointer shortcut, out of tab order) plus `.stage-row`s with count and share. **All / Active** hides the `uploaded` tone and recomputes shares. First 5 rows, then "Show all N stages". |
+| Applications | `TrendChart` | Daily **bars**, not an area curve (most days are 0 or 1). Headline = `summary.total` + "▲N vs prior N days" from `getApplicationsSummary`. Tap or arrow through bars (roving tabindex) to read a day; the busiest day starts selected. Keyed by range so the selection resets. |
+| Open roles | `ActiveJobOpeningsCard` (+ `jobOrder.ts`) | Replaces the seven-column table. Cards (`.job-tile`): JOB-00n, priority badge, title, location / department **only when set**, closing date (+ "Nd left" within 7 days), applicants bar relative to the busiest role. Sorted soonest to close (`sortByClosing`), first 6. Writers: tile → `/candidates?role=<id>`, "View all" → `/jobs`. |
+| Insights | `PipelineInsightsCard` | Roles / Skills switch around the existing `CountBarChart` (recharts). |
+| Offers | `OfferMetricsCard` | Offers made / Accepted / Hired steps plus the acceptance bar; hidden when `totalOffers` is 0. |
+| Activity | `ActivityFeed` (+ `activityGroups.ts`) | Grouped by day; back-to-back changes to one candidate fold into one run ("Offer Extended → Offer Accepted", "8 changes" expands). Shows 5 runs, then "Show more". "View all" → `/audit` for Admin+, else `/candidates`. |
+
+**Role behaviour.** Interviewers see the org-wide figures with **no drill-through** (tiles, stages
+and role cards render as plain figures), no Team toggle, no My pipeline, no floating button.
+Recruiters get the role filter (`['role-options','active']`). **Only link a figure when the
+destination reproduces it exactly** (the KPI buckets resolve through `CandidateBuckets` on the API;
+`CandidatesPage` shows an arriving bucket as a removable `.filter-chip`).
+
+Charts are added under **`recharts`** (the only chart dependency; today only `CountBarChart`). New
+chart chrome/colors go through `chartColors.ts`, not hardcoded hex; status-coloured graphics use the
+`.status--*` CSS tones directly.
 
 ### Interviews, evaluations & notifications
 - **Scheduling:** in `CandidateDetailPage`'s `AddStatusModal`, choosing **Interview Scheduled** reveals a required **Interviewers** `SearchableMultiSelect` (options from `['assignable-users']`); the payload adds `interviewerUserIds`, and success invalidates `['notifications']` + `['my-interviews']`.
 - **Notification bell (`components/NotificationBell.tsx`, topbar):** `['notifications']` query with a 60s `refetchInterval`; unread badge; dropdown of the latest ~15; clicking marks read (mutation) and navigates to the item's `linkUrl`; "Mark all read".
-- **Dashboard "My interviews" (`components/dashboard/MyInterviewsCard.tsx`):** `['my-interviews']` list of the caller's assigned interviews with date/time (highlight <24h) and an evaluation-state badge (Pending/Draft/Submitted); rows link to `/interviews/:id`.
+- **Dashboard "Up next" (`components/dashboard/UpNextCard.tsx`):** the "Mine" view of `['my-interviews']`: past interviews still owing your evaluation first ("Awaiting evaluation"), then upcoming ones by day, each with an evaluation-state badge (Pending/Draft/Submitted); rows link to `/interviews/:id`. See the Dashboard section.
 - **Interview page (`pages/InterviewPage.tsx`, `/interviews/:id`):** a **hero header card** (candidate **initials avatar + name + Role Applied For + interview type tags**, calendar chip with a relative badge Today/Tomorrow/In N days/Completed, interviewer avatar pills) above two columns with a staggered `.anim-fade-up` entry — left `ReadOnlyCandidateProfile` (non-editable card; **header** = "Current position" (renamed from the ungrammatical "Position on Last Organization") + LinkedIn/GitHub/Portfolio icon links + status pill, no name/avatar; **body** = email/phone/**Relevant Experience** detail tiles, colorful skill badges via `utils/skillColors.ts`, an **extendable Summary** (Show more/less), and CV files as `.cv-file-item` tiles with Preview (`outline-primary`) + `.btn-cv-download` reusing `previewCvFile`/`downloadCvFile`); right `EvaluationForm` driven by `utils/evaluationCriteria.ts`. **`.btn-cv-download` is no longer the hardcoded yellow fill with the looping icon bounce** — the colour was a literal rather than a token, yellow is the app's *warning* hue so the safest action on the panel wore the colour meaning "careful", and it made Download louder than Preview, which is the action a reviewer wants first. It is now the same secondary control as its Preview sibling. The hero drops the redundant "Interview" eyebrow (the topbar says it), puts the role and type tags on one meta line, and folds the schedule chip + interviewers into one right-hand `.interview-hero__aside` — they were two rows with a divider between, spending a third of the hero on what is usually one avatar pill (116px tall now, was ~230px). The grid is **`.detail-grid.detail-grid--panels.interview-grid`**: `--panels` supplies the equal-height / internal-scroll mechanics (shared with the candidate detail page), and `.interview-grid` overrides `--detail-panel-max` to exactly the viewport below the topbar and pins **both** columns `position: sticky`. The 760px floor is deliberately dropped here — a column taller than the space under the topbar hangs past the fold, which is what capping only the evaluation card left behind. The result is a fixed two-panel workspace: the candidate profile (`className="detail-scroll"`) scrolls on the left, the rubric on the right, and the two cards are the same height with their bottoms aligned. Inside it only the rubric scrolls (`.eval-form-card__scroll`) — the progress bar and the Submit / Save draft actions stay put, where before the card ran ~2500px and Submit was a screen below the last criterion. **Note the class is `eval-form-card`, not `eval-card`: `.eval-card` is already the per-interviewer summary tile in the status timeline, and reusing it silently inherited its `align-items:center` and padding.** Desktop only — a bounded scroll area nested in a scrolling page is worse than a long page on a phone. The recruiter's notes are folded **into** the evaluation card as an `.eval-briefing` band above the progress bar (passed to `EvaluationForm` as a `briefing` node, so the form need not know what the briefing is). They are instructions *for that form*, so they belong to the same object; as their own card they cost a whole surface plus a gap to show one line, and as an `alert-info-soft` before that they were the loudest thing on a page whose subject is the candidate. Being outside the scroll region they stay readable the whole way down the twelve criteria. The evaluation column is therefore exactly one card. The interviewer pills keep an inline "Interviewer(s)" label — the pills are meaningless without it, but it does not warrant a band of its own. the recruiter's notes render as a quiet **`.notes-card`**, not an `alert-info-soft` — as a tinted alert a one-line note was the loudest thing on a page whose subject is the candidate. In the rubric, each criterion's label column is capped (`--eval-label-w`) so the 1–5 scale sits a short, **constant** distance from every label: the row was `justify-content: space-between`, which parked the pills ~400px away against the panel's right edge and made rating twelve criteria twelve trips across the card. The comment field spans label + scale, and the panel header wraps so the "n/3 rated" chip drops below the title on a phone rather than squeezing it. Sections A–D are **independent collapsible accent panels** (`.eval-panel--a|b|c|d`, react-bootstrap `Collapse`, per-section icon + live `n/3 rated · avg` summary, rotating chevron); ratings use a **segmented 1–5 pill group** (click again to clear, `aria-pressed`); a top progress bar tracks `Rated X of 12`; general assessment / recommendation / overall rating live in a static "Summary & recommendation" panel. Recommendation options are `Recommended/Hold/Reject/Other`; picking **Other** reveals a required "Please specify" text box (blocks Submit until filled). **Save draft** any time (never gated); **Submit is gated** — all 12 criterion ratings, a final recommendation, and an overall rating are required (red `*` indicators; a failed attempt sets `showErrors`, flags the empty groups via `.rating-group--invalid`, and toasts what's missing before the confirm modal opens). **Submit** confirms via modal then locks (server returns 409 after). Read-only/submitted views reuse the panels with **filled-dot rating scales**. Admin+ also see other interviewers' evaluations read-only in an accordion. A 404 (not assigned / not admin) renders a friendly "not available" message. All animations respect `prefers-reduced-motion`.
 - **Status timeline interviewer links (`components/StatusTimeline.tsx`):** the "Interview Scheduled" entry shows its interviewers as **`.interviewer-pill` avatar pills** (initials + name), each a `<Link>` to `/interviews/{interviewId}`, plus the interview's **type tags** as `skillColorClass`-colored badges (from the entry's `interviewTags`). The **schedule form** (`CandidateDetailPage`'s `AddStatusModal`) adds an optional **Interview types** `SearchableMultiSelect` (from `getActiveInterviewTypes`) above the interviewers select. Timeline **dots** carry a soft `--status-tint` ring so they read distinctly from the tinted status badge. Comments render with `white-space: pre-line` (so the appended evaluation summary's line breaks show). An **"Interview Completed"** entry renders its `evaluationSummaries` as **cards** (initials avatar, interviewer name, overall-rating dots, a recommendation `status-badge` colored by outcome — Recommended/Hold/Reject/Other → success/intake/reject/muted, submitted date); Admin+ additionally get a **"View full evaluations →"** link to `/interviews/{id}` (gated by the `canViewEvaluations` prop = `isAdminOrAbove`). `cleanComment` strips any legacy baked-in "— Interview evaluations —" text so only the human comment shows above the cards.
 - **Interview page notes:** scheduling with "Notes for interviewers" text (the relabeled optional comment on the Interview Scheduled add-status form) stores it as the scheduled entry's comment; `InterviewPage` shows it as a **"Notes from the recruiter"** info card above the candidate profile (`InterviewDetail.notes`). Re-scheduling from Interview Completed reuses the same add-status flow (the new `8 → 3` transition surfaces Interview Scheduled as a next option).
