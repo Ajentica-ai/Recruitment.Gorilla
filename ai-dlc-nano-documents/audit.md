@@ -168,3 +168,13 @@
 - 2026-10-07T00:00Z [claude] RG-47 SIDE-EFFECT @b46d6da: assigned rayhan-ajentica; board status NOT moved (gh lacks read:project)
 - 2026-10-07T00:00Z [claude] RG-47 BRANCH @b46d6da: fix/RG-47/View-all-job-openings-link created off develop (user confirmed)
 - 2026-10-07T00:00Z [claude] RG-47 DONE @b46d6da: link -> /jobs, hidden for non-/jobs roles; 142 tests, tsc+lint clean; uncommitted
+- 2026-10-08T19:52Z [claude] RG-75 SIDE-EFFECT @282f3b6: assigned to tahmidsparrow, board status -> In Development
+- 2026-10-08T19:52Z [claude] RG-75 CREATED @282f3b6: bug, dashboard Recommended section stale after eval submit
+- 2026-10-08T19:55Z [claude] RG-75 DECISION @282f3b6: scope=fix dashboard invalidation only; no auto-transition (user confirmed)
+- 2026-10-08T19:55Z [claude] RG-75 PHASE CLARIFY->PLAN @282f3b6: root cause = missing dashboard query invalidation
+- 2026-10-08T20:02Z [claude] RG-75 BRANCH @282f3b6: fix/RG-75/Dashboard-recommended-stale created off develop (user confirmed)
+- 2026-10-08T20:02Z [claude] RG-75 PHASE PLAN->CONSTRUCT @282f3b6: plan approved, branch created
+- 2026-10-08T20:11Z [claude] RG-75 DONE @282f3b6: dashboard invalidation fixed in AddStatusModal+KanbanBoard; 176/176 tests green; RG-72,RG-84 archived (retention)
+- 2026-10-08T20:11Z [claude] RG-75 SIDE-EFFECT @707cd99: local commit created (user confirmed), not pushed
+- 2026-10-08T20:11Z [claude] RG-75 SIDE-EFFECT @4dd40c4: posted summary comment on GitHub issue #75 (user confirmed)
+- 2026-10-08T20:11Z [claude] RG-75 SIDE-EFFECT @fcc400e: pushed branch and opened PR #127 against develop (user confirmed)
