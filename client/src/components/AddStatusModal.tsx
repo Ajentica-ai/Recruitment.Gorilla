@@ -143,6 +143,9 @@ export default function AddStatusModal({
       void queryClient.invalidateQueries({ queryKey: ['status-options', 'next', candidateId] });
       void queryClient.invalidateQueries({ queryKey: ['notifications'] });
       void queryClient.invalidateQueries({ queryKey: ['my-interviews'] });
+      // The dashboard's KPI tiles (e.g. Recommended) are keyed off CurrentStatus too, and were
+      // going stale after a status change since nothing told them to refetch.
+      void queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       addToast(`Status updated to '${status}'.`);
       onAdded();
     },
