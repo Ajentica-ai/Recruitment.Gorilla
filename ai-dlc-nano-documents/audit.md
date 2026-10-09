@@ -194,3 +194,4 @@
 - 2026-10-09T15:55Z [claude] RG-97 PHASE CONSTRUCT->WRAP-UP @fd183e9: fix verified, 515/515 tests green (caught+fixed own scopeUserId bug mid-construct)
 - 2026-10-09T15:55Z [claude] RG-97 DONE @fd183e9: role-assignment enforced on candidate create/update, not committed yet
 - 2026-10-09T15:56Z [claude] RG-97 WRAP-UP @fd183e9: archived RG-82 (oldest completed) to stay within 10-item retention cap
+- 2026-10-09T16:05Z [claude] RG-97 SIDE-EFFECT @32c89e7: pushed branch and opened PR #133 against develop (user confirmed)
