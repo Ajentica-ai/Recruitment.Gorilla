@@ -13,7 +13,7 @@ the expensive-file guardrail and the anchor index for long documents.
 | `server/Recruitment.Gorilla.API/Migrations/AppDbContextModelSnapshot.cs` | 98 KB | EF Core generated | same; never hand-edit |
 | `client/package-lock.json` | 140 KB | npm lockfile | `npm ls <pkg>` |
 | `client/src/index.css` | 7436 lines | hand-written theme, far over the 500-line read cap | `git grep -n "<token>" -- client/src/index.css`, then `sed -n` a window |
-| `docs/user-guide/USER-GUIDE.pdf`, `docs/user-guide/images/*.png`, `client/public/logo.png` | 0.1-1.9 MB | binary | do not read |
+| `client/public/user-guide/images/*.png`, `client/public/logo.png` | 0.1-1.9 MB | binary | do not read |
 
 ## Long documents
 - `ai-docs/FEATURE_IMPROVEMENT_ROADMAP.md` (959 lines) - read with `sed -n`, never whole

@@ -55,6 +55,7 @@ builder.Services.AddScoped<CandidateDraftService>();
 builder.Services.AddScoped<CvFileIntake>();
 builder.Services.AddScoped<CandidateImportService>();
 builder.Services.AddScoped<AuditService>();
+builder.Services.AddSingleton<UserGuideService>();
 builder.Services.AddSingleton<IAuditLogQueue, AuditLogQueue>();
 builder.Services.AddHostedService<AuditLogBatchWorker>();
 builder.Services.AddScoped<ICVUploadProgressNotifier, CVUploadProgressNotifier>();

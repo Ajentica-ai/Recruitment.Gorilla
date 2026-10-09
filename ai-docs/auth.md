@@ -19,6 +19,7 @@ Four roles in a strict hierarchy **SuperAdmin → Admin → Recruiter → Interv
 | Edit / change status candidate | ✅ (all) | ✅ (all) | **own OR assigned-role** | – |
 | **Delete** candidate | ✅ | ✅ | – | – |
 | Dashboard + assigned interviews + evaluations | ✅ | ✅ | ✅ | ✅ |
+| User guide (`/api/user-guide`, `/user-guide` page) — content cut to caller's role | ✅ (all 7 chapters) | ✅ (+ch.3) | ✅ (+ch.2) | ✅ (ch.0/1/5 only) |
 | Candidate **evaluation report** (`/candidates/:id/evaluations`) | ✅ | ✅ | **own OR assigned-role** | – |
 | Create / edit / submit / extend an **offer**, record the candidate's decision | ✅ (all) | ✅ (all) | **own OR assigned-role** | – |
 | **Approve / reject** an offer (`.../offers/{id}/review`) | ✅ | ✅ | – | – |

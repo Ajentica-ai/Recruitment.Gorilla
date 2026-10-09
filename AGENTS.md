@@ -25,7 +25,7 @@ Adding a feature almost always follows: **Entity → AppDbContext → migration 
 
 ## Tech stack (pinned)
 - **Backend:** ASP.NET Core Web API on **.NET 10**, EF Core **9.0.0** + Pomelo MySQL **9.0.0**, JWT bearer auth, log4net, Swagger.
-- **Frontend:** React **19** + TypeScript + **Vite**, TanStack Query v5, Axios, react-bootstrap 2 + Bootstrap 5 (**Prism design system**, see [`ai-docs/frontend.md`](ai-docs/frontend.md)), react-router-dom 7, react-dropzone, lucide-react.
+- **Frontend:** React **19** + TypeScript + **Vite**, TanStack Query v5, Axios, react-bootstrap 2 + Bootstrap 5 (**Prism design system**, see [`ai-docs/frontend.md`](ai-docs/frontend.md)), react-router-dom 7, react-dropzone, lucide-react, react-markdown + remark-gfm (user guide only).
 - **DB:** MySQL 8+. **Files:** stored on local disk under `server/Recruitment.Gorilla.API/Uploads/`.
 
 ## Quickstart
@@ -69,4 +69,5 @@ Default admin login: **admin@recruitmentgorilla.com / admin**.
 | Pages / components | `client/src/pages/`, `client/src/components/` |
 | Auth (frontend) | `client/src/auth/AuthContext.tsx` |
 | Theme | `client/src/index.css` |
+| User guide content | `server/Recruitment.Gorilla.API/UserGuide/*.md` |
 | Full docs | `ai-docs/` |

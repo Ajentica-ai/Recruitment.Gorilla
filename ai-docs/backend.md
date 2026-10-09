@@ -90,6 +90,17 @@ Local disk under `Uploads/`, named `{GUID}{ext}` to avoid collisions; original n
 - **Slack** — `SlackService.EnqueueAsync(category, toEmail, …)` is **best-effort**, a no-op unless a bot token resolves *and* that category is routed to Slack (`ISlackSettingsResolver.IsCategoryEnabledAsync`), both stored per the **`SlackSetting`** (encrypted token, same `SecretProtector` as SMTP; managed at Configuration → Slack, SuperAdmin; falls back to the `Slack:BotToken` config key) and **`NotificationChannelSetting`** (one row per category, `SlackEnabled`; a missing row means off) tables. Recipients are found by their app **email** via Slack's `users.lookupByEmail`, then DMed with `chat.postMessage` — there is no stored Slack user id and no per-user opt-out, so a recipient simply not in the workspace (`users_not_found`) is a silent no-op, not an error. `HttpSlackTransport` (`AddHttpClient<ISlackTransport, HttpSlackTransport>`) maps Slack's response to `SlackApiException` (`IsTransient` true for 429/5xx/network errors, false for `invalid_auth`/`missing_scope`/unknown codes). Outbound sends are queued (`ISlackQueue`, a bounded `Channel<SlackJob>`) and processed by `SlackQueueWorker` (`BackgroundService`), which retries transient failures up to 3 times (honoring Slack's `Retry-After` when given) and drops permanent ones. `SendTestAsync` lets errors through for the admin test button. Messages are plain Slack mrkdwn (`*title*\nmessage\n<link|Open in Recruitment Gorilla>`), with `&`/`<`/`>` escaped so a candidate/job name can't forge a link or `@channel` mention, truncated at 3000 characters.
 - Both controllers are `[Authorize]` (all roles) and derive the caller from `CurrentUser`. `assignable-users` lives on `InterviewsController` because `UsersController` is class-level SuperAdmin-only.
 
+## User guide
+`UserGuideService` (singleton, `Services/UserGuideService.cs`) serves the user guide cut to the
+caller's role. Chapters are Markdown files under `UserGuide/*.md`, each an **embedded resource**
+(`LogicalName="UserGuide.<filename>"`) rather than a copied/published file — read via
+`Assembly.GetManifestResourceStream`, the same pattern `CandidateImportService` uses for its JSON
+template, so there is no file path to resolve at runtime and nothing can go missing from a published
+or containerized build. `EditionFor(roles)` ranks `interviewer < recruiter < admin < superadmin` and
+takes the highest role present (no roles falls back to `interviewer`); a chapter is included when its
+manifest `MinRank` is at or below that edition's rank. Results are cached per edition. See
+[specs/in-app-user-guide.md](specs/in-app-user-guide.md).
+
 ## Audit trail
 `AuditService` (scoped) writes an append-only `AuditLog` row at each write point (right beside the existing `LogInformation` audit line — logging stays): **Auth** (`Login`, `LoginFailed`, `Logout`, `PasswordChanged`), **Candidate** (`Created`/`Updated`/`Deleted`/`StatusChanged`), **Interview** (`EvaluationSubmitted`), **Config** (`Role`/`Skill`/`InterviewType` `.Created`/`.Updated`/`.Deleted`), **User** (`Created`/`Updated`/`PasswordReset`). `RecordAsync` derives the actor from `CurrentUser`, with an explicit-actor overload for auth events (anonymous request). Recording is **best-effort** — a write failure is logged and swallowed, never breaking the underlying operation. `QueryAsync` (newest-first, filters by actor/entity/action/date + paging) backs `GET /api/audit` (**Admin+**; the log holds PII). Never store secrets/passwords in `Details`.
 
@@ -103,6 +114,7 @@ log4net (`log4net.config`): console + daily rolling file under `Logs/`. App cate
 | GET | `/api/dashboard` | required | **Owner-scoped** remainder: by-role/top-skill counts, upcoming interviews, recent activity |
 | GET | `/api/analytics` | CanWriteCandidate | Executive **operational analytics** (time-to-hire, stage velocity, funnel drop-off conversion, sourcing channel ROI, recruiter workload). Non-Admins are scoped to their assigned roles plus candidates they own; `roleId` narrows that scope (never widens it), and workload transition/interview counts only include candidates in scope. Filters `preset, from, to, roleId` |
 | GET | `/api/audit` | **Admin+** | Audit trail (newest-first), filters `actorUserId,entityType,entityId,action,from,to` + paging |
+| GET | `/api/user-guide` | required (any role) | User guide, cut to the caller's edition (`{edition, label, chapters}`) |
 | GET | `/api/interviews/assignable-users` | required | Active users assignable as interviewers |
 | GET | `/api/interviews/mine` | required | Interviews the caller is assigned to (+ their eval state) |
 | GET | `/api/interviews/{id}` | required | Interview detail (assigned interviewer or Admin+; 404 otherwise). The embedded candidate carries **no `StatusHistory`** below Admin |

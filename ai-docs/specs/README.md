@@ -24,3 +24,4 @@ A spec captures the intent, data/API contract, and acceptance criteria so any ag
 | [json-candidate-import.md](json-candidate-import.md) | Implemented | Super Admin imports candidates from a JSON file (template with fill-in instructions in comments) plus their CVs, as Pending drafts for review. |
 | [slack-notifications.md](slack-notifications.md) | Implemented | Slack bot DMs for interview assigned, evaluation submitted, and recruiter assigned to a job opening; per-category routing, SuperAdmin-only settings. |
 | [email-outbox-and-notification-api.md](email-outbox-and-notification-api.md) | Implemented | Durable DB-backed email outbox + delivery log with Resend, plus a second HTTP notification-API provider (idempotency key, status-check-before-resend) alongside SMTP. |
+| [in-app-user-guide.md](in-app-user-guide.md) | Implemented | User guide rendered as a native page, chapters cut to the reader's role, reachable from the sidebar and avatar menu. |
