@@ -137,6 +137,18 @@ public class CandidateService(AppDbContext db, IWebHostEnvironment env, Notifica
         return MapToDetail(c);
     }
 
+    /// <summary>
+    /// A candidate's current status, scoped the same way as <see cref="GetByIdAsync"/> but
+    /// without the detail query's joins, for callers (like the next-status-options lookup) that
+    /// only need to know the candidate is in scope and what status it's at. Null when the
+    /// candidate doesn't exist or is out of the caller's access scope.
+    /// </summary>
+    public async Task<string?> GetCurrentStatusIfAccessibleAsync(int id, int? ownerUserId = null) =>
+        await ApplyAccess(db.Candidates, ownerUserId)
+            .Where(c => c.Id == id)
+            .Select(c => c.CurrentStatus)
+            .FirstOrDefaultAsync();
+
     public async Task<CandidateListItemDto?> FindDuplicateAsync(string email)
     {
         if (string.IsNullOrWhiteSpace(email)) return null;
