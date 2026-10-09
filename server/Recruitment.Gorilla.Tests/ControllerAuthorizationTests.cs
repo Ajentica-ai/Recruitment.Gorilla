@@ -58,6 +58,22 @@ public class ControllerAuthorizationTests(ApiFixture fx)
         await AssertStatus(role, HttpMethod.Get, $"/api/candidates/{id}/evaluation-report", expected);
     }
 
+    // ---- Next status options: Recruiter+ (Interviewer 403); candidate-access-scoped ----
+    // Was open to any authenticated role with no scope at all (#100): confirmed a candidate
+    // exists, and narrowed its current status via the allowed-transitions list, to a caller who
+    // gets 404/403 from the candidate endpoint itself.
+
+    [Theory]
+    [InlineData("SuperAdmin", HttpStatusCode.OK)]
+    [InlineData("Admin", HttpStatusCode.OK)]
+    [InlineData("Recruiter", HttpStatusCode.NotFound)]
+    [InlineData("Interviewer", HttpStatusCode.Forbidden)]
+    public async Task Get_next_status_options(string role, HttpStatusCode expected)
+    {
+        var id = await fx.NewCandidateAsync(fx.AdminId);
+        await AssertStatus(role, HttpMethod.Get, $"/api/status-options/next/{id}", expected);
+    }
+
     // ---- Offers ----
     // Creating an offer was role-gated but not scoped, so a Recruiter could raise one on any
     // candidate. Reviewing one was open to every Recruiter. The UI offered review only to Admin+.

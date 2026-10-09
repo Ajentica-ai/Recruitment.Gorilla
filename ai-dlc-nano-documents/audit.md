@@ -178,3 +178,11 @@
 - 2026-10-08T20:11Z [claude] RG-75 SIDE-EFFECT @707cd99: local commit created (user confirmed), not pushed
 - 2026-10-08T20:11Z [claude] RG-75 SIDE-EFFECT @4dd40c4: posted summary comment on GitHub issue #75 (user confirmed)
 - 2026-10-08T20:11Z [claude] RG-75 SIDE-EFFECT @fcc400e: pushed branch and opened PR #127 against develop (user confirmed)
+- 2026-10-09T13:23Z [claude] RG-100 CREATED @e0e7d12: status-options/next unscoped access-control bug
+- 2026-10-09T13:23Z [claude] RG-100 SIDE-EFFECT @e0e7d12: assigned (already tahmidsparrow), board status Backlog->In Development
+- 2026-10-09T13:40Z [claude] RG-100 DECISION @42c2b46: plan approved by user (combined with branch gate, fast path)
+- 2026-10-09T13:40Z [claude] RG-100 BRANCH @42c2b46: fix/RG-100/Scope-status-options-next created off develop (user confirmed)
+- 2026-10-09T13:40Z [claude] RG-100 PHASE PLAN->CONSTRUCT @42c2b46: implementing scoped GetNext
+- 2026-10-09T13:55Z [claude] RG-100 PHASE CONSTRUCT->WRAP-UP @42c2b46: fix verified, 505/505 tests green
+- 2026-10-09T13:58Z [claude] RG-100 WRAP-UP @42c2b46: archived RG-85 (oldest completed) to stay within 10-item retention cap
+- 2026-10-09T13:58Z [claude] RG-100 DONE @42c2b46: GetNext scoped + role-gated, 505/505 tests green, not committed yet

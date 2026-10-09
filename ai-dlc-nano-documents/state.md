@@ -3,7 +3,7 @@
 - Phase: —
 - Branch: —
 - Base SHA: —
-- Next step: none. RG-75 complete, pushed, PR #127 open against develop. Awaiting review.
+- Next step: none. RG-100 complete on fix/RG-100/Scope-status-options-next, 505/505 tests green. Not committed/pushed yet.
 - Paused work items: none
-- Uncommitted code: no
-- Last updated: 2026-10-08T20:11Z by claude
+- Uncommitted code: yes
+- Last updated: 2026-10-09T13:58Z by claude
