@@ -187,3 +187,11 @@
 - 2026-10-09T13:58Z [claude] RG-100 WRAP-UP @42c2b46: archived RG-85 (oldest completed) to stay within 10-item retention cap
 - 2026-10-09T13:58Z [claude] RG-100 DONE @42c2b46: GetNext scoped + role-gated, 505/505 tests green, not committed yet
 - 2026-10-09T15:05Z [claude] RG-100 SIDE-EFFECT @e258ad7: pushed branch and opened PR #132 against develop (user confirmed)
+- 2026-10-09T15:20Z [claude] RG-97 CREATED @9ebef80: role-assignment not enforced on candidate create/update (relevance-checked, narrowed vs original issue)
+- 2026-10-09T15:20Z [claude] RG-97 SIDE-EFFECT @9ebef80: already assigned (tahmidsparrow), board status Backlog->In Development
+- 2026-10-09T15:25Z [claude] RG-97 BRANCH @fd183e9: fix/RG-97/Enforce-role-assignment created off develop (bundled with plan approval)
+- 2026-10-09T15:25Z [claude] RG-97 PHASE PLAN->CONSTRUCT @fd183e9: implementing role-assignment check
+- 2026-10-09T15:55Z [claude] RG-97 PHASE CONSTRUCT->WRAP-UP @fd183e9: fix verified, 515/515 tests green (caught+fixed own scopeUserId bug mid-construct)
+- 2026-10-09T15:55Z [claude] RG-97 DONE @fd183e9: role-assignment enforced on candidate create/update, not committed yet
+- 2026-10-09T15:56Z [claude] RG-97 WRAP-UP @fd183e9: archived RG-82 (oldest completed) to stay within 10-item retention cap
+- 2026-10-09T16:05Z [claude] RG-97 SIDE-EFFECT @32c89e7: pushed branch and opened PR #133 against develop (user confirmed)

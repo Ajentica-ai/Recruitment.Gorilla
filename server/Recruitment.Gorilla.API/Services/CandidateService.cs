@@ -34,6 +34,10 @@ public class CandidateService(AppDbContext db, IWebHostEnvironment env, Notifica
                                 c.RoleAppliedOption.Recruiters.Any(rr => rr.UserId == uid)))
             : query;
 
+    /// <summary>Whether the given user is an assigned recruiter of the given job opening.</summary>
+    private Task<bool> IsAssignedToRoleAsync(int roleId, int uid) =>
+        db.RoleAppliedOptions.AnyAsync(r => r.Id == roleId && r.Recruiters.Any(rr => rr.UserId == uid));
+
     public async Task<PagedResult<CandidateListItemDto>> GetAllAsync(
         CandidateListQuery q, int? ownerUserId = null)
     {
@@ -382,18 +386,26 @@ public class CandidateService(AppDbContext db, IWebHostEnvironment env, Notifica
     }
 
     /// <summary>
-    /// Creates a candidate. If an existing candidate shares the same email and the
-    /// caller has not set AllowDuplicate, the existing record is returned in
-    /// <c>Duplicate</c> and nothing is saved (warn-but-allow).
+    /// Creates a candidate, owned by <paramref name="ownerUserId"/> (set for every caller,
+    /// including Admin+ — this is who created it, not an access scope). A non-admin caller
+    /// (<paramref name="scopeUserId"/> set — null for Admin+, same convention as
+    /// <see cref="UpdateAsync"/>'s owner scope) may only file the candidate under a role they are
+    /// an assigned recruiter of; otherwise <c>Error</c> is set and nothing is saved.
+    /// If an existing candidate shares the same email and the caller has not set AllowDuplicate,
+    /// the existing record is returned in <c>Duplicate</c> and nothing is saved (warn-but-allow).
     /// </summary>
-    public async Task<(CandidateDetailDto? Created, CandidateListItemDto? Duplicate)> CreateAsync(
-        CreateCandidateDto dto, int? ownerUserId, string? changedBy)
+    public async Task<(CandidateDetailDto? Created, CandidateListItemDto? Duplicate, string? Error)> CreateAsync(
+        CreateCandidateDto dto, int? ownerUserId, string? changedBy, int? scopeUserId = null)
     {
+        if (scopeUserId is int scopeUid && dto.RoleAppliedOptionId is int newRoleId &&
+            !await IsAssignedToRoleAsync(newRoleId, scopeUid))
+            return (null, null, "You are not assigned to this job opening.");
+
         if (!dto.AllowDuplicate)
         {
             var existing = await FindDuplicateAsync(dto.Email);
             if (existing is not null)
-                return (null, existing);
+                return (null, existing, null);
         }
 
         var candidate = new Candidate
@@ -484,7 +496,7 @@ public class CandidateService(AppDbContext db, IWebHostEnvironment env, Notifica
         await db.SaveChangesAsync();
 
         // Reload with role/skill navigations for a complete detail response.
-        return ((await GetByIdAsync(candidate.Id))!, null);
+        return ((await GetByIdAsync(candidate.Id))!, null, null);
     }
 
     public async Task<CvFileResult?> GetCvFileAsync(int candidateId, int fileId)
@@ -537,12 +549,26 @@ public class CandidateService(AppDbContext db, IWebHostEnvironment env, Notifica
         return true;
     }
 
-    public async Task<CandidateDetailDto?> UpdateAsync(int id, UpdateCandidateDto dto, int? ownerUserId = null)
+    /// <summary>
+    /// Updates a candidate. A non-admin caller (<paramref name="ownerUserId"/> set) may only
+    /// reassign the candidate to a role they are an assigned recruiter of; this only applies
+    /// when <paramref name="dto"/>'s role differs from the candidate's current one, so editing
+    /// unrelated fields on a candidate filed under a role the caller isn't assigned to (which
+    /// they can reach through ownership or interview assignment) is never blocked by this check.
+    /// </summary>
+    public async Task<(CandidateDetailDto? Updated, string? Error)> UpdateAsync(
+        int id, UpdateCandidateDto dto, int? ownerUserId = null)
     {
         var candidate = await ApplyAccess(db.Candidates.Include(x => x.CandidateSkills), ownerUserId)
             .FirstOrDefaultAsync(x => x.Id == id);
 
-        if (candidate is null) return null;
+        if (candidate is null) return (null, null);
+
+        var previousRoleId = candidate.RoleAppliedOptionId;
+        if (ownerUserId is int ownerUid && dto.RoleAppliedOptionId != previousRoleId &&
+            dto.RoleAppliedOptionId is int newRoleId &&
+            !await IsAssignedToRoleAsync(newRoleId, ownerUid))
+            return (null, "You are not assigned to this job opening.");
 
         candidate.FullName = dto.FullName;
         candidate.Email = dto.Email;
@@ -608,7 +634,7 @@ public class CandidateService(AppDbContext db, IWebHostEnvironment env, Notifica
             candidate.CandidateSkills.Add(new CandidateSkill { SkillOptionId = skillId });
 
         await db.SaveChangesAsync();
-        return await GetByIdAsync(id);
+        return (await GetByIdAsync(id), null);
     }
 
     public async Task<StatusHistoryDto?> AddStatusAsync(
