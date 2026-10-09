@@ -230,7 +230,7 @@ No `max-width` queries, and the phone is never the exception. Concretely:
   decides what is *reachable*, and a missing guard must never be covered for by
   a hidden nav item. `navRoutes.test.ts` covers the visibility side.
 - **Candidate role/skill lookups** come from `getActiveRoleOptions`/`getActiveSkillOptions` (`/api/candidates/role-options` · `/skill-options`, `CanWriteCandidate`); `role-options` is server-scoped so a Recruiter only sees their assigned roles. `CandidateForm` **auto-selects** the role when the list has exactly one (a single-assigned recruiter). The **"Delete candidate"** button on `CandidateDetailPage` shows only for `isAdminOrAbove` (delete is Admin-only). The dashboard shows recruiter-only users a **role filter** (`Form.Select` of their assigned roles + "All") that feeds `getDashboard(roleId)` and the `['dashboard','scoped',roleId]` key.
-- Routes: `/` → `DashboardPage` (landing for every role: `RequireRole`, sign-in and password change all send users here), `/jobs` → `JobsPage` (Admin+, `RequireRole`), `/candidates` + `/candidates/:id` (Recruiter+, `RequireRole`), `/upload` (Recruiter+), `/interviews/:id` → `InterviewPage` (all roles), `/configuration` (Admin+), `/users` (SuperAdmin), `/change-password`. The **Dashboard** nav link (`to="/" end`) is first and visible to all roles; the **Candidates/Upload** links show only for `canWriteCandidates`. So an **Interviewer** (bottom of the hierarchy — `useAuth().isInterviewerOnly`) sees Dashboard only, plus the interview pages they're linked to. The **topbar** hosts a **`NotificationBell`** (all roles). Nav visibility is driven by `navRoutes.ts`, not by inline conditionals.
+- Routes: `/` → `DashboardPage` (landing for every role: `RequireRole`, sign-in and password change all send users here), `/user-guide` → `UserGuidePage` (every role, no `RequireRole`), `/jobs` → `JobsPage` (Admin+, `RequireRole`), `/candidates` + `/candidates/:id` (Recruiter+, `RequireRole`), `/upload` (Recruiter+), `/interviews/:id` → `InterviewPage` (all roles), `/configuration` (Admin+), `/users` (SuperAdmin), `/change-password`. The **Dashboard** nav link (`to="/" end`) is first and visible to all roles; the **Candidates/Upload** links show only for `canWriteCandidates`. So an **Interviewer** (bottom of the hierarchy — `useAuth().isInterviewerOnly`) sees Dashboard and the user guide, plus the interview pages they're linked to. The **topbar** hosts a **`NotificationBell`** (all roles). Nav visibility is driven by `navRoutes.ts`, not by inline conditionals.
 
 ## Data fetching (TanStack Query)
 - Reads: `useQuery` with array keys — `['dashboard']`, `['candidates', { search, status, page }]`, `['candidate', id]`, `['status-options']`, `['status-options', 'initial']`, `['status-options', 'next', id]`, `['notifications']` (60s `refetchInterval`), `['my-interviews']`, `['assignable-users']`, `['interview', id]`. Use `keepPreviousData` for paged lists.
@@ -253,6 +253,18 @@ No `max-width` queries, and the phone is never the exception. Concretely:
 - **Evaluation report** (`CandidateEvaluationReportPage`, route `/candidates/:id/evaluations`, Recruiter+): fetches `getCandidateEvaluationReport(id)` and shows a summary panel (interviewer count, average overall, recommendation tally, per-criterion averages ordered by `EVALUATION_SECTIONS`) then every interviewer's full rubric grouped by interview, reusing `EvaluationReadOnly`. Has a **Print** button (`window.print()`, `d-print-none` chrome) and an empty state when no evaluations are submitted yet.
 
 Both the upload `CandidateForm` and the detail `ProfileEditor` include **GitHub URL**, **Portfolio website**, a **Role applied for** single-select and a **Skills** multi-select (both `components/SearchableSelect.tsx`, fed by `['config','roles']` / `['config','skills']` — configured values only, **not creatable** from the candidate form), and a **"This candidate has been referred"** checkbox revealing Reference name\* / email\* / Employee ID. Forms validate required full name + email format client-side (mirrored server-side); the legacy free-text role datalist was replaced by the configured role select.
+
+### User guide (`pages/UserGuidePage.tsx`, route `/user-guide`)
+`useQuery(['user-guide'], getUserGuide)` fetches `{ edition, label, chapters }` from
+`GET /api/user-guide`, already cut to the caller's role on the server — the frontend never decides
+what to hide. Each chapter is Markdown, rendered by `components/userGuide/GuideMarkdown.tsx`
+(`react-markdown` + `remark-gfm`) mapped onto the app's own Tailwind tokens rather than an embedded
+stylesheet. `utils/slugify.ts` gives headings GitHub-compatible ids so the guide's own pre-existing
+cross-reference links (e.g. `[2.2](#22-your-dashboard)`) resolve; a link to a chapter outside the
+reader's edition renders as plain text instead of a dead anchor. A contents rail (desktop: sticky
+sidebar; mobile: an accordion) is built from the same headings. Print / Save as PDF calls
+`window.print()`; print CSS in `index.css` restarts each chapter on its own page. See
+[specs/in-app-user-guide.md](specs/in-app-user-guide.md).
 
 ### Dashboard (`pages/DashboardPage.tsx`, route `/`)
 **One `useQuery` per section** (no single payload), rendered as react-bootstrap `Row`/`Col`/`Card`:

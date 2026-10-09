@@ -17,6 +17,7 @@ import type {
   ResendEmailResult,
   SlackSettings,
   UpsertSlackSettings,
+  UserGuide,
   CreateCandidatePayload,
   CreateUserPayload,
   DashboardData,
@@ -785,6 +786,12 @@ export const getRecruitingAnalytics = async (
   params?: AnalyticsFilterParams
 ): Promise<RecruitingAnalyticsSummary> => {
   const { data } = await api.get<RecruitingAnalyticsSummary>('/analytics', { params });
+  return data;
+};
+
+// ----- User guide -----
+export const getUserGuide = async (): Promise<UserGuide> => {
+  const { data } = await api.get<UserGuide>('/user-guide');
   return data;
 };
 

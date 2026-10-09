@@ -462,6 +462,19 @@ export type Role = 'SuperAdmin' | 'Admin' | 'Recruiter' | 'Interviewer';
 
 export const ALL_ROLES: Role[] = ['SuperAdmin', 'Admin', 'Recruiter', 'Interviewer'];
 
+export interface UserGuideChapter {
+  id: string;
+  title: string;
+  markdown: string;
+}
+
+/** The user guide cut to the caller's edition — see `GET /api/user-guide`. */
+export interface UserGuide {
+  edition: string;
+  label: string;
+  chapters: UserGuideChapter[];
+}
+
 export interface LoginPayload {
   email: string;
   password: string;

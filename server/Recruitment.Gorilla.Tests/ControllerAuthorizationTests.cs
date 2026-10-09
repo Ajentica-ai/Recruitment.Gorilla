@@ -272,6 +272,22 @@ public class ControllerAuthorizationTests(ApiFixture fx)
         await AssertStatus(role, HttpMethod.Get, "/api/dashboard/kpis", HttpStatusCode.OK);
     }
 
+    // ---- User guide: any authenticated role, content cut to the caller's edition ----
+
+    [Theory]
+    [InlineData("Interviewer", "interviewer")]
+    [InlineData("Recruiter", "recruiter")]
+    [InlineData("Admin", "admin")]
+    [InlineData("SuperAdmin", "superadmin")]
+    public async Task Get_user_guide_returns_the_callers_edition(string role, string expectedEdition)
+    {
+        var resp = await fx.SendAsync(HttpMethod.Get, "/api/user-guide", await TokenFor(role));
+        Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
+
+        using var doc = JsonDocument.Parse(await resp.Content.ReadAsStringAsync());
+        Assert.Equal(expectedEdition, doc.RootElement.GetProperty("edition").GetString());
+    }
+
     // ---- Default-deny: no token → 401 ----
 
     [Theory]
@@ -282,6 +298,7 @@ public class ControllerAuthorizationTests(ApiFixture fx)
     [InlineData("/api/interviews/types")]
     [InlineData("/api/dashboard/kpis")]
     [InlineData("/api/audit")]
+    [InlineData("/api/user-guide")]
     public async Task Protected_endpoints_reject_anonymous(string url)
     {
         var resp = await fx.SendAsync(HttpMethod.Get, url, token: null);

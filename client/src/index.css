@@ -7412,6 +7412,20 @@ a.hero-chip--accent:hover {
     color: #000 !important;
     text-decoration: underline;
   }
+
+  /* User guide: each chapter restarts on its own page, and a figure/table/quote
+     never splits across a page boundary mid-content. */
+  .guide-article {
+    break-before: page;
+  }
+  .guide-article:first-child {
+    break-before: auto;
+  }
+  .guide-article figure,
+  .guide-article table,
+  .guide-article blockquote {
+    break-inside: avoid;
+  }
 }
 
 /* ============================================================

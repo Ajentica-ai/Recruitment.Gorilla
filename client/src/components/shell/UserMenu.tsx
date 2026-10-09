@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { KeyRound, LogOut } from 'lucide-react';
+import { BookOpen, KeyRound, LogOut } from 'lucide-react';
 
 import Avatar from '@/components/common/Avatar';
 import { Badge } from '@/components/ui/badge';
@@ -78,6 +78,13 @@ export default function UserMenu() {
         )}
 
         <DropdownMenuSeparator />
+
+        <DropdownMenuItem asChild>
+          <Link to="/user-guide">
+            <BookOpen strokeWidth={1.75} aria-hidden="true" />
+            User guide
+          </Link>
+        </DropdownMenuItem>
 
         <DropdownMenuItem asChild>
           <Link to="/change-password">
