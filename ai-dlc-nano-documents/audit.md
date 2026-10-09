@@ -176,3 +176,4 @@
 - 2026-10-08T20:02Z [claude] RG-75 PHASE PLAN->CONSTRUCT @282f3b6: plan approved, branch created
 - 2026-10-08T20:11Z [claude] RG-75 DONE @282f3b6: dashboard invalidation fixed in AddStatusModal+KanbanBoard; 176/176 tests green; RG-72,RG-84 archived (retention)
 - 2026-10-08T20:11Z [claude] RG-75 SIDE-EFFECT @707cd99: local commit created (user confirmed), not pushed
+- 2026-10-08T20:11Z [claude] RG-75 SIDE-EFFECT @4dd40c4: posted summary comment on GitHub issue #75 (user confirmed)
