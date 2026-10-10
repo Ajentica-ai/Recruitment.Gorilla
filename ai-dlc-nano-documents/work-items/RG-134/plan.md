@@ -1,6 +1,6 @@
 <!-- phase: DONE | branch: feature/RG-134/Dashboard-redesign | tasks: 10/10
-     base: a1a6644 | updated: 2026-10-10
-     next: none. Not committed; awaiting user (commit, push, PR are gated) -->
+     base: a1a6644 | updated: 2026-10-10 (PR #135)
+     next: none. PR #135 open against develop, awaiting review. -->
 # Plan: Dashboard redesign, action-first and mobile-first (RG-134)
 ## Tasks
 - [x] 1. API: `DashboardKpisDto` + `NewPrevWeek`, `RecommendedThisWeek`, `RejectedThisWeek` (first bucket entry in 7d); `ApplicationsSummaryDto` + `GET /api/dashboard/applications-summary?days=`
