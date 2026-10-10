@@ -215,3 +215,5 @@
 - 2026-10-10T03:15Z [claude] RG-58 PHASE CONSTRUCT->WRAP-UP @b749e19: 2/2 tasks; tsc/lint/216 vitest green; verified live in app
 - 2026-10-10T03:15Z [claude] RG-58 DONE @b749e19: Education+Experience add-entry presets replaced with blank fields; not committed
 - 2026-10-10T03:16Z [claude] RG-58 WRAP-UP @b749e19: archived RG-93 (oldest completed) to stay within 10-item retention cap
+- 2026-10-10T03:25Z [claude] RG-58 SIDE-EFFECT @e4d7b4f: pushed branch and opened PR #136 against develop (user confirmed)
+- 2026-10-10T03:35Z [claude] RG-134 SIDE-EFFECT @b749e19: PR #135 merged into develop (user confirmed)
