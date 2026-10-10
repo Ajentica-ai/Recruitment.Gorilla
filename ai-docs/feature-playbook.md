@@ -39,7 +39,7 @@ Add one typed function per endpoint in `client/src/services/api.ts` using the sh
 ### 9. Query/Mutation + UI
 - Reads: `useQuery` with a sensible array key.
 - Writes: `useMutation`; invalidate the affected keys on success.
-- Build the page/component in `pages/`/`components/` with react-bootstrap; keep it theme-consistent (no hardcoded colors). Add confirm modals for destructive actions.
+- Build the page/component in `pages/`/`components/` with Tailwind utilities and shadcn/Radix primitives (`components/ui/`), following the existing component patterns; keep it theme-consistent (no hardcoded colors). Add confirm modals for destructive actions.
 
 ### 10. Tests
 Add/extend tests for the behavior you changed (patterns in [conventions.md](conventions.md#testing); how to run in [dev-setup.md](dev-setup.md#4b-run-the-tests)):

@@ -54,7 +54,7 @@ and every write path (`UserService`, `CandidateService.ValidateCandidateAsync`,
 - **TanStack Query** for server state:
   - Reads use `useQuery` with array keys: `['candidates', { search, status, page }]`, `['candidate', id]`.
   - Writes use `useMutation` and **invalidate** the relevant keys on success: `queryClient.invalidateQueries({ queryKey: ['candidates'] })`.
-- **Components/pages** use react-bootstrap; no bespoke CSS frameworks. Pages live in `pages/`, reusable pieces in `components/`.
+- **Components/pages** use Tailwind utilities and shadcn/Radix primitives (`components/ui/`), plus a hand-written semantic class layer in `index.css` for pieces with no shadcn equivalent. Pages live in `pages/`, reusable pieces in `components/`.
 
 ### ⚠️ JSON camelCase gotcha (important)
 ASP.NET serializes with camelCase, and it lowercases **runs of leading capitals**. So C# `CVFiles` becomes JSON **`cvFiles`** (not `cVFiles`). Always match the real serialized name in `types/index.ts` and component code. When in doubt, check the actual response. (This caused a real crash — `data.cvFiles` was undefined.)
@@ -71,8 +71,8 @@ ASP.NET serializes with camelCase, and it lowercases **runs of leading capitals*
 Guarded by `UtcDateTimeTests` (the `Kind` on read) and `DateSerializationTests` (the `Z` on the wire).
 
 ### Theme
-- The Microsoft **Fluent** theme lives in `client/src/index.css` as CSS variables mapped onto Bootstrap's variables (`--ms-primary: #0078d4`, neutrals, depth shadows, Segoe UI). Use existing Bootstrap classes/components; they pick up the theme. Don't hardcode colors — reference the look already established (primary blue, 4px/8px radii, subtle shadows).
-- Brand logo: `client/public/logo.png`, shown via `.app-logo-img`.
+- The **Harbor** design system lives in `client/src/styles/tokens.css` as CSS custom properties (cool slate neutrals, a cobalt/violet accent, soft elevation, Plus Jakarta Sans). `styles/theme.css` maps Tailwind's `--color-*` namespace onto those tokens so shadcn components inherit the theme with no JSX change. Don't hardcode colors: reference a token.
+- Brand logo: `client/src/assets/brand-logo.png`, shown via the `BrandLogo` component.
 
 ## File references in docs/PRs
 Use clickable relative markdown links, e.g. `[CandidateService.cs](server/Recruitment.Gorilla.API/Services/CandidateService.cs)`, not bare backticks.
@@ -83,7 +83,7 @@ Use clickable relative markdown links, e.g. `[CandidateService.cs](server/Recrui
 - Pattern: derive a DB test class from `Infrastructure/DbTestBase` (joins the `mysql` collection → one migrated DB per run, a transaction rolled back per test for isolation); build rows with `Infrastructure/TestData` (`AddUser`/`AddRole`/`AddCandidate`/`AddInterview`/`AddSubmittedEvaluation`); assert with plain xUnit `Assert` (no FluentAssertions).
 - Focus new tests on **business rules** (access scoping, status transitions, validation gates), not framework plumbing.
 - **Controller-level authorization** (the `[Authorize(Roles = …)]` attributes) is tested via `WebApplicationFactory<Program>` integration tests (`Infrastructure/ApiFactory.cs` + `ApiFixture.cs`): the real API boots against a throwaway MySQL DB seeded with one user per role; tests log in for a real JWT and assert **status codes** (`Infrastructure/ApiFixture` derives the throwaway connection like the unit fixture; config is injected via env vars because Program reads it at startup). `AuthService`/`PasswordHasher` have their own tests.
-- **Frontend** tests use **Vitest + Testing Library** (jsdom), run via `npm test` in `client`. Test files sit next to their source as `*.test.ts(x)`; setup is `client/src/test/setup.ts`. Cover **pure logic** (`utils/*`), **derived behavior** (e.g. `AuthContext` role flags), and **logic-heavy components** (validation gates, conditional rendering) — for the latter, render via `test/renderWithProviders` (Query + Toast + Router) and **mock `services/api`** with `vi.mock` (no network). Skip snapshots and testing that react-bootstrap/recharts render. A **read-only Playwright E2E smoke** lives in `client/e2e/` (`npm run e2e`), runs against the live dev stack with env-var credentials (`E2E_EMAIL`/`E2E_PASSWORD`), and skips when unset — it creates nothing.
+- **Frontend** tests use **Vitest + Testing Library** (jsdom), run via `npm test` in `client`. Test files sit next to their source as `*.test.ts(x)`; setup is `client/src/test/setup.ts`. Cover **pure logic** (`utils/*`), **derived behavior** (e.g. `AuthContext` role flags), and **logic-heavy components** (validation gates, conditional rendering) — for the latter, render via `test/renderWithProviders` (Query + Toast + Router) and **mock `services/api`** with `vi.mock` (no network). Skip snapshots and testing that shadcn/recharts render. A **read-only Playwright E2E smoke** lives in `client/e2e/` (`npm run e2e`), runs against the live dev stack with env-var credentials (`E2E_EMAIL`/`E2E_PASSWORD`), and skips when unset — it creates nothing.
 
 ## Git
 - Commit only when asked; branch off the default branch first if needed.
