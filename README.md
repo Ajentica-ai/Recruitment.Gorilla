@@ -23,7 +23,7 @@ A recruitment management system for streamlining CV ingestion, candidate trackin
 - **Timeline View** — per-candidate vertical timeline of the full status history (newest first)
 - **CV Download** — stream/download the original stored CV file
 - **Delete** — remove a candidate (and their files + history) with confirmation
-- **Modern UI** — Microsoft Fluent-inspired theme (responsive)
+- **Modern UI**: Harbor design system on Tailwind and shadcn/Radix (responsive)
 
 ---
 
@@ -37,7 +37,7 @@ A recruitment management system for streamlining CV ingestion, candidate trackin
 | Auth | JWT bearer (access token) + rotating refresh token in httpOnly cookie |
 | Logging | log4net (console + daily rolling file) |
 | Frontend | React 19 + TypeScript (Vite) |
-| UI | Bootstrap 5 + React Bootstrap, Microsoft Fluent theme |
+| UI | Tailwind v4 + shadcn/Radix, Harbor design system |
 | Data Fetching | TanStack Query v5 + Axios |
 | File Upload UX | react-dropzone |
 | CV Parsing | PdfPig (PDF), DocumentFormat.OpenXml (Word) |
@@ -188,7 +188,7 @@ Recruitment.Gorilla/
 │       │   └── CandidateDetailPage.tsx
 │       ├── services/api.ts          # Axios layer + auth interceptors
 │       ├── types/index.ts           # Shared TypeScript types
-│       └── index.css                # Microsoft Fluent theme
+│       └── index.css                # Harbor design system (Tailwind + shadcn/Radix)
 │
 └── server/
     └── Recruitment.Gorilla.API/

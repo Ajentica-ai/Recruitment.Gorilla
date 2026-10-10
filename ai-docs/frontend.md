@@ -5,45 +5,46 @@ React 19 + TypeScript + Vite. Root: `client/`.
 ## Structure
 | Path | Purpose |
 |---|---|
-| `src/main.tsx` | Entry; wraps app in `QueryClientProvider`; imports Figtree, Bootstrap CSS + `index.css`. |
+| `src/main.tsx` | Entry; wraps app in `QueryClientProvider`; imports Plus Jakarta Sans (self-hosted) + `styles/theme.css`. |
 | `src/App.tsx` | Router, `AuthProvider`, `ProtectedLayout` (auth guard only — chrome lives in `AppShell`), routes. |
 | `src/navRoutes.ts` | **Single source for the sidebar items and topbar titles** — path, label, lucide icon, description, role gate. |
 | `src/auth/AuthContext.tsx` | Auth state, login/logout, silent session restore. |
 | `src/services/api.ts` | Typed Axios layer + auth interceptors (the only HTTP caller). |
 | `src/types/index.ts` | Shared types mirroring API DTOs. |
-| `src/pages/` | `DashboardPage`, `LoginPage`, `UploadPage`, `CandidatesPage`, `CandidateDetailPage`, `CandidateEvaluationReportPage`, `InterviewPage`, `ConfigurationPage`, `UsersPage`, `AuditLogPage`, `ChangePasswordPage`. |
+| `src/pages/` | `DashboardPage`, `LoginPage`, `UploadPage`, `CandidatesPage`, `CandidateDetailPage`, `CandidateEvaluationReportPage`, `InterviewPage`, `JobsPage`, `AnalyticsPage`, `ConfigurationPage`, `UsersPage`, `AuditLogPage`, `UserGuidePage`, `ChangePasswordPage`. |
 | `src/pages/configuration/` | The Configuration tabs: `JobOpeningsTab`, `OptionChipsTab`, `EmailSettingsTab`, `EmailDeliveryTab`, `SlackSettingsTab`. |
 | `src/components/shell/` | App chrome: `AppShell` (layout + sidebar state, skip link, `<main>`), `SidebarNav`, `TopbarTitle`, **`UserMenu`** (topbar avatar → account menu). |
-| `src/components/ui/` | Shared primitives: **`Page`**, **`SectionCard`**, `PageHeader`, `Pagination`, `EmptyState`, `ConfirmModal`, **`Loading`** (`LoadingPanel`, `Skeleton*`), `Tabs` + `useTabs`. |
+| `src/components/common/` | App-level primitives: **`Page`**, **`SectionCard`**, `PageHeader`, `Pagination`, `EmptyState`, `ConfirmModal`, **`Loading`** (`LoadingPanel`, `Skeleton*`), `Tabs` + `useTabs`, `Avatar`, `RowActions`, `PasswordInput`. |
+| `src/components/ui/` | shadcn/Radix primitives, styled for Harbor: `button`, `badge`, `card`, `dialog`, `sheet`, `dropdown-menu`, `select`, `native-select`, `segmented`, `tabs`, `checkbox`, `input`, `textarea`, `tooltip`, `popover`, and the rest of the set. |
 | `src/components/` | `BulkUploader`, `JsonImporter`, `drafts/DraftReviewWorkspace`, `CandidateForm`, `StatusTimeline`, `SearchableSelect`, `StatusBadge`, **`ThemeMenu`**, `ToastStack`, `RequireRole`, `NotificationBell`, `ReadOnlyCandidateProfile`, `EvaluationForm`. |
 | `src/components/dashboard/` | Dashboard widgets: `DashboardHero`, `QuickActionFab`, `UpNextCard` (+ `upNextGroups.tsx`), `KpiStrip`, `KpiCard`, `kpiIcons`, `PipelineCard`, `TrendChart`, `ActiveJobOpeningsCard` (+ `jobOrder.ts`), `PipelineInsightsCard`, `CountBarChart`, `OfferMetricsCard`, `ActivityFeed` (+ `activityGroups.ts`). See the Dashboard section. |
 | `src/utils/` | `statusColors.ts` (status → tone class); `chartColors.ts` (chart colors from status tokens + chrome read off the design tokens); `evaluationCriteria.ts` (interview-form catalog — keys match the backend); `skillColors.ts` (stable hash of a skill name → badge class); `jobStatus.ts` (job-opening lifecycle); `initials.ts`. |
 | `src/styles/tokens.css` | **Design tokens — the single source of visual truth.** |
-| `src/index.css` | Bootstrap bridge → Prism semantic layer → app-specific components. |
+| `src/index.css` | The hand-written semantic component layer (cards, status badges, tables, kanban board, candidate profile) with no shadcn equivalent; imported into Tailwind's `legacy` layer by `styles/theme.css`, which sits below Tailwind's utilities so a utility still wins on a shadcn component. |
 | `src/assets/brand-logo.png` | Brand badge artwork, imported by `BrandLogo`. `public/favicon.png` is the same art padded square. |
 | `vite.config.ts` | Dev server host + `/api` proxy. |
 
-## Design system (Prism)
+## Design system (Harbor)
 
-The UI follows the **Ajentica Prism/Pulse** dashboard so the two products read
+The UI follows the **Ajentica Harbor/Pulse** dashboard so the two products read
 as one. `styles/tokens.css` holds the palette, radius/space/type scales and the
-dark-mode overrides; `index.css` maps those onto Bootstrap's `--bs-*` so
-react-bootstrap components inherit the design with no JSX change, then adds a
-semantic class layer that pages are written against.
+dark-mode overrides; `styles/theme.css` maps the `--color-*` namespace onto
+those tokens so shadcn/Radix components (`components/ui/`) inherit the design
+with no JSX change, then `index.css` adds the semantic class layer that pages
+are written against for pieces with no shadcn equivalent.
 
 - **Never hardcode a colour.** Reference a token. The `--ms-*` legacy aliases
   are **gone** — every reference was rewritten to the canonical token it already
   resolved to. Don't reintroduce a second vocabulary: a colour has one name.
 - **Never hardcode a spacing value either.** `tokens.css` carries a 4px-based
   `--space-1…--space-10` scale plus `--card-pad`, `--stack-gap` and
-  `--space-page`. Reach for a token, not a raw px value and not a Bootstrap
+  `--space-page`. Reach for a token, not a raw px value and not a Tailwind
   `m-*`/`p-*` utility.
-- **Cards are flat**: `--radius-card` (14px), 1px border, **no shadow**; hover
-  changes the border. Shadows are reserved for things that float (dropdowns,
-  modals, toasts).
+- **Cards** are `--radius-card` (14px), 1px border, `--shadow-sm` at rest; hover
+  changes the border. Depth comes from elevation (shadow), not a heavier border.
 - **Icons are `lucide-react`**, size 16 (20 in a KPI chip), `strokeWidth` 1.5–1.75.
   Don't hand-roll SVGs or use emoji.
-- **Semantic classes** to reach for before stacking Bootstrap utilities:
+- **Semantic classes** to reach for before stacking Tailwind utilities:
   `.rg-content`, `.page-stack`, `.grid-2`/`.grid-3`/`.kpi-grid`, `.card-stack`,
   `.page-header`/`.page-eyebrow`, `.section-head`/`.section-title`,
   `.pulse-card` (+ `__head`/`__body`/`--flush`),
@@ -184,10 +185,12 @@ No `max-width` queries, and the phone is never the exception. Concretely:
     (initials avatar + presence dot → name/email, role pills, Change password,
     Sign out). All three share `.topbar-btn` sizing and the `.menu-panel` /
     `.menu-item` dropdown shape, so they read as one set.
-  - **Dropdowns must be controlled.** react-bootstrap only auto-closes on
-    `<Dropdown.Item>`; the panels here use plain buttons and links, so each
-    holds `show`/`onToggle` state and closes itself on selection. Forgetting
-    this leaves the menu hanging open after a choice.
+  - **All three are shadcn's `DropdownMenu`** (`components/ui/dropdown-menu.tsx`,
+    built on Radix), which closes itself on `DropdownMenuItem` selection with
+    no extra state needed. `NotificationBell` is the one exception: it keeps
+    its own `open`/`setOpen` so it can close the panel itself before
+    `navigate()`ing to a notification's link, not as a workaround for a
+    dropdown that wouldn't otherwise close.
 - **The topbar owns the page title**, so pages must not render their own `<h2>`
   heading. A heading that is *content* (a candidate's name) is fine, as is a
   `PageHeader` carrying a real title/description (the evaluation report).
@@ -312,7 +315,7 @@ chart chrome/colors go through `chartColors.ts`, not hardcoded hex; status-colou
 - **Scheduling:** in `CandidateDetailPage`'s `AddStatusModal`, choosing **Interview Scheduled** reveals a required **Interviewers** `SearchableMultiSelect` (options from `['assignable-users']`); the payload adds `interviewerUserIds`, and success invalidates `['notifications']` + `['my-interviews']`.
 - **Notification bell (`components/NotificationBell.tsx`, topbar):** `['notifications']` query with a 60s `refetchInterval`; unread badge; dropdown of the latest ~15; clicking marks read (mutation) and navigates to the item's `linkUrl`; "Mark all read".
 - **Dashboard "Up next" (`components/dashboard/UpNextCard.tsx`):** the "Mine" view of `['my-interviews']`: past interviews still owing your evaluation first ("Awaiting evaluation"), then upcoming ones by day, each with an evaluation-state badge (Pending/Draft/Submitted); rows link to `/interviews/:id`. See the Dashboard section.
-- **Interview page (`pages/InterviewPage.tsx`, `/interviews/:id`):** a **hero header card** (candidate **initials avatar + name + Role Applied For + interview type tags**, calendar chip with a relative badge Today/Tomorrow/In N days/Completed, interviewer avatar pills) above two columns with a staggered `.anim-fade-up` entry — left `ReadOnlyCandidateProfile` (non-editable card; **header** = "Current position" (renamed from the ungrammatical "Position on Last Organization") + LinkedIn/GitHub/Portfolio icon links + status pill, no name/avatar; **body** = email/phone/**Relevant Experience** detail tiles, colorful skill badges via `utils/skillColors.ts`, an **extendable Summary** (Show more/less), and CV files as `.cv-file-item` tiles with Preview (`outline-primary`) + `.btn-cv-download` reusing `previewCvFile`/`downloadCvFile`); right `EvaluationForm` driven by `utils/evaluationCriteria.ts`. **`.btn-cv-download` is no longer the hardcoded yellow fill with the looping icon bounce** — the colour was a literal rather than a token, yellow is the app's *warning* hue so the safest action on the panel wore the colour meaning "careful", and it made Download louder than Preview, which is the action a reviewer wants first. It is now the same secondary control as its Preview sibling. The hero drops the redundant "Interview" eyebrow (the topbar says it), puts the role and type tags on one meta line, and folds the schedule chip + interviewers into one right-hand `.interview-hero__aside` — they were two rows with a divider between, spending a third of the hero on what is usually one avatar pill (116px tall now, was ~230px). The grid is **`.detail-grid.detail-grid--panels.interview-grid`**: `--panels` supplies the equal-height / internal-scroll mechanics (shared with the candidate detail page), and `.interview-grid` overrides `--detail-panel-max` to exactly the viewport below the topbar and pins **both** columns `position: sticky`. The 760px floor is deliberately dropped here — a column taller than the space under the topbar hangs past the fold, which is what capping only the evaluation card left behind. The result is a fixed two-panel workspace: the candidate profile (`className="detail-scroll"`) scrolls on the left, the rubric on the right, and the two cards are the same height with their bottoms aligned. Inside it only the rubric scrolls (`.eval-form-card__scroll`) — the progress bar and the Submit / Save draft actions stay put, where before the card ran ~2500px and Submit was a screen below the last criterion. **Note the class is `eval-form-card`, not `eval-card`: `.eval-card` is already the per-interviewer summary tile in the status timeline, and reusing it silently inherited its `align-items:center` and padding.** Desktop only — a bounded scroll area nested in a scrolling page is worse than a long page on a phone. The recruiter's notes are folded **into** the evaluation card as an `.eval-briefing` band above the progress bar (passed to `EvaluationForm` as a `briefing` node, so the form need not know what the briefing is). They are instructions *for that form*, so they belong to the same object; as their own card they cost a whole surface plus a gap to show one line, and as an `alert-info-soft` before that they were the loudest thing on a page whose subject is the candidate. Being outside the scroll region they stay readable the whole way down the twelve criteria. The evaluation column is therefore exactly one card. The interviewer pills keep an inline "Interviewer(s)" label — the pills are meaningless without it, but it does not warrant a band of its own. the recruiter's notes render as a quiet **`.notes-card`**, not an `alert-info-soft` — as a tinted alert a one-line note was the loudest thing on a page whose subject is the candidate. In the rubric, each criterion's label column is capped (`--eval-label-w`) so the 1–5 scale sits a short, **constant** distance from every label: the row was `justify-content: space-between`, which parked the pills ~400px away against the panel's right edge and made rating twelve criteria twelve trips across the card. The comment field spans label + scale, and the panel header wraps so the "n/3 rated" chip drops below the title on a phone rather than squeezing it. Sections A–D are **independent collapsible accent panels** (`.eval-panel--a|b|c|d`, react-bootstrap `Collapse`, per-section icon + live `n/3 rated · avg` summary, rotating chevron); ratings use a **segmented 1–5 pill group** (click again to clear, `aria-pressed`); a top progress bar tracks `Rated X of 12`; general assessment / recommendation / overall rating live in a static "Summary & recommendation" panel. Recommendation options are `Recommended/Hold/Reject/Other`; picking **Other** reveals a required "Please specify" text box (blocks Submit until filled). **Save draft** any time (never gated); **Submit is gated** — all 12 criterion ratings, a final recommendation, and an overall rating are required (red `*` indicators; a failed attempt sets `showErrors`, flags the empty groups via `.rating-group--invalid`, and toasts what's missing before the confirm modal opens). **Submit** confirms via modal then locks (server returns 409 after). Read-only/submitted views reuse the panels with **filled-dot rating scales**. Admin+ also see other interviewers' evaluations read-only in an accordion. A 404 (not assigned / not admin) renders a friendly "not available" message. All animations respect `prefers-reduced-motion`.
+- **Interview page (`pages/InterviewPage.tsx`, `/interviews/:id`):** a **hero header card** (candidate **initials avatar + name + Role Applied For + interview type tags**, calendar chip with a relative badge Today/Tomorrow/In N days/Completed, interviewer avatar pills) above two columns with a staggered `.anim-fade-up` entry — left `ReadOnlyCandidateProfile` (non-editable card; **header** = "Current position" (renamed from the ungrammatical "Position on Last Organization") + LinkedIn/GitHub/Portfolio icon links + status pill, no name/avatar; **body** = email/phone/**Relevant Experience** detail tiles, colorful skill badges via `utils/skillColors.ts`, an **extendable Summary** (Show more/less), and CV files as `.cv-file-item` tiles with Preview (`variant="outline"`) + `.btn-cv-download` reusing `previewCvFile`/`downloadCvFile`); right `EvaluationForm` driven by `utils/evaluationCriteria.ts`. **`.btn-cv-download` is no longer the hardcoded yellow fill with the looping icon bounce** — the colour was a literal rather than a token, yellow is the app's *warning* hue so the safest action on the panel wore the colour meaning "careful", and it made Download louder than Preview, which is the action a reviewer wants first. It is now the same secondary control as its Preview sibling. The hero drops the redundant "Interview" eyebrow (the topbar says it), puts the role and type tags on one meta line, and folds the schedule chip + interviewers into one right-hand `.interview-hero__aside` — they were two rows with a divider between, spending a third of the hero on what is usually one avatar pill (116px tall now, was ~230px). The grid is **`.detail-grid.detail-grid--panels.interview-grid`**: `--panels` supplies the equal-height / internal-scroll mechanics (shared with the candidate detail page), and `.interview-grid` overrides `--detail-panel-max` to exactly the viewport below the topbar and pins **both** columns `position: sticky`. The 760px floor is deliberately dropped here — a column taller than the space under the topbar hangs past the fold, which is what capping only the evaluation card left behind. The result is a fixed two-panel workspace: the candidate profile (`className="detail-scroll"`) scrolls on the left, the rubric on the right, and the two cards are the same height with their bottoms aligned. Inside it only the rubric scrolls (`.eval-form-card__scroll`) — the progress bar and the Submit / Save draft actions stay put, where before the card ran ~2500px and Submit was a screen below the last criterion. **Note the class is `eval-form-card`, not `eval-card`: `.eval-card` is already the per-interviewer summary tile in the status timeline, and reusing it silently inherited its `align-items:center` and padding.** Desktop only — a bounded scroll area nested in a scrolling page is worse than a long page on a phone. The recruiter's notes are folded **into** the evaluation card as an `.eval-briefing` band above the progress bar (passed to `EvaluationForm` as a `briefing` node, so the form need not know what the briefing is). They are instructions *for that form*, so they belong to the same object; as their own card they cost a whole surface plus a gap to show one line, and as an `alert-info-soft` before that they were the loudest thing on a page whose subject is the candidate. Being outside the scroll region they stay readable the whole way down the twelve criteria. The evaluation column is therefore exactly one card. The interviewer pills keep an inline "Interviewer(s)" label — the pills are meaningless without it, but it does not warrant a band of its own. the recruiter's notes render as a quiet **`.notes-card`**, not an `alert-info-soft` — as a tinted alert a one-line note was the loudest thing on a page whose subject is the candidate. In the rubric, each criterion's label column is capped (`--eval-label-w`) so the 1–5 scale sits a short, **constant** distance from every label: the row was `justify-content: space-between`, which parked the pills ~400px away against the panel's right edge and made rating twelve criteria twelve trips across the card. The comment field spans label + scale, and the panel header wraps so the "n/3 rated" chip drops below the title on a phone rather than squeezing it. Sections A–D are **independent collapsible accent panels** (`.eval-panel--a|b|c|d`, plain `useState` + `aria-expanded`, per-section icon + live `n/3 rated · avg` summary, rotating chevron); ratings use a **segmented 1–5 pill group** (click again to clear, `aria-pressed`); a top progress bar tracks `Rated X of 12`; general assessment / recommendation / overall rating live in a static "Summary & recommendation" panel. Recommendation options are `Recommended/Hold/Reject/Other`; picking **Other** reveals a required "Please specify" text box (blocks Submit until filled). **Save draft** any time (never gated); **Submit is gated** — all 12 criterion ratings, a final recommendation, and an overall rating are required (red `*` indicators; a failed attempt sets `showErrors`, flags the empty groups via `.rating-group--invalid`, and toasts what's missing before the confirm modal opens). **Submit** confirms via modal then locks (server returns 409 after). Read-only/submitted views reuse the panels with **filled-dot rating scales**. Admin+ also see other interviewers' evaluations read-only in an accordion. A 404 (not assigned / not admin) renders a friendly "not available" message. All animations respect `prefers-reduced-motion`.
 - **Status timeline interviewer links (`components/StatusTimeline.tsx`):** the "Interview Scheduled" entry shows its interviewers as **`.interviewer-pill` avatar pills** (initials + name), each a `<Link>` to `/interviews/{interviewId}`, plus the interview's **type tags** as `skillColorClass`-colored badges (from the entry's `interviewTags`). The **schedule form** (`CandidateDetailPage`'s `AddStatusModal`) adds an optional **Interview types** `SearchableMultiSelect` (from `getActiveInterviewTypes`) above the interviewers select. Timeline **dots** carry a soft `--status-tint` ring so they read distinctly from the tinted status badge. Comments render with `white-space: pre-line` (so the appended evaluation summary's line breaks show). An **"Interview Completed"** entry renders its `evaluationSummaries` as **cards** (initials avatar, interviewer name, overall-rating dots, a recommendation `status-badge` colored by outcome — Recommended/Hold/Reject/Other → success/intake/reject/muted, submitted date); Admin+ additionally get a **"View full evaluations →"** link to `/interviews/{id}` (gated by the `canViewEvaluations` prop = `isAdminOrAbove`). `cleanComment` strips any legacy baked-in "— Interview evaluations —" text so only the human comment shows above the cards.
 - **Interview page notes:** scheduling with "Notes for interviewers" text (the relabeled optional comment on the Interview Scheduled add-status form) stores it as the scheduled entry's comment; `InterviewPage` shows it as a **"Notes from the recruiter"** info card above the candidate profile (`InterviewDetail.notes`). Re-scheduling from Interview Completed reuses the same add-status flow (the new `8 → 3` transition surfaces Interview Scheduled as a next option).
 - **Peer evaluations:** `InterviewPage` renders an **"Other interviewers' evaluations"** accordion when `InterviewDetail.allEvaluations` is present (filtering the caller out). The backend only populates that list for Admin+, or for an assigned interviewer **after they submit & lock their own** (peers' submitted evaluations only) — so a peer can't preview colleagues before forming their own view.
@@ -369,7 +372,7 @@ mutations invalidate the `['config']` prefix so candidate forms refresh too.
   (`/config/slack*`); the token is never returned by the API.
 
 ### Status colors (`utils/statusColors.ts` + `components/StatusBadge.tsx`)
-`getStatusClass(status)` maps a status to a **tone** modifier class (`status--reject|success|interview|assessment|muted|uploaded|intake`). The colors are CSS design tokens in `index.css` (`--status-color` solid for the dot, `--status-tint` translucent for the badge background), with a `[data-bs-theme="dark"]` override block so a future dark theme just flips `data-bs-theme` on `<html>` — no component changes. Use the shared `StatusBadge` / `StatusDot` components (do not reintroduce per-call Bootstrap `bg-*` variants); applied to the candidate list, detail header, and `StatusTimeline`.
+`getStatusClass(status)` maps a status to a **tone** modifier class (`status--reject|success|interview|assessment|muted|uploaded|intake`). The colors are CSS design tokens in `index.css` (`--status-color` solid for the dot, `--status-tint` translucent for the badge background), with a `[data-bs-theme="dark"]` override block so dark mode just flips `data-bs-theme` on `<html>` — no component changes. Use the shared `StatusBadge` / `StatusDot` components (do not reintroduce per-call Tailwind `bg-*` utility classes); applied to the candidate list, detail header, and `StatusTimeline`.
 
 ### External links (`utils/externalUrl.ts`)
 Candidate profile links (LinkedIn, GitHub, portfolio, ...) and timeline submission links are stored as typed or extracted, often without a scheme (`linkedin.com/in/jane`). A bare value used as `href` resolves relative to the current page (`/candidates/linkedin.com/in/jane`), so always render these through `externalUrl(raw)`: it prefixes `https://` to bare links, passes `http(s)://` through, and returns `undefined` for any other scheme (`javascript:`, `data:`) so the link is not rendered.
@@ -381,22 +384,28 @@ Each CV file has **Preview** + **Download**. Preview calls `previewCvFile` (auth
 `LoginPage` no longer hints credentials (placeholders removed, `autoComplete="off"`, no app-prefill).
 
 ## Theme (`styles/tokens.css`)
-- **Coastal teal `#468189`** on near-neutral surfaces, Figtree, 14px base. Token
-  names and scales follow Prism; the palette descends from GorillaHR, which is
-  where Prism's does too.
+- **Violet accent** (`--primary: #7c5cfc` light / `#8b6dff` dark) on
+  near-colourless slate neutrals, Plus Jakarta Sans, a 12.5px base
+  (`--text-md`). Token names and scales follow Harbor; the palette descends
+  from GorillaHR, same as before. Neutrals stay nearly colourless, the accent
+  is used sparingly, and depth comes from elevation (shadow) rather than
+  borders.
 - Semantic **status / priority / skill / KPI / evaluation** colours are
   deliberately *not* derived from the brand hue and live in `index.css`.
   `utils/chartColors.ts` resolves `--status-color` off a hidden probe element
   rather than duplicating hexes, and reads chart chrome off the tokens.
-- **Don't hardcode colours.** Avoid fixed light utilities like
-  `bg-light`/`bg-white`/`text-dark` — use tokens or `bg-body-tertiary` so they
-  adapt to dark mode.
+- **Don't hardcode colours.** Avoid fixed Tailwind utilities like
+  `bg-white`/`text-black`: reference a token (`bg-[var(--surface)]`,
+  `text-[var(--text)]`) so they adapt to dark mode.
 
 ### Dark mode / theming
 - **Token flip:** light is `:root`; a `[data-bs-theme='dark']` block in
-  `tokens.css` overrides the neutrals and accents. Because the `--bs-*`
-  variables map onto the tokens, the whole app flips automatically. Bootstrap
-  5.3 / react-bootstrap also honour `data-bs-theme`.
+  `tokens.css` overrides the neutrals and accents. `styles/theme.css` maps
+  Tailwind's `--color-*` namespace onto the tokens and ties Tailwind's `dark:`
+  variant to the same attribute (`@custom-variant dark (&:where([data-bs-theme='dark'], ...))`),
+  so both the hand-written CSS and every shadcn component flip together. The
+  attribute name is a holdover from the pre-Tailwind implementation; Bootstrap
+  itself is gone from the project.
 - **State:** `theme/ThemeContext.tsx` (`ThemeProvider` + `useTheme`) exposes
   **`preference`** (`'light' | 'dark' | 'system'` — what the user chose) and
   **`theme`** (`'light' | 'dark'` — what is painted). Components that need the

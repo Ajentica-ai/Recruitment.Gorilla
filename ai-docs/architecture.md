@@ -1,7 +1,7 @@
 # Architecture
 
 ## What it is
-A single-admin recruitment management system (Phase 1). The admin bulk-uploads CVs (PDF / `.docx`), the API extracts candidate fields for review, candidates are stored in MySQL, and each candidate has an **append-only status history** rendered as a vertical timeline.
+A recruitment management system for four roles (Super Admin, Admin, Recruiter, Interviewer). An admin or recruiter bulk-uploads CVs (PDF / `.docx`), the API extracts candidate fields for review, candidates are stored in MySQL, and each candidate has an **append-only status history** rendered as a vertical timeline.
 
 ## Monorepo layout
 ```
@@ -13,11 +13,13 @@ Recruitment.Gorilla/
 ├── client/                    # React 19 + TypeScript (Vite)
 │   └── src/
 │       ├── auth/AuthContext.tsx
-│       ├── components/        # BulkUploader, CandidateForm, StatusTimeline, dashboard/*
-│       ├── pages/             # DashboardPage, LoginPage, UploadPage, CandidatesPage, CandidateDetailPage, ConfigurationPage
+│       ├── components/        # BulkUploader, CandidateForm, StatusTimeline, dashboard/*, drafts/*, kanban/*, offers/*, shell/*, ui/*
+│       ├── pages/             # DashboardPage, CandidatesPage, CandidateDetailPage, InterviewPage, UploadPage, ConfigurationPage, UsersPage, AuditLogPage, AnalyticsPage, JobsPage, LoginPage
 │       ├── services/api.ts    # typed Axios layer + auth interceptors
 │       ├── types/index.ts     # shared TS types
-│       └── index.css          # Microsoft Fluent theme
+│       ├── styles/tokens.css  # design tokens (Harbor)
+│       ├── styles/theme.css   # Tailwind v4 + shadcn/ui bridge, cascade-layer order
+│       └── index.css          # legacy semantic component layer (cards, status badges, tables, kanban)
 └── server/
     └── Recruitment.Gorilla.API/
         ├── Controllers/       # Auth, Candidates, CVUpload, Configuration, Dashboard
@@ -41,7 +43,7 @@ Recruitment.Gorilla/
 | API docs | Swashbuckle (Swagger) | 10.x |
 | CV parsing | PdfPig (PDF) + DocumentFormat.OpenXml (Word) | 0.1.15 / 3.5.1 |
 | Frontend | React + TypeScript + Vite | 19 / Vite 8 |
-| UI | react-bootstrap 2 + Bootstrap 5, Fluent theme | — |
+| UI | Tailwind v4 + shadcn/Radix, Harbor design system | — |
 | Routing | react-router-dom | 7 |
 | Background Queues | System.Threading.Channels (AuditLog & Slack); Email is a DB-backed outbox, polled by a BackgroundService | .NET 10 |
 | Real-time WebSockets | Microsoft.AspNetCore.SignalR & @microsoft/signalr | 10.0.x / 8.0.x |

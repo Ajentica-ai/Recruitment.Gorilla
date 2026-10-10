@@ -19,13 +19,13 @@ This file is the entry point for any AI agent (or new human contributor). Detail
 Browser (5173)  ──/api──►  Vite dev proxy  ──►  ASP.NET Core API (localhost:5134)  ──►  MySQL
   React 19/TS                                    Controller → Service → AppDbContext (EF Core)
   TanStack Query                                 JWT auth (access token + httpOnly refresh cookie)
-  react-bootstrap (Prism design system)
+  Tailwind v4 + shadcn/Radix (Harbor design system)
 ```
 Adding a feature almost always follows: **Entity → AppDbContext → migration → DTO → Service → Controller (`[Authorize]`) → `api.ts` → `types` → Query/Mutation → page/component → verify.** Full recipe: [`ai-docs/feature-playbook.md`](ai-docs/feature-playbook.md).
 
 ## Tech stack (pinned)
 - **Backend:** ASP.NET Core Web API on **.NET 10**, EF Core **9.0.0** + Pomelo MySQL **9.0.0**, JWT bearer auth, log4net, Swagger.
-- **Frontend:** React **19** + TypeScript + **Vite**, TanStack Query v5, Axios, react-bootstrap 2 + Bootstrap 5 (**Prism design system**, see [`ai-docs/frontend.md`](ai-docs/frontend.md)), react-router-dom 7, react-dropzone, lucide-react, react-markdown + remark-gfm (user guide only).
+- **Frontend:** React **19** + TypeScript + **Vite**, TanStack Query v5, Axios, Tailwind v4 + shadcn/Radix (**Harbor design system**, see [`ai-docs/frontend.md`](ai-docs/frontend.md)), react-router-dom 7, react-dropzone, lucide-react, react-markdown + remark-gfm (user guide only).
 - **DB:** MySQL 8+. **Files:** stored on local disk under `server/Recruitment.Gorilla.API/Uploads/`.
 
 ## Quickstart
