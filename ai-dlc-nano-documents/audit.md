@@ -205,3 +205,13 @@
 - 2026-10-10T01:35Z [claude] RG-134 PHASE CONSTRUCT->WRAP-UP @a1a6644: 10/10 tasks; 525/525 server, 216/216 vitest, 12/12 e2e green
 - 2026-10-10T01:38Z [claude] RG-134 WRAP-UP @a1a6644: archived RG-83 (oldest completed); backlog -1 (RG-99 moot) +2 follow-ups
 - 2026-10-10T01:40Z [claude] RG-134 DONE @a1a6644: dashboard redesigned action-first/mobile-first; docs + guide updated; not committed
+- 2026-10-10T02:10Z [claude] RG-134 SIDE-EFFECT @58a6c51: pushed branch and opened PR #135 against develop (user confirmed)
+- 2026-10-10T03:00Z [claude] RG-58 SIDE-EFFECT @58a6c51: assigned #58 to tahmidsparrow, status In Development
+- 2026-10-10T03:00Z [claude] RG-58 CREATED @58a6c51: Add Education preset-value bug, fast path (issue #58)
+- 2026-10-10T03:05Z [claude] RG-58 DECISION @b749e19: fix both Education and Experience presets (user confirmed)
+- 2026-10-10T03:05Z [claude] RG-58 DECISION @b749e19: no new test, verify in running app (user confirmed)
+- 2026-10-10T03:05Z [claude] RG-58 BRANCH @b749e19: fix/RG-58/Blank-draft-entry-defaults created off develop (user confirmed)
+- 2026-10-10T03:05Z [claude] RG-58 PHASE PLAN->CONSTRUCT @b749e19: 2-task fast path
+- 2026-10-10T03:15Z [claude] RG-58 PHASE CONSTRUCT->WRAP-UP @b749e19: 2/2 tasks; tsc/lint/216 vitest green; verified live in app
+- 2026-10-10T03:15Z [claude] RG-58 DONE @b749e19: Education+Experience add-entry presets replaced with blank fields; not committed
+- 2026-10-10T03:16Z [claude] RG-58 WRAP-UP @b749e19: archived RG-93 (oldest completed) to stay within 10-item retention cap
