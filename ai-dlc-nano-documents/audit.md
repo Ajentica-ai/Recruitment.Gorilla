@@ -225,3 +225,5 @@
 - 2026-10-10T05:30Z [claude] 003 PHASE CONSTRUCT->WRAP-UP @69bcf33: 8/8 tasks; repo-wide stale-pattern sweep returns zero hits
 - 2026-10-10T05:30Z [claude] 003 WRAP-UP @69bcf33: archived RG-102 (oldest completed); backlog -1 (stale docs/PROJECT_PLAN.md line resolved)
 - 2026-10-10T05:30Z [claude] 003 DONE @69bcf33: react-bootstrap->Tailwind/shadcn, Prism->Harbor across AGENTS.md+5 ai-docs files+README; map/tech-stack refreshed; not committed
+- 2026-10-10T05:45Z [claude] 003 SIDE-EFFECT @5690914: merged unpushed fix/RG-58 branch (1 commit, superseded bookkeeping); resolved 4 conflicts
+- 2026-10-10T05:45Z [claude] RG-134 REVISED @5690914: plan.md regressed to 'PR open' mid-merge; corrected to 'merged @b749e19' (verified via gh pr view)
