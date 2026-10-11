@@ -262,3 +262,16 @@
 - 2026-10-11T16:38Z [claude] RG-98 PHASE CONSTRUCT->WRAP-UP @4c298c1: 533/533 backend, 221/221 frontend tests pass
 - 2026-10-11T16:38Z [claude] RG-98 DONE @4c298c1: scoped duplicate-candidate 409 to caller access; backlog'd the ApproveDraftAsync gap (user confirmed)
 - 2026-10-11T16:46Z [claude] RG-98 SIDE-EFFECT @b628447: PR #143 opened against develop (user confirmed)
+- 2026-10-11T16:52Z [claude] RG-96 SIDE-EFFECT @532df34: already assigned to tahmidsparrow; added to board, status Backlog -> In Development
+- 2026-10-11T16:52Z [claude] RG-96 CREATED @532df34: issue #96, analytics roleId scope-replace bug - found already fixed by 9fe7f1b
+- 2026-10-11T16:55Z [claude] RG-96 DECISION @532df34: close as already-fixed, no code change (user confirmed)
+- 2026-10-11T16:55Z [claude] RG-96 SIDE-EFFECT @532df34: posted explanatory comment, closed issue #96, board status -> Done (user confirmed)
+- 2026-10-11T16:55Z [claude] RG-96 DONE @532df34: already fixed by 9fe7f1b; no code change
+- 2026-10-11T16:59Z [claude] RG-74 SIDE-EFFECT @532df34: assigned to tahmidsparrow; added to board, status Backlog -> In Development
+- 2026-10-11T16:59Z [claude] RG-74 CREATED @532df34: issue #74, overall-rating dropdown shows duplicated 'N - N -' value
+- 2026-10-11T17:00Z [claude] RG-74 BRANCH @509f84a: fix/RG-74/Overall-rating-dropdown-duplicate-value created off develop (user confirmed)
+- 2026-10-11T17:00Z [claude] RG-74 PHASE PLAN->CONSTRUCT @509f84a: fast path, plan approved
+- 2026-10-11T17:04Z [claude] RG-74 PHASE CONSTRUCT->WRAP-UP @509f84a: verified in browser on interview #14
+- 2026-10-11T17:04Z [claude] RG-74 DONE @509f84a: dropped duplicated value prefix in Overall rating dropdown
+- 2026-10-11T17:33Z [claude] RG-74 SIDE-EFFECT @e1bd9ef: PR #144 opened against develop (user confirmed)
+- 2026-10-11T17:39Z [claude] RG-74 REVISED @ea8e86c: squashed + reworded commit to drop em-dashes per no-em-dash rule (user confirmed); sha e1bd9ef superseded
