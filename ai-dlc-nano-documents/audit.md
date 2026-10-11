@@ -275,3 +275,16 @@
 - 2026-10-11T17:04Z [claude] RG-74 DONE @509f84a: dropped duplicated value prefix in Overall rating dropdown
 - 2026-10-11T17:33Z [claude] RG-74 SIDE-EFFECT @e1bd9ef: PR #144 opened against develop (user confirmed)
 - 2026-10-11T17:39Z [claude] RG-74 REVISED @ea8e86c: squashed + reworded commit to drop em-dashes per no-em-dash rule (user confirmed); sha e1bd9ef superseded
+- 2026-10-11T17:59Z [claude] RG-71 SIDE-EFFECT @36bbba8: assigned to tahmidsparrow; added to board, status -> In Development
+- 2026-10-11T17:59Z [claude] RG-71 CREATED @36bbba8: issue #71, Applications chart x-axis label overlap - found already fixed by b749e19 (RG-134)
+- 2026-10-11T18:07Z [claude] RG-71 DECISION @36bbba8: close as already-fixed, no code change (user confirmed)
+- 2026-10-11T18:07Z [claude] RG-71 SIDE-EFFECT @36bbba8: posted explanatory comment, closed issue #71, board status -> Done (user confirmed)
+- 2026-10-11T18:07Z [claude] RG-71 DONE @36bbba8: already fixed by b749e19 (RG-134); no code change
+- 2026-10-11T18:15Z [claude] RG-65 SIDE-EFFECT @36bbba8: already assigned to tahmidsparrow; board status Backlog -> In Development
+- 2026-10-11T18:15Z [claude] RG-65 CREATED @36bbba8: issue #65, card-view row-actions dropdown overlaps the next candidate card
+- 2026-10-11T18:17Z [claude] RG-65 DECISION @36bbba8: prefer side=top on RowActions only, not the shared wrapper (user confirmed)
+- 2026-10-11T18:17Z [claude] RG-65 PHASE CLARIFY->PLAN @36bbba8: writing plan.md
+- 2026-10-11T18:18Z [claude] RG-65 BRANCH @69c6489: feature/RG-65/Row-actions-menu-overlap created off develop (user confirmed)
+- 2026-10-11T18:18Z [claude] RG-65 PHASE PLAN->CONSTRUCT @69c6489: plan approved
+- 2026-10-11T18:23Z [claude] RG-65 PHASE CONSTRUCT->WRAP-UP @69c6489: verified across Candidates/Users at reported viewport; full suite 221/221
+- 2026-10-11T18:23Z [claude] RG-65 DONE @69c6489: RowActions opens upward (side=top), stops overlapping the next card

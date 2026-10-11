@@ -1,9 +1,9 @@
 # AI-DLC Nano State
 - Active work item: none
 - Phase: —
-- Branch: fix/RG-74/Overall-rating-dropdown-duplicate-value
-- Base SHA: 509f84a
-- Next step: none - RG-74 complete, PR #144 open against develop
+- Branch: feature/RG-65/Row-actions-menu-overlap
+- Base SHA: 69c6489
+- Next step: none - RG-65 complete, verified across Candidates/Users, ready to commit on request
 - Paused work items: none
-- Uncommitted code: no
-- Last updated: 2026-10-11T00:00Z by claude
+- Uncommitted code: yes
+- Last updated: 2026-10-12T00:00Z by claude
