@@ -215,3 +215,15 @@
 - 2026-10-10T03:15Z [claude] RG-58 PHASE CONSTRUCT->WRAP-UP @b749e19: 2/2 tasks; tsc/lint/216 vitest green; verified live in app
 - 2026-10-10T03:15Z [claude] RG-58 DONE @b749e19: Education+Experience add-entry presets replaced with blank fields; not committed
 - 2026-10-10T03:16Z [claude] RG-58 WRAP-UP @b749e19: archived RG-93 (oldest completed) to stay within 10-item retention cap
+- 2026-10-10T03:25Z [claude] RG-58 SIDE-EFFECT @e4d7b4f: pushed branch and opened PR #136 against develop (user confirmed)
+- 2026-10-10T03:35Z [claude] RG-134 SIDE-EFFECT @b749e19: PR #135 merged into develop (user confirmed)
+- 2026-10-10T04:50Z [claude] RG-58 SIDE-EFFECT @69bcf33: PR #136 merged into develop, issue #58 auto-closed (user confirmed)
+- 2026-10-10T05:15Z [claude] 003 CREATED @69bcf33: docs/map refresh after Prism->Harbor, react-bootstrap->Tailwind rename found stale
+- 2026-10-10T05:15Z [claude] 003 DECISION @69bcf33: leave PROJECT_PLAN.md, FEATURE_IMPROVEMENT_ROADMAP.md, old spec pair as historical (user confirmed)
+- 2026-10-10T05:15Z [claude] 003 BRANCH @69bcf33: feature/003-docs-map-refresh created off develop (user confirmed)
+- 2026-10-10T05:15Z [claude] 003 PHASE PLAN->CONSTRUCT @69bcf33: 8-task plan approved by user
+- 2026-10-10T05:30Z [claude] 003 PHASE CONSTRUCT->WRAP-UP @69bcf33: 8/8 tasks; repo-wide stale-pattern sweep returns zero hits
+- 2026-10-10T05:30Z [claude] 003 WRAP-UP @69bcf33: archived RG-102 (oldest completed); backlog -1 (stale docs/PROJECT_PLAN.md line resolved)
+- 2026-10-10T05:30Z [claude] 003 DONE @69bcf33: react-bootstrap->Tailwind/shadcn, Prism->Harbor across AGENTS.md+5 ai-docs files+README; map/tech-stack refreshed; not committed
+- 2026-10-10T05:45Z [claude] 003 SIDE-EFFECT @5690914: merged unpushed fix/RG-58 branch (1 commit, superseded bookkeeping); resolved 4 conflicts
+- 2026-10-10T05:45Z [claude] RG-134 REVISED @5690914: plan.md regressed to 'PR open' mid-merge; corrected to 'merged @b749e19' (verified via gh pr view)

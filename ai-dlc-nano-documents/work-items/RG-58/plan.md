@@ -1,6 +1,6 @@
 <!-- phase: DONE | branch: fix/RG-58/Blank-draft-entry-defaults | tasks: 2/2
      base: b749e19 | updated: 2026-10-10
-     next: none. Not committed; awaiting user (commit, push, PR are gated) -->
+     next: none. PR #136 merged into develop @69bcf33. -->
 # Plan: Blank defaults for new Education/Experience draft entries (RG-58)
 ## Tasks
 - [x] 1. Replace the hardcoded Education preset (`{ degree: 'BSc in CSE', institution: 'University', graduationYear: '2024', cgpa: '' }`) with blank strings
