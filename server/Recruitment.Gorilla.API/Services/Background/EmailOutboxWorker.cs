@@ -25,6 +25,21 @@ public class EmailOutboxWorker(
 
         using var timer = new PeriodicTimer(PollInterval);
 
+        // Both waits are long-lived across loop iterations, each replaced only once it has
+        // actually completed. Racing a *fresh* call to either every iteration and discarding
+        // whichever loses (the obvious way to write this, and what this used to do) leaves an
+        // abandoned, still-pending call underneath; the next iteration's fresh call then
+        // overlaps it. PeriodicTimer forbids two concurrent WaitForNextTickAsync calls on one
+        // instance and throws InvalidOperationException, uncaught here, which (since
+        // HostOptions.BackgroundServiceExceptionBehavior is StopHost) took the whole API down
+        // the moment two emails were queued inside one poll window, not an edge case: the signal
+        // winning the race before the next tick is the normal, intended fast path. The channel
+        // reader has the same hazard with SingleReader set, more quietly: an abandoned wait can
+        // silently consume a later Notify() before the loop acts on it, delaying that email up
+        // to a full poll interval instead of crashing.
+        var signalTask = signal.WaitAsync(stoppingToken).AsTask();
+        var timerTask = timer.WaitForNextTickAsync(stoppingToken).AsTask();
+
         try
         {
             while (!stoppingToken.IsCancellationRequested)
@@ -38,9 +53,19 @@ public class EmailOutboxWorker(
                 }
 
                 // Wake on whichever comes first: a fresh signal, or the regular poll tick.
-                var signalTask = signal.WaitAsync(stoppingToken).AsTask();
-                var timerTask = timer.WaitForNextTickAsync(stoppingToken).AsTask();
                 await Task.WhenAny(signalTask, timerTask);
+
+                if (signalTask.IsCompleted)
+                {
+                    await signalTask;
+                    signalTask = signal.WaitAsync(stoppingToken).AsTask();
+                }
+
+                if (timerTask.IsCompleted)
+                {
+                    await timerTask;
+                    timerTask = timer.WaitForNextTickAsync(stoppingToken).AsTask();
+                }
             }
         }
         catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
