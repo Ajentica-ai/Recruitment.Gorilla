@@ -1,6 +1,6 @@
 <!-- phase: DONE | branch: feature/RG-65/Row-actions-menu-overlap | tasks: 1/1
      base: 69c6489 | updated: 2026-10-12
-     next: none - verified across Candidates/Users, ready to commit -->
+     next: none. PR #145 open against develop @ee8cd3f. -->
 # Plan: Open the row/card actions menu upward to stop it overlapping the next card
 
 Rigor tier: standard (shared UI component, 4 call sites, no business logic).

@@ -288,3 +288,4 @@
 - 2026-10-11T18:18Z [claude] RG-65 PHASE PLAN->CONSTRUCT @69c6489: plan approved
 - 2026-10-11T18:23Z [claude] RG-65 PHASE CONSTRUCT->WRAP-UP @69c6489: verified across Candidates/Users at reported viewport; full suite 221/221
 - 2026-10-11T18:23Z [claude] RG-65 DONE @69c6489: RowActions opens upward (side=top), stops overlapping the next card
+- 2026-10-11T18:58Z [claude] RG-65 SIDE-EFFECT @ee8cd3f: PR #145 opened against develop (user confirmed)
