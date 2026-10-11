@@ -239,3 +239,10 @@
 - 2026-10-11T04:50Z [claude] RG-138 DONE @308027d: Firefox date-icon dedupe + itemNoun on SearchableSelect (3 call sites fixed); not committed
 - 2026-10-11T05:12Z [claude] RG-139 SIDE-EFFECT @dbd14eb: created issue #139, assigned tahmidsparrow, added to board, status In Development
 - 2026-10-11T05:12Z [claude] RG-139 CREATED @dbd14eb: EmailOutboxWorker overlapping-wait crash, found while running RG-138's e2e suite
+- 2026-10-11T05:20Z [claude] RG-138 SIDE-EFFECT @d30fd04: pushed branch and opened PR #140 against develop (user confirmed)
+- 2026-10-11T06:00Z [claude] RG-138 SIDE-EFFECT @d35c517: PR #140 merged into develop, issue #138 auto-closed (user confirmed)
+- 2026-10-11T06:00Z [claude] RG-139 BRANCH @d35c517: fix/RG-139/Email-outbox-overlapping-wait-crash created off develop (user confirmed)
+- 2026-10-11T06:00Z [claude] RG-139 PHASE PLAN->CONSTRUCT @d35c517: 3-task plan approved by user
+- 2026-10-11T06:30Z [claude] RG-139 DONE @d35c517: overlapping-wait fix verified; 3x repeat of BackgroundQueueTests clean (7/7 each); uncommitted
+- 2026-10-11T06:30Z [claude] RG-101 ARCHIVED @d35c517: moved to _archive, retention cap (10 active items)
+- 2026-10-11T06:45Z [claude] RG-139 SIDE-EFFECT @61804ff: pushed branch and opened PR #141 against develop (user confirmed)

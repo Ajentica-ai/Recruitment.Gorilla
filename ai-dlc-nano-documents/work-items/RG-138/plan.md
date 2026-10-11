@@ -1,6 +1,6 @@
 <!-- phase: DONE | branch: fix/RG-138/Datepicker-and-label-fixes | tasks: 4/4
      base: 308027d | updated: 2026-10-11
-     next: none. Not committed; awaiting user (commit, push, PR are gated) -->
+     next: none. PR #140 merged into develop @d35c517. -->
 # Plan: Datepicker double icon (Firefox) + skills-selected mislabels (RG-138)
 ## Tasks
 - [x] 1. `ui/date-picker.tsx`: detect Firefox (`navigator.userAgent`); when true, don't render the

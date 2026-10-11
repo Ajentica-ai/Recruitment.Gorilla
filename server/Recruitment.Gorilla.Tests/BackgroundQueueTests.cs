@@ -62,6 +62,134 @@ public class BackgroundQueueTests(MySqlDatabaseFixture fixture) : DbTestBase(fix
         Assert.Equal(OutboundEmailStatus.Sent, row.Status);
     }
 
+    /// <summary>
+    /// RG-139: queuing two emails within one poll window used to crash the whole worker, not
+    /// just fail to send the second one. <c>ExecuteAsync</c> raced the signal against the poll
+    /// timer with <c>Task.WhenAny</c> every loop and abandoned whichever lost while still
+    /// pending; the next iteration then started a *new* call to the same `PeriodicTimer` while
+    /// the old one was still outstanding, which `PeriodicTimer` forbids and throws on. That
+    /// `InvalidOperationException` propagated out of `ExecuteAsync` uncaught, which in the real
+    /// app (`HostOptions.BackgroundServiceExceptionBehavior = StopHost`) took the whole API down.
+    ///
+    /// The existing test above wouldn't have caught this: it only checks that the email sent,
+    /// never whether the worker's own background task later faulted after sending it, which is
+    /// exactly what happens here, the crash lands a few milliseconds after the second email's
+    /// delivery.
+    /// </summary>
+    [Fact]
+    public async Task EmailOutboxWorker_survives_two_emails_queued_close_together()
+    {
+        var signal = new EmailOutboxSignal();
+        var fakeDispatcher = new CapturingDispatcher();
+        var emailService = new EmailService(
+            Db,
+            new EmailDispatcher(
+                new FixedEmailSettingsResolver(new SmtpOptions { Host = "smtp.test.local", FromAddress = "test@test.local" }),
+                new NoOpSmtpTransport(),
+                new NoOpEmailApiTransport()),
+            NullLogger<EmailService>.Instance,
+            signal);
+
+        var services = new ServiceCollection();
+        services.AddSingleton(Db);
+        services.AddSingleton<IEmailDispatcher>(fakeDispatcher);
+        services.AddSingleton(TimeProvider.System);
+        services.AddSingleton<ILogger<EmailOutboxProcessor>>(NullLogger<EmailOutboxProcessor>.Instance);
+        services.AddScoped<EmailOutboxProcessor>();
+        var sp = services.BuildServiceProvider();
+        var scopeFactory = sp.GetRequiredService<IServiceScopeFactory>();
+
+        var worker = new EmailOutboxWorker(
+            signal, scopeFactory, new ConfigurationBuilder().Build(), NullLogger<EmailOutboxWorker>.Instance);
+
+        using var cts = new CancellationTokenSource();
+        await worker.StartAsync(cts.Token);
+
+        // Both well inside the 30s poll window, so the signal (not the timer) wins the wake-up
+        // race in two consecutive loop iterations, which is what the bug needs.
+        await emailService.SendAsync("first@example.com", "First Person", "Subject one", "<p>One</p>");
+        await Task.Delay(100);
+        await emailService.SendAsync("second@example.com", "Second Person", "Subject two", "<p>Two</p>");
+        await Task.Delay(300);
+
+        await cts.CancelAsync();
+        await worker.StopAsync(CancellationToken.None);
+
+        // BackgroundService surfaces an uncaught ExecuteAsync exception on ExecuteTask; by the
+        // time we get here the fault (if any) happened well before the cancel above.
+        Assert.True(
+            worker.ExecuteTask is { IsFaulted: false },
+            $"the worker's background task should not fault: {worker.ExecuteTask?.Exception}");
+
+        Assert.Equal(2, fakeDispatcher.Sent.Count);
+    }
+
+    /// <summary>
+    /// A burst, not just a pair: every signal arrives back to back with essentially no gap, so
+    /// the loop cycles through several iterations before the first `ProcessOnceAsync` call even
+    /// returns. Guards against a fix that only survives two well-spaced signals.
+    /// </summary>
+    [Fact]
+    public async Task EmailOutboxWorker_survives_a_burst_of_emails()
+    {
+        var signal = new EmailOutboxSignal();
+        var fakeDispatcher = new CapturingDispatcher();
+        var emailService = new EmailService(
+            Db,
+            new EmailDispatcher(
+                new FixedEmailSettingsResolver(new SmtpOptions { Host = "smtp.test.local", FromAddress = "test@test.local" }),
+                new NoOpSmtpTransport(),
+                new NoOpEmailApiTransport()),
+            NullLogger<EmailService>.Instance,
+            signal);
+
+        var services = new ServiceCollection();
+        services.AddSingleton(Db);
+        services.AddSingleton<IEmailDispatcher>(fakeDispatcher);
+        services.AddSingleton(TimeProvider.System);
+        services.AddSingleton<ILogger<EmailOutboxProcessor>>(NullLogger<EmailOutboxProcessor>.Instance);
+        services.AddScoped<EmailOutboxProcessor>();
+        var sp = services.BuildServiceProvider();
+        var scopeFactory = sp.GetRequiredService<IServiceScopeFactory>();
+
+        var worker = new EmailOutboxWorker(
+            signal, scopeFactory, new ConfigurationBuilder().Build(), NullLogger<EmailOutboxWorker>.Instance);
+
+        using var cts = new CancellationTokenSource();
+        await worker.StartAsync(cts.Token);
+
+        // A few ms apart, not zero: `emailService` and the worker's scope share this test's one
+        // transactional DbContext (the same trick the test above uses), which is not safe to
+        // touch from two tasks at the exact same instant. A small gap keeps this a test of the
+        // *worker's* burst handling rather than of EF Core's single-context threading contract.
+        for (var i = 0; i < 4; i++)
+        {
+            await emailService.SendAsync($"burst{i}@example.com", $"Person {i}", $"Subject {i}", "<p>Hi</p>");
+            await Task.Delay(30);
+        }
+
+        // The bounded, capacity-1 signal channel drops a Notify() that arrives before the worker
+        // reads the last one (by design: ProcessDueAsync scans every due row regardless, so no
+        // email is lost), which can leave rows for the worker's next pass rather than its current
+        // one. Poll instead of a single fixed delay, with real headroom: this is 4 genuine DB
+        // round-trips against the shared MySQL collection, and the full suite runs it under far
+        // more contention than an isolated run.
+        var deadline = DateTime.UtcNow.AddSeconds(20);
+        while (fakeDispatcher.Sent.Count < 4 && DateTime.UtcNow < deadline)
+        {
+            await Task.Delay(50);
+        }
+
+        await cts.CancelAsync();
+        await worker.StopAsync(CancellationToken.None);
+
+        Assert.True(
+            worker.ExecuteTask is { IsFaulted: false },
+            $"the worker's background task should not fault: {worker.ExecuteTask?.Exception}");
+
+        Assert.Equal(4, fakeDispatcher.Sent.Count);
+    }
+
     [Fact]
     public async Task AuditLogBatchWorker_FlushesEntriesToDatabase()
     {
