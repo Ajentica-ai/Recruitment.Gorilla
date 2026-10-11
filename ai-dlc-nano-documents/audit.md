@@ -227,3 +227,15 @@
 - 2026-10-10T05:30Z [claude] 003 DONE @69bcf33: react-bootstrap->Tailwind/shadcn, Prism->Harbor across AGENTS.md+5 ai-docs files+README; map/tech-stack refreshed; not committed
 - 2026-10-10T05:45Z [claude] 003 SIDE-EFFECT @5690914: merged unpushed fix/RG-58 branch (1 commit, superseded bookkeeping); resolved 4 conflicts
 - 2026-10-10T05:45Z [claude] RG-134 REVISED @5690914: plan.md regressed to 'PR open' mid-merge; corrected to 'merged @b749e19' (verified via gh pr view)
+- 2026-10-11T00:05Z [claude] 003 SIDE-EFFECT @97e0941: pushed branch and opened PR #137 against develop (user confirmed)
+- 2026-10-11T04:00Z [claude] 003 SIDE-EFFECT @308027d: PR #137 merged into develop (user confirmed)
+- 2026-10-11T04:16Z [claude] RG-138 SIDE-EFFECT @308027d: created issue #138, assigned tahmidsparrow, added to board, status In Development
+- 2026-10-11T04:16Z [claude] RG-138 CREATED @308027d: datepicker double-icon (Firefox) + skills-selected mislabel, repro'd via Playwright
+- 2026-10-11T04:30Z [claude] RG-138 DECISION @308027d: Firefox-specific fix, verified Chromium+WebKit already show 1 icon (user confirmed)
+- 2026-10-11T04:30Z [claude] RG-138 BRANCH @308027d: fix/RG-138/Datepicker-and-label-fixes created off develop (user confirmed)
+- 2026-10-11T04:30Z [claude] RG-138 PHASE PLAN->CONSTRUCT @308027d: 4-task plan approved by user
+- 2026-10-11T04:50Z [claude] RG-138 PHASE CONSTRUCT->WRAP-UP @308027d: 4/4 tasks; verified Chromium+Firefox+WebKit live; tsc/lint/219 vitest/38 e2e green
+- 2026-10-11T04:50Z [claude] RG-138 WRAP-UP @308027d: archived RG-50 (oldest completed) to stay within 10-item retention cap
+- 2026-10-11T04:50Z [claude] RG-138 DONE @308027d: Firefox date-icon dedupe + itemNoun on SearchableSelect (3 call sites fixed); not committed
+- 2026-10-11T05:12Z [claude] RG-139 SIDE-EFFECT @dbd14eb: created issue #139, assigned tahmidsparrow, added to board, status In Development
+- 2026-10-11T05:12Z [claude] RG-139 CREATED @dbd14eb: EmailOutboxWorker overlapping-wait crash, found while running RG-138's e2e suite
