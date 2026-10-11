@@ -50,13 +50,13 @@ public sealed class TestData(AppDbContext db)
     /// <paramref name="priorStatuses"/> and the current status (so HasStatus checks work).</summary>
     public Candidate AddCandidate(
         int? ownerUserId = null, int? roleId = null, string status = "Uploaded",
-        string? phone = null, bool isReferred = false, List<int>? skillIds = null,
+        string? phone = null, bool isReferred = false, List<int>? skillIds = null, string? email = null,
         params string[] priorStatuses)
     {
         var candidate = new Candidate
         {
             FullName = $"Cand-{Guid.NewGuid():N}",
-            Email = $"{Guid.NewGuid():N}@test.local",
+            Email = email ?? $"{Guid.NewGuid():N}@test.local",
             RelevantExperience = "3 Years",
             OwnerUserId = ownerUserId,
             RoleAppliedOptionId = roleId,

@@ -235,7 +235,9 @@ export interface CreateCandidatePayload {
 
 export interface DuplicateCandidate {
   message: string;
-  existing: CandidateListItem;
+  // Null when the duplicate exists outside the caller's own access scope: a duplicate was
+  // found, but which candidate it is isn't disclosed.
+  existing: CandidateListItem | null;
 }
 
 export interface UpdateCandidatePayload {

@@ -183,8 +183,13 @@ export default function CandidateForm({ draft, onSaved, onCancel }: Props) {
       {duplicate && (
         <div className="alert-warning-soft mb-6">
           <div>
-            {duplicate.message}{' '}
-            <Link to={`/candidates/${duplicate.existing.id}`}>Open existing candidate</Link>.
+            {duplicate.message}
+            {duplicate.existing && (
+              <>
+                {' '}
+                <Link to={`/candidates/${duplicate.existing.id}`}>Open existing candidate</Link>.
+              </>
+            )}
           </div>
           <div className="mt-4">
             <Button

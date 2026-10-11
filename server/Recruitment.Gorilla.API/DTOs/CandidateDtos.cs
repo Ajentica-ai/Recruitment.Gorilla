@@ -83,7 +83,9 @@ public record CreateCandidateDto(
 
 public record DuplicateCandidateDto(
     string Message,
-    CandidateListItemDto Existing
+    // Null when a duplicate exists but is outside the caller's access scope - the caller is
+    // told a duplicate exists, but not which candidate it is.
+    CandidateListItemDto? Existing
 );
 
 public record CvFileResult(
