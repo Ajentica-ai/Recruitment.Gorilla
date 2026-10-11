@@ -261,3 +261,4 @@
 - 2026-10-11T16:17Z [claude] RG-98 PHASE PLAN->CONSTRUCT @4c298c1: plan approved
 - 2026-10-11T16:38Z [claude] RG-98 PHASE CONSTRUCT->WRAP-UP @4c298c1: 533/533 backend, 221/221 frontend tests pass
 - 2026-10-11T16:38Z [claude] RG-98 DONE @4c298c1: scoped duplicate-candidate 409 to caller access; backlog'd the ApproveDraftAsync gap (user confirmed)
+- 2026-10-11T16:46Z [claude] RG-98 SIDE-EFFECT @b628447: PR #143 opened against develop (user confirmed)

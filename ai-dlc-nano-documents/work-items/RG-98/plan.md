@@ -1,6 +1,6 @@
 <!-- phase: DONE | branch: fix/RG-98/Candidate-duplicate-scope-leak | tasks: 10/10
      base: 4c298c1 | updated: 2026-10-11
-     next: none - verified (533/533 backend, 221/221 frontend), ready to commit -->
+     next: none. PR #143 open against develop @b628447. -->
 # Plan: Scope the candidate-create 409 duplicate record to the caller's access
 
 Rigor tier: **high blast radius** (access-control/PII fix) - full suite +
