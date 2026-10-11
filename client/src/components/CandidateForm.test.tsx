@@ -103,4 +103,56 @@ describe('CandidateForm', () => {
     await screen.findByRole('button', { name: /Save candidate/i });
     expect(screen.getByPlaceholderText(/Search roles/i)).toHaveValue('');
   });
+
+  // Issue #98: a duplicate out of the caller's access scope is reported with no candidate
+  // record, so the form must not try to link to a candidate it was never given.
+  const submitDuplicateAttempt = async () => {
+    const user = userEvent.setup();
+    vi.mocked(getActiveRoleOptions).mockResolvedValue([role()]);
+    renderWithProviders(
+      <CandidateForm
+        draft={{ ...draft, fullName: 'Jane Doe', email: 'jane@test.local' }}
+        onSaved={() => {}}
+        onCancel={() => {}}
+      />
+    );
+
+    await waitFor(() => expect(screen.getByPlaceholderText(/Search roles/i)).toHaveValue('Backend Engineer'));
+    await user.type(screen.getByPlaceholderText(/e.g. 3 Years/i), '3 Years');
+    await user.click(screen.getByRole('button', { name: /Save candidate/i }));
+  };
+
+  it('shows the existing candidate link when the duplicate is in the caller\'s scope', async () => {
+    vi.mocked(createCandidate).mockResolvedValue({
+      kind: 'duplicate',
+      duplicate: {
+        message: "A candidate with email 'jane@test.local' already exists.",
+        existing: { id: 7 } as never,
+      },
+    });
+
+    await submitDuplicateAttempt();
+
+    expect(await screen.findByText(/already exists/i)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Open existing candidate/i })).toHaveAttribute(
+      'href', '/candidates/7'
+    );
+  });
+
+  it('omits the existing candidate link when the duplicate is out of scope', async () => {
+    vi.mocked(createCandidate).mockResolvedValue({
+      kind: 'duplicate',
+      duplicate: {
+        message: 'A candidate with this email already exists.',
+        existing: null,
+      },
+    });
+
+    await submitDuplicateAttempt();
+
+    expect(await screen.findByText('A candidate with this email already exists.')).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /Open existing candidate/i })).not.toBeInTheDocument();
+    // The override is still offered regardless of visibility.
+    expect(screen.getByRole('button', { name: /Save anyway/i })).toBeInTheDocument();
+  });
 });

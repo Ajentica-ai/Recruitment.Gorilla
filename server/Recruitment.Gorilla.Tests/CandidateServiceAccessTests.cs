@@ -165,11 +165,12 @@ public class CandidateServiceAccessTests(MySqlDatabaseFixture fixture) : DbTestB
         var recruiter = Data.AddUser(Roles.Recruiter);
         var otherRole = Data.AddRole();
 
-        var (created, duplicate, error) = await Candidates().CreateAsync(
+        var (created, duplicate, duplicateExists, error) = await Candidates().CreateAsync(
             NewCandidateDto(otherRole.Id), recruiter.Id, recruiter.Name, scopeUserId: recruiter.Id);
 
         Assert.Null(created);
         Assert.Null(duplicate);
+        Assert.False(duplicateExists);
         Assert.Equal("You are not assigned to this job opening.", error);
     }
 
@@ -179,7 +180,7 @@ public class CandidateServiceAccessTests(MySqlDatabaseFixture fixture) : DbTestB
         var recruiter = Data.AddUser(Roles.Recruiter);
         var assignedRole = Data.AddRole(recruiterUserIds: recruiter.Id);
 
-        var (created, _, error) = await Candidates().CreateAsync(
+        var (created, _, _, error) = await Candidates().CreateAsync(
             NewCandidateDto(assignedRole.Id), recruiter.Id, recruiter.Name, scopeUserId: recruiter.Id);
 
         Assert.Null(error);
@@ -192,11 +193,110 @@ public class CandidateServiceAccessTests(MySqlDatabaseFixture fixture) : DbTestB
         var admin = Data.AddUser(Roles.Admin);
         var otherRole = Data.AddRole();
 
-        var (created, _, error) = await Candidates().CreateAsync(
+        var (created, _, _, error) = await Candidates().CreateAsync(
             NewCandidateDto(otherRole.Id), admin.Id, "Admin", scopeUserId: null);
 
         Assert.Null(error);
         Assert.NotNull(created);
+    }
+
+    // ---- Candidate-create 409 only discloses the matched candidate within the caller's own ----
+    // ---- access scope (#98): everyone still learns a duplicate exists, but not who it is. ----
+
+    private static CreateCandidateDto DuplicateDto(string email, int? roleId = null) => new(
+        FullName: "Duplicate Attempt",
+        Email: email,
+        Phone: null,
+        CurrentTitle: null,
+        RelevantExperience: "3 Years",
+        Skills: null,
+        Summary: null,
+        LinkedInUrl: null,
+        GithubUrl: null,
+        PortfolioUrl: null,
+        AppliedRole: null,
+        IsReferred: false,
+        ReferenceName: null,
+        ReferenceEmail: null,
+        ReferenceEmployeeId: null,
+        RoleAppliedOptionId: roleId,
+        SkillOptionIds: null,
+        StoredFileName: $"{Guid.NewGuid():N}.pdf",
+        OriginalFileName: "resume.pdf",
+        FileType: "PDF",
+        FileSizeBytes: 1000,
+        InitialStatus: "Uploaded",
+        InitialStatusComment: null);
+
+    [Fact]
+    public async Task Out_of_scope_recruiter_is_told_a_duplicate_exists_but_not_which_candidate()
+    {
+        var admin = Data.AddUser(Roles.Admin);
+        var recruiter = Data.AddUser(Roles.Recruiter);
+        var email = $"{Guid.NewGuid():N}@test.local";
+        Data.AddCandidate(ownerUserId: admin.Id, email: email); // owned by someone else, no shared role
+
+        var (created, duplicate, duplicateExists, error) = await Candidates().CreateAsync(
+            DuplicateDto(email), recruiter.Id, recruiter.Name, scopeUserId: recruiter.Id);
+
+        Assert.Null(created);
+        Assert.Null(error);
+        Assert.True(duplicateExists);
+        Assert.Null(duplicate);
+    }
+
+    [Fact]
+    public async Task Owning_recruiter_sees_the_duplicate_record()
+    {
+        var recruiter = Data.AddUser(Roles.Recruiter);
+        var email = $"{Guid.NewGuid():N}@test.local";
+        var existing = Data.AddCandidate(ownerUserId: recruiter.Id, email: email);
+
+        var (created, duplicate, duplicateExists, error) = await Candidates().CreateAsync(
+            DuplicateDto(email), recruiter.Id, recruiter.Name, scopeUserId: recruiter.Id);
+
+        Assert.Null(created);
+        Assert.Null(error);
+        Assert.True(duplicateExists);
+        Assert.NotNull(duplicate);
+        Assert.Equal(existing.Id, duplicate!.Id);
+    }
+
+    [Fact]
+    public async Task Assigned_recruiter_sees_the_duplicate_record_via_role_not_ownership()
+    {
+        var admin = Data.AddUser(Roles.Admin);
+        var recruiter = Data.AddUser(Roles.Recruiter);
+        var assignedRole = Data.AddRole(recruiterUserIds: recruiter.Id);
+        var email = $"{Guid.NewGuid():N}@test.local";
+        var existing = Data.AddCandidate(ownerUserId: admin.Id, roleId: assignedRole.Id, email: email);
+
+        var (created, duplicate, duplicateExists, error) = await Candidates().CreateAsync(
+            DuplicateDto(email, assignedRole.Id), recruiter.Id, recruiter.Name, scopeUserId: recruiter.Id);
+
+        Assert.Null(created);
+        Assert.Null(error);
+        Assert.True(duplicateExists);
+        Assert.NotNull(duplicate);
+        Assert.Equal(existing.Id, duplicate!.Id);
+    }
+
+    [Fact]
+    public async Task Admin_sees_the_duplicate_record_regardless_of_ownership()
+    {
+        var recruiter = Data.AddUser(Roles.Recruiter);
+        var admin = Data.AddUser(Roles.Admin);
+        var email = $"{Guid.NewGuid():N}@test.local";
+        var existing = Data.AddCandidate(ownerUserId: recruiter.Id, email: email);
+
+        var (created, duplicate, duplicateExists, error) = await Candidates().CreateAsync(
+            DuplicateDto(email), admin.Id, "Admin", scopeUserId: null);
+
+        Assert.Null(created);
+        Assert.Null(error);
+        Assert.True(duplicateExists);
+        Assert.NotNull(duplicate);
+        Assert.Equal(existing.Id, duplicate!.Id);
     }
 
     [Fact]

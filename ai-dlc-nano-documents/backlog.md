@@ -1,5 +1,6 @@
 # Backlog
 <!-- Out-of-scope findings, newest first. Delete a line when it is resolved. -->
+- [2026-10-11] CandidateDraftService.ApproveDraftAsync - no duplicate-email check at all (the real create path; POST /api/candidates has one but is unused by the UI) (found: RG-98)
 - [2026-10-10] client/CountBarChart - Insights bar chart keeps a fixed tall height even with one bar (found: RG-134)
 - [2026-10-10] client/DashboardPage - KPI figures are org-wide but a Recruiter's drill-through list is owner-scoped (found: RG-134)
 - [2026-10-02] Tests/ControllerAuthorizationTests - delete audit-row test flaky under full suite; 500ms poll too short (found: RG-101)

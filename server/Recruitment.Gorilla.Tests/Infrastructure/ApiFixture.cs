@@ -107,14 +107,14 @@ public sealed class ApiFixture : IAsyncLifetime
     }
 
     /// <summary>Inserts a candidate (committed — the whole DB is dropped at teardown) and returns its id.</summary>
-    public async Task<int> NewCandidateAsync(int ownerUserId, int? roleId = null)
+    public async Task<int> NewCandidateAsync(int ownerUserId, int? roleId = null, string? email = null)
     {
         using var scope = _factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var candidate = new Candidate
         {
             FullName = $"Cand-{Guid.NewGuid():N}",
-            Email = $"{Guid.NewGuid():N}@test.local",
+            Email = email ?? $"{Guid.NewGuid():N}@test.local",
             RelevantExperience = "3 Years",
             OwnerUserId = ownerUserId,
             RoleAppliedOptionId = roleId,

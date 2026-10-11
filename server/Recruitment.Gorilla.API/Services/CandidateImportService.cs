@@ -182,7 +182,8 @@ public class CandidateImportService(
 
         if (entry.Email is not null && EmailFormat.IsValid(entry.Email))
         {
-            var existing = await candidateService.FindDuplicateAsync(entry.Email);
+            // Admin-only endpoint, so no access scope to apply - this caller may see any candidate.
+            var (existing, _) = await candidateService.FindDuplicateAsync(entry.Email, accessUserId: null);
             if (existing is not null)
                 warnings.Add($"A candidate with this email already exists ({existing.FullName}, #{existing.Id}).");
             else if (await db.CandidateDrafts.AnyAsync(d => d.Status == "Pending" && d.Email == entry.Email))

@@ -253,3 +253,12 @@
 - 2026-10-11T15:39Z [claude] RG-40 PHASE CONSTRUCT->WRAP-UP @1e398c7: both password fields verified in browser
 - 2026-10-11T15:39Z [claude] RG-40 DONE @1e398c7: Input swapped for PasswordInput in Add User + Reset password modals
 - 2026-10-11T15:48Z [claude] RG-40 SIDE-EFFECT @af68f7f: PR #142 opened against develop (user confirmed)
+- 2026-10-11T15:58Z [claude] RG-98 SIDE-EFFECT @8fb74f2: assigned to tahmidsparrow; added to board, status Backlog -> In Development
+- 2026-10-11T15:58Z [claude] RG-98 CREATED @8fb74f2: issue #98, candidate-create 409 leaks out-of-scope candidate record
+- 2026-10-11T16:15Z [claude] RG-98 DECISION @8fb74f2: fix disclosure only, email-equality match left unchanged (user confirmed)
+- 2026-10-11T16:15Z [claude] RG-98 PHASE CLARIFY->PLAN @8fb74f2: writing plan.md
+- 2026-10-11T16:17Z [claude] RG-98 BRANCH @4c298c1: fix/RG-98/Candidate-duplicate-scope-leak created off develop (user confirmed)
+- 2026-10-11T16:17Z [claude] RG-98 PHASE PLAN->CONSTRUCT @4c298c1: plan approved
+- 2026-10-11T16:38Z [claude] RG-98 PHASE CONSTRUCT->WRAP-UP @4c298c1: 533/533 backend, 221/221 frontend tests pass
+- 2026-10-11T16:38Z [claude] RG-98 DONE @4c298c1: scoped duplicate-candidate 409 to caller access; backlog'd the ApproveDraftAsync gap (user confirmed)
+- 2026-10-11T16:46Z [claude] RG-98 SIDE-EFFECT @b628447: PR #143 opened against develop (user confirmed)

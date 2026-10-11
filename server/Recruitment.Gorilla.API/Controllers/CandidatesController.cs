@@ -101,18 +101,20 @@ public class CandidatesController(
         if (fileError is not null)
             return BadRequest(fileError);
 
-        var (created, duplicate, roleError) = await candidateService.CreateAsync(
+        var (created, duplicate, duplicateExists, roleError) = await candidateService.CreateAsync(
             dto, currentUser.UserId, currentUser.Name, WriteOwnerScope);
         if (roleError is not null)
             return BadRequest(roleError);
 
-        if (duplicate is not null)
+        if (duplicateExists)
         {
             logger.LogWarning(
-                "Duplicate candidate email '{Email}' — matches existing candidate {ExistingId}.",
-                dto.Email, duplicate.Id);
-            return Conflict(new DuplicateCandidateDto(
-                $"A candidate with email '{duplicate.Email}' already exists.", duplicate));
+                "Duplicate candidate email '{Email}' — matches existing candidate{Detail}.",
+                dto.Email, duplicate is not null ? $" {duplicate.Id}" : " (outside caller's access scope)");
+            var message = duplicate is not null
+                ? $"A candidate with email '{duplicate.Email}' already exists."
+                : "A candidate with this email already exists.";
+            return Conflict(new DuplicateCandidateDto(message, duplicate));
         }
 
         logger.LogInformation("Created candidate {Id} ('{Name}') by {ChangedBy}.",
