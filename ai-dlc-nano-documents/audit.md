@@ -237,3 +237,5 @@
 - 2026-10-11T04:50Z [claude] RG-138 PHASE CONSTRUCT->WRAP-UP @308027d: 4/4 tasks; verified Chromium+Firefox+WebKit live; tsc/lint/219 vitest/38 e2e green
 - 2026-10-11T04:50Z [claude] RG-138 WRAP-UP @308027d: archived RG-50 (oldest completed) to stay within 10-item retention cap
 - 2026-10-11T04:50Z [claude] RG-138 DONE @308027d: Firefox date-icon dedupe + itemNoun on SearchableSelect (3 call sites fixed); not committed
+- 2026-10-11T05:12Z [claude] RG-139 SIDE-EFFECT @dbd14eb: created issue #139, assigned tahmidsparrow, added to board, status In Development
+- 2026-10-11T05:12Z [claude] RG-139 CREATED @dbd14eb: EmailOutboxWorker overlapping-wait crash, found while running RG-138's e2e suite
