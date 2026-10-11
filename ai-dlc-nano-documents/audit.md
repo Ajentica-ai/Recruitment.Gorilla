@@ -246,3 +246,9 @@
 - 2026-10-11T06:30Z [claude] RG-139 DONE @d35c517: overlapping-wait fix verified; 3x repeat of BackgroundQueueTests clean (7/7 each); uncommitted
 - 2026-10-11T06:30Z [claude] RG-101 ARCHIVED @d35c517: moved to _archive, retention cap (10 active items)
 - 2026-10-11T06:45Z [claude] RG-139 SIDE-EFFECT @61804ff: pushed branch and opened PR #141 against develop (user confirmed)
+- 2026-10-11T15:33Z [claude] RG-40 SIDE-EFFECT @1e398c7: already assigned to tahmidsparrow; moved board status Backlog -> In Development
+- 2026-10-11T15:34Z [claude] RG-40 CREATED @1e398c7: issue #40, missing password visibility icon on Temporary Password fields
+- 2026-10-11T15:36Z [claude] RG-40 BRANCH @1e398c7: feature/RG-40/Password-visibility-icon created off develop (user confirmed)
+- 2026-10-11T15:36Z [claude] RG-40 PHASE PLAN->CONSTRUCT @1e398c7: fast path, plan approved
+- 2026-10-11T15:39Z [claude] RG-40 PHASE CONSTRUCT->WRAP-UP @1e398c7: both password fields verified in browser
+- 2026-10-11T15:39Z [claude] RG-40 DONE @1e398c7: Input swapped for PasswordInput in Add User + Reset password modals
