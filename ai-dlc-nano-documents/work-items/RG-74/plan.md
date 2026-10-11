@@ -1,6 +1,6 @@
 <!-- phase: DONE | branch: fix/RG-74/Overall-rating-dropdown-duplicate-value | tasks: 1/1
      base: 509f84a | updated: 2026-10-11
-     next: none. PR #144 open against develop @e1bd9ef. -->
+     next: none. PR #144 open against develop @ea8e86c. -->
 # Plan: Fix duplicated value in the Overall rating dropdown
 
 ## Tasks

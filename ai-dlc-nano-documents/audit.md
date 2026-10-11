@@ -274,3 +274,4 @@
 - 2026-10-11T17:04Z [claude] RG-74 PHASE CONSTRUCT->WRAP-UP @509f84a: verified in browser on interview #14
 - 2026-10-11T17:04Z [claude] RG-74 DONE @509f84a: dropped duplicated value prefix in Overall rating dropdown
 - 2026-10-11T17:33Z [claude] RG-74 SIDE-EFFECT @e1bd9ef: PR #144 opened against develop (user confirmed)
+- 2026-10-11T17:39Z [claude] RG-74 REVISED @ea8e86c: squashed + reworded commit to drop em-dashes per no-em-dash rule (user confirmed); sha e1bd9ef superseded
