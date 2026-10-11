@@ -1,6 +1,6 @@
 <!-- phase: DONE | branch: fix/RG-139/Email-outbox-overlapping-wait-crash | tasks: 3/3
      base: d35c517 | updated: 2026-10-11
-     next: none - complete, uncommitted; awaiting commit/push/PR on request -->
+     next: none. PR #141 open against develop. -->
 # Plan: Fix the EmailOutboxWorker crash (RG-139)
 ## Tasks
 - [x] 1. Reproduce first: a new `BackgroundQueueTests` case that queues two emails close
