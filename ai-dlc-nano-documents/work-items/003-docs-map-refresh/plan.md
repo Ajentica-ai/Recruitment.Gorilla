@@ -1,6 +1,6 @@
 <!-- phase: DONE | branch: feature/003-docs-map-refresh | tasks: 8/8
      base: 69bcf33 | updated: 2026-10-10
-     next: none. Not committed; awaiting user (commit, push, PR are gated) -->
+     next: none. PR #137 merged into develop @308027d. -->
 # Plan: Refresh stale living docs and the codebase map (003)
 ## Tasks
 - [x] 1. `AGENTS.md`: react-bootstrap -> Tailwind v4 + shadcn/Radix; "Prism" -> "Harbor" design system

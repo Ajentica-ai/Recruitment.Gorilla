@@ -380,6 +380,7 @@ export default function JobOpeningsTab() {
                   value={recruiterUserIds}
                   onChange={setRecruiterUserIds}
                   placeholder="Search by name or email…"
+                  itemNoun="recruiters"
                 />
                 <p className="text-[length:var(--text-sm)] leading-[var(--leading-normal)] text-muted-foreground">
                   Each assigned recruiter can access every candidate under this role. Only users with
