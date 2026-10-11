@@ -252,3 +252,4 @@
 - 2026-10-11T15:36Z [claude] RG-40 PHASE PLAN->CONSTRUCT @1e398c7: fast path, plan approved
 - 2026-10-11T15:39Z [claude] RG-40 PHASE CONSTRUCT->WRAP-UP @1e398c7: both password fields verified in browser
 - 2026-10-11T15:39Z [claude] RG-40 DONE @1e398c7: Input swapped for PasswordInput in Add User + Reset password modals
+- 2026-10-11T15:48Z [claude] RG-40 SIDE-EFFECT @af68f7f: PR #142 opened against develop (user confirmed)

@@ -1,6 +1,6 @@
 <!-- phase: DONE | branch: feature/RG-40/Password-visibility-icon | tasks: 2/2
      base: 1e398c7 | updated: 2026-10-11
-     next: none - verified end-to-end, ready to commit -->
+     next: none. PR #142 open against develop @af68f7f. -->
 # Plan: Add password visibility icon to Temporary Password fields
 
 ## Tasks
