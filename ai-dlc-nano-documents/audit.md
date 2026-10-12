@@ -292,3 +292,7 @@
 - 2026-10-08T00:00Z [claude] RG-48 CREATED @9909c42: issue #48 bug, Interviewer View all redirect; already assigned to rayhan-ajentica
 - 2026-10-08T00:00Z [claude] RG-48 DECISION @9909c42: verified in Edge via Playwright: Interviewer sees no View all; Admin/Recruiter land on /jobs (RG-47 branch)
 - 2026-10-08T00:00Z [claude] RG-48 DONE @9909c42: no code; covered by RG-47 merged in PR #117
+- 2026-10-08T00:00Z [claude] RG-49 CREATED @51946a6: issue #49 bug; already assigned; repro: stale login 'from' after logout
+- 2026-10-08T00:00Z [claude] RG-49 SIDE-EFFECT @51946a6: already assigned to rayhan-ajentica; board status not moved (gh lacks read:project)
+- 2026-10-08T00:00Z [claude] RG-49 PHASE PLAN→CONSTRUCT @51946a6: plan approved by user; branch fix/RG-49/Logout-keeps-previous-page off origin/develop (user confirmed)
+- 2026-10-08T00:00Z [claude] RG-49 DONE @51946a6: AuthContext.loggedOut; guard omits from on logout; 165 tests, tsc+lint clean, browser 7/7; uncommitted
