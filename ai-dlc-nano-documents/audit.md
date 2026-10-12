@@ -299,3 +299,6 @@
 - 2026-10-12T00:00Z [claude] RG-51 CREATED @c630b32: issue #51 bug/UI; already assigned to rayhan-ajentica; board status not moved (gh lacks read:project)
 - 2026-10-12T00:00Z [claude] RG-51 PHASE PLAN→CONSTRUCT @c630b32: plan approved; fix/RG-51/Funnel-bar-at-zero off origin/develop (user confirmed)
 - 2026-10-12T00:00Z [claude] RG-51 DONE @c630b32: bar width 0 at 0% (4% floor kept above 0); 225 tests, tsc+lint clean, browser ok; uncommitted
+- 2026-10-12T00:00Z [claude] RG-52 CREATED @6f46c71: issue #52 bug/UI; already assigned to rayhan-ajentica; board status not moved (gh lacks read:project)
+- 2026-10-12T00:00Z [claude] RG-52 PHASE PLAN→CONSTRUCT @6f46c71: plan approved incl. Sourcing sibling; fix/RG-52/Recruiter-header-alignment off origin/develop (user confirmed)
+- 2026-10-12T00:00Z [claude] RG-52 DONE @6f46c71: first th text-left pl-3 (Recruiter+Sourcing); browser 77px/35px off -> 0; 226 tests, tsc+lint clean; uncommitted
