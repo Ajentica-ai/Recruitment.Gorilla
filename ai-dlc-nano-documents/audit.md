@@ -289,3 +289,6 @@
 - 2026-10-11T18:23Z [claude] RG-65 PHASE CONSTRUCT->WRAP-UP @69c6489: verified across Candidates/Users at reported viewport; full suite 221/221
 - 2026-10-11T18:23Z [claude] RG-65 DONE @69c6489: RowActions opens upward (side=top), stops overlapping the next card
 - 2026-10-11T18:58Z [claude] RG-65 SIDE-EFFECT @ee8cd3f: PR #145 opened against develop (user confirmed)
+- 2026-10-08T00:00Z [claude] RG-48 CREATED @9909c42: issue #48 bug, Interviewer View all redirect; already assigned to rayhan-ajentica
+- 2026-10-08T00:00Z [claude] RG-48 DECISION @9909c42: verified in Edge via Playwright: Interviewer sees no View all; Admin/Recruiter land on /jobs (RG-47 branch)
+- 2026-10-08T00:00Z [claude] RG-48 DONE @9909c42: no code; covered by RG-47 merged in PR #117
