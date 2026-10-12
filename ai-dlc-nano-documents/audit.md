@@ -296,3 +296,6 @@
 - 2026-10-08T00:00Z [claude] RG-49 SIDE-EFFECT @51946a6: already assigned to rayhan-ajentica; board status not moved (gh lacks read:project)
 - 2026-10-08T00:00Z [claude] RG-49 PHASE PLAN→CONSTRUCT @51946a6: plan approved by user; branch fix/RG-49/Logout-keeps-previous-page off origin/develop (user confirmed)
 - 2026-10-08T00:00Z [claude] RG-49 DONE @51946a6: AuthContext.loggedOut; guard omits from on logout; 165 tests, tsc+lint clean, browser 7/7; uncommitted
+- 2026-10-12T00:00Z [claude] RG-51 CREATED @c630b32: issue #51 bug/UI; already assigned to rayhan-ajentica; board status not moved (gh lacks read:project)
+- 2026-10-12T00:00Z [claude] RG-51 PHASE PLAN→CONSTRUCT @c630b32: plan approved; fix/RG-51/Funnel-bar-at-zero off origin/develop (user confirmed)
+- 2026-10-12T00:00Z [claude] RG-51 DONE @c630b32: bar width 0 at 0% (4% floor kept above 0); 225 tests, tsc+lint clean, browser ok; uncommitted
