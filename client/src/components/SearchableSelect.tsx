@@ -32,6 +32,13 @@ export interface SearchableDropdownProps<T = number | string> {
   className?: string;
   emptyMessage?: string;
   renderOption?: (option: Option<T>, isSelected: boolean) => React.ReactNode;
+  /**
+   * What the collapsed multi-select summary calls its items: "N `itemNoun`
+   * selected". Defaults to "skills", this component's original and most
+   * common use; pass the real noun ("interview types", "interviewers", ...)
+   * anywhere else, or the summary names the wrong thing.
+   */
+  itemNoun?: string;
 }
 
 export default function SearchableDropdown<T = number | string>({
@@ -49,6 +56,7 @@ export default function SearchableDropdown<T = number | string>({
   className = '',
   emptyMessage = 'No matches found',
   renderOption,
+  itemNoun = 'skills',
 }: SearchableDropdownProps<T>) {
   const autoId = useId();
   const inputId = customId || autoId;
@@ -199,7 +207,7 @@ export default function SearchableDropdown<T = number | string>({
     if (multiple) {
       if (selectedOptions.length === 0) return '';
       if (selectedOptions.length === 1) return selectedOptions[0].name;
-      return `${selectedOptions.length} skills selected`;
+      return `${selectedOptions.length} ${itemNoun} selected`;
     }
     return singleSelectedOption ? singleSelectedOption.name : '';
   };
@@ -463,6 +471,7 @@ export function SearchableMultiSelect({
   clearable = true,
   size,
   showTokens = true,
+  itemNoun,
 }: {
   options: Option<number>[];
   value: number[];
@@ -474,6 +483,8 @@ export function SearchableMultiSelect({
   clearable?: boolean;
   size?: 'sm' | 'md' | 'lg';
   showTokens?: boolean;
+  /** See `SearchableDropdown`'s `itemNoun`. Defaults to "skills". */
+  itemNoun?: string;
 }) {
   return (
     <SearchableDropdown<number>
@@ -488,6 +499,7 @@ export function SearchableMultiSelect({
       disabled={disabled}
       clearable={clearable}
       size={size}
+      itemNoun={itemNoun}
     />
   );
 }

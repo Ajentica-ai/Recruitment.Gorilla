@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Recruitment.Gorilla.API.Models;
+using Recruitment.Gorilla.API.Services;
 
 namespace Recruitment.Gorilla.API.Data;
 
@@ -27,6 +28,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<Notification> Notifications => Set<Notification>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
     public DbSet<EmailSetting> EmailSettings => Set<EmailSetting>();
+    public DbSet<OutboundEmail> OutboundEmails => Set<OutboundEmail>();
     public DbSet<SlackSetting> SlackSettings => Set<SlackSetting>();
     public DbSet<NotificationChannelSetting> NotificationChannelSettings => Set<NotificationChannelSetting>();
     public DbSet<Offer> Offers => Set<Offer>();
@@ -146,17 +148,40 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         modelBuilder.Entity<EmailSetting>(e =>
         {
             e.HasKey(s => s.Id);
+            e.Property(s => s.Provider).HasMaxLength(16).IsRequired().HasDefaultValue(EmailProviders.Smtp);
             e.Property(s => s.Host).HasMaxLength(200).IsRequired();
             e.Property(s => s.User).HasMaxLength(200);
             e.Property(s => s.PasswordEncrypted).HasMaxLength(1000);
             e.Property(s => s.FromAddress).HasMaxLength(200).IsRequired();
             e.Property(s => s.FromName).HasMaxLength(200).IsRequired();
+            e.Property(s => s.ApiBaseUrl).HasMaxLength(500);
+            e.Property(s => s.ApiKeyEncrypted).HasMaxLength(1000);
+            e.Property(s => s.AllowedRecipientDomains).HasMaxLength(500);
         });
 
         modelBuilder.Entity<SlackSetting>(e =>
         {
             e.HasKey(s => s.Id);
             e.Property(s => s.BotTokenEncrypted).HasMaxLength(1000);
+        });
+
+        modelBuilder.Entity<OutboundEmail>(e =>
+        {
+            e.HasKey(o => o.Id);
+            e.Property(o => o.Reference).HasMaxLength(36).IsRequired();
+            e.Property(o => o.ToEmail).HasMaxLength(320).IsRequired();
+            e.Property(o => o.ToName).HasMaxLength(200).IsRequired();
+            e.Property(o => o.Subject).HasMaxLength(400).IsRequired();
+            e.Property(o => o.HtmlBody).HasColumnType("longtext").IsRequired();
+            e.Property(o => o.CalendarFileName).HasMaxLength(255);
+            e.Property(o => o.CalendarMethod).HasMaxLength(20);
+            e.Property(o => o.Status).HasMaxLength(16).IsRequired();
+            e.Property(o => o.Provider).HasMaxLength(16);
+            e.Property(o => o.LastError).HasMaxLength(1000);
+            e.Property(o => o.ProviderMessageId).HasMaxLength(200);
+            e.HasIndex(o => o.Reference).IsUnique();
+            // The processor's due-work query filters on exactly these two columns.
+            e.HasIndex(o => new { o.Status, o.NextAttemptAt });
         });
 
         modelBuilder.Entity<NotificationChannelSetting>(e =>

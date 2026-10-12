@@ -10,17 +10,25 @@ import type { Role } from './types';
 describe('visibleRoutes', () => {
   const labels = (roles: Role[]) => visibleRoutes(roles).map((r) => r.label);
 
-  it('shows an Interviewer only the Dashboard', () => {
-    expect(labels(['Interviewer'])).toEqual(['Dashboard']);
+  it('shows an Interviewer the Dashboard and the user guide, nothing else', () => {
+    expect(labels(['Interviewer'])).toEqual(['Dashboard', 'User guide']);
   });
 
   it('shows a Recruiter the candidate-managing pages but no admin pages', () => {
-    expect(labels(['Recruiter'])).toEqual(['Dashboard', 'Analytics', 'Jobs', 'Upload CVs', 'Candidates']);
+    expect(labels(['Recruiter'])).toEqual([
+      'Dashboard',
+      'User guide',
+      'Analytics',
+      'Jobs',
+      'Upload CVs',
+      'Candidates',
+    ]);
   });
 
   it('shows an Admin the config and audit pages but not Users', () => {
     expect(labels(['Admin'])).toEqual([
       'Dashboard',
+      'User guide',
       'Analytics',
       'Jobs',
       'Upload CVs',
@@ -33,6 +41,7 @@ describe('visibleRoutes', () => {
   it('shows a SuperAdmin everything', () => {
     expect(labels(['SuperAdmin'])).toEqual([
       'Dashboard',
+      'User guide',
       'Analytics',
       'Jobs',
       'Upload CVs',
@@ -49,8 +58,8 @@ describe('visibleRoutes', () => {
     expect(all).not.toContain('Change password');
   });
 
-  it('gives a user with no roles nothing but the Dashboard', () => {
-    expect(labels([])).toEqual(['Dashboard']);
+  it('gives a user with no roles the Dashboard and the user guide', () => {
+    expect(labels([])).toEqual(['Dashboard', 'User guide']);
   });
 });
 

@@ -18,6 +18,7 @@ import { SkeletonRows } from '../components/common/Loading';
 import { ALL_ROLES, type Role, type UserListItem } from '../types';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
+import PasswordInput from '../components/common/PasswordInput';
 import { Button } from '@/components/ui/button';
 import { CheckboxField } from '@/components/ui/field';
 import { Badge, type BadgeVariant } from '@/components/ui/badge';
@@ -340,7 +341,7 @@ export default function UsersPage() {
               {!editing && (
                 <div className="flex flex-col gap-1.5">
                   <Label>Temporary password <span className="required-star" aria-hidden="true">*</span></Label>
-                  <Input
+                  <PasswordInput
                     value={temporaryPassword}
                     onChange={(e) => setTemporaryPassword(e.target.value)}
                     autoComplete="off"
@@ -387,7 +388,7 @@ export default function UsersPage() {
               </p>
               <div className="flex flex-col gap-1.5">
                 <Label>Temporary password <span className="required-star" aria-hidden="true">*</span></Label>
-                <Input
+                <PasswordInput
                   value={resetPassword}
                   onChange={(e) => setResetPassword(e.target.value)}
                   autoComplete="off"

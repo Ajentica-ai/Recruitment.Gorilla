@@ -84,6 +84,9 @@ export default function KanbanBoard({ candidates, isLoading, canWrite }: KanbanB
       void queryClient.invalidateQueries({ queryKey: ['candidate', variables.candidateId] });
       void queryClient.invalidateQueries({ queryKey: ['status-options'] });
       void queryClient.invalidateQueries({ queryKey: ['my-interviews'] });
+      // Same gap as AddStatusModal's status-change mutation: the dashboard's KPI tiles are keyed
+      // off CurrentStatus too, and were going stale after a direct drag-and-drop transition.
+      void queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       addToast(`Candidate moved to '${variables.targetStatus}'.`);
     },
     onError: (err: any) => {

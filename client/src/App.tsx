@@ -14,6 +14,7 @@ import ConfigurationPage from './pages/ConfigurationPage';
 import UsersPage from './pages/UsersPage';
 import AuditLogPage from './pages/AuditLogPage';
 import ChangePasswordPage from './pages/ChangePasswordPage';
+import UserGuidePage from './pages/UserGuidePage';
 import InterviewPage from './pages/InterviewPage';
 import AppShell from './components/shell/AppShell';
 
@@ -124,6 +125,7 @@ export default function App() {
               }
             />
             <Route path="/change-password" element={<ChangePasswordPage />} />
+            <Route path="/user-guide" element={<UserGuidePage />} />
           </Route>
         </Routes>
       </AuthProvider>

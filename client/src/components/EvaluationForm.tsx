@@ -470,7 +470,7 @@ export default function EvaluationForm({
                 <option value="">Select an overall rating…</option>
                 {RATING_SCALE.map((r) => (
                   <option key={r.value} value={r.value}>
-                    {r.value} — {r.label}
+                    {r.label}
                   </option>
                 ))}
               </NativeSelect>

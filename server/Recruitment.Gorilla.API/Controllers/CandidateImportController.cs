@@ -9,14 +9,15 @@ namespace Recruitment.Gorilla.API.Controllers;
 
 /// <summary>
 /// Imports candidates described in a JSON file, each with its CV, as Pending drafts for review.
-/// Super Admin only. The client reads the JSON file and sends one entry and its CV per request, the same
-/// way the CV upload sends one file per request, so a large batch never becomes one huge request.
+/// Admin and Super Admin only. The client reads the JSON file and sends one entry and its CV per request,
+/// the same way the CV upload sends one file per request, so a large batch never becomes one huge request.
 /// </summary>
 [ApiController]
-[Authorize(Roles = Roles.SuperAdmin)]
+[Authorize(Roles = Roles.AdminOrAbove)]
 [Route("api/candidate-import")]
 public class CandidateImportController(
     CandidateImportService importService,
+    CandidateDraftService draftService,
     CvFileIntake intake,
     ICVUploadProgressNotifier progressNotifier,
     CurrentUser currentUser,
@@ -58,6 +59,9 @@ public class CandidateImportController(
         // The draft's BatchId and BatchName columns; longer would be a database failure, not a readable 400.
         if (bId.Length > 100 || batchName?.Length > 200)
             return await Reject(StatusCodes.Status400BadRequest, "The batch id or batch label is too long.");
+
+        if (await draftService.ValidateJobOpeningForCallerAsync(roleAppliedOptionId, required: true) is string roleError)
+            return await Reject(StatusCodes.Status400BadRequest, roleError);
 
         var (parsed, parseError) = CandidateImportService.ParseEntry(entry);
         if (parsed is null) return await Reject(StatusCodes.Status400BadRequest, parseError!);

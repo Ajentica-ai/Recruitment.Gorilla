@@ -1,6 +1,7 @@
 import type { LucideIcon } from 'lucide-react';
 import {
   BarChart3,
+  BookOpen,
   Briefcase,
   CalendarCheck,
   KeyRound,
@@ -62,6 +63,13 @@ export const NAV_ROUTES: NavRoute[] = [
     group: 'Overview',
     icon: LayoutDashboard,
     description: 'Pipeline health, upcoming interviews and recent activity at a glance.',
+  },
+  {
+    path: '/user-guide',
+    label: 'User guide',
+    group: 'Overview',
+    icon: BookOpen,
+    description: 'How to use the app, by role: getting started, your pipeline, and the appendix.',
   },
   {
     path: '/analytics',

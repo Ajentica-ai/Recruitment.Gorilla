@@ -1,6 +1,8 @@
 # Backlog
 <!-- Out-of-scope findings, newest first. Delete a line when it is resolved. -->
-- [2026-10-02] client/DashboardPage - Recent activity 'View all' links Interviewers to /candidates (found: RG-99)
+- [2026-10-11] CandidateDraftService.ApproveDraftAsync - no duplicate-email check at all (the real create path; POST /api/candidates has one but is unused by the UI) (found: RG-98)
+- [2026-10-10] client/CountBarChart - Insights bar chart keeps a fixed tall height even with one bar (found: RG-134)
+- [2026-10-10] client/DashboardPage - KPI figures are org-wide but a Recruiter's drill-through list is owner-scoped (found: RG-134)
 - [2026-10-02] Tests/ControllerAuthorizationTests - delete audit-row test flaky under full suite; 500ms poll too short (found: RG-101)
 - [2026-10-02] local dev - user-secrets DB password is stale, so dotnet run/test fail until reset (found: RG-50)
 - [2026-10-02] CVUploadController - duplicate check has no DB constraint; simultaneous identical uploads both pass (found: RG-93)
@@ -10,4 +12,3 @@
 - [2026-09-30] client/src/components/ui/label.tsx - Label has no htmlFor, so getByLabelText fails and SRs lose the tie (found: RG-38)
 - [2026-09-30] server CandidateService - stores dto.FullName untrimmed while UserService trims; padded names save padded (found: RG-38)
 - [2026-09-30] client/e2e - seeded admin@recruitmentgorilla.com is named 'Super Admin' but holds only the Admin role (found: RG-38)
-- [2026-09-30] docs/PROJECT_PLAN.md - never refreshed to describe develop as final (found: 001-brand-branch-triage)

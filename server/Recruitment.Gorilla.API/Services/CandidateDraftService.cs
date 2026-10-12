@@ -58,6 +58,31 @@ public class CandidateDraftService(
     private const string CandidateDuplicateMessage =
         "This CV has already been uploaded for an existing candidate.";
 
+    /// <summary>
+    /// Checks a job opening (a <see cref="RoleAppliedOption"/>) is one the caller may use right now:
+    /// it must exist, be active, and not be past its end date. A Recruiter is further restricted to
+    /// openings they are assigned to; Admin and Super Admin may use any open opening.
+    /// Returns an error message, or null when the opening is fine to use.
+    /// </summary>
+    public async Task<string?> ValidateJobOpeningForCallerAsync(int? roleId, bool required)
+    {
+        if (roleId is not int id)
+            return required ? "Select a job opening." : null;
+
+        var role = await db.RoleAppliedOptions
+            .Include(r => r.Recruiters)
+            .FirstOrDefaultAsync(r => r.Id == id);
+
+        if (role is null || !role.IsActive || role.EndDate < DateTime.UtcNow)
+            return "The selected job opening is not open.";
+
+        if (!currentUser.IsInAnyRole(Roles.SuperAdmin, Roles.Admin) &&
+            !role.Recruiters.Any(rr => rr.UserId == currentUser.UserId))
+            return "You are not assigned to this job opening.";
+
+        return null;
+    }
+
     private string? HashStoredFile(string storedFileName)
     {
         var path = UploadPaths.Resolve(env.ContentRootPath, storedFileName);
@@ -68,7 +93,8 @@ public class CandidateDraftService(
 
     /// <summary>
     /// Restricts a draft query to the drafts the caller may see or act on: every draft for Admin and
-    /// Super Admin, otherwise only the ones the caller uploaded.
+    /// Super Admin; for a Recruiter, the ones they uploaded themselves plus any draft for a job opening
+    /// they are assigned to as a recruiter (matching <see cref="CandidateService"/>'s candidate scoping).
     ///
     /// Every read and write goes through this, not only the list. The list was scoped while the by-id
     /// read, update, approve, discard and their bulk forms loaded drafts by id alone, so a Recruiter who
@@ -81,8 +107,9 @@ public class CandidateDraftService(
     private IQueryable<CandidateDraft> ScopedDrafts()
     {
         if (currentUser.IsInAnyRole(Roles.SuperAdmin, Roles.Admin)) return db.CandidateDrafts;
-        if (currentUser.UserId is not int uploaderId) return db.CandidateDrafts.Where(_ => false);
-        return db.CandidateDrafts.Where(d => d.UploadedByUserId == uploaderId);
+        if (currentUser.UserId is not int uid) return db.CandidateDrafts.Where(_ => false);
+        return db.CandidateDrafts.Where(d => d.UploadedByUserId == uid ||
+            (d.RoleAppliedOption != null && d.RoleAppliedOption.Recruiters.Any(rr => rr.UserId == uid)));
     }
 
     public async Task<PagedDraftsResultDto> GetDraftsAsync(DraftsFilterQuery query)
@@ -338,10 +365,14 @@ public class CandidateDraftService(
         return draft;
     }
 
-    public async Task<CandidateDraftDto?> UpdateDraftAsync(int id, UpdateCandidateDraftDto dto)
+    public async Task<(CandidateDraftDto? Draft, string? Error)> UpdateDraftAsync(int id, UpdateCandidateDraftDto dto)
     {
         var draft = await ScopedDrafts().FirstOrDefaultAsync(d => d.Id == id);
-        if (draft == null) return null;
+        if (draft == null) return (null, null);
+
+        if (dto.RoleAppliedOptionId != draft.RoleAppliedOptionId &&
+            await ValidateJobOpeningForCallerAsync(dto.RoleAppliedOptionId, required: false) is string roleError)
+            return (null, roleError);
 
         draft.FullName = dto.FullName?.Trim();
         draft.Email = dto.Email?.Trim();
@@ -376,7 +407,7 @@ public class CandidateDraftService(
 
         await db.SaveChangesAsync();
 
-        return await GetDraftByIdAsync(id);
+        return (await GetDraftByIdAsync(id), null);
     }
 
     public async Task<(Candidate? Candidate, string? Error)> ApproveDraftAsync(int id, ApproveCandidateDraftDto dto)
@@ -392,14 +423,10 @@ public class CandidateDraftService(
         var nameError = PersonNameValidator.Validate(fullName, "Full name");
         if (nameError is not null) return (null, nameError);
         if (string.IsNullOrWhiteSpace(email)) return (null, "Email is required.");
-        if (!roleId.HasValue) return (null, "Role applied for is required.");
         if (string.IsNullOrWhiteSpace(experience)) experience = "0 Years";
 
-        // Check if role is active and not expired
-        var role = await db.RoleAppliedOptions.FindAsync(roleId.Value);
-        if (role == null || !role.IsActive) return (null, "Selected role is not active.");
-        if (role.EndDate < DateTime.UtcNow)
-            return (null, $"Role '{role.Name}' expired on {role.EndDate:yyyy-MM-dd}.");
+        if (await ValidateJobOpeningForCallerAsync(roleId, required: true) is string roleError)
+            return (null, roleError);
 
         var candidate = new Candidate
         {

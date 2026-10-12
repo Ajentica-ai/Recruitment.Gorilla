@@ -143,6 +143,9 @@ export default function AddStatusModal({
       void queryClient.invalidateQueries({ queryKey: ['status-options', 'next', candidateId] });
       void queryClient.invalidateQueries({ queryKey: ['notifications'] });
       void queryClient.invalidateQueries({ queryKey: ['my-interviews'] });
+      // The dashboard's KPI tiles (e.g. Recommended) are keyed off CurrentStatus too, and were
+      // going stale after a status change since nothing told them to refetch.
+      void queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       addToast(`Status updated to '${status}'.`);
       onAdded();
     },
@@ -293,6 +296,7 @@ export default function AddStatusModal({
                   value={interviewTypeIds}
                   onChange={setInterviewTypeIds}
                   placeholder="Tag this interview (Technical, HR, 1st Level…)"
+                  itemNoun="interview types"
                 />
                 <p className="text-[length:var(--text-sm)] leading-[var(--leading-normal)] text-muted-foreground">Optional tags shown on the status history and interview page.</p>
               </div>
@@ -311,6 +315,7 @@ export default function AddStatusModal({
                     clearFE('interviewers');
                   }}
                   placeholder="Search users to assign…"
+                  itemNoun="interviewers"
                 />
                 {fieldErrors.interviewers && (
                   <div className="text-[var(--danger-text)] text-[length:var(--text-sm)] mt-1">{fieldErrors.interviewers}</div>

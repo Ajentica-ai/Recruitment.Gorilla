@@ -11,12 +11,18 @@ import type {
   ChangePasswordPayload,
   EmailSettings,
   UpsertEmailSettings,
+  TestEmailResult,
+  OutboundEmail,
+  OutboundEmailQuery,
+  ResendEmailResult,
   SlackSettings,
   UpsertSlackSettings,
+  UserGuide,
   CreateCandidatePayload,
   CreateUserPayload,
   DashboardData,
   DashboardKpis,
+  ApplicationsSummary,
   StatusCount,
   TrendPoint,
   JobOpening,
@@ -220,13 +226,13 @@ export const uploadCV = async (
   return data;
 };
 
-/** Super Admin only: the import template, whose comments explain how to fill it in. */
+/** Admin and Super Admin only: the import template, whose comments explain how to fill it in. */
 export const downloadImportTemplate = async (): Promise<void> => {
   const res = await api.get('/candidate-import/template', { responseType: 'blob' });
   saveBlob(res.data as Blob, res.headers['content-disposition'] as string | undefined, 'candidate-import-template.json');
 };
 
-/** Super Admin only: one entry of a JSON import file, with the CV it names, becomes a Pending draft. */
+/** Admin and Super Admin only: one entry of a JSON import file, with the CV it names, becomes a Pending draft. */
 export const importJsonCandidate = async (
   entry: Record<string, unknown>,
   file: File,
@@ -321,6 +327,12 @@ export const getStatusBreakdown = async (): Promise<StatusCount[]> => {
 
 export const getApplicationsTrend = async (days = 30): Promise<TrendPoint[]> => {
   const { data } = await api.get<TrendPoint[]>('/dashboard/applications-trend', { params: { days } });
+  return data;
+};
+
+// The trend's headline: totals for the same window and the one before it.
+export const getApplicationsSummary = async (days = 30): Promise<ApplicationsSummary> => {
+  const { data } = await api.get<ApplicationsSummary>('/dashboard/applications-summary', { params: { days } });
   return data;
 };
 
@@ -499,8 +511,19 @@ export const saveEmailSettings = async (payload: UpsertEmailSettings): Promise<E
   return data;
 };
 
-export const sendTestEmail = async (toEmail: string): Promise<{ ok: boolean; error: string | null }> => {
-  const { data } = await api.post<{ ok: boolean; error: string | null }>('/config/email/test', { toEmail });
+export const sendTestEmail = async (toEmail: string): Promise<TestEmailResult> => {
+  const { data } = await api.post<TestEmailResult>('/config/email/test', { toEmail });
+  return data;
+};
+
+// ----- Configuration: Email delivery log (SuperAdmin) -----
+export const getEmailOutbox = async (query: OutboundEmailQuery): Promise<PagedResult<OutboundEmail>> => {
+  const { data } = await api.get<PagedResult<OutboundEmail>>('/config/email/outbox', { params: query });
+  return data;
+};
+
+export const resendEmail = async (id: number): Promise<ResendEmailResult> => {
+  const { data } = await api.post<ResendEmailResult>(`/config/email/outbox/${id}/resend`);
   return data;
 };
 
@@ -770,6 +793,12 @@ export const getRecruitingAnalytics = async (
   params?: AnalyticsFilterParams
 ): Promise<RecruitingAnalyticsSummary> => {
   const { data } = await api.get<RecruitingAnalyticsSummary>('/analytics', { params });
+  return data;
+};
+
+// ----- User guide -----
+export const getUserGuide = async (): Promise<UserGuide> => {
+  const { data } = await api.get<UserGuide>('/user-guide');
   return data;
 };
 

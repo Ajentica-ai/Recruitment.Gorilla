@@ -1,8 +1,10 @@
 import { useState } from 'react';
+import { isAxiosError } from 'axios';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   AlertCircle,
   CheckCircle2,
+  Globe,
   KeyRound,
   Mail,
   Radio,
@@ -18,11 +20,13 @@ import { useAuth } from '../../auth/AuthContext';
 import { useToast } from '../../components/ToastStack';
 import PasswordInput from '../../components/common/PasswordInput';
 import { SkeletonRows } from '../../components/common/Loading';
+import type { EmailProvider } from '../../types';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { CheckboxField, Field } from '@/components/ui/field';
+import { Segmented, SegmentedItem } from '@/components/ui/segmented';
 import {
   Card,
   CardAction,
@@ -73,6 +77,7 @@ export default function EmailSettingsTab() {
 
   const { data, isLoading } = useQuery({ queryKey: ['config', 'email'], queryFn: getEmailSettings });
 
+  const [provider, setProvider] = useState<EmailProvider>('Smtp');
   const [host, setHost] = useState('');
   const [port, setPort] = useState(587);
   const [smtpUser, setSmtpUser] = useState('');
@@ -80,19 +85,26 @@ export default function EmailSettingsTab() {
   const [fromAddress, setFromAddress] = useState('');
   const [fromName, setFromName] = useState('Recruitment Gorilla');
   const [useStartTls, setUseStartTls] = useState(true);
+  const [apiBaseUrl, setApiBaseUrl] = useState('');
+  const [apiKey, setApiKey] = useState('');
+  const [allowedRecipientDomains, setAllowedRecipientDomains] = useState('');
   const [enabled, setEnabled] = useState(false);
   const [testTo, setTestTo] = useState('');
   const [loaded, setLoaded] = useState(false);
   const [testFeedback, setTestFeedback] = useState<{ ok: boolean; message: string } | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   // Seed the form from the server once.
   if (data && !loaded) {
+    setProvider(data.provider);
     setHost(data.host);
     setPort(data.port);
     setSmtpUser(data.user ?? '');
     setFromAddress(data.fromAddress);
     setFromName(data.fromName);
     setUseStartTls(data.useStartTls);
+    setApiBaseUrl(data.apiBaseUrl);
+    setAllowedRecipientDomains(data.allowedRecipientDomains);
     setEnabled(data.enabled);
     setTestTo(user?.email ?? '');
     setLoaded(true);
@@ -108,6 +120,7 @@ export default function EmailSettingsTab() {
   const saveMutation = useMutation({
     mutationFn: () =>
       saveEmailSettings({
+        provider,
         host: host.trim(),
         port,
         user: smtpUser.trim() || null,
@@ -115,21 +128,35 @@ export default function EmailSettingsTab() {
         fromAddress: fromAddress.trim(),
         fromName: fromName.trim() || 'Recruitment Gorilla',
         useStartTls,
+        apiBaseUrl: apiBaseUrl.trim() || null,
+        apiKey: apiKey.trim() || null, // blank keeps the stored key
+        allowedRecipientDomains: allowedRecipientDomains.trim() || null,
         enabled,
       }),
     onSuccess: (fresh) => {
       queryClient.setQueryData(['config', 'email'], fresh);
       setPassword('');
+      setApiKey('');
+      setSaveError(null);
       addToast('Email settings saved successfully.');
     },
-    onError: () => addToast('Could not save email settings.', 'danger'),
+    // A 400 carries the server's reason as a plain string (e.g. the host-changed-without-a-new-key
+    // check) — show it rather than a generic guess, which would otherwise hide why the save failed.
+    onError: (err) => {
+      const body = isAxiosError(err) && err.response?.status === 400 ? err.response.data : null;
+      const message = typeof body === 'string' && body ? body : 'Could not save email settings.';
+      setSaveError(message);
+      addToast(message, 'danger');
+    },
   });
 
   const testMutation = useMutation({
     mutationFn: () => sendTestEmail(testTo.trim()),
     onSuccess: (res) => {
       if (res.ok) {
-        const msg = `Diagnostic email successfully delivered to ${testTo.trim()}.`;
+        const msg = res.messageId
+          ? `Diagnostic email successfully delivered to ${testTo.trim()} (message id ${res.messageId}).`
+          : `Diagnostic email successfully delivered to ${testTo.trim()}.`;
         setTestFeedback({ ok: true, message: msg });
         addToast(msg);
       } else {
@@ -147,6 +174,8 @@ export default function EmailSettingsTab() {
 
   if (isLoading) return <SkeletonRows rows={4} label="Loading email settings" />;
 
+  const isSmtp = provider === 'Smtp';
+
   return (
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-12 items-start">
       {/* Primary Configuration Column (8 cols on large) */}
@@ -157,11 +186,11 @@ export default function EmailSettingsTab() {
               <CardTitle asChild>
                 <h3 className="flex items-center gap-2">
                   <Mail className="size-5 text-primary" />
-                  <span>SMTP Server Configuration</span>
+                  <span>Email Configuration</span>
                 </h3>
               </CardTitle>
               <CardDescription className="mt-0.5">
-                Configure your outgoing transactional email server for interview schedules and notifications.
+                Choose how outgoing transactional email (interview schedules, notifications) is delivered.
               </CardDescription>
             </div>
             <CardAction>
@@ -178,141 +207,225 @@ export default function EmailSettingsTab() {
             }}
           >
             <CardContent className="flex flex-col gap-6 pt-2">
-              {/* Quick Preset Selector */}
-              <div className="rounded-lg border border-border/80 bg-surface-muted/30 p-3">
-                <div className="flex items-center gap-1.5 text-[length:var(--text-xs)] font-semibold text-muted-foreground uppercase tracking-wider mb-2">
-                  <Sparkles className="size-3.5 text-primary" />
-                  <span>Quick Setup Presets</span>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {PRESETS.map((p) => {
-                    const isActive = p.host && host.toLowerCase().includes(p.host.toLowerCase());
-                    return (
-                      <button
-                        key={p.name}
-                        type="button"
-                        onClick={() => applyPreset(p)}
-                        className={cn(
-                          'inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-[length:var(--text-xs)] font-medium transition-all',
-                          isActive
-                            ? 'bg-primary text-white shadow-xs'
-                            : 'bg-surface border border-border text-foreground hover:bg-surface-muted',
+              <Segmented
+                type="single"
+                value={provider}
+                onValueChange={(v) => v && setProvider(v as EmailProvider)}
+              >
+                <SegmentedItem value="Smtp">SMTP server</SegmentedItem>
+                <SegmentedItem value="HttpApi">Notification API</SegmentedItem>
+              </Segmented>
+
+              {isSmtp ? (
+                <>
+                  {/* Quick Preset Selector */}
+                  <div className="rounded-lg border border-border/80 bg-surface-muted/30 p-3">
+                    <div className="flex items-center gap-1.5 text-[length:var(--text-xs)] font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+                      <Sparkles className="size-3.5 text-primary" />
+                      <span>Quick Setup Presets</span>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {PRESETS.map((p) => {
+                        const isActive = p.host && host.toLowerCase().includes(p.host.toLowerCase());
+                        return (
+                          <button
+                            key={p.name}
+                            type="button"
+                            onClick={() => applyPreset(p)}
+                            className={cn(
+                              'inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-[length:var(--text-xs)] font-medium transition-all',
+                              isActive
+                                ? 'bg-primary text-white shadow-xs'
+                                : 'bg-surface border border-border text-foreground hover:bg-surface-muted',
+                            )}
+                          >
+                            {p.name}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Section 1: Server Connection */}
+                  <div className="flex flex-col gap-3">
+                    <div className="flex items-center gap-2 text-[length:var(--text-xs)] font-bold uppercase tracking-wider text-muted-foreground border-b border-line pb-1.5">
+                      <Server className="size-3.5 text-primary" />
+                      <span>Server & Connection</span>
+                    </div>
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-12">
+                      <Field className="sm:col-span-8" label="SMTP Host / Server" required>
+                        {(p) => (
+                          <Input
+                            {...p}
+                            value={host}
+                            onChange={(e) => setHost(e.target.value)}
+                            placeholder="e.g. smtp.gmail.com"
+                          />
                         )}
+                      </Field>
+                      <Field className="sm:col-span-4" label="Port" required>
+                        {(p) => (
+                          <Input
+                            {...p}
+                            type="number"
+                            value={port}
+                            onChange={(e) => setPort(Number(e.target.value))}
+                            placeholder="587"
+                          />
+                        )}
+                      </Field>
+                    </div>
+                    <CheckboxField
+                      id="smtp-starttls"
+                      label="Use STARTTLS encryption"
+                      description="Standard for port 587. Uncheck if using implicit SSL/TLS on port 465."
+                      checked={useStartTls}
+                      onCheckedChange={(checked) => setUseStartTls(checked)}
+                    />
+                  </div>
+
+                  {/* Section 2: Authentication */}
+                  <div className="flex flex-col gap-3">
+                    <div className="flex items-center gap-2 text-[length:var(--text-xs)] font-bold uppercase tracking-wider text-muted-foreground border-b border-line pb-1.5">
+                      <KeyRound className="size-3.5 text-primary" />
+                      <span>Authentication</span>
+                    </div>
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                      <Field label="Username / Email">
+                        {(p) => (
+                          <Input
+                            {...p}
+                            value={smtpUser}
+                            onChange={(e) => setSmtpUser(e.target.value)}
+                            placeholder="e.g. you@company.com"
+                            autoComplete="off"
+                          />
+                        )}
+                      </Field>
+                      <Field
+                        label="App Password / Token"
+                        help={
+                          data?.passwordSet
+                            ? 'Password is stored. Leave blank to keep unchanged.'
+                            : 'Enter SMTP account or App password.'
+                        }
                       >
-                        {p.name}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
+                        {(p) => (
+                          <PasswordInput
+                            {...p}
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            autoComplete="new-password"
+                            placeholder={data?.passwordSet ? '•••••••• (leave blank to keep)' : 'Enter password'}
+                          />
+                        )}
+                      </Field>
+                    </div>
+                  </div>
 
-              {/* Section 1: Server Connection */}
-              <div className="flex flex-col gap-3">
-                <div className="flex items-center gap-2 text-[length:var(--text-xs)] font-bold uppercase tracking-wider text-muted-foreground border-b border-line pb-1.5">
-                  <Server className="size-3.5 text-primary" />
-                  <span>Server & Connection</span>
-                </div>
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-12">
-                  <Field className="sm:col-span-8" label="SMTP Host / Server" required>
-                    {(p) => (
-                      <Input
-                        {...p}
-                        value={host}
-                        onChange={(e) => setHost(e.target.value)}
-                        placeholder="e.g. smtp.gmail.com"
-                      />
-                    )}
-                  </Field>
-                  <Field className="sm:col-span-4" label="Port" required>
-                    {(p) => (
-                      <Input
-                        {...p}
-                        type="number"
-                        value={port}
-                        onChange={(e) => setPort(Number(e.target.value))}
-                        placeholder="587"
-                      />
-                    )}
-                  </Field>
-                </div>
-                <CheckboxField
-                  id="smtp-starttls"
-                  label="Use STARTTLS encryption"
-                  description="Standard for port 587. Uncheck if using implicit SSL/TLS on port 465."
-                  checked={useStartTls}
-                  onCheckedChange={(checked) => setUseStartTls(checked)}
-                />
-              </div>
+                  {/* Section 3: Sender Identity */}
+                  <div className="flex flex-col gap-3">
+                    <div className="flex items-center gap-2 text-[length:var(--text-xs)] font-bold uppercase tracking-wider text-muted-foreground border-b border-line pb-1.5">
+                      <UserCheck className="size-3.5 text-primary" />
+                      <span>Sender Identity</span>
+                    </div>
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                      <Field label="From Email Address" required>
+                        {(p) => (
+                          <Input
+                            {...p}
+                            type="email"
+                            value={fromAddress}
+                            onChange={(e) => setFromAddress(e.target.value)}
+                            placeholder="recruitment@yourcompany.com"
+                          />
+                        )}
+                      </Field>
+                      <Field label="From Display Name" help="Display name shown in candidates' email clients.">
+                        {(p) => (
+                          <Input
+                            {...p}
+                            value={fromName}
+                            onChange={(e) => setFromName(e.target.value)}
+                            placeholder="Recruitment Gorilla"
+                          />
+                        )}
+                      </Field>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <>
+                  {/* Notification API connection */}
+                  <div className="flex flex-col gap-3">
+                    <div className="flex items-center gap-2 text-[length:var(--text-xs)] font-bold uppercase tracking-wider text-muted-foreground border-b border-line pb-1.5">
+                      <Globe className="size-3.5 text-primary" />
+                      <span>Notification API Connection</span>
+                    </div>
+                    <Field label="Base URL" required help="The notification service's API root, e.g. https://your-service.example.com">
+                      {(p) => (
+                        <Input
+                          {...p}
+                          value={apiBaseUrl}
+                          onChange={(e) => setApiBaseUrl(e.target.value)}
+                          placeholder="https://hr-notif-api.example.com"
+                        />
+                      )}
+                    </Field>
+                    <Field
+                      label="API Key"
+                      help={
+                        data?.apiKeySet
+                          ? 'Key is stored. Leave blank to keep unchanged. Entering a new key is required if you change the base URL’s host.'
+                          : 'Paste the X-API-Key value given by the notification service.'
+                      }
+                    >
+                      {(p) => (
+                        <PasswordInput
+                          {...p}
+                          value={apiKey}
+                          onChange={(e) => setApiKey(e.target.value)}
+                          autoComplete="new-password"
+                          placeholder={data?.apiKeySet ? '•••••••• (leave blank to keep)' : 'Enter API key'}
+                        />
+                      )}
+                    </Field>
+                    <Field
+                      label="Allowed Recipient Domains"
+                      help="Comma-separated. The service only delivers to these domains; other recipients are skipped, not sent."
+                    >
+                      {(p) => (
+                        <Input
+                          {...p}
+                          value={allowedRecipientDomains}
+                          onChange={(e) => setAllowedRecipientDomains(e.target.value)}
+                          placeholder="ajentica.ai"
+                        />
+                      )}
+                    </Field>
+                  </div>
 
-              {/* Section 2: Authentication */}
-              <div className="flex flex-col gap-3">
-                <div className="flex items-center gap-2 text-[length:var(--text-xs)] font-bold uppercase tracking-wider text-muted-foreground border-b border-line pb-1.5">
-                  <KeyRound className="size-3.5 text-primary" />
-                  <span>Authentication</span>
-                </div>
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  <Field label="Username / Email">
-                    {(p) => (
-                      <Input
-                        {...p}
-                        value={smtpUser}
-                        onChange={(e) => setSmtpUser(e.target.value)}
-                        placeholder="e.g. you@company.com"
-                        autoComplete="off"
-                      />
-                    )}
-                  </Field>
-                  <Field
-                    label="App Password / Token"
-                    help={
-                      data?.passwordSet
-                        ? 'Password is stored. Leave blank to keep unchanged.'
-                        : 'Enter SMTP account or App password.'
-                    }
-                  >
-                    {(p) => (
-                      <PasswordInput
-                        {...p}
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        autoComplete="new-password"
-                        placeholder={data?.passwordSet ? '•••••••• (leave blank to keep)' : 'Enter password'}
-                      />
-                    )}
-                  </Field>
-                </div>
-              </div>
+                  {/* Sender identity, API mode: only the display name is configurable */}
+                  <div className="flex flex-col gap-3">
+                    <div className="flex items-center gap-2 text-[length:var(--text-xs)] font-bold uppercase tracking-wider text-muted-foreground border-b border-line pb-1.5">
+                      <UserCheck className="size-3.5 text-primary" />
+                      <span>Sender Identity</span>
+                    </div>
+                    <Field label="From Display Name" help="Display name shown in recipients' email clients. The address itself is fixed by the notification service.">
+                      {(p) => (
+                        <Input
+                          {...p}
+                          value={fromName}
+                          onChange={(e) => setFromName(e.target.value)}
+                          placeholder="Recruitment Gorilla"
+                        />
+                      )}
+                    </Field>
+                  </div>
+                </>
+              )}
 
-              {/* Section 3: Sender Identity */}
-              <div className="flex flex-col gap-3">
-                <div className="flex items-center gap-2 text-[length:var(--text-xs)] font-bold uppercase tracking-wider text-muted-foreground border-b border-line pb-1.5">
-                  <UserCheck className="size-3.5 text-primary" />
-                  <span>Sender Identity</span>
-                </div>
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  <Field label="From Email Address" required>
-                    {(p) => (
-                      <Input
-                        {...p}
-                        type="email"
-                        value={fromAddress}
-                        onChange={(e) => setFromAddress(e.target.value)}
-                        placeholder="recruitment@yourcompany.com"
-                      />
-                    )}
-                  </Field>
-                  <Field label="From Display Name" help="Display name shown in candidates' email clients.">
-                    {(p) => (
-                      <Input
-                        {...p}
-                        value={fromName}
-                        onChange={(e) => setFromName(e.target.value)}
-                        placeholder="Recruitment Gorilla"
-                      />
-                    )}
-                  </Field>
-                </div>
-              </div>
+              {saveError && <Alert variant="danger">{saveError}</Alert>}
             </CardContent>
 
             <CardFooter className="justify-between bg-surface-muted/20">
@@ -390,7 +503,7 @@ export default function EmailSettingsTab() {
                   <span>Send Test Email</span>
                 </h4>
               </CardTitle>
-              <CardDescription>Verify your SMTP server connection & credentials.</CardDescription>
+              <CardDescription>Verify your email provider connection & credentials.</CardDescription>
             </div>
           </CardHeader>
           <CardContent className="flex flex-col gap-3">
@@ -449,32 +562,58 @@ export default function EmailSettingsTab() {
         </Card>
 
         {/* Security & Setup Guide */}
-        <Card className="border-dashed bg-surface-muted/20">
-          <CardHeader>
-            <div className="min-w-0">
-              <CardTitle asChild>
-                <h4 className="text-[length:var(--text-sm)] font-semibold flex items-center gap-2">
-                  <ShieldCheck className="size-4 text-primary" />
-                  <span>Setup Recommendations</span>
-                </h4>
-              </CardTitle>
-            </div>
-          </CardHeader>
-          <CardContent className="text-[length:var(--text-xs)] text-muted-foreground flex flex-col gap-2.5 pt-0">
-            <div>
-              <strong className="text-foreground">Google Workspace / Gmail:</strong>
-              <p className="mt-0.5">
-                Enable 2-Step Verification and create a 16-character <em>App Password</em> in your Google Account security settings.
+        {isSmtp ? (
+          <Card className="border-dashed bg-surface-muted/20">
+            <CardHeader>
+              <div className="min-w-0">
+                <CardTitle asChild>
+                  <h4 className="text-[length:var(--text-sm)] font-semibold flex items-center gap-2">
+                    <ShieldCheck className="size-4 text-primary" />
+                    <span>Setup Recommendations</span>
+                  </h4>
+                </CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent className="text-[length:var(--text-xs)] text-muted-foreground flex flex-col gap-2.5 pt-0">
+              <div>
+                <strong className="text-foreground">Google Workspace / Gmail:</strong>
+                <p className="mt-0.5">
+                  Enable 2-Step Verification and create a 16-character <em>App Password</em> in your Google Account security settings.
+                </p>
+              </div>
+              <div>
+                <strong className="text-foreground">Microsoft 365:</strong>
+                <p className="mt-0.5">
+                  Ensure <em>Authenticated SMTP</em> is enabled on the sending mailbox in the M365 Admin Center.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        ) : (
+          <Card className="border-dashed bg-surface-muted/20">
+            <CardHeader>
+              <div className="min-w-0">
+                <CardTitle asChild>
+                  <h4 className="text-[length:var(--text-sm)] font-semibold flex items-center gap-2">
+                    <ShieldCheck className="size-4 text-primary" />
+                    <span>About the Notification API</span>
+                  </h4>
+                </CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent className="text-[length:var(--text-xs)] text-muted-foreground flex flex-col gap-2.5 pt-0">
+              <p>
+                Email is sent through the configured notification service instead of SMTP. Only
+                recipients on an allowed domain receive mail; others are skipped and recorded in
+                the delivery log rather than sent.
               </p>
-            </div>
-            <div>
-              <strong className="text-foreground">Microsoft 365:</strong>
-              <p className="mt-0.5">
-                Ensure <em>Authenticated SMTP</em> is enabled on the sending mailbox in the M365 Admin Center.
+              <p>
+                Changing the base URL&rsquo;s host requires entering the API key again, so a stored
+                key is never silently redirected to a different host.
               </p>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </div>
   );

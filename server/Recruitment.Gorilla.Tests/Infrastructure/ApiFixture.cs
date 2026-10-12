@@ -107,14 +107,14 @@ public sealed class ApiFixture : IAsyncLifetime
     }
 
     /// <summary>Inserts a candidate (committed — the whole DB is dropped at teardown) and returns its id.</summary>
-    public async Task<int> NewCandidateAsync(int ownerUserId, int? roleId = null)
+    public async Task<int> NewCandidateAsync(int ownerUserId, int? roleId = null, string? email = null)
     {
         using var scope = _factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var candidate = new Candidate
         {
             FullName = $"Cand-{Guid.NewGuid():N}",
-            Email = $"{Guid.NewGuid():N}@test.local",
+            Email = email ?? $"{Guid.NewGuid():N}@test.local",
             RelevantExperience = "3 Years",
             OwnerUserId = ownerUserId,
             RoleAppliedOptionId = roleId,
@@ -147,15 +147,17 @@ public sealed class ApiFixture : IAsyncLifetime
         return draft.StoredFileName;
     }
 
-    /// <summary>Inserts a role and returns its id.</summary>
-    public async Task<int> NewRoleAsync()
+    /// <summary>Inserts a role (job opening), open and active unless overridden, and returns its id.
+    /// Pass recruiter user ids to assign them to it.</summary>
+    public async Task<int> NewRoleAsync(DateTime? endDate = null, bool isActive = true, params int[] recruiterUserIds)
     {
         using var scope = _factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var role = new RoleAppliedOption
         {
-            Name = $"Role-{Guid.NewGuid():N}", SortOrder = 1, IsActive = true,
-            EndDate = DateTime.UtcNow.AddDays(30),
+            Name = $"Role-{Guid.NewGuid():N}", SortOrder = 1, IsActive = isActive,
+            EndDate = endDate ?? DateTime.UtcNow.AddDays(30),
+            Recruiters = recruiterUserIds.Distinct().Select(uid => new RoleRecruiter { UserId = uid }).ToList(),
         };
         db.RoleAppliedOptions.Add(role);
         await db.SaveChangesAsync();

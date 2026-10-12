@@ -1161,7 +1161,7 @@ export default function DraftReviewWorkspace({ initialBatchId, onCandidateCreate
                           ...prev,
                           educations: [
                             ...(prev.educations || []),
-                            { degree: 'BSc in CSE', institution: 'University', graduationYear: '2024', cgpa: '' },
+                            { degree: '', institution: '', graduationYear: '', cgpa: '' },
                                 ],
                               }))
                             }
@@ -1287,7 +1287,7 @@ export default function DraftReviewWorkspace({ initialBatchId, onCandidateCreate
                           ...prev,
                           experiences: [
                             ...(prev.experiences || []),
-                            { jobTitle: 'Software Engineer', company: 'Company Name', duration: '2022 - Present', description: '' },
+                            { jobTitle: '', company: '', duration: '', description: '' },
                                 ],
                               }))
                             }
