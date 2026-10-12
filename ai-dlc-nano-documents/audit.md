@@ -313,3 +313,4 @@
 - 2026-10-12T12:28Z [claude] RG-62 DONE @77e5c15: split-view panel height now measured at runtime (--split-panel-height), replacing the two hardcoded calc(100vh-Npx) rules; bulk bar no longer covers the editor-studio footer; not committed
 - 2026-10-12T12:56Z [claude] RG-62 SIDE-EFFECT @e31341f: local commit created (user confirmed), not pushed
 - 2026-10-12T12:56Z [claude] RG-62 SIDE-EFFECT @e31341f: posted summary comment on issue #62 (user confirmed)
+- 2026-10-12T13:00Z [claude] RG-62 SIDE-EFFECT @92d3c8e: pushed branch and opened PR #149 against develop (user requested)
