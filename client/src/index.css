@@ -7933,12 +7933,6 @@ a.job-tile:hover {
     max-width: 100% !important;
     min-width: 0 !important;
   }
-
-  .draft-list-rail,
-  .draft-editor-studio {
-    height: calc(100vh - 220px);
-    min-height: 480px;
-  }
 }
 
 .draft-split-view {
@@ -7960,8 +7954,12 @@ a.job-tile:hover {
   border-radius: var(--radius-card);
   display: flex;
   flex-direction: column;
-  height: calc(100vh - 210px);
-  min-height: 540px;
+  /* --split-panel-height is measured in JS from the panel's own position, so
+     it adapts to however much the chrome above it wraps at a given width -
+     see the comment above splitViewRef in DraftReviewWorkspace.tsx. The calc
+     fallback only applies before that first measurement. */
+  height: var(--split-panel-height, calc(100vh - 210px));
+  min-height: 480px;
   overflow: hidden;
   min-width: 0;
   width: 100%;
@@ -8093,8 +8091,8 @@ a.job-tile:hover {
   border-radius: var(--radius-card);
   display: flex;
   flex-direction: column;
-  height: calc(100vh - 210px);
-  min-height: 540px;
+  height: var(--split-panel-height, calc(100vh - 210px));
+  min-height: 480px;
   overflow: hidden;
 }
 

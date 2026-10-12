@@ -75,6 +75,42 @@ export default function DraftReviewWorkspace({ initialBatchId, onCandidateCreate
   const [bulkBarInset, setBulkBarInset] = useState(0);
   const [bulkRoleId, setBulkRoleId] = useState<number | null>(null);
 
+  /**
+   * The list rail and editor studio used a hardcoded `calc(100vh - 210px)`
+   * (`calc(100vh - 220px)` under 992px) to size themselves, guessing how much
+   * chrome sits above them. At widths where the status pills/dropdowns wrap
+   * onto extra lines, the real chrome is taller than the guess, so the panel
+   * computes taller than the space actually left and its footer lands below
+   * the viewport - which is also why the floating bulk bar (fixed to the
+   * viewport) could appear to sit on top of it. Measuring the split-view's
+   * own top and the page's own bottom gutter replaces the guess with the
+   * real number, at any width or height.
+   */
+  const splitViewRef = useRef<HTMLDivElement | null>(null);
+  const [splitPanelHeight, setSplitPanelHeight] = useState(0);
+
+  useEffect(() => {
+    const el = splitViewRef.current;
+    if (!el) {
+      setSplitPanelHeight(0);
+      return;
+    }
+    const measure = () => {
+      const top = el.getBoundingClientRect().top;
+      const page = el.closest('.rg-content');
+      const bottomGutter = page ? parseFloat(getComputedStyle(page).paddingBottom) || 0 : 0;
+      setSplitPanelHeight(Math.max(0, window.innerHeight - top - bottomGutter));
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    window.addEventListener('resize', measure);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener('resize', measure);
+    };
+  }, [mobileDetailOpen]);
+
   // Form editing state for currently loaded draft
   const [editForm, setEditForm] = useState<Partial<CandidateDraft>>({});
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
@@ -431,7 +467,12 @@ export default function DraftReviewWorkspace({ initialBatchId, onCandidateCreate
   return (
     <div
       className="draft-workspace"
-      style={{ '--bulk-bar-inset': `${bulkBarInset}px` } as React.CSSProperties}
+      style={
+        {
+          '--bulk-bar-inset': `${bulkBarInset}px`,
+          '--split-panel-height': splitPanelHeight ? `${splitPanelHeight}px` : undefined,
+        } as React.CSSProperties
+      }
     >
       {/* 1. Header Toolbar & Command Row */}
       <div className="draft-toolbar">
@@ -528,7 +569,7 @@ export default function DraftReviewWorkspace({ initialBatchId, onCandidateCreate
       </div>
 
       {/* 2. Workspace Split-Screen: Master Rail + Studio */}
-      <div className="draft-split-view">
+      <div className="draft-split-view" ref={splitViewRef}>
         {/* LEFT RAIL: Queue Cards List */}
         <div className={cn('draft-list-rail', mobileDetailOpen ? 'hidden lg:flex' : 'flex')}>
           <div className="flex items-stretch justify-between border-b border-border shrink-0 bg-card">

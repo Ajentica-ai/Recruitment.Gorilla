@@ -306,3 +306,17 @@
 - 2026-10-12T00:00Z [claude] RG-53 DECISION @77e5c15: Recruiter sees only assigned openings (#10/#50); user tested in browser; close as designed
 - 2026-10-12T00:00Z [claude] RG-53 SIDE-EFFECT @77e5c15: commented on #53 and closed it as not planned (user confirmed)
 - 2026-10-12T00:00Z [claude] RG-53 DONE @77e5c15: no code; closed as working as designed; notes PR on fix/RG-53/Recruiter-job-openings-scope
+- 2026-10-12T11:55Z [claude] RG-62 SIDE-EFFECT @1c1faf5: assigned to tahmidsparrow, board status set to In Development (added to board)
+- 2026-10-12T12:09Z [claude] RG-62 CREATED @1c1faf5: Bulk selection action bar overlaps editor-studio footer on narrow/short responsive viewports
+- 2026-10-12T12:16Z [claude] RG-62 DECISION @1c1faf5: fix via dynamic measured panel height, not magic-number bump or global flex refactor
+- 2026-10-12T12:16Z [claude] RG-62 PHASE CLARIFY->PLAN @1c1faf5: approach confirmed
+- 2026-10-12T12:20Z [claude] RG-62 BRANCH @77e5c15: fix/RG-62/Bulk-bar-footer-overlap created off origin/develop (user confirmed)
+- 2026-10-12T12:20Z [claude] RG-62 PHASE PLAN->CONSTRUCT @77e5c15: plan approved by user
+- 2026-10-12T12:27Z [claude] RG-62 PHASE CONSTRUCT->WRAP-UP @77e5c15: 5/5 tasks; verified 830x835/1440x900/390x844 clean, 992x700 floor case noted; tsc/lint/225-226 vitest green
+- 2026-10-12T12:28Z [claude] RG-62 WRAP-UP @77e5c15: archived RG-48,RG-49,RG-134,003-docs-map-refresh,RG-138 (oldest completed) to stay within 10-item retention cap
+- 2026-10-12T12:28Z [claude] RG-62 DONE @77e5c15: split-view panel height now measured at runtime (--split-panel-height), replacing the two hardcoded calc(100vh-Npx) rules; bulk bar no longer covers the editor-studio footer; not committed
+- 2026-10-12T12:56Z [claude] RG-62 SIDE-EFFECT @e31341f: local commit created (user confirmed), not pushed
+- 2026-10-12T12:56Z [claude] RG-62 SIDE-EFFECT @e31341f: posted summary comment on issue #62 (user confirmed)
+- 2026-10-12T13:00Z [claude] RG-62 SIDE-EFFECT @92d3c8e: pushed branch and opened PR #149 against develop (user requested)
+- 2026-10-13T00:00Z [claude] RG-62 SIDE-EFFECT @HEAD: merged origin/develop (RG-53 docs) to resolve PR #149 conflict; audit/state append-only conflicts only, no app code conflicts
+- 2026-10-12T19:29Z [claude] RG-62 SIDE-EFFECT @fdab485: merge commit created resolving the above conflict
