@@ -302,3 +302,12 @@
 - 2026-10-12T00:00Z [claude] RG-52 CREATED @6f46c71: issue #52 bug/UI; already assigned to rayhan-ajentica; board status not moved (gh lacks read:project)
 - 2026-10-12T00:00Z [claude] RG-52 PHASE PLAN→CONSTRUCT @6f46c71: plan approved incl. Sourcing sibling; fix/RG-52/Recruiter-header-alignment off origin/develop (user confirmed)
 - 2026-10-12T00:00Z [claude] RG-52 DONE @6f46c71: first th text-left pl-3 (Recruiter+Sourcing); browser 77px/35px off -> 0; 226 tests, tsc+lint clean; uncommitted
+- 2026-10-12T11:55Z [claude] RG-62 SIDE-EFFECT @1c1faf5: assigned to tahmidsparrow, board status set to In Development (added to board)
+- 2026-10-12T12:09Z [claude] RG-62 CREATED @1c1faf5: Bulk selection action bar overlaps editor-studio footer on narrow/short responsive viewports
+- 2026-10-12T12:16Z [claude] RG-62 DECISION @1c1faf5: fix via dynamic measured panel height, not magic-number bump or global flex refactor
+- 2026-10-12T12:16Z [claude] RG-62 PHASE CLARIFY->PLAN @1c1faf5: approach confirmed
+- 2026-10-12T12:20Z [claude] RG-62 BRANCH @77e5c15: fix/RG-62/Bulk-bar-footer-overlap created off origin/develop (user confirmed)
+- 2026-10-12T12:20Z [claude] RG-62 PHASE PLAN->CONSTRUCT @77e5c15: plan approved by user
+- 2026-10-12T12:27Z [claude] RG-62 PHASE CONSTRUCT->WRAP-UP @77e5c15: 5/5 tasks; verified 830x835/1440x900/390x844 clean, 992x700 floor case noted; tsc/lint/225-226 vitest green
+- 2026-10-12T12:28Z [claude] RG-62 WRAP-UP @77e5c15: archived RG-48,RG-49,RG-134,003-docs-map-refresh,RG-138 (oldest completed) to stay within 10-item retention cap
+- 2026-10-12T12:28Z [claude] RG-62 DONE @77e5c15: split-view panel height now measured at runtime (--split-panel-height), replacing the two hardcoded calc(100vh-Npx) rules; bulk bar no longer covers the editor-studio footer; not committed
