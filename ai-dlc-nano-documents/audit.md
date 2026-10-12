@@ -302,3 +302,7 @@
 - 2026-10-12T00:00Z [claude] RG-52 CREATED @6f46c71: issue #52 bug/UI; already assigned to rayhan-ajentica; board status not moved (gh lacks read:project)
 - 2026-10-12T00:00Z [claude] RG-52 PHASE PLAN→CONSTRUCT @6f46c71: plan approved incl. Sourcing sibling; fix/RG-52/Recruiter-header-alignment off origin/develop (user confirmed)
 - 2026-10-12T00:00Z [claude] RG-52 DONE @6f46c71: first th text-left pl-3 (Recruiter+Sourcing); browser 77px/35px off -> 0; 226 tests, tsc+lint clean; uncommitted
+- 2026-10-12T00:00Z [claude] RG-53 CREATED @77e5c15: issue #53 bug; already assigned to rayhan-ajentica; board status not moved (gh lacks read:project)
+- 2026-10-12T00:00Z [claude] RG-53 DECISION @77e5c15: Recruiter sees only assigned openings (#10/#50); user tested in browser; close as designed
+- 2026-10-12T00:00Z [claude] RG-53 SIDE-EFFECT @77e5c15: commented on #53 and closed it as not planned (user confirmed)
+- 2026-10-12T00:00Z [claude] RG-53 DONE @77e5c15: no code; closed as working as designed; notes PR on fix/RG-53/Recruiter-job-openings-scope
