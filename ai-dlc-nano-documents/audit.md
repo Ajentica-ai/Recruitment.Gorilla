@@ -302,6 +302,10 @@
 - 2026-10-12T00:00Z [claude] RG-52 CREATED @6f46c71: issue #52 bug/UI; already assigned to rayhan-ajentica; board status not moved (gh lacks read:project)
 - 2026-10-12T00:00Z [claude] RG-52 PHASE PLAN→CONSTRUCT @6f46c71: plan approved incl. Sourcing sibling; fix/RG-52/Recruiter-header-alignment off origin/develop (user confirmed)
 - 2026-10-12T00:00Z [claude] RG-52 DONE @6f46c71: first th text-left pl-3 (Recruiter+Sourcing); browser 77px/35px off -> 0; 226 tests, tsc+lint clean; uncommitted
+- 2026-10-12T00:00Z [claude] RG-53 CREATED @77e5c15: issue #53 bug; already assigned to rayhan-ajentica; board status not moved (gh lacks read:project)
+- 2026-10-12T00:00Z [claude] RG-53 DECISION @77e5c15: Recruiter sees only assigned openings (#10/#50); user tested in browser; close as designed
+- 2026-10-12T00:00Z [claude] RG-53 SIDE-EFFECT @77e5c15: commented on #53 and closed it as not planned (user confirmed)
+- 2026-10-12T00:00Z [claude] RG-53 DONE @77e5c15: no code; closed as working as designed; notes PR on fix/RG-53/Recruiter-job-openings-scope
 - 2026-10-12T11:55Z [claude] RG-62 SIDE-EFFECT @1c1faf5: assigned to tahmidsparrow, board status set to In Development (added to board)
 - 2026-10-12T12:09Z [claude] RG-62 CREATED @1c1faf5: Bulk selection action bar overlaps editor-studio footer on narrow/short responsive viewports
 - 2026-10-12T12:16Z [claude] RG-62 DECISION @1c1faf5: fix via dynamic measured panel height, not magic-number bump or global flex refactor
@@ -314,3 +318,4 @@
 - 2026-10-12T12:56Z [claude] RG-62 SIDE-EFFECT @e31341f: local commit created (user confirmed), not pushed
 - 2026-10-12T12:56Z [claude] RG-62 SIDE-EFFECT @e31341f: posted summary comment on issue #62 (user confirmed)
 - 2026-10-12T13:00Z [claude] RG-62 SIDE-EFFECT @92d3c8e: pushed branch and opened PR #149 against develop (user requested)
+- 2026-10-13T00:00Z [claude] RG-62 SIDE-EFFECT @HEAD: merged origin/develop (RG-53 docs) to resolve PR #149 conflict; audit/state append-only conflicts only, no app code conflicts
