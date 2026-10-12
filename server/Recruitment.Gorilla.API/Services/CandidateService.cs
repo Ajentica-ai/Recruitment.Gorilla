@@ -34,6 +34,10 @@ public class CandidateService(AppDbContext db, IWebHostEnvironment env, Notifica
                                 c.RoleAppliedOption.Recruiters.Any(rr => rr.UserId == uid)))
             : query;
 
+    /// <summary>Whether the given user is an assigned recruiter of the given job opening.</summary>
+    private Task<bool> IsAssignedToRoleAsync(int roleId, int uid) =>
+        db.RoleAppliedOptions.AnyAsync(r => r.Id == roleId && r.Recruiters.Any(rr => rr.UserId == uid));
+
     public async Task<PagedResult<CandidateListItemDto>> GetAllAsync(
         CandidateListQuery q, int? ownerUserId = null)
     {
@@ -137,21 +141,51 @@ public class CandidateService(AppDbContext db, IWebHostEnvironment env, Notifica
         return MapToDetail(c);
     }
 
-    public async Task<CandidateListItemDto?> FindDuplicateAsync(string email)
-    {
-        if (string.IsNullOrWhiteSpace(email)) return null;
+    /// <summary>
+    /// A candidate's current status, scoped the same way as <see cref="GetByIdAsync"/> but
+    /// without the detail query's joins, for callers (like the next-status-options lookup) that
+    /// only need to know the candidate is in scope and what status it's at. Null when the
+    /// candidate doesn't exist or is out of the caller's access scope.
+    /// </summary>
+    public async Task<string?> GetCurrentStatusIfAccessibleAsync(int id, int? ownerUserId = null) =>
+        await ApplyAccess(db.Candidates, ownerUserId)
+            .Where(c => c.Id == id)
+            .Select(c => c.CurrentStatus)
+            .FirstOrDefaultAsync();
 
-        return await db.Candidates
+    /// <summary>
+    /// Finds a candidate sharing <paramref name="email"/>, if any. The match itself is global
+    /// (any email collision counts, regardless of scope - callers still need to know a possible
+    /// duplicate exists), but <c>Visible</c> is populated only when <paramref name="accessUserId"/>
+    /// may access that candidate, using the same owner/assigned-role predicate as <see cref="ApplyAccess"/>.
+    /// A null <paramref name="accessUserId"/> means no restriction (Admin+).
+    /// </summary>
+    public async Task<(CandidateListItemDto? Visible, bool Exists)> FindDuplicateAsync(string email, int? accessUserId)
+    {
+        if (string.IsNullOrWhiteSpace(email)) return (null, false);
+
+        var match = await db.Candidates
             .Where(c => c.Email == email)
             .OrderBy(c => c.Id)
-            .Select(c => new CandidateListItemDto(
-                c.Id, c.FullName, c.Email, c.Phone,
-                c.CurrentTitle,
-                c.RoleAppliedOption != null ? c.RoleAppliedOption.Name : c.AppliedRole,
-                c.CurrentStatus, c.CreatedAt,
-                c.SourceOption != null ? c.SourceOption.Name : null,
-                c.UpdatedAt))
+            .Select(c => new
+            {
+                Dto = new CandidateListItemDto(
+                    c.Id, c.FullName, c.Email, c.Phone,
+                    c.CurrentTitle,
+                    c.RoleAppliedOption != null ? c.RoleAppliedOption.Name : c.AppliedRole,
+                    c.CurrentStatus, c.CreatedAt,
+                    c.SourceOption != null ? c.SourceOption.Name : null,
+                    c.UpdatedAt),
+                c.OwnerUserId,
+                IsAssignedRecruiter = c.RoleAppliedOption != null &&
+                    c.RoleAppliedOption.Recruiters.Any(rr => rr.UserId == accessUserId),
+            })
             .FirstOrDefaultAsync();
+
+        if (match is null) return (null, false);
+
+        var visible = accessUserId is null || match.OwnerUserId == accessUserId || match.IsAssignedRecruiter;
+        return (visible ? match.Dto : null, true);
     }
 
     /// <summary>Distinct non-empty applied roles, for the role suggestions dropdown.</summary>
@@ -370,18 +404,28 @@ public class CandidateService(AppDbContext db, IWebHostEnvironment env, Notifica
     }
 
     /// <summary>
-    /// Creates a candidate. If an existing candidate shares the same email and the
-    /// caller has not set AllowDuplicate, the existing record is returned in
-    /// <c>Duplicate</c> and nothing is saved (warn-but-allow).
+    /// Creates a candidate, owned by <paramref name="ownerUserId"/> (set for every caller,
+    /// including Admin+ — this is who created it, not an access scope). A non-admin caller
+    /// (<paramref name="scopeUserId"/> set — null for Admin+, same convention as
+    /// <see cref="UpdateAsync"/>'s owner scope) may only file the candidate under a role they are
+    /// an assigned recruiter of; otherwise <c>Error</c> is set and nothing is saved.
+    /// If an existing candidate shares the same email and the caller has not set AllowDuplicate,
+    /// <c>DuplicateExists</c> is set and nothing is saved (warn-but-allow). <c>Duplicate</c> itself
+    /// carries the existing record only when the caller's own access scope (<paramref name="scopeUserId"/>)
+    /// covers it - otherwise the caller learns a duplicate exists but not which candidate it is.
     /// </summary>
-    public async Task<(CandidateDetailDto? Created, CandidateListItemDto? Duplicate)> CreateAsync(
-        CreateCandidateDto dto, int? ownerUserId, string? changedBy)
+    public async Task<(CandidateDetailDto? Created, CandidateListItemDto? Duplicate, bool DuplicateExists, string? Error)> CreateAsync(
+        CreateCandidateDto dto, int? ownerUserId, string? changedBy, int? scopeUserId = null)
     {
+        if (scopeUserId is int scopeUid && dto.RoleAppliedOptionId is int newRoleId &&
+            !await IsAssignedToRoleAsync(newRoleId, scopeUid))
+            return (null, null, false, "You are not assigned to this job opening.");
+
         if (!dto.AllowDuplicate)
         {
-            var existing = await FindDuplicateAsync(dto.Email);
-            if (existing is not null)
-                return (null, existing);
+            var (visible, exists) = await FindDuplicateAsync(dto.Email, scopeUserId);
+            if (exists)
+                return (null, visible, true, null);
         }
 
         var candidate = new Candidate
@@ -472,7 +516,7 @@ public class CandidateService(AppDbContext db, IWebHostEnvironment env, Notifica
         await db.SaveChangesAsync();
 
         // Reload with role/skill navigations for a complete detail response.
-        return ((await GetByIdAsync(candidate.Id))!, null);
+        return ((await GetByIdAsync(candidate.Id))!, null, false, null);
     }
 
     public async Task<CvFileResult?> GetCvFileAsync(int candidateId, int fileId)
@@ -525,12 +569,26 @@ public class CandidateService(AppDbContext db, IWebHostEnvironment env, Notifica
         return true;
     }
 
-    public async Task<CandidateDetailDto?> UpdateAsync(int id, UpdateCandidateDto dto, int? ownerUserId = null)
+    /// <summary>
+    /// Updates a candidate. A non-admin caller (<paramref name="ownerUserId"/> set) may only
+    /// reassign the candidate to a role they are an assigned recruiter of; this only applies
+    /// when <paramref name="dto"/>'s role differs from the candidate's current one, so editing
+    /// unrelated fields on a candidate filed under a role the caller isn't assigned to (which
+    /// they can reach through ownership or interview assignment) is never blocked by this check.
+    /// </summary>
+    public async Task<(CandidateDetailDto? Updated, string? Error)> UpdateAsync(
+        int id, UpdateCandidateDto dto, int? ownerUserId = null)
     {
         var candidate = await ApplyAccess(db.Candidates.Include(x => x.CandidateSkills), ownerUserId)
             .FirstOrDefaultAsync(x => x.Id == id);
 
-        if (candidate is null) return null;
+        if (candidate is null) return (null, null);
+
+        var previousRoleId = candidate.RoleAppliedOptionId;
+        if (ownerUserId is int ownerUid && dto.RoleAppliedOptionId != previousRoleId &&
+            dto.RoleAppliedOptionId is int newRoleId &&
+            !await IsAssignedToRoleAsync(newRoleId, ownerUid))
+            return (null, "You are not assigned to this job opening.");
 
         candidate.FullName = dto.FullName;
         candidate.Email = dto.Email;
@@ -596,7 +654,7 @@ public class CandidateService(AppDbContext db, IWebHostEnvironment env, Notifica
             candidate.CandidateSkills.Add(new CandidateSkill { SkillOptionId = skillId });
 
         await db.SaveChangesAsync();
-        return await GetByIdAsync(id);
+        return (await GetByIdAsync(id), null);
     }
 
     public async Task<StatusHistoryDto?> AddStatusAsync(

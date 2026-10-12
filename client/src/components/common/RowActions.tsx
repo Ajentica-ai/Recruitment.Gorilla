@@ -30,6 +30,14 @@ import {
  *
  * On Radix, so the menu portals out of the table's scroll container instead of
  * clipping at its edge.
+ *
+ * `side="top"`: below 1024px, `.table-cards` reflows each row into a stacked
+ * card with this trigger at the card's bottom-right (#65). Radix's collision
+ * avoidance only flips placement against the viewport, not sibling elements,
+ * so a downward-opening menu there always had room "in the viewport" and
+ * covered the next card. Opening upward overlaps the triggering card's own
+ * content instead; Radix still flips back to "bottom" when there's no room
+ * above (e.g. the first row/card near the top of the page).
  */
 export default function RowActions({
   children,
@@ -46,7 +54,7 @@ export default function RowActions({
           <MoreVertical strokeWidth={2} aria-hidden="true" />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">{children}</DropdownMenuContent>
+      <DropdownMenuContent align="end" side="top">{children}</DropdownMenuContent>
     </DropdownMenu>
   );
 }

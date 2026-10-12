@@ -168,6 +168,130 @@
 - 2026-10-07T00:00Z [claude] RG-47 SIDE-EFFECT @b46d6da: assigned rayhan-ajentica; board status NOT moved (gh lacks read:project)
 - 2026-10-07T00:00Z [claude] RG-47 BRANCH @b46d6da: fix/RG-47/View-all-job-openings-link created off develop (user confirmed)
 - 2026-10-07T00:00Z [claude] RG-47 DONE @b46d6da: link -> /jobs, hidden for non-/jobs roles; 142 tests, tsc+lint clean; uncommitted
+- 2026-10-08T19:52Z [claude] RG-75 SIDE-EFFECT @282f3b6: assigned to tahmidsparrow, board status -> In Development
+- 2026-10-08T19:52Z [claude] RG-75 CREATED @282f3b6: bug, dashboard Recommended section stale after eval submit
+- 2026-10-08T19:55Z [claude] RG-75 DECISION @282f3b6: scope=fix dashboard invalidation only; no auto-transition (user confirmed)
+- 2026-10-08T19:55Z [claude] RG-75 PHASE CLARIFY->PLAN @282f3b6: root cause = missing dashboard query invalidation
+- 2026-10-08T20:02Z [claude] RG-75 BRANCH @282f3b6: fix/RG-75/Dashboard-recommended-stale created off develop (user confirmed)
+- 2026-10-08T20:02Z [claude] RG-75 PHASE PLAN->CONSTRUCT @282f3b6: plan approved, branch created
+- 2026-10-08T20:11Z [claude] RG-75 DONE @282f3b6: dashboard invalidation fixed in AddStatusModal+KanbanBoard; 176/176 tests green; RG-72,RG-84 archived (retention)
+- 2026-10-08T20:11Z [claude] RG-75 SIDE-EFFECT @707cd99: local commit created (user confirmed), not pushed
+- 2026-10-08T20:11Z [claude] RG-75 SIDE-EFFECT @4dd40c4: posted summary comment on GitHub issue #75 (user confirmed)
+- 2026-10-08T20:11Z [claude] RG-75 SIDE-EFFECT @fcc400e: pushed branch and opened PR #127 against develop (user confirmed)
+- 2026-10-09T13:23Z [claude] RG-100 CREATED @e0e7d12: status-options/next unscoped access-control bug
+- 2026-10-09T13:23Z [claude] RG-100 SIDE-EFFECT @e0e7d12: assigned (already tahmidsparrow), board status Backlog->In Development
+- 2026-10-09T13:40Z [claude] RG-100 DECISION @42c2b46: plan approved by user (combined with branch gate, fast path)
+- 2026-10-09T13:40Z [claude] RG-100 BRANCH @42c2b46: fix/RG-100/Scope-status-options-next created off develop (user confirmed)
+- 2026-10-09T13:40Z [claude] RG-100 PHASE PLAN->CONSTRUCT @42c2b46: implementing scoped GetNext
+- 2026-10-09T13:55Z [claude] RG-100 PHASE CONSTRUCT->WRAP-UP @42c2b46: fix verified, 505/505 tests green
+- 2026-10-09T13:58Z [claude] RG-100 WRAP-UP @42c2b46: archived RG-85 (oldest completed) to stay within 10-item retention cap
+- 2026-10-09T13:58Z [claude] RG-100 DONE @42c2b46: GetNext scoped + role-gated, 505/505 tests green, not committed yet
+- 2026-10-09T15:05Z [claude] RG-100 SIDE-EFFECT @e258ad7: pushed branch and opened PR #132 against develop (user confirmed)
+- 2026-10-09T15:20Z [claude] RG-97 CREATED @9ebef80: role-assignment not enforced on candidate create/update (relevance-checked, narrowed vs original issue)
+- 2026-10-09T15:20Z [claude] RG-97 SIDE-EFFECT @9ebef80: already assigned (tahmidsparrow), board status Backlog->In Development
+- 2026-10-09T15:25Z [claude] RG-97 BRANCH @fd183e9: fix/RG-97/Enforce-role-assignment created off develop (bundled with plan approval)
+- 2026-10-09T15:25Z [claude] RG-97 PHASE PLAN->CONSTRUCT @fd183e9: implementing role-assignment check
+- 2026-10-09T15:55Z [claude] RG-97 PHASE CONSTRUCT->WRAP-UP @fd183e9: fix verified, 515/515 tests green (caught+fixed own scopeUserId bug mid-construct)
+- 2026-10-09T15:55Z [claude] RG-97 DONE @fd183e9: role-assignment enforced on candidate create/update, not committed yet
+- 2026-10-09T15:56Z [claude] RG-97 WRAP-UP @fd183e9: archived RG-82 (oldest completed) to stay within 10-item retention cap
+- 2026-10-09T16:05Z [claude] RG-97 SIDE-EFFECT @32c89e7: pushed branch and opened PR #133 against develop (user confirmed)
+- 2026-10-09T18:49Z [claude] RG-134 CREATED @590d564: dashboard redesign, action-first mobile-first (issue #134)
+- 2026-10-09T18:49Z [claude] RG-134 SIDE-EFFECT @590d564: assigned #134 to tahmidsparrow, added to board, status In Development
+- 2026-10-09T18:49Z [claude] RG-134 PHASE INTAKE->CLARIFY @590d564: layout, API scope, mockup decisions carried from planning session
+- 2026-10-09T18:55Z [claude] RG-134 DECISION @590d564: Up next Mine=future+awaiting-eval, Team=scoped; deltas=first entry into bucket in 7d
+- 2026-10-09T18:55Z [claude] RG-134 PHASE CLARIFY->PLAN @590d564: 8 assumptions confirmed by user
+- 2026-10-09T19:00Z [claude] RG-134 BRANCH @a1a6644: feature/RG-134/Dashboard-redesign created off origin/develop (user confirmed)
+- 2026-10-09T19:00Z [claude] RG-134 PHASE PLAN->CONSTRUCT @a1a6644: plan approved by user, 10 tasks
+- 2026-10-10T01:35Z [claude] RG-134 PHASE CONSTRUCT->WRAP-UP @a1a6644: 10/10 tasks; 525/525 server, 216/216 vitest, 12/12 e2e green
+- 2026-10-10T01:38Z [claude] RG-134 WRAP-UP @a1a6644: archived RG-83 (oldest completed); backlog -1 (RG-99 moot) +2 follow-ups
+- 2026-10-10T01:40Z [claude] RG-134 DONE @a1a6644: dashboard redesigned action-first/mobile-first; docs + guide updated; not committed
+- 2026-10-10T02:10Z [claude] RG-134 SIDE-EFFECT @58a6c51: pushed branch and opened PR #135 against develop (user confirmed)
+- 2026-10-10T03:00Z [claude] RG-58 SIDE-EFFECT @58a6c51: assigned #58 to tahmidsparrow, status In Development
+- 2026-10-10T03:00Z [claude] RG-58 CREATED @58a6c51: Add Education preset-value bug, fast path (issue #58)
+- 2026-10-10T03:05Z [claude] RG-58 DECISION @b749e19: fix both Education and Experience presets (user confirmed)
+- 2026-10-10T03:05Z [claude] RG-58 DECISION @b749e19: no new test, verify in running app (user confirmed)
+- 2026-10-10T03:05Z [claude] RG-58 BRANCH @b749e19: fix/RG-58/Blank-draft-entry-defaults created off develop (user confirmed)
+- 2026-10-10T03:05Z [claude] RG-58 PHASE PLAN->CONSTRUCT @b749e19: 2-task fast path
+- 2026-10-10T03:15Z [claude] RG-58 PHASE CONSTRUCT->WRAP-UP @b749e19: 2/2 tasks; tsc/lint/216 vitest green; verified live in app
+- 2026-10-10T03:15Z [claude] RG-58 DONE @b749e19: Education+Experience add-entry presets replaced with blank fields; not committed
+- 2026-10-10T03:16Z [claude] RG-58 WRAP-UP @b749e19: archived RG-93 (oldest completed) to stay within 10-item retention cap
+- 2026-10-10T03:25Z [claude] RG-58 SIDE-EFFECT @e4d7b4f: pushed branch and opened PR #136 against develop (user confirmed)
+- 2026-10-10T03:35Z [claude] RG-134 SIDE-EFFECT @b749e19: PR #135 merged into develop (user confirmed)
+- 2026-10-10T04:50Z [claude] RG-58 SIDE-EFFECT @69bcf33: PR #136 merged into develop, issue #58 auto-closed (user confirmed)
+- 2026-10-10T05:15Z [claude] 003 CREATED @69bcf33: docs/map refresh after Prism->Harbor, react-bootstrap->Tailwind rename found stale
+- 2026-10-10T05:15Z [claude] 003 DECISION @69bcf33: leave PROJECT_PLAN.md, FEATURE_IMPROVEMENT_ROADMAP.md, old spec pair as historical (user confirmed)
+- 2026-10-10T05:15Z [claude] 003 BRANCH @69bcf33: feature/003-docs-map-refresh created off develop (user confirmed)
+- 2026-10-10T05:15Z [claude] 003 PHASE PLAN->CONSTRUCT @69bcf33: 8-task plan approved by user
+- 2026-10-10T05:30Z [claude] 003 PHASE CONSTRUCT->WRAP-UP @69bcf33: 8/8 tasks; repo-wide stale-pattern sweep returns zero hits
+- 2026-10-10T05:30Z [claude] 003 WRAP-UP @69bcf33: archived RG-102 (oldest completed); backlog -1 (stale docs/PROJECT_PLAN.md line resolved)
+- 2026-10-10T05:30Z [claude] 003 DONE @69bcf33: react-bootstrap->Tailwind/shadcn, Prism->Harbor across AGENTS.md+5 ai-docs files+README; map/tech-stack refreshed; not committed
+- 2026-10-10T05:45Z [claude] 003 SIDE-EFFECT @5690914: merged unpushed fix/RG-58 branch (1 commit, superseded bookkeeping); resolved 4 conflicts
+- 2026-10-10T05:45Z [claude] RG-134 REVISED @5690914: plan.md regressed to 'PR open' mid-merge; corrected to 'merged @b749e19' (verified via gh pr view)
+- 2026-10-11T00:05Z [claude] 003 SIDE-EFFECT @97e0941: pushed branch and opened PR #137 against develop (user confirmed)
+- 2026-10-11T04:00Z [claude] 003 SIDE-EFFECT @308027d: PR #137 merged into develop (user confirmed)
+- 2026-10-11T04:16Z [claude] RG-138 SIDE-EFFECT @308027d: created issue #138, assigned tahmidsparrow, added to board, status In Development
+- 2026-10-11T04:16Z [claude] RG-138 CREATED @308027d: datepicker double-icon (Firefox) + skills-selected mislabel, repro'd via Playwright
+- 2026-10-11T04:30Z [claude] RG-138 DECISION @308027d: Firefox-specific fix, verified Chromium+WebKit already show 1 icon (user confirmed)
+- 2026-10-11T04:30Z [claude] RG-138 BRANCH @308027d: fix/RG-138/Datepicker-and-label-fixes created off develop (user confirmed)
+- 2026-10-11T04:30Z [claude] RG-138 PHASE PLAN->CONSTRUCT @308027d: 4-task plan approved by user
+- 2026-10-11T04:50Z [claude] RG-138 PHASE CONSTRUCT->WRAP-UP @308027d: 4/4 tasks; verified Chromium+Firefox+WebKit live; tsc/lint/219 vitest/38 e2e green
+- 2026-10-11T04:50Z [claude] RG-138 WRAP-UP @308027d: archived RG-50 (oldest completed) to stay within 10-item retention cap
+- 2026-10-11T04:50Z [claude] RG-138 DONE @308027d: Firefox date-icon dedupe + itemNoun on SearchableSelect (3 call sites fixed); not committed
+- 2026-10-11T05:12Z [claude] RG-139 SIDE-EFFECT @dbd14eb: created issue #139, assigned tahmidsparrow, added to board, status In Development
+- 2026-10-11T05:12Z [claude] RG-139 CREATED @dbd14eb: EmailOutboxWorker overlapping-wait crash, found while running RG-138's e2e suite
+- 2026-10-11T05:20Z [claude] RG-138 SIDE-EFFECT @d30fd04: pushed branch and opened PR #140 against develop (user confirmed)
+- 2026-10-11T06:00Z [claude] RG-138 SIDE-EFFECT @d35c517: PR #140 merged into develop, issue #138 auto-closed (user confirmed)
+- 2026-10-11T06:00Z [claude] RG-139 BRANCH @d35c517: fix/RG-139/Email-outbox-overlapping-wait-crash created off develop (user confirmed)
+- 2026-10-11T06:00Z [claude] RG-139 PHASE PLAN->CONSTRUCT @d35c517: 3-task plan approved by user
+- 2026-10-11T06:30Z [claude] RG-139 DONE @d35c517: overlapping-wait fix verified; 3x repeat of BackgroundQueueTests clean (7/7 each); uncommitted
+- 2026-10-11T06:30Z [claude] RG-101 ARCHIVED @d35c517: moved to _archive, retention cap (10 active items)
+- 2026-10-11T06:45Z [claude] RG-139 SIDE-EFFECT @61804ff: pushed branch and opened PR #141 against develop (user confirmed)
+- 2026-10-11T15:33Z [claude] RG-40 SIDE-EFFECT @1e398c7: already assigned to tahmidsparrow; moved board status Backlog -> In Development
+- 2026-10-11T15:34Z [claude] RG-40 CREATED @1e398c7: issue #40, missing password visibility icon on Temporary Password fields
+- 2026-10-11T15:36Z [claude] RG-40 BRANCH @1e398c7: feature/RG-40/Password-visibility-icon created off develop (user confirmed)
+- 2026-10-11T15:36Z [claude] RG-40 PHASE PLAN->CONSTRUCT @1e398c7: fast path, plan approved
+- 2026-10-11T15:39Z [claude] RG-40 PHASE CONSTRUCT->WRAP-UP @1e398c7: both password fields verified in browser
+- 2026-10-11T15:39Z [claude] RG-40 DONE @1e398c7: Input swapped for PasswordInput in Add User + Reset password modals
+- 2026-10-11T15:48Z [claude] RG-40 SIDE-EFFECT @af68f7f: PR #142 opened against develop (user confirmed)
+- 2026-10-11T15:58Z [claude] RG-98 SIDE-EFFECT @8fb74f2: assigned to tahmidsparrow; added to board, status Backlog -> In Development
+- 2026-10-11T15:58Z [claude] RG-98 CREATED @8fb74f2: issue #98, candidate-create 409 leaks out-of-scope candidate record
+- 2026-10-11T16:15Z [claude] RG-98 DECISION @8fb74f2: fix disclosure only, email-equality match left unchanged (user confirmed)
+- 2026-10-11T16:15Z [claude] RG-98 PHASE CLARIFY->PLAN @8fb74f2: writing plan.md
+- 2026-10-11T16:17Z [claude] RG-98 BRANCH @4c298c1: fix/RG-98/Candidate-duplicate-scope-leak created off develop (user confirmed)
+- 2026-10-11T16:17Z [claude] RG-98 PHASE PLAN->CONSTRUCT @4c298c1: plan approved
+- 2026-10-11T16:38Z [claude] RG-98 PHASE CONSTRUCT->WRAP-UP @4c298c1: 533/533 backend, 221/221 frontend tests pass
+- 2026-10-11T16:38Z [claude] RG-98 DONE @4c298c1: scoped duplicate-candidate 409 to caller access; backlog'd the ApproveDraftAsync gap (user confirmed)
+- 2026-10-11T16:46Z [claude] RG-98 SIDE-EFFECT @b628447: PR #143 opened against develop (user confirmed)
+- 2026-10-11T16:52Z [claude] RG-96 SIDE-EFFECT @532df34: already assigned to tahmidsparrow; added to board, status Backlog -> In Development
+- 2026-10-11T16:52Z [claude] RG-96 CREATED @532df34: issue #96, analytics roleId scope-replace bug - found already fixed by 9fe7f1b
+- 2026-10-11T16:55Z [claude] RG-96 DECISION @532df34: close as already-fixed, no code change (user confirmed)
+- 2026-10-11T16:55Z [claude] RG-96 SIDE-EFFECT @532df34: posted explanatory comment, closed issue #96, board status -> Done (user confirmed)
+- 2026-10-11T16:55Z [claude] RG-96 DONE @532df34: already fixed by 9fe7f1b; no code change
+- 2026-10-11T16:59Z [claude] RG-74 SIDE-EFFECT @532df34: assigned to tahmidsparrow; added to board, status Backlog -> In Development
+- 2026-10-11T16:59Z [claude] RG-74 CREATED @532df34: issue #74, overall-rating dropdown shows duplicated 'N - N -' value
+- 2026-10-11T17:00Z [claude] RG-74 BRANCH @509f84a: fix/RG-74/Overall-rating-dropdown-duplicate-value created off develop (user confirmed)
+- 2026-10-11T17:00Z [claude] RG-74 PHASE PLAN->CONSTRUCT @509f84a: fast path, plan approved
+- 2026-10-11T17:04Z [claude] RG-74 PHASE CONSTRUCT->WRAP-UP @509f84a: verified in browser on interview #14
+- 2026-10-11T17:04Z [claude] RG-74 DONE @509f84a: dropped duplicated value prefix in Overall rating dropdown
+- 2026-10-11T17:33Z [claude] RG-74 SIDE-EFFECT @e1bd9ef: PR #144 opened against develop (user confirmed)
+- 2026-10-11T17:39Z [claude] RG-74 REVISED @ea8e86c: squashed + reworded commit to drop em-dashes per no-em-dash rule (user confirmed); sha e1bd9ef superseded
+- 2026-10-11T17:59Z [claude] RG-71 SIDE-EFFECT @36bbba8: assigned to tahmidsparrow; added to board, status -> In Development
+- 2026-10-11T17:59Z [claude] RG-71 CREATED @36bbba8: issue #71, Applications chart x-axis label overlap - found already fixed by b749e19 (RG-134)
+- 2026-10-11T18:07Z [claude] RG-71 DECISION @36bbba8: close as already-fixed, no code change (user confirmed)
+- 2026-10-11T18:07Z [claude] RG-71 SIDE-EFFECT @36bbba8: posted explanatory comment, closed issue #71, board status -> Done (user confirmed)
+- 2026-10-11T18:07Z [claude] RG-71 DONE @36bbba8: already fixed by b749e19 (RG-134); no code change
+- 2026-10-11T18:15Z [claude] RG-65 SIDE-EFFECT @36bbba8: already assigned to tahmidsparrow; board status Backlog -> In Development
+- 2026-10-11T18:15Z [claude] RG-65 CREATED @36bbba8: issue #65, card-view row-actions dropdown overlaps the next candidate card
+- 2026-10-11T18:17Z [claude] RG-65 DECISION @36bbba8: prefer side=top on RowActions only, not the shared wrapper (user confirmed)
+- 2026-10-11T18:17Z [claude] RG-65 PHASE CLARIFY->PLAN @36bbba8: writing plan.md
+- 2026-10-11T18:18Z [claude] RG-65 BRANCH @69c6489: feature/RG-65/Row-actions-menu-overlap created off develop (user confirmed)
+- 2026-10-11T18:18Z [claude] RG-65 PHASE PLAN->CONSTRUCT @69c6489: plan approved
+- 2026-10-11T18:23Z [claude] RG-65 PHASE CONSTRUCT->WRAP-UP @69c6489: verified across Candidates/Users at reported viewport; full suite 221/221
+- 2026-10-11T18:23Z [claude] RG-65 DONE @69c6489: RowActions opens upward (side=top), stops overlapping the next card
+- 2026-10-11T18:58Z [claude] RG-65 SIDE-EFFECT @ee8cd3f: PR #145 opened against develop (user confirmed)
+- 2026-10-08T00:00Z [claude] RG-48 CREATED @9909c42: issue #48 bug, Interviewer View all redirect; already assigned to rayhan-ajentica
+- 2026-10-08T00:00Z [claude] RG-48 DECISION @9909c42: verified in Edge via Playwright: Interviewer sees no View all; Admin/Recruiter land on /jobs (RG-47 branch)
+- 2026-10-08T00:00Z [claude] RG-48 DONE @9909c42: no code; covered by RG-47 merged in PR #117
 - 2026-10-08T00:00Z [claude] RG-49 CREATED @51946a6: issue #49 bug; already assigned; repro: stale login 'from' after logout
 - 2026-10-08T00:00Z [claude] RG-49 SIDE-EFFECT @51946a6: already assigned to rayhan-ajentica; board status not moved (gh lacks read:project)
 - 2026-10-08T00:00Z [claude] RG-49 PHASE PLAN→CONSTRUCT @51946a6: plan approved by user; branch fix/RG-49/Logout-keeps-previous-page off origin/develop (user confirmed)

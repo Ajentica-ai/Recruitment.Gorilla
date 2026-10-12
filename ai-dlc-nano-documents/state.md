@@ -1,9 +1,9 @@
 # AI-DLC Nano State
 - Active work item: none
-- Phase: -
-- Branch: fix/RG-49/Logout-keeps-previous-page
-- Base SHA: 51946a6
-- Next step: none. RG-49 done, uncommitted on fix/RG-49/Logout-keeps-previous-page; commit/PR on request.
+- Phase: —
+- Branch: feature/RG-65/Row-actions-menu-overlap
+- Base SHA: 69c6489
+- Next step: none - RG-65 complete, PR #145 open against develop
 - Paused work items: none
-- Uncommitted code: yes
-- Last updated: 2026-10-07T00:00Z by claude
+- Uncommitted code: no
+- Last updated: 2026-10-12T00:00Z by claude

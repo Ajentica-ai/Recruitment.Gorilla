@@ -5,6 +5,7 @@ import { AlertTriangle, CheckCircle2, Copy, Download, FileJson, UploadCloud, XCi
 import { downloadImportTemplate, getActiveRoleOptions, importJsonCandidate } from '../services/api';
 import type { CVDraft } from '../types';
 import { parseImportManifest, type ImportManifest } from '../utils/importManifest';
+import { jobStatus } from '../utils/jobStatus';
 import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -33,9 +34,9 @@ const ACCEPTED = {
 const isJson = (f: File) => f.name.toLowerCase().endsWith('.json');
 
 /**
- * Super Admin only. Imports candidates from a JSON file (made from the downloadable template) together
- * with the CVs it names. Each valid entry is sent with its CV, one at a time, and becomes a Pending draft
- * in the Review Workspace, just like a parsed CV.
+ * Admin and Super Admin only. Imports candidates from a JSON file (made from the downloadable template)
+ * together with the CVs it names. Each valid entry is sent with its CV, one at a time, and becomes a
+ * Pending draft in the Review Workspace, just like a parsed CV.
  */
 export default function JsonImporter({ onDraftsParsed }: Props) {
   const [batchName, setBatchName] = useState('');
@@ -49,10 +50,12 @@ export default function JsonImporter({ onDraftsParsed }: Props) {
   const [busy, setBusy] = useState(false);
   const [finished, setFinished] = useState(false);
 
-  const { data: roles = [] } = useQuery({
+  const { data: allRoles = [] } = useQuery({
     queryKey: ['active-role-options'],
     queryFn: getActiveRoleOptions,
   });
+  // A job opening must be selected to import; only ones still open are offerable.
+  const roles = allRoles.filter((r) => jobStatus(r) === 'open' || jobStatus(r) === 'closing-soon');
 
   useEffect(() => {
     let current = true;
@@ -119,7 +122,7 @@ export default function JsonImporter({ onDraftsParsed }: Props) {
   };
 
   const handleImport = async () => {
-    if (validRows.length === 0) return;
+    if (validRows.length === 0 || selectedRoleId == null) return;
     const batchId = `batch_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
     setBusy(true);
     setFinished(false);
@@ -201,12 +204,13 @@ export default function JsonImporter({ onDraftsParsed }: Props) {
           <NativeSelect
             id="json-job-role-select"
             size="sm"
+            required
             value={selectedRoleId ?? ''}
             disabled={busy}
             onChange={(e) => setSelectedRoleId(e.target.value ? Number(e.target.value) : null)}
             aria-label="Default Job Opening"
           >
-            <option value="">Default Job Opening (Optional)…</option>
+            <option value="">Default Job Opening…</option>
             {roles.map((r) => (
               <option key={r.id} value={r.id}>
                 {r.name}
@@ -324,13 +328,18 @@ export default function JsonImporter({ onDraftsParsed }: Props) {
 
       {manifest && manifest.rows.length > 0 && !finished && (
         <div className="flex flex-wrap items-center justify-end gap-3">
+          {selectedRoleId == null && (
+            <span className="text-[length:var(--text-sm)] text-muted-foreground">
+              Choose a default job opening to import.
+            </span>
+          )}
           {validRows.length < manifest.rows.length && (
             <span className="text-[length:var(--text-sm)] text-muted-foreground">
               {manifest.rows.length - validRows.length} entr{manifest.rows.length - validRows.length === 1 ? 'y' : 'ies'} with
               errors will be skipped.
             </span>
           )}
-          <Button onClick={handleImport} disabled={busy || validRows.length === 0}>
+          <Button onClick={handleImport} disabled={busy || validRows.length === 0 || selectedRoleId == null}>
             Import {validRows.length} candidate{validRows.length === 1 ? '' : 's'}
           </Button>
         </div>

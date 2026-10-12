@@ -58,6 +58,22 @@ public class ControllerAuthorizationTests(ApiFixture fx)
         await AssertStatus(role, HttpMethod.Get, $"/api/candidates/{id}/evaluation-report", expected);
     }
 
+    // ---- Next status options: Recruiter+ (Interviewer 403); candidate-access-scoped ----
+    // Was open to any authenticated role with no scope at all (#100): confirmed a candidate
+    // exists, and narrowed its current status via the allowed-transitions list, to a caller who
+    // gets 404/403 from the candidate endpoint itself.
+
+    [Theory]
+    [InlineData("SuperAdmin", HttpStatusCode.OK)]
+    [InlineData("Admin", HttpStatusCode.OK)]
+    [InlineData("Recruiter", HttpStatusCode.NotFound)]
+    [InlineData("Interviewer", HttpStatusCode.Forbidden)]
+    public async Task Get_next_status_options(string role, HttpStatusCode expected)
+    {
+        var id = await fx.NewCandidateAsync(fx.AdminId);
+        await AssertStatus(role, HttpMethod.Get, $"/api/status-options/next/{id}", expected);
+    }
+
     // ---- Offers ----
     // Creating an offer was role-gated but not scoped, so a Recruiter could raise one on any
     // candidate. Reviewing one was open to every Recruiter. The UI offered review only to Admin+.
@@ -119,6 +135,33 @@ public class ControllerAuthorizationTests(ApiFixture fx)
         Assert.Equal(HttpStatusCode.Unauthorized, anon.StatusCode);
     }
 
+    // ---- Email delivery log: SuperAdmin only ----
+
+    [Theory]
+    [InlineData("SuperAdmin", HttpStatusCode.OK)]
+    [InlineData("Admin", HttpStatusCode.Forbidden)]
+    [InlineData("Recruiter", HttpStatusCode.Forbidden)]
+    [InlineData("Interviewer", HttpStatusCode.Forbidden)]
+    public Task Get_email_outbox(string role, HttpStatusCode expected) =>
+        AssertStatus(role, HttpMethod.Get, "/api/config/email/outbox", expected);
+
+    [Fact]
+    public async Task Resending_an_email_is_super_admin_only()
+    {
+        await AssertStatus("Admin", HttpMethod.Post, "/api/config/email/outbox/1/resend", HttpStatusCode.Forbidden);
+        await AssertStatus("Recruiter", HttpMethod.Post, "/api/config/email/outbox/1/resend", HttpStatusCode.Forbidden);
+        await AssertStatus("Interviewer", HttpMethod.Post, "/api/config/email/outbox/1/resend", HttpStatusCode.Forbidden);
+        var anon = await fx.SendAsync(HttpMethod.Post, "/api/config/email/outbox/1/resend", token: null);
+        Assert.Equal(HttpStatusCode.Unauthorized, anon.StatusCode);
+    }
+
+    [Fact]
+    public async Task Resending_an_unknown_email_is_not_found()
+    {
+        var resp = await fx.SendAsync(HttpMethod.Post, "/api/config/email/outbox/999999999/resend", await TokenFor("SuperAdmin"));
+        Assert.Equal(HttpStatusCode.NotFound, resp.StatusCode);
+    }
+
     // ---- Slack settings: SuperAdmin only ----
 
     [Theory]
@@ -140,21 +183,21 @@ public class ControllerAuthorizationTests(ApiFixture fx)
         Assert.Equal(HttpStatusCode.Unauthorized, anon.StatusCode);
     }
 
-    // ---- JSON candidate import: SuperAdmin only ----
+    // ---- JSON candidate import: Admin and Super Admin ----
 
     [Theory]
     [InlineData("SuperAdmin", HttpStatusCode.OK)]
-    [InlineData("Admin", HttpStatusCode.Forbidden)]
+    [InlineData("Admin", HttpStatusCode.OK)]
     [InlineData("Recruiter", HttpStatusCode.Forbidden)]
     [InlineData("Interviewer", HttpStatusCode.Forbidden)]
     public Task Get_import_template(string role, HttpStatusCode expected) =>
         AssertStatus(role, HttpMethod.Get, "/api/candidate-import/template", expected);
 
-    // A body that would import, so the role is what decides the answer. Admin and Recruiter can write
-    // candidates everywhere else; this endpoint is the one place they can't.
+    // A body that would import, so the role is what decides the answer. Recruiter can write
+    // candidates everywhere else; this endpoint is one place they can't.
     [Theory]
     [InlineData("SuperAdmin", HttpStatusCode.OK)]
-    [InlineData("Admin", HttpStatusCode.Forbidden)]
+    [InlineData("Admin", HttpStatusCode.OK)]
     [InlineData("Recruiter", HttpStatusCode.Forbidden)]
     [InlineData("Interviewer", HttpStatusCode.Forbidden)]
     public async Task Post_import_entry(string role, HttpStatusCode expected)
@@ -166,6 +209,7 @@ public class ControllerAuthorizationTests(ApiFixture fx)
         {
             { new StringContent($$"""{ "cvFileName": "{{name}}", "fullName": "Auth Probe", "email": "{{Guid.NewGuid():N}}@test.com" }"""), "entry" },
             { file, "file", name },
+            { new StringContent(fx.RoleId.ToString()), "roleAppliedOptionId" },
         };
 
         var resp = await fx.SendMultipartAsync("/api/candidate-import", await TokenFor(role), form);
@@ -176,6 +220,42 @@ public class ControllerAuthorizationTests(ApiFixture fx)
             using var doc = JsonDocument.Parse(await resp.Content.ReadAsStringAsync());
             fx.DeleteStoredUpload(doc.RootElement.GetProperty("draft").GetProperty("storedFileName").GetString()!);
         }
+    }
+
+    // ---- CV upload: Admin and Recruiter can write candidates ----
+
+    [Theory]
+    [InlineData("SuperAdmin", HttpStatusCode.OK)]
+    [InlineData("Admin", HttpStatusCode.OK)]
+    [InlineData("Recruiter", HttpStatusCode.OK)]
+    [InlineData("Interviewer", HttpStatusCode.Forbidden)]
+    public async Task Post_cv_upload(string role, HttpStatusCode expected)
+    {
+        var roleId = await fx.NewRoleAsync(recruiterUserIds: [fx.RecruiterId]);
+        var name = $"cvupload_auth_{Guid.NewGuid():N}.pdf";
+        var file = new ByteArrayContent(ApiFixture.MinimalPdf($"Auth {Guid.NewGuid()}"));
+        file.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/pdf");
+        var form = new MultipartFormDataContent
+        {
+            { file, "file", name },
+            { new StringContent(roleId.ToString()), "roleAppliedOptionId" },
+        };
+
+        var resp = await fx.SendMultipartAsync("/api/cvupload", await TokenFor(role), form);
+
+        Assert.Equal(expected, resp.StatusCode);
+        if (resp.IsSuccessStatusCode)
+        {
+            using var doc = JsonDocument.Parse(await resp.Content.ReadAsStringAsync());
+            fx.DeleteStoredUpload(doc.RootElement.GetProperty("storedFileName").GetString()!);
+        }
+    }
+
+    [Fact]
+    public async Task Cv_upload_refuses_anonymous_callers()
+    {
+        var anon = await fx.SendMultipartAsync("/api/cvupload", token: null, new MultipartFormDataContent());
+        Assert.Equal(HttpStatusCode.Unauthorized, anon.StatusCode);
     }
 
     [Fact]
@@ -243,6 +323,23 @@ public class ControllerAuthorizationTests(ApiFixture fx)
     {
         await AssertStatus(role, HttpMethod.Get, "/api/interviews/types", HttpStatusCode.OK);
         await AssertStatus(role, HttpMethod.Get, "/api/dashboard/kpis", HttpStatusCode.OK);
+        await AssertStatus(role, HttpMethod.Get, "/api/dashboard/applications-summary?days=7", HttpStatusCode.OK);
+    }
+
+    // ---- User guide: any authenticated role, content cut to the caller's edition ----
+
+    [Theory]
+    [InlineData("Interviewer", "interviewer")]
+    [InlineData("Recruiter", "recruiter")]
+    [InlineData("Admin", "admin")]
+    [InlineData("SuperAdmin", "superadmin")]
+    public async Task Get_user_guide_returns_the_callers_edition(string role, string expectedEdition)
+    {
+        var resp = await fx.SendAsync(HttpMethod.Get, "/api/user-guide", await TokenFor(role));
+        Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
+
+        using var doc = JsonDocument.Parse(await resp.Content.ReadAsStringAsync());
+        Assert.Equal(expectedEdition, doc.RootElement.GetProperty("edition").GetString());
     }
 
     // ---- Default-deny: no token → 401 ----
@@ -254,7 +351,9 @@ public class ControllerAuthorizationTests(ApiFixture fx)
     [InlineData("/api/candidates/source-options")]
     [InlineData("/api/interviews/types")]
     [InlineData("/api/dashboard/kpis")]
+    [InlineData("/api/dashboard/applications-summary")]
     [InlineData("/api/audit")]
+    [InlineData("/api/user-guide")]
     public async Task Protected_endpoints_reject_anonymous(string url)
     {
         var resp = await fx.SendAsync(HttpMethod.Get, url, token: null);

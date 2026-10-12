@@ -1,7 +1,14 @@
 import { expect, test, type APIRequestContext } from '@playwright/test';
 import { randomUUID } from 'node:crypto';
-import { ADMIN, RECRUITER, apiAuth, signIn } from './helpers';
+import { ADMIN, RECRUITER, apiAuth, requireData, signIn } from './helpers';
 import { seedCandidate, uploadDraft } from './seed';
+
+/** Job openings the given caller may use: every active opening for Admin+, only the assigned ones for a Recruiter. */
+async function rolesFor(request: APIRequestContext, auth: Record<string, string>): Promise<{ id: number }[]> {
+  const res = await request.get('/api/candidates/role-options', { headers: auth });
+  expect(res.ok(), `role-options failed: ${res.status()}`).toBeTruthy();
+  return res.json();
+}
 
 /**
  * Regression guard for #50: a Recruiter reaches Upload CVs and Candidates, but only their own work.
@@ -44,7 +51,14 @@ test.describe('a Recruiter works only their own CVs and candidates', () => {
   test("a Recruiter sees their own draft and none of an Admin's", async ({ request }) => {
     const admin = await apiAuth(request, ADMIN);
     const recruiter = await apiAuth(request, RECRUITER);
-    const adminsDraft = await uploadDraft(request, admin, `RG50 Admin Draft ${randomUUID()}`);
+
+    // The Admin's draft must be for an opening the Recruiter is NOT assigned to, or scoping
+    // would legitimately show it to them (RG130) and this test would prove nothing.
+    const recruiterRoleIds = new Set((await rolesFor(request, recruiter)).map((r) => r.id));
+    const outsideRole = (await rolesFor(request, admin)).find((r) => !recruiterRoleIds.has(r.id));
+    requireData(outsideRole !== undefined, 'a job opening the test Recruiter is not assigned to');
+
+    const adminsDraft = await uploadDraft(request, admin, `RG50 Admin Draft ${randomUUID()}`, outsideRole!.id);
     const ownDraft = await uploadDraft(request, recruiter, `RG50 Own Draft ${randomUUID()}`);
 
     try {
@@ -85,6 +99,37 @@ test.describe('a Recruiter works only their own CVs and candidates', () => {
     } finally {
       await request.post(`/api/candidate-drafts/${adminsDraft.id}/discard`, { headers: admin }).catch(() => {});
       await request.post(`/api/candidate-drafts/${ownDraft.id}/discard`, { headers: recruiter }).catch(() => {});
+    }
+  });
+
+  test("a Recruiter can see and approve an Admin's draft for their assigned job opening (RG130)", async ({ request }) => {
+    const admin = await apiAuth(request, ADMIN);
+    const recruiter = await apiAuth(request, RECRUITER);
+
+    const assignedRoles = await rolesFor(request, recruiter);
+    requireData(assignedRoles.length > 0, 'a job opening the test Recruiter is assigned to');
+    const roleId = assignedRoles[0].id;
+
+    const draft = await uploadDraft(request, admin, `RG130 Assigned Draft ${randomUUID()}`, roleId);
+    let candidateId: number | undefined;
+    try {
+      expect(await draftIds(request, recruiter)).toContain(draft.id);
+      expect((await request.get(`/api/candidate-drafts/${draft.id}`, { headers: recruiter })).status()).toBe(200);
+
+      const approve = await request.post(`/api/candidate-drafts/${draft.id}/approve`, {
+        headers: recruiter,
+        data: {
+          fullName: 'RG130 Assigned Candidate',
+          email: `rg130-${randomUUID()}@example.invalid`,
+          relevantExperience: '1 year',
+          roleAppliedOptionId: roleId,
+        },
+      });
+      expect(approve.ok(), `approve failed: ${approve.status()} ${await approve.text()}`).toBeTruthy();
+      candidateId = (await approve.json()).candidateId as number;
+    } finally {
+      await request.post(`/api/candidate-drafts/${draft.id}/discard`, { headers: admin }).catch(() => {});
+      if (candidateId) await request.delete(`/api/candidates/${candidateId}`, { headers: admin }).catch(() => {});
     }
   });
 

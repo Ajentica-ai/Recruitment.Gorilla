@@ -9,6 +9,16 @@ namespace Recruitment.Gorilla.API.Services;
 /// </summary>
 public static class EmailTemplates
 {
+    /// <summary>
+    /// Stands in for the "open the attached invite" sentence in a stored email body. Whether the
+    /// calendar invite actually travels as an attachment depends on which provider ends up sending
+    /// this email (and isn't even fixed until send time: the admin can switch providers while a send
+    /// is still retrying), so the template can't commit to that sentence up front. The sender
+    /// (<c>EmailDispatcher</c>) substitutes the real text, or removes the placeholder, right before
+    /// handing the body to a transport.
+    /// </summary>
+    public const string CalendarNotePlaceholder = "{{calendar-attachment-note}}";
+
     private static string Wrap(string title, string bodyHtml, string? actionUrl = null, string? actionLabel = null)
     {
         var action = actionUrl is null ? "" : $"""
@@ -54,7 +64,7 @@ public static class EmailTemplates
               &nbsp;·&nbsp;
               <a href="{CalendarInvite.OutlookUrl(invite)}" style="color:#2b579a;">Outlook</a>
               <br />
-              <span style="color:#777777;">Or open the attached invite (interview.ics) in any calendar app.</span>
+              <span style="color:#777777;">{CalendarNotePlaceholder}</span>
             </p>
             """;
 

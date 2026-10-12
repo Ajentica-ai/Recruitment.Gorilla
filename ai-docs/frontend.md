@@ -5,45 +5,46 @@ React 19 + TypeScript + Vite. Root: `client/`.
 ## Structure
 | Path | Purpose |
 |---|---|
-| `src/main.tsx` | Entry; wraps app in `QueryClientProvider`; imports Figtree, Bootstrap CSS + `index.css`. |
+| `src/main.tsx` | Entry; wraps app in `QueryClientProvider`; imports Plus Jakarta Sans (self-hosted) + `styles/theme.css`. |
 | `src/App.tsx` | Router, `AuthProvider`, `ProtectedLayout` (auth guard only — chrome lives in `AppShell`), routes. |
 | `src/navRoutes.ts` | **Single source for the sidebar items and topbar titles** — path, label, lucide icon, description, role gate. |
 | `src/auth/AuthContext.tsx` | Auth state, login/logout, silent session restore. |
 | `src/services/api.ts` | Typed Axios layer + auth interceptors (the only HTTP caller). |
 | `src/types/index.ts` | Shared types mirroring API DTOs. |
-| `src/pages/` | `DashboardPage`, `LoginPage`, `UploadPage`, `CandidatesPage`, `CandidateDetailPage`, `CandidateEvaluationReportPage`, `InterviewPage`, `ConfigurationPage`, `UsersPage`, `AuditLogPage`, `ChangePasswordPage`. |
-| `src/pages/configuration/` | The Configuration tabs: `JobOpeningsTab`, `OptionChipsTab`, `EmailSettingsTab`, `SlackSettingsTab`. |
+| `src/pages/` | `DashboardPage`, `LoginPage`, `UploadPage`, `CandidatesPage`, `CandidateDetailPage`, `CandidateEvaluationReportPage`, `InterviewPage`, `JobsPage`, `AnalyticsPage`, `ConfigurationPage`, `UsersPage`, `AuditLogPage`, `UserGuidePage`, `ChangePasswordPage`. |
+| `src/pages/configuration/` | The Configuration tabs: `JobOpeningsTab`, `OptionChipsTab`, `EmailSettingsTab`, `EmailDeliveryTab`, `SlackSettingsTab`. |
 | `src/components/shell/` | App chrome: `AppShell` (layout + sidebar state, skip link, `<main>`), `SidebarNav`, `TopbarTitle`, **`UserMenu`** (topbar avatar → account menu). |
-| `src/components/ui/` | Shared primitives: **`Page`**, **`SectionCard`**, `PageHeader`, `Pagination`, `EmptyState`, `ConfirmModal`, **`Loading`** (`LoadingPanel`, `Skeleton*`), `Tabs` + `useTabs`. |
+| `src/components/common/` | App-level primitives: **`Page`**, **`SectionCard`**, `PageHeader`, `Pagination`, `EmptyState`, `ConfirmModal`, **`Loading`** (`LoadingPanel`, `Skeleton*`), `Tabs` + `useTabs`, `Avatar`, `RowActions`, `PasswordInput`. |
+| `src/components/ui/` | shadcn/Radix primitives, styled for Harbor: `button`, `badge`, `card`, `dialog`, `sheet`, `dropdown-menu`, `select`, `native-select`, `segmented`, `tabs`, `checkbox`, `input`, `textarea`, `tooltip`, `popover`, and the rest of the set. |
 | `src/components/` | `BulkUploader`, `JsonImporter`, `drafts/DraftReviewWorkspace`, `CandidateForm`, `StatusTimeline`, `SearchableSelect`, `StatusBadge`, **`ThemeMenu`**, `ToastStack`, `RequireRole`, `NotificationBell`, `ReadOnlyCandidateProfile`, `EvaluationForm`. |
-| `src/components/dashboard/` | Dashboard widgets: `KpiCard`, `kpiIcons`, `StatusDonutChart`, `TrendChart`, `CountBarChart`, `ActiveJobOpeningsTable`, `MyInterviewsCard`, `DashboardHero`. |
+| `src/components/dashboard/` | Dashboard widgets: `DashboardHero`, `QuickActionFab`, `UpNextCard` (+ `upNextGroups.tsx`), `KpiStrip`, `KpiCard`, `kpiIcons`, `PipelineCard`, `TrendChart`, `ActiveJobOpeningsCard` (+ `jobOrder.ts`), `PipelineInsightsCard`, `CountBarChart`, `OfferMetricsCard`, `ActivityFeed` (+ `activityGroups.ts`). See the Dashboard section. |
 | `src/utils/` | `statusColors.ts` (status → tone class); `chartColors.ts` (chart colors from status tokens + chrome read off the design tokens); `evaluationCriteria.ts` (interview-form catalog — keys match the backend); `skillColors.ts` (stable hash of a skill name → badge class); `jobStatus.ts` (job-opening lifecycle); `initials.ts`. |
 | `src/styles/tokens.css` | **Design tokens — the single source of visual truth.** |
-| `src/index.css` | Bootstrap bridge → Prism semantic layer → app-specific components. |
+| `src/index.css` | The hand-written semantic component layer (cards, status badges, tables, kanban board, candidate profile) with no shadcn equivalent; imported into Tailwind's `legacy` layer by `styles/theme.css`, which sits below Tailwind's utilities so a utility still wins on a shadcn component. |
 | `src/assets/brand-logo.png` | Brand badge artwork, imported by `BrandLogo`. `public/favicon.png` is the same art padded square. |
 | `vite.config.ts` | Dev server host + `/api` proxy. |
 
-## Design system (Prism)
+## Design system (Harbor)
 
-The UI follows the **Ajentica Prism/Pulse** dashboard so the two products read
+The UI follows the **Ajentica Harbor/Pulse** dashboard so the two products read
 as one. `styles/tokens.css` holds the palette, radius/space/type scales and the
-dark-mode overrides; `index.css` maps those onto Bootstrap's `--bs-*` so
-react-bootstrap components inherit the design with no JSX change, then adds a
-semantic class layer that pages are written against.
+dark-mode overrides; `styles/theme.css` maps the `--color-*` namespace onto
+those tokens so shadcn/Radix components (`components/ui/`) inherit the design
+with no JSX change, then `index.css` adds the semantic class layer that pages
+are written against for pieces with no shadcn equivalent.
 
 - **Never hardcode a colour.** Reference a token. The `--ms-*` legacy aliases
   are **gone** — every reference was rewritten to the canonical token it already
   resolved to. Don't reintroduce a second vocabulary: a colour has one name.
 - **Never hardcode a spacing value either.** `tokens.css` carries a 4px-based
   `--space-1…--space-10` scale plus `--card-pad`, `--stack-gap` and
-  `--space-page`. Reach for a token, not a raw px value and not a Bootstrap
+  `--space-page`. Reach for a token, not a raw px value and not a Tailwind
   `m-*`/`p-*` utility.
-- **Cards are flat**: `--radius-card` (14px), 1px border, **no shadow**; hover
-  changes the border. Shadows are reserved for things that float (dropdowns,
-  modals, toasts).
+- **Cards** are `--radius-card` (14px), 1px border, `--shadow-sm` at rest; hover
+  changes the border. Depth comes from elevation (shadow), not a heavier border.
 - **Icons are `lucide-react`**, size 16 (20 in a KPI chip), `strokeWidth` 1.5–1.75.
   Don't hand-roll SVGs or use emoji.
-- **Semantic classes** to reach for before stacking Bootstrap utilities:
+- **Semantic classes** to reach for before stacking Tailwind utilities:
   `.rg-content`, `.page-stack`, `.grid-2`/`.grid-3`/`.kpi-grid`, `.card-stack`,
   `.page-header`/`.page-eyebrow`, `.section-head`/`.section-title`,
   `.pulse-card` (+ `__head`/`__body`/`--flush`),
@@ -184,10 +185,12 @@ No `max-width` queries, and the phone is never the exception. Concretely:
     (initials avatar + presence dot → name/email, role pills, Change password,
     Sign out). All three share `.topbar-btn` sizing and the `.menu-panel` /
     `.menu-item` dropdown shape, so they read as one set.
-  - **Dropdowns must be controlled.** react-bootstrap only auto-closes on
-    `<Dropdown.Item>`; the panels here use plain buttons and links, so each
-    holds `show`/`onToggle` state and closes itself on selection. Forgetting
-    this leaves the menu hanging open after a choice.
+  - **All three are shadcn's `DropdownMenu`** (`components/ui/dropdown-menu.tsx`,
+    built on Radix), which closes itself on `DropdownMenuItem` selection with
+    no extra state needed. `NotificationBell` is the one exception: it keeps
+    its own `open`/`setOpen` so it can close the panel itself before
+    `navigate()`ing to a notification's link, not as a workaround for a
+    dropdown that wouldn't otherwise close.
 - **The topbar owns the page title**, so pages must not render their own `<h2>`
   heading. A heading that is *content* (a candidate's name) is fine, as is a
   `PageHeader` carrying a real title/description (the evaluation report).
@@ -230,7 +233,7 @@ No `max-width` queries, and the phone is never the exception. Concretely:
   decides what is *reachable*, and a missing guard must never be covered for by
   a hidden nav item. `navRoutes.test.ts` covers the visibility side.
 - **Candidate role/skill lookups** come from `getActiveRoleOptions`/`getActiveSkillOptions` (`/api/candidates/role-options` · `/skill-options`, `CanWriteCandidate`); `role-options` is server-scoped so a Recruiter only sees their assigned roles. `CandidateForm` **auto-selects** the role when the list has exactly one (a single-assigned recruiter). The **"Delete candidate"** button on `CandidateDetailPage` shows only for `isAdminOrAbove` (delete is Admin-only). The dashboard shows recruiter-only users a **role filter** (`Form.Select` of their assigned roles + "All") that feeds `getDashboard(roleId)` and the `['dashboard','scoped',roleId]` key.
-- Routes: `/` → `DashboardPage` (landing for every role: `RequireRole`, sign-in and password change all send users here), `/jobs` → `JobsPage` (Admin+, `RequireRole`), `/candidates` + `/candidates/:id` (Recruiter+, `RequireRole`), `/upload` (Recruiter+), `/interviews/:id` → `InterviewPage` (all roles), `/configuration` (Admin+), `/users` (SuperAdmin), `/change-password`. The **Dashboard** nav link (`to="/" end`) is first and visible to all roles; the **Candidates/Upload** links show only for `canWriteCandidates`. So an **Interviewer** (bottom of the hierarchy — `useAuth().isInterviewerOnly`) sees Dashboard only, plus the interview pages they're linked to. The **topbar** hosts a **`NotificationBell`** (all roles). Nav visibility is driven by `navRoutes.ts`, not by inline conditionals.
+- Routes: `/` → `DashboardPage` (landing for every role: `RequireRole`, sign-in and password change all send users here), `/user-guide` → `UserGuidePage` (every role, no `RequireRole`), `/jobs` → `JobsPage` (Admin+, `RequireRole`), `/candidates` + `/candidates/:id` (Recruiter+, `RequireRole`), `/upload` (Recruiter+), `/interviews/:id` → `InterviewPage` (all roles), `/configuration` (Admin+), `/users` (SuperAdmin), `/change-password`. The **Dashboard** nav link (`to="/" end`) is first and visible to all roles; the **Candidates/Upload** links show only for `canWriteCandidates`. So an **Interviewer** (bottom of the hierarchy — `useAuth().isInterviewerOnly`) sees Dashboard and the user guide, plus the interview pages they're linked to. The **topbar** hosts a **`NotificationBell`** (all roles). Nav visibility is driven by `navRoutes.ts`, not by inline conditionals.
 
 ## Data fetching (TanStack Query)
 - Reads: `useQuery` with array keys — `['dashboard']`, `['candidates', { search, status, page }]`, `['candidate', id]`, `['status-options']`, `['status-options', 'initial']`, `['status-options', 'next', id]`, `['notifications']` (60s `refetchInterval`), `['my-interviews']`, `['assignable-users']`, `['interview', id]`. Use `keepPreviousData` for paged lists.
@@ -245,68 +248,74 @@ No `max-width` queries, and the phone is never the exception. Concretely:
 
 ## Key flows
 - **Upload** (`UploadPage`, two tabs):
-  - **Upload & Intake** (`BulkUploader`): drop multiple PDFs/`.docx` → each posts to `/cvupload`, which parses it and saves a **Pending `CandidateDraft`** on the server. A 409 from `/cvupload` (identical CV already uploaded) shows a **Duplicate** badge in the queue and a "Skipped N duplicate CVs" warning, separate from parse failures. When at least one draft is staged, the page shows an "Open Review Workspace" banner.
-  - **Review Staging Workspace** (`drafts/DraftReviewWorkspace`): lists drafts from `/candidate-drafts`, edits them, and approves (`/candidate-drafts/{id}/approve`, creates the candidate at status Uploaded), saves, or discards them, one at a time or in bulk. `CandidateForm` (with the initial-status dropdown and the duplicate-email "save anyway / open existing" flow) is no longer used on this page.
-  - **JSON + CVs** (`JsonImporter`, Super Admin only; the switch renders only for `useAuth().isSuperAdmin`): a "Download JSON template" button (`downloadImportTemplate`) and one dropzone for a `.json` file plus its CVs. `utils/importManifest.ts` strips comments, accepts `{ candidates: [...] }`, a bare list or one object, and pairs entries with CVs by `cvFileName`, showing a pre-check table (errors skip a row; warnings don't). "Import N candidates" posts each valid row with `importJsonCandidate` to `/candidate-import`, one at a time, and hands the drafts to the same "Open Review Workspace" banner. See [specs/json-candidate-import.md](specs/json-candidate-import.md).
+  - **Upload & Intake** (`BulkUploader`, Admin and Recruiter): a required **Job Opening** select (`getActiveRoleOptions`, filtered to open/closing-soon via `utils/jobStatus.ts`) gates the dropzone — it stays disabled until one is chosen. Drop multiple PDFs/`.docx` → each posts to `/cvupload` with that `roleAppliedOptionId`, which parses it and saves a **Pending `CandidateDraft`** on the server. A 400 (no/closed/unassigned job opening) or a 409 from `/cvupload` (identical CV already uploaded) shows in the queue, the 409 as a **Duplicate** badge and a "Skipped N duplicate CVs" warning, separate from parse failures. When at least one draft is staged, the page shows an "Open Review Workspace" banner.
+  - **Review Staging Workspace** (`drafts/DraftReviewWorkspace`, Admin and Recruiter): lists drafts from `/candidate-drafts` — scoped server-side to a Recruiter's own uploads plus any draft for a job opening they're assigned to — edits them, and approves (`/candidate-drafts/{id}/approve`, creates the candidate at status Uploaded), saves, or discards them, one at a time or in bulk. `CandidateForm` (with the initial-status dropdown and the duplicate-email "save anyway / open existing" flow) is no longer used on this page.
+  - **JSON + CVs** (`JsonImporter`, Admin and Super Admin only; the switch renders only for `useAuth().isAdminOrAbove`): a required **default Job Opening** select (same open/closing-soon filter as `BulkUploader`) and a "Download JSON template" button (`downloadImportTemplate`) and one dropzone for a `.json` file plus its CVs. `utils/importManifest.ts` strips comments, accepts `{ candidates: [...] }`, a bare list or one object, and pairs entries with CVs by `cvFileName`, showing a pre-check table (errors skip a row; warnings don't). "Import N candidates" stays disabled until a job opening is chosen, then posts each valid row with `importJsonCandidate` to `/candidate-import`, one at a time, and hands the drafts to the same "Open Review Workspace" banner. See [specs/json-candidate-import.md](specs/json-candidate-import.md).
 - **List** (`CandidatesPage`): paged table with **URL-synced filters** (`useSearchParams` — bookmarkable, survive refresh; a **Clear filters** link resets them): search by name/email/**phone**, database-backed status filter, **role filter** (job opening — `GET /candidates/role-filter-options`, includes inactive roles labelled "(inactive)"; scoped: Admin+ see all roles, a Recruiter sees their assigned roles), **skills multi-select** (ANY-of, active skills via `getActiveSkillOptions`), and a **Referred only** toggle. **Sortable headers** (Name/Status/Added → `sort`+`dir` params, default Added desc; click flips direction with a ▲/▼ indicator). Per-row delete (confirm modal, Admin+ only). Responsive: columns hide progressively on small screens (email shown under the name on mobile).
 - **Detail** (`CandidateDetailPage`): **read-only by default** — a `.page-header` (avatar, name, role, `StatusBadge`) with **Edit** / **Evaluation report** / **Delete** actions. **Read mode** is `.detail-grid.detail-grid--panels` (5/7 at `≥992`, stacked below). `--panels` makes the two columns **share one bounded height** so their bottoms line up, with each column's dominant card (`.detail-scroll` — the profile, and the status history) scrolling its own **body** while its header stays pinned; otherwise a long timeline stretched the page and left the profile beside a column of whitespace. The cap is `min(max(--detail-panel-min, viewport - chrome), viewport - topbar - 1rem)`: at least **`--detail-panel-min` (760px)** so a short window can't squeeze the panels down to something unreadable (derived from the viewport alone, a 720px-tall laptop produced 480px), but **never taller than the viewport**, since a panel taller than the screen means scrolling the page *and* the panel. `--detail-panel-min` is the comfort dial. It is a *cap*, not a height, so two short columns still size to their content. The plain `.detail-grid` (no `--panels`) is what `InterviewPage` uses, where the evaluation form must grow freely. Contents: `ReadOnlyCandidateProfile` + `CvFilesCard` on the left, and **"Status history"** on the right. Advancing the pipeline is an **`AddStatusModal`** opened from an "Add status" button in that card's header (writers only), not a form sitting permanently open: the form is used occasionally, it grows to five fields when "Interview Scheduled" is picked, and leaving it open pushed the history — the thing you came to read — down the page on every visit. Since #85 it is a **drawer** (`Sheet` at `sm:w-[min(42rem,100vw)]`), a bottom sheet on a phone. The `Sheet` lives *inside* `AddStatusModal` rather than in the caller so one `<form className="contents">` can wrap `SheetHeader`, `SheetBody` and `SheetFooter`, which is what puts Save in the pinned footer while still submitting the form; that `contents` class is load-bearing (see the modal note above). Opened from the history drawer's "Advance Stage", that drawer closes and **returns** when the status drawer does, on save and on cancel, so the reader keeps their place in the timeline. Opened from the page header it returns to nothing, which is why `CandidateDetailPage` tracks the origin with a flag instead of reopening unconditionally. Dismissing resets the draft. `ReadOnlyCandidateProfile` is passed **`showCvFiles={false}`** here: it has its own CV list, and rendering it alongside `CvFilesCard` listed every file **twice**, in two designs, each with its own Preview and Download. The interview page, which has no second card, keeps the list (the prop defaults to `true`). **Edit** (shown only when `canWriteCandidates && !roleClosed`) switches to a **focused single-column form** (`.detail-edit-column`, capped at 860px) with `ProfileEditor` + `CvFilesCard`, and **hides the Status panel**; Save or Cancel returns to the read view with refreshed data. Delete is a confirm modal (Admin+); the Evaluation report link goes to `/candidates/:id/evaluations`.
 - **Evaluation report** (`CandidateEvaluationReportPage`, route `/candidates/:id/evaluations`, Recruiter+): fetches `getCandidateEvaluationReport(id)` and shows a summary panel (interviewer count, average overall, recommendation tally, per-criterion averages ordered by `EVALUATION_SECTIONS`) then every interviewer's full rubric grouped by interview, reusing `EvaluationReadOnly`. Has a **Print** button (`window.print()`, `d-print-none` chrome) and an empty state when no evaluations are submitted yet.
 
 Both the upload `CandidateForm` and the detail `ProfileEditor` include **GitHub URL**, **Portfolio website**, a **Role applied for** single-select and a **Skills** multi-select (both `components/SearchableSelect.tsx`, fed by `['config','roles']` / `['config','skills']` — configured values only, **not creatable** from the candidate form), and a **"This candidate has been referred"** checkbox revealing Reference name\* / email\* / Employee ID. Forms validate required full name + email format client-side (mirrored server-side); the legacy free-text role datalist was replaced by the configured role select.
 
-### Dashboard (`pages/DashboardPage.tsx`, route `/`)
-**One `useQuery` per section** (no single payload), rendered as react-bootstrap `Row`/`Col`/`Card`:
-the org-wide queries `['dashboard','kpis']`, `['dashboard','status-breakdown']`,
-`['dashboard','trend',days]`, `['dashboard','job-openings']` render **for every role**; the
-owner-scoped `['dashboard','scoped']` (`enabled: canWriteCandidates`) feeds the candidate-centric
-sections and renders only for candidate-managing roles. An **Interviewer** therefore sees the same
-KPIs / charts / openings as an Admin, plus their My-Interviews card, but not By-role/Top-skills/
-Upcoming/Activity.
-- **Hero kicker** — `components/dashboard/DashboardHero`: greeting + user name + date and
-  **pending-task chips** from `['my-interviews']` / `['notifications']`. Styled
-  `.dashboard-hero-kicker` + `.hero-chip` (`anim-fade-up`, dark + reduced-motion).
-  The chips are strictly *the signed-in user's own outstanding work*. A chip counting
-  candidates in process was **removed**: it is a pipeline statistic rather than a task, it
-  already exists as the "In process" KPI card directly below, and it made the row read as a
-  mix of "things you must do" and "things that are true". `DashboardHero` therefore takes no
-  props — don't reintroduce `inProcessCount`.
-- **KPI cards** — six `components/dashboard/KpiCard`s (accent icon chip, big value, sub-label + %,
-  thin progress bar; `.kpi--<tone>` tokens, light + dark, reduced-motion). Icons inline in
-  `kpiIcons.tsx`.
-  **All six drill through** to the candidate list showing exactly what they count, rendering as a
-  `<Link>` with a persistent arrow in the action corner. Total → `/candidates`, Referred →
-  `?referred=1`, the other four → `?bucket=in-process|recommended|rejected|new-this-week`, which the
-  API resolves through `CandidateBuckets` — the same definitions the dashboard sums, so a tile and
-  its list cannot disagree. (`status` alone could not express them: *Rejected* spans four statuses,
-  *In process* is "not yet terminal", *New this week* is a date window.)
-  **Only pass `to` when the destination reproduces the tile's figure exactly** — a stat that opens a
-  list with a different total is worse than one that does not open. Interviewers get no links,
-  since they can see the figures but not the list.
-  The arrow is **persistent, not hover-only**: a cue that appears only under the pointer cannot tell
-  you the tile is a link before you find it. It sits beside the icon rather than inline with the
-  label (where a longer label wrapped it onto its own line) or in the foot (where it truncated the
-  sub-label).
-  `CandidatesPage` surfaces an arriving bucket as a removable `.filter-chip` — it is an active
-  filter that none of the visible controls represent, so without it the short list looks like a bug.
-- **Charts** (recharts) — `StatusDonutChart` (colored from the status tokens via
-  `utils/chartColors.ts` so it matches `StatusBadge`) beside `TrendChart` (area) with a **7D/30D/90D
-  range toggle** (`btn-group` → `trendDays` state → query key + `getApplicationsTrend(days)`), and
-  two `CountBarChart`s (by role, top skills). (The redundant pipeline funnel was removed — the donut
-  is the single status visual.) Charts read `useTheme()` so colors flip with the theme.
-- **Lists** — upcoming interviews and recent activity (`ListGroup`, names link to
-  `/candidates/:id`, `StatusBadge` pills).
-- **Active Job Openings** — `ActiveJobOpeningsTable`: Job ID (`JOB-00n`), posted date, title +
-  priority badge, location, department, **End date** (+ a `.job-closing-soon` badge when within 7
-  days), applicants; "View All" → `/jobs` (shown only to roles that can open it). Backend returns **open** roles only (past their
-  End date drop off).
+### User guide (`pages/UserGuidePage.tsx`, route `/user-guide`)
+`useQuery(['user-guide'], getUserGuide)` fetches `{ edition, label, chapters }` from
+`GET /api/user-guide`, already cut to the caller's role on the server — the frontend never decides
+what to hide. Each chapter is Markdown, rendered by `components/userGuide/GuideMarkdown.tsx`
+(`react-markdown` + `remark-gfm`) mapped onto the app's own Tailwind tokens rather than an embedded
+stylesheet. `utils/slugify.ts` gives headings GitHub-compatible ids so the guide's own pre-existing
+cross-reference links (e.g. `[2.2](#22-your-dashboard)`) resolve; a link to a chapter outside the
+reader's edition renders as plain text instead of a dead anchor. A contents rail (desktop: sticky
+sidebar; mobile: an accordion) is built from the same headings. Print / Save as PDF calls
+`window.print()`; print CSS in `index.css` restarts each chapter on its own page. See
+[specs/in-app-user-guide.md](specs/in-app-user-guide.md).
 
-Charts are added under **`recharts`** (the only chart dependency). New chart chrome/colors go through `chartColors.ts`, not hardcoded hex.
+### Dashboard (`pages/DashboardPage.tsx`, route `/`)
+**Action-first and mobile-first** (RG-134). Top to bottom: what needs you today, the pipeline
+figures, pipeline health, open roles, then the owner-scoped "My pipeline" block. Signed-off mockup
+screenshots: branch `assets/dashboard-redesign-mockups`, `docs/mockups/dashboard-redesign/`.
+
+**One `useQuery` per section**, every one under the `['dashboard']` key (plus the shared
+`['my-interviews']` and `['notifications']`), all with `staleTime: 60s`. A status change elsewhere
+invalidates `['dashboard']`, and the hero's refresh control invalidates all three keys. Org-wide
+queries render **for every role**: `['dashboard','kpis']`, `['dashboard','status-breakdown']`,
+`['dashboard','trend',days]` (plus `['dashboard','trend',30]` for the sparkline),
+`['dashboard','trend-summary',days]`, `['dashboard','job-openings']`. The owner-scoped
+`['dashboard','scoped',roleId|'all']` and `['dashboard','offer-metrics']` are
+`enabled: canWriteCandidates`.
+
+Layout uses `.dash-row` (one column, `5fr / 7fr` from 1200px) and `.dash-pair` (two columns on a
+tablet, stacked again beside the activity feed on a desktop). On a phone the KPI tiles and open
+roles are `.snap-strip`s: sideways scroll-snap strips that bleed to the page edge so the next item
+peeks in (keyboard-scrollable: `tabIndex` + label). All dashboard CSS is in the "Dashboard layout
+(RG-134)" block of `index.css`, `min-width` queries only.
+
+| Section | Component | Notes |
+|---|---|---|
+| Hero | `DashboardHero` | Date, **"Updated Xm ago" refresh** (`.dash-refresh`), greeting, a lede built from your own work, task chips (`.hero-chip-row--scroll`: one sideways row on a phone). Chips are strictly *your* outstanding work; don't add pipeline statistics. "N evaluations to complete" counts `awaitingEvaluation()` (past, not submitted), the same set as Up next. Candidates / Upload CVs buttons from 768px; below that writers get `QuickActionFab` (`.quick-fab`, fixed, safe-area aware) and the page adds `.dash-page--fab` bottom room. |
+| Up next | `UpNextCard` (+ `upNextGroups.tsx`) | Replaces My interviews and Upcoming interviews. **Mine** (`['my-interviews']`): an "Awaiting evaluation" group (past, not submitted, links `/interviews/:id`), then upcoming by day (Today / Tomorrow / weekday), "in 1h 20m" highlighted today, eval-state badge. Submitted past interviews drop out. **Team** = `scoped.upcomingInterviews` (links `/candidates/:id`); the toggle only exists when the page passes `team` (writers). Shows 5 rows, then "Show all". Empty = one `.slim-empty` line. |
+| KPI tiles | `KpiStrip` → `KpiCard` | Six tiles; phone strip with dots, 3 x 2 from 768px (stays 3 x 2 beside Up next on desktop). `KpiCard` takes `delta` (▲/▼ glyph + number + label, `goodWhenUp` tints a rise green; the link name says "up 3 vs last week") and `spark` (14 daily bars, this week highlighted). Figures count up via `hooks/useCountUp` (off under reduced motion; the real figure is in an `sr-only` span). |
+| Pipeline | `PipelineCard` | Replaces the donut (72 of 82 at Uploaded made every other slice a sliver). 100% stacked `.pipeline-bar` (segments use the `.status--*` tones via `getStatusClass`, pointer shortcut, out of tab order) plus `.stage-row`s with count and share. **All / Active** hides the `uploaded` tone and recomputes shares. First 5 rows, then "Show all N stages". |
+| Applications | `TrendChart` | Daily **bars**, not an area curve (most days are 0 or 1). Headline = `summary.total` + "▲N vs prior N days" from `getApplicationsSummary`. Tap or arrow through bars (roving tabindex) to read a day; the busiest day starts selected. Keyed by range so the selection resets. |
+| Open roles | `ActiveJobOpeningsCard` (+ `jobOrder.ts`) | Replaces the seven-column table. Cards (`.job-tile`): JOB-00n, priority badge, title, location / department **only when set**, closing date (+ "Nd left" within 7 days), applicants bar relative to the busiest role. Sorted soonest to close (`sortByClosing`), first 6. Writers: tile → `/candidates?role=<id>`, "View all" → `/jobs`. |
+| Insights | `PipelineInsightsCard` | Roles / Skills switch around the existing `CountBarChart` (recharts). |
+| Offers | `OfferMetricsCard` | Offers made / Accepted / Hired steps plus the acceptance bar; hidden when `totalOffers` is 0. |
+| Activity | `ActivityFeed` (+ `activityGroups.ts`) | Grouped by day; back-to-back changes to one candidate fold into one run ("Offer Extended → Offer Accepted", "8 changes" expands). Shows 5 runs, then "Show more". "View all" → `/audit` for Admin+, else `/candidates`. |
+
+**Role behaviour.** Interviewers see the org-wide figures with **no drill-through** (tiles, stages
+and role cards render as plain figures), no Team toggle, no My pipeline, no floating button.
+Recruiters get the role filter (`['role-options','active']`). **Only link a figure when the
+destination reproduces it exactly** (the KPI buckets resolve through `CandidateBuckets` on the API;
+`CandidatesPage` shows an arriving bucket as a removable `.filter-chip`).
+
+Charts are added under **`recharts`** (the only chart dependency; today only `CountBarChart`). New
+chart chrome/colors go through `chartColors.ts`, not hardcoded hex; status-coloured graphics use the
+`.status--*` CSS tones directly.
 
 ### Interviews, evaluations & notifications
 - **Scheduling:** in `CandidateDetailPage`'s `AddStatusModal`, choosing **Interview Scheduled** reveals a required **Interviewers** `SearchableMultiSelect` (options from `['assignable-users']`); the payload adds `interviewerUserIds`, and success invalidates `['notifications']` + `['my-interviews']`.
 - **Notification bell (`components/NotificationBell.tsx`, topbar):** `['notifications']` query with a 60s `refetchInterval`; unread badge; dropdown of the latest ~15; clicking marks read (mutation) and navigates to the item's `linkUrl`; "Mark all read".
-- **Dashboard "My interviews" (`components/dashboard/MyInterviewsCard.tsx`):** `['my-interviews']` list of the caller's assigned interviews with date/time (highlight <24h) and an evaluation-state badge (Pending/Draft/Submitted); rows link to `/interviews/:id`.
-- **Interview page (`pages/InterviewPage.tsx`, `/interviews/:id`):** a **hero header card** (candidate **initials avatar + name + Role Applied For + interview type tags**, calendar chip with a relative badge Today/Tomorrow/In N days/Completed, interviewer avatar pills) above two columns with a staggered `.anim-fade-up` entry — left `ReadOnlyCandidateProfile` (non-editable card; **header** = "Current position" (renamed from the ungrammatical "Position on Last Organization") + LinkedIn/GitHub/Portfolio icon links + status pill, no name/avatar; **body** = email/phone/**Relevant Experience** detail tiles, colorful skill badges via `utils/skillColors.ts`, an **extendable Summary** (Show more/less), and CV files as `.cv-file-item` tiles with Preview (`outline-primary`) + `.btn-cv-download` reusing `previewCvFile`/`downloadCvFile`); right `EvaluationForm` driven by `utils/evaluationCriteria.ts`. **`.btn-cv-download` is no longer the hardcoded yellow fill with the looping icon bounce** — the colour was a literal rather than a token, yellow is the app's *warning* hue so the safest action on the panel wore the colour meaning "careful", and it made Download louder than Preview, which is the action a reviewer wants first. It is now the same secondary control as its Preview sibling. The hero drops the redundant "Interview" eyebrow (the topbar says it), puts the role and type tags on one meta line, and folds the schedule chip + interviewers into one right-hand `.interview-hero__aside` — they were two rows with a divider between, spending a third of the hero on what is usually one avatar pill (116px tall now, was ~230px). The grid is **`.detail-grid.detail-grid--panels.interview-grid`**: `--panels` supplies the equal-height / internal-scroll mechanics (shared with the candidate detail page), and `.interview-grid` overrides `--detail-panel-max` to exactly the viewport below the topbar and pins **both** columns `position: sticky`. The 760px floor is deliberately dropped here — a column taller than the space under the topbar hangs past the fold, which is what capping only the evaluation card left behind. The result is a fixed two-panel workspace: the candidate profile (`className="detail-scroll"`) scrolls on the left, the rubric on the right, and the two cards are the same height with their bottoms aligned. Inside it only the rubric scrolls (`.eval-form-card__scroll`) — the progress bar and the Submit / Save draft actions stay put, where before the card ran ~2500px and Submit was a screen below the last criterion. **Note the class is `eval-form-card`, not `eval-card`: `.eval-card` is already the per-interviewer summary tile in the status timeline, and reusing it silently inherited its `align-items:center` and padding.** Desktop only — a bounded scroll area nested in a scrolling page is worse than a long page on a phone. The recruiter's notes are folded **into** the evaluation card as an `.eval-briefing` band above the progress bar (passed to `EvaluationForm` as a `briefing` node, so the form need not know what the briefing is). They are instructions *for that form*, so they belong to the same object; as their own card they cost a whole surface plus a gap to show one line, and as an `alert-info-soft` before that they were the loudest thing on a page whose subject is the candidate. Being outside the scroll region they stay readable the whole way down the twelve criteria. The evaluation column is therefore exactly one card. The interviewer pills keep an inline "Interviewer(s)" label — the pills are meaningless without it, but it does not warrant a band of its own. the recruiter's notes render as a quiet **`.notes-card`**, not an `alert-info-soft` — as a tinted alert a one-line note was the loudest thing on a page whose subject is the candidate. In the rubric, each criterion's label column is capped (`--eval-label-w`) so the 1–5 scale sits a short, **constant** distance from every label: the row was `justify-content: space-between`, which parked the pills ~400px away against the panel's right edge and made rating twelve criteria twelve trips across the card. The comment field spans label + scale, and the panel header wraps so the "n/3 rated" chip drops below the title on a phone rather than squeezing it. Sections A–D are **independent collapsible accent panels** (`.eval-panel--a|b|c|d`, react-bootstrap `Collapse`, per-section icon + live `n/3 rated · avg` summary, rotating chevron); ratings use a **segmented 1–5 pill group** (click again to clear, `aria-pressed`); a top progress bar tracks `Rated X of 12`; general assessment / recommendation / overall rating live in a static "Summary & recommendation" panel. Recommendation options are `Recommended/Hold/Reject/Other`; picking **Other** reveals a required "Please specify" text box (blocks Submit until filled). **Save draft** any time (never gated); **Submit is gated** — all 12 criterion ratings, a final recommendation, and an overall rating are required (red `*` indicators; a failed attempt sets `showErrors`, flags the empty groups via `.rating-group--invalid`, and toasts what's missing before the confirm modal opens). **Submit** confirms via modal then locks (server returns 409 after). Read-only/submitted views reuse the panels with **filled-dot rating scales**. Admin+ also see other interviewers' evaluations read-only in an accordion. A 404 (not assigned / not admin) renders a friendly "not available" message. All animations respect `prefers-reduced-motion`.
+- **Dashboard "Up next" (`components/dashboard/UpNextCard.tsx`):** the "Mine" view of `['my-interviews']`: past interviews still owing your evaluation first ("Awaiting evaluation"), then upcoming ones by day, each with an evaluation-state badge (Pending/Draft/Submitted); rows link to `/interviews/:id`. See the Dashboard section.
+- **Interview page (`pages/InterviewPage.tsx`, `/interviews/:id`):** a **hero header card** (candidate **initials avatar + name + Role Applied For + interview type tags**, calendar chip with a relative badge Today/Tomorrow/In N days/Completed, interviewer avatar pills) above two columns with a staggered `.anim-fade-up` entry — left `ReadOnlyCandidateProfile` (non-editable card; **header** = "Current position" (renamed from the ungrammatical "Position on Last Organization") + LinkedIn/GitHub/Portfolio icon links + status pill, no name/avatar; **body** = email/phone/**Relevant Experience** detail tiles, colorful skill badges via `utils/skillColors.ts`, an **extendable Summary** (Show more/less), and CV files as `.cv-file-item` tiles with Preview (`variant="outline"`) + `.btn-cv-download` reusing `previewCvFile`/`downloadCvFile`); right `EvaluationForm` driven by `utils/evaluationCriteria.ts`. **`.btn-cv-download` is no longer the hardcoded yellow fill with the looping icon bounce** — the colour was a literal rather than a token, yellow is the app's *warning* hue so the safest action on the panel wore the colour meaning "careful", and it made Download louder than Preview, which is the action a reviewer wants first. It is now the same secondary control as its Preview sibling. The hero drops the redundant "Interview" eyebrow (the topbar says it), puts the role and type tags on one meta line, and folds the schedule chip + interviewers into one right-hand `.interview-hero__aside` — they were two rows with a divider between, spending a third of the hero on what is usually one avatar pill (116px tall now, was ~230px). The grid is **`.detail-grid.detail-grid--panels.interview-grid`**: `--panels` supplies the equal-height / internal-scroll mechanics (shared with the candidate detail page), and `.interview-grid` overrides `--detail-panel-max` to exactly the viewport below the topbar and pins **both** columns `position: sticky`. The 760px floor is deliberately dropped here — a column taller than the space under the topbar hangs past the fold, which is what capping only the evaluation card left behind. The result is a fixed two-panel workspace: the candidate profile (`className="detail-scroll"`) scrolls on the left, the rubric on the right, and the two cards are the same height with their bottoms aligned. Inside it only the rubric scrolls (`.eval-form-card__scroll`) — the progress bar and the Submit / Save draft actions stay put, where before the card ran ~2500px and Submit was a screen below the last criterion. **Note the class is `eval-form-card`, not `eval-card`: `.eval-card` is already the per-interviewer summary tile in the status timeline, and reusing it silently inherited its `align-items:center` and padding.** Desktop only — a bounded scroll area nested in a scrolling page is worse than a long page on a phone. The recruiter's notes are folded **into** the evaluation card as an `.eval-briefing` band above the progress bar (passed to `EvaluationForm` as a `briefing` node, so the form need not know what the briefing is). They are instructions *for that form*, so they belong to the same object; as their own card they cost a whole surface plus a gap to show one line, and as an `alert-info-soft` before that they were the loudest thing on a page whose subject is the candidate. Being outside the scroll region they stay readable the whole way down the twelve criteria. The evaluation column is therefore exactly one card. The interviewer pills keep an inline "Interviewer(s)" label — the pills are meaningless without it, but it does not warrant a band of its own. the recruiter's notes render as a quiet **`.notes-card`**, not an `alert-info-soft` — as a tinted alert a one-line note was the loudest thing on a page whose subject is the candidate. In the rubric, each criterion's label column is capped (`--eval-label-w`) so the 1–5 scale sits a short, **constant** distance from every label: the row was `justify-content: space-between`, which parked the pills ~400px away against the panel's right edge and made rating twelve criteria twelve trips across the card. The comment field spans label + scale, and the panel header wraps so the "n/3 rated" chip drops below the title on a phone rather than squeezing it. Sections A–D are **independent collapsible accent panels** (`.eval-panel--a|b|c|d`, plain `useState` + `aria-expanded`, per-section icon + live `n/3 rated · avg` summary, rotating chevron); ratings use a **segmented 1–5 pill group** (click again to clear, `aria-pressed`); a top progress bar tracks `Rated X of 12`; general assessment / recommendation / overall rating live in a static "Summary & recommendation" panel. Recommendation options are `Recommended/Hold/Reject/Other`; picking **Other** reveals a required "Please specify" text box (blocks Submit until filled). **Save draft** any time (never gated); **Submit is gated** — all 12 criterion ratings, a final recommendation, and an overall rating are required (red `*` indicators; a failed attempt sets `showErrors`, flags the empty groups via `.rating-group--invalid`, and toasts what's missing before the confirm modal opens). **Submit** confirms via modal then locks (server returns 409 after). Read-only/submitted views reuse the panels with **filled-dot rating scales**. Admin+ also see other interviewers' evaluations read-only in an accordion. A 404 (not assigned / not admin) renders a friendly "not available" message. All animations respect `prefers-reduced-motion`.
 - **Status timeline interviewer links (`components/StatusTimeline.tsx`):** the "Interview Scheduled" entry shows its interviewers as **`.interviewer-pill` avatar pills** (initials + name), each a `<Link>` to `/interviews/{interviewId}`, plus the interview's **type tags** as `skillColorClass`-colored badges (from the entry's `interviewTags`). The **schedule form** (`CandidateDetailPage`'s `AddStatusModal`) adds an optional **Interview types** `SearchableMultiSelect` (from `getActiveInterviewTypes`) above the interviewers select. Timeline **dots** carry a soft `--status-tint` ring so they read distinctly from the tinted status badge. Comments render with `white-space: pre-line` (so the appended evaluation summary's line breaks show). An **"Interview Completed"** entry renders its `evaluationSummaries` as **cards** (initials avatar, interviewer name, overall-rating dots, a recommendation `status-badge` colored by outcome — Recommended/Hold/Reject/Other → success/intake/reject/muted, submitted date); Admin+ additionally get a **"View full evaluations →"** link to `/interviews/{id}` (gated by the `canViewEvaluations` prop = `isAdminOrAbove`). `cleanComment` strips any legacy baked-in "— Interview evaluations —" text so only the human comment shows above the cards.
 - **Interview page notes:** scheduling with "Notes for interviewers" text (the relabeled optional comment on the Interview Scheduled add-status form) stores it as the scheduled entry's comment; `InterviewPage` shows it as a **"Notes from the recruiter"** info card above the candidate profile (`InterviewDetail.notes`). Re-scheduling from Interview Completed reuses the same add-status flow (the new `8 → 3` transition surfaces Interview Scheduled as a next option).
 - **Peer evaluations:** `InterviewPage` renders an **"Other interviewers' evaluations"** accordion when `InterviewDetail.allEvaluations` is present (filtering the caller out). The backend only populates that list for Admin+, or for an assigned interviewer **after they submit & lock their own** (peers' submitted evaluations only) — so a peer can't preview colleagues before forming their own view.
@@ -331,12 +340,28 @@ mutations invalidate the `['config']` prefix so candidate forms refresh too.
   deleted or (having candidates) deactivated.
 - **Interview types** work exactly like Skills — used as multi-select tags on
   the interview schedule form and shown as coloured badges.
-- **Email / SMTP** (`EmailSettingsTab`, `isSuperAdmin` only) — host, port,
-  username, password (`type=password`, write-only; placeholder "leave blank to
-  keep" when `passwordSet`), from-address/name, STARTTLS + Enabled toggles, plus
-  a **Send test email** button defaulting to the current user's email. Backed by
-  `getEmailSettings`/`saveEmailSettings`/`sendTestEmail` (`/config/email*`); the
-  password is never returned by the API.
+- **Email** (`EmailSettingsTab`, `isSuperAdmin` only) — a `Segmented` provider
+  choice ("SMTP server" / "Notification API") at the top of the form.
+  **SMTP**: host, port, username, password (`type=password`, write-only;
+  placeholder "leave blank to keep" when `passwordSet`), from-address/name,
+  STARTTLS toggle, plus the existing quick-setup presets. **Notification
+  API**: base URL, API key (write-only; placeholder "leave blank to keep"
+  when `apiKeySet`), allowed recipient domains, and the shared From Display
+  Name (the address itself is fixed by the service). Both share an Enabled
+  toggle and a **Send test email** button defaulting to the current user's
+  email, showing the returned message id for a successful API send. A save
+  failure's server message (e.g. "base URL's host changed, enter the key
+  again") is read from the response body and shown inline. Backed by
+  `getEmailSettings`/`saveEmailSettings`/`sendTestEmail` (`/config/email*`);
+  neither secret is ever returned by the API.
+- **Email delivery** (`EmailDeliveryTab`, `isSuperAdmin` only): a read-only,
+  paged log of every outbound email (queued time, recipient, subject, a status
+  `Badge`, attempts, last error), filterable by status via a `Segmented`
+  control. A row's overflow menu (`RowActions`) offers **Resend** for a
+  `Failed`/`Unknown` row only, behind a `ConfirmModal` that warns about a
+  possible duplicate when the status is `Unknown`. Backed by
+  `getEmailOutbox`/`resendEmail` (`/config/email/outbox*`); the HTML body is
+  never returned by the API.
 - **Slack** (`SlackSettingsTab`, `isSuperAdmin` only) — a bot token
   (`PasswordInput`, write-only; placeholder "leave blank to keep" when
   `botTokenSet`), an Enabled toggle, a per-category checklist (one `CheckboxField`
@@ -347,7 +372,7 @@ mutations invalidate the `['config']` prefix so candidate forms refresh too.
   (`/config/slack*`); the token is never returned by the API.
 
 ### Status colors (`utils/statusColors.ts` + `components/StatusBadge.tsx`)
-`getStatusClass(status)` maps a status to a **tone** modifier class (`status--reject|success|interview|assessment|muted|uploaded|intake`). The colors are CSS design tokens in `index.css` (`--status-color` solid for the dot, `--status-tint` translucent for the badge background), with a `[data-bs-theme="dark"]` override block so a future dark theme just flips `data-bs-theme` on `<html>` — no component changes. Use the shared `StatusBadge` / `StatusDot` components (do not reintroduce per-call Bootstrap `bg-*` variants); applied to the candidate list, detail header, and `StatusTimeline`.
+`getStatusClass(status)` maps a status to a **tone** modifier class (`status--reject|success|interview|assessment|muted|uploaded|intake`). The colors are CSS design tokens in `index.css` (`--status-color` solid for the dot, `--status-tint` translucent for the badge background), with a `[data-bs-theme="dark"]` override block so dark mode just flips `data-bs-theme` on `<html>` — no component changes. Use the shared `StatusBadge` / `StatusDot` components (do not reintroduce per-call Tailwind `bg-*` utility classes); applied to the candidate list, detail header, and `StatusTimeline`.
 
 ### External links (`utils/externalUrl.ts`)
 Candidate profile links (LinkedIn, GitHub, portfolio, ...) and timeline submission links are stored as typed or extracted, often without a scheme (`linkedin.com/in/jane`). A bare value used as `href` resolves relative to the current page (`/candidates/linkedin.com/in/jane`), so always render these through `externalUrl(raw)`: it prefixes `https://` to bare links, passes `http(s)://` through, and returns `undefined` for any other scheme (`javascript:`, `data:`) so the link is not rendered.
@@ -359,22 +384,28 @@ Each CV file has **Preview** + **Download**. Preview calls `previewCvFile` (auth
 `LoginPage` no longer hints credentials (placeholders removed, `autoComplete="off"`, no app-prefill).
 
 ## Theme (`styles/tokens.css`)
-- **Coastal teal `#468189`** on near-neutral surfaces, Figtree, 14px base. Token
-  names and scales follow Prism; the palette descends from GorillaHR, which is
-  where Prism's does too.
+- **Violet accent** (`--primary: #7c5cfc` light / `#8b6dff` dark) on
+  near-colourless slate neutrals, Plus Jakarta Sans, a 12.5px base
+  (`--text-md`). Token names and scales follow Harbor; the palette descends
+  from GorillaHR, same as before. Neutrals stay nearly colourless, the accent
+  is used sparingly, and depth comes from elevation (shadow) rather than
+  borders.
 - Semantic **status / priority / skill / KPI / evaluation** colours are
   deliberately *not* derived from the brand hue and live in `index.css`.
   `utils/chartColors.ts` resolves `--status-color` off a hidden probe element
   rather than duplicating hexes, and reads chart chrome off the tokens.
-- **Don't hardcode colours.** Avoid fixed light utilities like
-  `bg-light`/`bg-white`/`text-dark` — use tokens or `bg-body-tertiary` so they
-  adapt to dark mode.
+- **Don't hardcode colours.** Avoid fixed Tailwind utilities like
+  `bg-white`/`text-black`: reference a token (`bg-[var(--surface)]`,
+  `text-[var(--text)]`) so they adapt to dark mode.
 
 ### Dark mode / theming
 - **Token flip:** light is `:root`; a `[data-bs-theme='dark']` block in
-  `tokens.css` overrides the neutrals and accents. Because the `--bs-*`
-  variables map onto the tokens, the whole app flips automatically. Bootstrap
-  5.3 / react-bootstrap also honour `data-bs-theme`.
+  `tokens.css` overrides the neutrals and accents. `styles/theme.css` maps
+  Tailwind's `--color-*` namespace onto the tokens and ties Tailwind's `dark:`
+  variant to the same attribute (`@custom-variant dark (&:where([data-bs-theme='dark'], ...))`),
+  so both the hand-written CSS and every shadcn component flip together. The
+  attribute name is a holdover from the pre-Tailwind implementation; Bootstrap
+  itself is gone from the project.
 - **State:** `theme/ThemeContext.tsx` (`ThemeProvider` + `useTheme`) exposes
   **`preference`** (`'light' | 'dark' | 'system'` — what the user chose) and
   **`theme`** (`'light' | 'dark'` — what is painted). Components that need the
@@ -446,7 +477,11 @@ their tabs are absent, not disabled, for everyone else.
   **× now opens a `ConfirmModal`** rather than firing the delete immediately:
   removing a skill can deactivate it across every candidate tagged with it, the
   chips sit a few pixels apart, and there is no undo.
-- **Email** — grouped into Server / Credentials / Sender fieldsets.
+- **Email** — a provider switch (SMTP / Notification API) over grouped
+  fieldsets, SMTP's Server / Credentials / Sender or the API's Connection /
+  Sender.
+- **Email delivery**: a status-filterable log table with a per-row Resend
+  action, mirroring the shape of the Audit log page.
 - **Slack** — bot token field, delivery toggle, and a per-category checklist
   (which notification types also go to Slack), plus the test-message sidebar.
 - **`sortOrder` is not in the UI.** It is still sent — auto-assigned `last + 1`

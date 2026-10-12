@@ -36,7 +36,8 @@ public class CandidateDraftsController(CandidateDraftService draftService) : Con
     [HttpPut("{id:int}")]
     public async Task<ActionResult<CandidateDraftDto>> Update(int id, [FromBody] UpdateCandidateDraftDto dto)
     {
-        var updated = await draftService.UpdateDraftAsync(id, dto);
+        var (updated, error) = await draftService.UpdateDraftAsync(id, dto);
+        if (error != null) return BadRequest(error);
         if (updated == null) return NotFound($"Candidate draft #{id} not found.");
         return Ok(updated);
     }

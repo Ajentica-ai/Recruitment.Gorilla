@@ -101,4 +101,18 @@ describe('SearchableDropdown', () => {
     const input = screen.getByRole('combobox');
     expect(input).toHaveValue('2 skills selected');
   });
+
+  it('names the actual item type when itemNoun is given, not "skills"', () => {
+    render(
+      <SearchableMultiSelect
+        options={sampleOptions}
+        value={[1, 2]}
+        onChange={vi.fn()}
+        placeholder="Search users to assign…"
+        itemNoun="interviewers"
+      />
+    );
+
+    expect(screen.getByRole('combobox')).toHaveValue('2 interviewers selected');
+  });
 });

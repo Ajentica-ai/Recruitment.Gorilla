@@ -1,72 +1,109 @@
-import { useMemo } from 'react';
-import {
-  Area,
-  AreaChart,
-  CartesianGrid,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from 'recharts';
-import { useTheme } from '../../theme/ThemeContext';
-import { accentFor, chartChrome } from '../../utils/chartColors';
-import type { TrendPoint } from '../../types';
+import { useRef, useState, type KeyboardEvent } from 'react';
+import { CalendarDays } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import type { ApplicationsSummary, TrendPoint } from '../../types';
 
-/** Applications-per-day area chart over the trailing window (single accent hue). */
-export default function TrendChart({ data }: { data: TrendPoint[] }) {
-  const { theme } = useTheme();
-  const chrome = chartChrome(theme);
-  const accent = accentFor(theme);
+const parse = (iso: string) => new Date(`${iso}T00:00:00`);
+const short = (iso: string) => parse(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
+const long = (iso: string) =>
+  parse(iso).toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' });
 
-  const hasData = useMemo(() => data.some((p) => p.count > 0), [data]);
+/**
+ * New candidates per day as bars, under a headline of the period's total and
+ * its change against the period before.
+ *
+ * Bars rather than the old area curve: most days have zero or one new
+ * candidate, and a smoothed line drew those as hills between days that never
+ * happened. Tap or arrow through the bars to read a day. The busiest day is
+ * selected to start with. Callers key this by range so the selection resets.
+ */
+export default function TrendChart({
+  data,
+  summary,
+  days,
+}: {
+  data: TrendPoint[];
+  summary?: ApplicationsSummary;
+  days: number;
+}) {
+  const counts = data.map((p) => p.count);
+  const max = Math.max(1, ...counts);
+  const peak = counts.indexOf(Math.max(0, ...counts));
+  const [picked, setPicked] = useState<number | null>(null);
+  const sel = picked !== null && picked < data.length ? picked : peak;
+  const bars = useRef<(HTMLButtonElement | null)[]>([]);
 
-  // Short "MMM d" tick labels; thin them so the axis doesn't crowd.
-  const fmt = (iso: string) => {
-    const d = new Date(`${iso}T00:00:00`);
-    return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
-  };
-  const interval = Math.max(0, Math.floor(data.length / 8) - 1);
+  const total = summary?.total ?? counts.reduce((a, b) => a + b, 0);
+  const delta = summary ? summary.total - summary.previousTotal : null;
 
-  if (!hasData) {
-    return <p className="text-muted-foreground mb-0">No applications in this period.</p>;
+  if (data.length === 0 || total === 0) {
+    return <p className="mb-0 text-muted-foreground">No applications in the last {days} days.</p>;
   }
 
+  // Roving focus: one tab stop for the whole chart, arrows move between days.
+  const onKey = (e: KeyboardEvent) => {
+    const next = e.key === 'ArrowRight' ? sel + 1 : e.key === 'ArrowLeft' ? sel - 1 : e.key === 'Home' ? 0 : e.key === 'End' ? data.length - 1 : null;
+    if (next === null) return;
+    e.preventDefault();
+    const i = Math.max(0, Math.min(data.length - 1, next));
+    setPicked(i);
+    bars.current[i]?.focus();
+  };
+
+  const mid = Math.floor((data.length - 1) / 2);
+
   return (
-    <ResponsiveContainer width="100%" height={260}>
-      <AreaChart data={data} margin={{ left: 0, right: 16, top: 8, bottom: 4 }}>
-        <defs>
-          <linearGradient id="trendFill" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor={accent} stopOpacity={0.35} />
-            <stop offset="100%" stopColor={accent} stopOpacity={0.02} />
-          </linearGradient>
-        </defs>
-        <CartesianGrid vertical={false} stroke={chrome.grid} />
-        <XAxis
-          dataKey="date"
-          tickFormatter={fmt}
-          interval={interval}
-          tick={{ fill: chrome.axis, fontSize: 12 }}
-          stroke={chrome.grid}
-        />
-        <YAxis allowDecimals={false} width={32} tick={{ fill: chrome.axis, fontSize: 12 }} stroke={chrome.grid} />
-        <Tooltip
-          labelFormatter={(l) => fmt(String(l))}
-          contentStyle={{
-            background: chrome.tooltipBg,
-            border: `1px solid ${chrome.tooltipBorder}`,
-            borderRadius: 8,
-            color: chrome.tooltipText,
-          }}
-        />
-        <Area
-          type="monotone"
-          dataKey="count"
-          name="Applications"
-          stroke={accent}
-          strokeWidth={2}
-          fill="url(#trendFill)"
-        />
-      </AreaChart>
-    </ResponsiveContainer>
+    <div className="flex flex-col gap-3">
+      <div className="trend-head">
+        <span className="trend-head__total">{total.toLocaleString()}</span>
+        <span className="trend-head__label">new in the last {days} days</span>
+        {delta !== null && (
+          <span className={cn('kpi-delta', delta > 0 && 'kpi-delta--good')}>
+            {delta !== 0 && <span aria-hidden="true">{delta > 0 ? '▲' : '▼'}</span>}
+            <span className="sr-only">{delta > 0 ? 'up ' : delta < 0 ? 'down ' : ''}</span>
+            {delta === 0 ? 'Same as' : Math.abs(delta).toLocaleString()} {delta === 0 ? '' : 'vs '}prior {days} days
+          </span>
+        )}
+      </div>
+
+      <div className="trend-readout" aria-live="polite">
+        <CalendarDays size={14} strokeWidth={1.75} aria-hidden="true" />
+        <span>{long(data[sel].date)}:</span>
+        <b>{data[sel].count} new</b>
+      </div>
+
+      <div
+        className={cn('trend-bars', `trend-bars--d${days}`)}
+        role="group"
+        aria-label={`New candidates per day, last ${days} days`}
+        onKeyDown={onKey}
+      >
+        <div className="trend-bars__grid" style={{ top: 'var(--space-4)' }} />
+        <div className="trend-bars__grid" style={{ top: '50%' }} />
+        <span className="trend-bars__max" aria-hidden="true">{max}</span>
+        {data.map((p, i) => (
+          <button
+            key={p.date}
+            ref={(el) => {
+              bars.current[i] = el;
+            }}
+            type="button"
+            tabIndex={i === sel ? 0 : -1}
+            aria-pressed={i === sel}
+            aria-label={`${short(p.date)}: ${p.count} new`}
+            title={`${short(p.date)}: ${p.count} new`}
+            className={cn('trend-bar', p.count === 0 && 'trend-bar--zero', i === sel && 'trend-bar--on')}
+            style={p.count === 0 ? undefined : { height: `${Math.max(6, (p.count / max) * 100)}%` }}
+            onClick={() => setPicked(i)}
+          />
+        ))}
+      </div>
+
+      <div className="trend-axis" aria-hidden="true">
+        <span>{short(data[0].date)}</span>
+        <span>{short(data[mid].date)}</span>
+        <span>{short(data[data.length - 1].date)}</span>
+      </div>
+    </div>
   );
 }

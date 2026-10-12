@@ -25,27 +25,39 @@ dotnet user-secrets set "Auth:PasswordHash" "<pbkdf2 hash>"
 # ciphertext becomes undecryptable. 32+ random chars.
 dotnet user-secrets set "Encryption:Key" "<random base64 key>"
 
-# Outbound email — OPTIONAL fallback. SMTP is normally configured in-app (Configuration →
-# Email / SMTP, SuperAdmin) and stored encrypted in the DB. These user-secrets/config values
-# are only used as a fallback when no DB row exists (or it's disabled). If neither is set,
-# EmailService logs a warning and skips sending (never breaks the underlying operation).
+# Outbound email — OPTIONAL fallback. Email is normally configured in-app (Configuration →
+# Email, SuperAdmin) and stored encrypted in the DB. These user-secrets/config values are only
+# used as a fallback when no DB row exists (or it's disabled). If neither is set, the queued
+# email is marked Failed by the outbox worker; EmailService.SendAsync itself never throws, so
+# the operation that triggered the email (creating a user, scheduling an interview, ...) is
+# never broken by it.
 dotnet user-secrets set "Smtp:User" "notifications@yourdomain.com"
 dotnet user-secrets set "Smtp:Password" "<16-char app password>"
 dotnet user-secrets set "Smtp:FromAddress" "notifications@yourdomain.com"
+
+# Outbound email via the HTTP notification API — OPTIONAL fallback, used only when there's no
+# EmailSetting row at all, or it's disabled, and Email:Provider resolves to HttpApi. An enabled
+# in-app row with the Notification API selected always uses its own key (or none); it never falls
+# back to this value, so a blank key on an enabled row is never silently filled in from config.
+# This value itself is a plain user-secret/env var, not encrypted at rest the way the DB row's key is.
+dotnet user-secrets set "EmailApi:ApiKey" "<notification API key>"
 
 # Outbound Slack — OPTIONAL fallback, same pattern as Smtp above. Slack is normally configured
 # in-app (Configuration → Slack, SuperAdmin) and stored encrypted in the DB. This is only used
 # when no DB row exists (or it's disabled). If neither is set, SlackService skips sending.
 dotnet user-secrets set "Slack:BotToken" "<xoxb-... bot token>"
 ```
-**SMTP is configured in-app** by a SuperAdmin at **Configuration → Email / SMTP** (host, port,
-username, password, from-address, STARTTLS, enabled) with a **Send test email** button; the password
-is encrypted at rest (`SecretProtector`, AES-GCM keyed by `Encryption:Key`) and never returned to the
-client. The `Smtp:*` config/`appsettings` values (`Smtp:Host`/`Smtp:Port`/`Smtp:FromName` default to
-`smtp.gmail.com`/`587`/`Recruitment Gorilla`) are a **fallback** only. Gmail/Workspace app passwords
-require 2-Step Verification; `App:ClientBaseUrl` (default `http://localhost:5173`) builds absolute
-links in emails — set it to your real frontend origin in other environments. In Docker, provide
-`Encryption__Key` (and any fallback `Smtp__*`/`Slack__BotToken`) as environment variables.
+**Email is configured in-app** by a SuperAdmin at **Configuration → Email**: a provider choice
+(SMTP, or the HTTP notification API), each with its own fields (SMTP: host, port, username,
+password, from-address, STARTTLS; Notification API: base URL, API key, allowed recipient domains)
+plus a shared sender display name, an Enabled toggle and a **Send test email** button. Every secret
+(the SMTP password, the API key) is encrypted at rest (`SecretProtector`, AES-GCM keyed by
+`Encryption:Key`) and never returned to the client. The `Smtp:*`/`EmailApi:*` config/`appsettings`
+values are a **fallback** only, picked between by `Email:Provider` (default `Smtp`). Gmail/Workspace
+app passwords require 2-Step Verification; `App:ClientBaseUrl` (default `http://localhost:5173`)
+builds absolute links in emails — set it to your real frontend origin in other environments. In
+Docker, provide `Encryption__Key` (and any fallback `Smtp__*`/`EmailApi__ApiKey`/`Slack__BotToken`)
+as environment variables. See [specs/email-outbox-and-notification-api.md](specs/email-outbox-and-notification-api.md).
 
 **Slack is configured in-app** the same way, at **Configuration → Slack** (SuperAdmin): a bot
 token, an Enabled toggle, and a per-category checklist of which notifications also go to Slack

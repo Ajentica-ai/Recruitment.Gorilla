@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { ADMIN, freshTestCvs, requireData, shotPath } from './helpers';
+import { ADMIN, apiAuth, freshTestCvs, requireData, shotPath } from './helpers';
 
 // Admin, not E2E_EMAIL's Recruiter: approving a draft requires assigning an
 // applied role, and a Recruiter only sees roles they are assigned to. With none,
@@ -10,7 +10,12 @@ const password = ADMIN.password ?? process.env.E2E_PASSWORD;
 test.describe('Bulk Upload 10 CVs & Staging Review Workspace Test', () => {
   test.setTimeout(60000);
 
-  test('uploads 10 sample CVs → persists to MySQL → reviews in Staging Workspace', async ({ page }) => {
+  test('uploads 10 sample CVs → persists to MySQL → reviews in Staging Workspace', async ({ page, request }) => {
+    // 0. A job opening must be selected before the dropzone accepts files now.
+    const auth = await apiAuth(request, { email, password });
+    const roles = await (await request.get('/api/candidates/role-options', { headers: auth })).json();
+    requireData(Array.isArray(roles) && roles.length > 0, 'an open job opening');
+
     // 1. Log in
     await page.goto('/login');
     await page.waitForSelector('input[type="email"], input[name="email"]');
@@ -23,9 +28,10 @@ test.describe('Bulk Upload 10 CVs & Staging Review Workspace Test', () => {
     await page.goto('/upload');
     await expect(page).toHaveURL(/\/upload$/);
 
-    // 3. Provide batch label
+    // 3. Provide batch label and the job opening these CVs are for
     const batchInput = page.locator('#batch-name-input');
     await batchInput.fill('Q3 Senior Engineering Intake');
+    await page.locator('#job-role-select').selectOption({ index: 1 });
 
     // 4. Attach 10 CV files. A fresh salted set each run: since #93 the API
     //    refuses any CV it has seen before, by content hash, so a reused set
