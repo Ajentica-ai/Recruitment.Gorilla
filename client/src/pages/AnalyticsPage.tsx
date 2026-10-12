@@ -384,7 +384,7 @@ export default function AnalyticsPage() {
               <table className="analytics-table">
                 <thead>
                   <tr>
-                    <th>Sourcing Channel</th>
+                    <th className="text-left pl-3">Sourcing Channel</th>
                     <th className="text-center">Applicants</th>
                     <th className="text-center">Screened</th>
                     <th className="text-center">Interviewed</th>
@@ -448,7 +448,7 @@ export default function AnalyticsPage() {
               <table className="analytics-table">
                 <thead>
                   <tr>
-                    <th>Recruiter</th>
+                    <th className="text-left pl-3">Recruiter</th>
                     <th className="text-center">Active Pipeline</th>
                     <th className="text-center">Total Assigned</th>
                     <th className="text-center">Status Actions</th>

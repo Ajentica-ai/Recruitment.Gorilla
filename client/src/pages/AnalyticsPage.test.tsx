@@ -212,4 +212,16 @@ describe('AnalyticsPage', () => {
       expect(fills()).toEqual(['100%', '4%', '0%']);
     });
   });
+
+  it('left-aligns the first-column headers over their left-aligned cells', async () => {
+    vi.mocked(getRecruitingAnalytics).mockResolvedValue(mockSummary);
+    renderWithClient();
+
+    for (const name of ['Recruiter', 'Sourcing Channel']) {
+      const header = await screen.findByRole('columnheader', { name });
+      expect(header).toHaveClass('text-left');
+    }
+    // The numeric columns stay centred over their centred values.
+    expect(screen.getByRole('columnheader', { name: 'Active Pipeline' })).toHaveClass('text-center');
+  });
 });
