@@ -6,6 +6,7 @@ import {
   createRoleOption,
   deleteRoleOption,
   getEvaluationRubrics,
+  getJobOpeningOptions,
   getRecruiterOptions,
   getRoleOptions,
   updateRoleOption,
@@ -43,9 +44,11 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet';
 
-const PRIORITIES = ['High', 'Medium', 'Low'];
-const LOCATIONS = ['Remote', 'Office', 'Hybrid', 'Contractual'];
-const DEPARTMENTS = ['Engineering', 'Admin', 'HR'];
+/** Active option names, plus the opening's current value so a since-deactivated one still shows. */
+const choices = (options: { name: string }[], current: string) => {
+  const names = options.map((o) => o.name);
+  return current && !names.includes(current) ? [...names, current] : names;
+};
 
 const STATUS_FILTERS: { id: 'all' | JobStatus; label: string }[] = [
   { id: 'all', label: 'All' },
@@ -99,6 +102,10 @@ export default function JobOpeningsTab() {
     queryKey: ['config', 'roles', 'all'],
     queryFn: () => getRoleOptions(true),
   });
+
+  const { data: priorityOptions = [] } = useQuery({ queryKey: ['config', 'job-priority', 'active'], queryFn: () => getJobOpeningOptions('priority') });
+  const { data: locationOptions = [] } = useQuery({ queryKey: ['config', 'job-location', 'active'], queryFn: () => getJobOpeningOptions('location') });
+  const { data: departmentOptions = [] } = useQuery({ queryKey: ['config', 'job-department', 'active'], queryFn: () => getJobOpeningOptions('department') });
 
   const { data: users = [] } = useQuery({ queryKey: ['recruiter-options'], queryFn: getRecruiterOptions });
 
@@ -342,21 +349,21 @@ export default function JobOpeningsTab() {
                 <Label>Priority</Label>
                 <NativeSelect value={priority} onChange={(e) => setPriority(e.target.value)}>
                   <option value="">None</option>
-                  {PRIORITIES.map((p) => <option key={p} value={p}>{p}</option>)}
+                  {choices(priorityOptions, priority).map((p) => <option key={p} value={p}>{p}</option>)}
                 </NativeSelect>
               </div>
               <div className="col-span-12 md:col-span-6">
                 <Label>Location</Label>
                 <NativeSelect value={location} onChange={(e) => setLocation(e.target.value)}>
                   <option value="">None</option>
-                  {LOCATIONS.map((l) => <option key={l} value={l}>{l}</option>)}
+                  {choices(locationOptions, location).map((l) => <option key={l} value={l}>{l}</option>)}
                 </NativeSelect>
               </div>
               <div className="col-span-12 md:col-span-6">
                 <Label>Department</Label>
                 <NativeSelect value={department} onChange={(e) => setDepartment(e.target.value)}>
                   <option value="">None</option>
-                  {DEPARTMENTS.map((d) => <option key={d} value={d}>{d}</option>)}
+                  {choices(departmentOptions, department).map((d) => <option key={d} value={d}>{d}</option>)}
                 </NativeSelect>
               </div>
               <div className="col-span-12 md:col-span-6">

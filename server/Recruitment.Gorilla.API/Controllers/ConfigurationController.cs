@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Recruitment.Gorilla.API.Auth;
 using Recruitment.Gorilla.API.DTOs;
+using Recruitment.Gorilla.API.Models;
 using Recruitment.Gorilla.API.Services;
 
 namespace Recruitment.Gorilla.API.Controllers;
@@ -313,6 +314,55 @@ public class ConfigurationController(
         logger.LogInformation("Updated interview type option {Id}.", id);
         await audit.RecordAsync("InterviewType.Updated", "InterviewType", id, $"Updated interview type '{updated!.Name}' (#{id})");
         return Ok(updated);
+    }
+
+    // ----- Job opening fields (Location / Department / Priority) -----
+
+    [HttpGet("job-opening-options/{kind}")]
+    public async Task<IActionResult> GetJobOpeningOptions(string kind, [FromQuery] bool includeInactive = false)
+    {
+        if (JobOpeningOptionKinds.FromRoute(kind) is not string k) return NotFound();
+        return Ok(await config.GetJobOpeningOptionsAsync(k, includeInactive));
+    }
+
+    [HttpPost("job-opening-options/{kind}")]
+    public async Task<IActionResult> CreateJobOpeningOption(string kind, [FromBody] UpsertJobOpeningOptionDto dto)
+    {
+        if (JobOpeningOptionKinds.FromRoute(kind) is not string k) return NotFound();
+        if (string.IsNullOrWhiteSpace(dto.Name)) return BadRequest("Name is required.");
+
+        var (created, conflict) = await config.CreateJobOpeningOptionAsync(k, dto);
+        if (conflict) return Conflict($"A {k.ToLowerInvariant()} with that name already exists.");
+
+        logger.LogInformation("Created job opening {Kind} option {Id} ('{Name}').", k, created!.Id, created.Name);
+        await audit.RecordAsync($"JobOpening{k}.Created", $"JobOpening{k}", created.Id, $"Created {k.ToLowerInvariant()} option '{created.Name}' (#{created.Id})");
+        return Ok(created);
+    }
+
+    [HttpPut("job-opening-options/{kind}/{id:int}")]
+    public async Task<IActionResult> UpdateJobOpeningOption(string kind, int id, [FromBody] UpsertJobOpeningOptionDto dto)
+    {
+        if (JobOpeningOptionKinds.FromRoute(kind) is not string k) return NotFound();
+        if (string.IsNullOrWhiteSpace(dto.Name)) return BadRequest("Name is required.");
+
+        var (updated, notFound, conflict) = await config.UpdateJobOpeningOptionAsync(k, id, dto);
+        if (notFound) return NotFound();
+        if (conflict) return Conflict($"A {k.ToLowerInvariant()} with that name already exists.");
+
+        logger.LogInformation("Updated job opening {Kind} option {Id}.", k, id);
+        await audit.RecordAsync($"JobOpening{k}.Updated", $"JobOpening{k}", id, $"Updated {k.ToLowerInvariant()} option '{updated!.Name}' (#{id})");
+        return Ok(updated);
+    }
+
+    [HttpDelete("job-opening-options/{kind}/{id:int}")]
+    public async Task<IActionResult> DeleteJobOpeningOption(string kind, int id)
+    {
+        if (JobOpeningOptionKinds.FromRoute(kind) is not string k) return NotFound();
+        if (!await config.DeleteJobOpeningOptionAsync(k, id)) return NotFound();
+
+        logger.LogInformation("Deleted/disabled job opening {Kind} option {Id}.", k, id);
+        await audit.RecordAsync($"JobOpening{k}.Deleted", $"JobOpening{k}", id, $"Deleted/disabled {k.ToLowerInvariant()} option #{id}");
+        return NoContent();
     }
 
     [HttpDelete("interview-types/{id:int}")]

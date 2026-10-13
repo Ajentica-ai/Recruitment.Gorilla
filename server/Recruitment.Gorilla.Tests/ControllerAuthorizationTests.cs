@@ -25,6 +25,26 @@ public class ControllerAuthorizationTests(ApiFixture fx)
         Assert.Equal(expected, resp.StatusCode);
     }
 
+    // ---- Job opening field options: Admin or above ----
+
+    [Theory]
+    [InlineData("SuperAdmin", HttpStatusCode.OK)]
+    [InlineData("Admin", HttpStatusCode.OK)]
+    [InlineData("Recruiter", HttpStatusCode.Forbidden)]
+    [InlineData("Interviewer", HttpStatusCode.Forbidden)]
+    public Task Get_job_opening_options(string role, HttpStatusCode expected) =>
+        AssertStatus(role, HttpMethod.Get, "/api/config/job-opening-options/location", expected);
+
+    [Fact]
+    public async Task Job_opening_options_reject_writes_from_recruiters_and_unknown_kinds()
+    {
+        await AssertStatus("Recruiter", HttpMethod.Post, "/api/config/job-opening-options/location", HttpStatusCode.Forbidden);
+        await AssertStatus("Recruiter", HttpMethod.Delete, "/api/config/job-opening-options/priority/1", HttpStatusCode.Forbidden);
+        await AssertStatus("Admin", HttpMethod.Get, "/api/config/job-opening-options/bogus", HttpStatusCode.NotFound);
+        var anon = await fx.SendAsync(HttpMethod.Get, "/api/config/job-opening-options/location", token: null);
+        Assert.Equal(HttpStatusCode.Unauthorized, anon.StatusCode);
+    }
+
     // ---- Browse candidates: CanWriteCandidate (Interviewer excluded) ----
 
     [Theory]

@@ -40,6 +40,8 @@ import type {
   DeleteRoleResult,
   SkillOption,
   InterviewTypeOption,
+  JobOpeningOption,
+  JobOpeningOptionKind,
   StatusOption,
   StatusChangePayload,
   StatusHistoryEntry,
@@ -605,6 +607,25 @@ export const deleteInterviewTypeOption = async (id: number): Promise<void> => {
   await api.delete(`/config/interview-types/${id}`);
 };
 
+// ----- Configuration: Job opening field options (Location / Department / Priority) -----
+export const getJobOpeningOptions = async (kind: JobOpeningOptionKind, includeInactive = false): Promise<JobOpeningOption[]> => {
+  const { data } = await api.get<JobOpeningOption[]>(`/config/job-opening-options/${kind}`, { params: { includeInactive } });
+  return data;
+};
+
+export const createJobOpeningOption = async (kind: JobOpeningOptionKind, payload: UpsertOptionPayload): Promise<JobOpeningOption> => {
+  const { data } = await api.post<JobOpeningOption>(`/config/job-opening-options/${kind}`, payload);
+  return data;
+};
+
+export const updateJobOpeningOption = async (kind: JobOpeningOptionKind, id: number, payload: UpsertOptionPayload): Promise<JobOpeningOption> => {
+  const { data } = await api.put<JobOpeningOption>(`/config/job-opening-options/${kind}/${id}`, payload);
+  return data;
+};
+
+export const deleteJobOpeningOption = async (kind: JobOpeningOptionKind, id: number): Promise<void> => {
+  await api.delete(`/config/job-opening-options/${kind}/${id}`);
+};
 /** Active interview type tags for the schedule form (readable by any authorized user). */
 export const getActiveInterviewTypes = async (): Promise<InterviewTypeOption[]> => {
   const { data } = await api.get<InterviewTypeOption[]>('/interviews/types');

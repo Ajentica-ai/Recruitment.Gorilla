@@ -967,6 +967,148 @@ namespace Recruitment.Gorilla.API.Migrations
                         });
                 });
 
+            modelBuilder.Entity("Recruitment.Gorilla.API.Models.JobOpeningOption", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("tinyint(1)")
+                        .HasDefaultValue(true);
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("varchar(20)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("varchar(200)");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Kind", "Name")
+                        .IsUnique();
+
+                    b.ToTable("JobOpeningOptions");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            CreatedAt = new DateTime(2026, 10, 13, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            Kind = "Location",
+                            Name = "Remote",
+                            SortOrder = 1,
+                            UpdatedAt = new DateTime(2026, 10, 13, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            Id = 2,
+                            CreatedAt = new DateTime(2026, 10, 13, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            Kind = "Location",
+                            Name = "Office",
+                            SortOrder = 2,
+                            UpdatedAt = new DateTime(2026, 10, 13, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            Id = 3,
+                            CreatedAt = new DateTime(2026, 10, 13, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            Kind = "Location",
+                            Name = "Hybrid",
+                            SortOrder = 3,
+                            UpdatedAt = new DateTime(2026, 10, 13, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            Id = 4,
+                            CreatedAt = new DateTime(2026, 10, 13, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            Kind = "Location",
+                            Name = "Contractual",
+                            SortOrder = 4,
+                            UpdatedAt = new DateTime(2026, 10, 13, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            Id = 5,
+                            CreatedAt = new DateTime(2026, 10, 13, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            Kind = "Department",
+                            Name = "Engineering",
+                            SortOrder = 1,
+                            UpdatedAt = new DateTime(2026, 10, 13, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            Id = 6,
+                            CreatedAt = new DateTime(2026, 10, 13, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            Kind = "Department",
+                            Name = "Admin",
+                            SortOrder = 2,
+                            UpdatedAt = new DateTime(2026, 10, 13, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            Id = 7,
+                            CreatedAt = new DateTime(2026, 10, 13, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            Kind = "Department",
+                            Name = "HR",
+                            SortOrder = 3,
+                            UpdatedAt = new DateTime(2026, 10, 13, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            Id = 8,
+                            CreatedAt = new DateTime(2026, 10, 13, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            Kind = "Priority",
+                            Name = "High",
+                            SortOrder = 1,
+                            UpdatedAt = new DateTime(2026, 10, 13, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            Id = 9,
+                            CreatedAt = new DateTime(2026, 10, 13, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            Kind = "Priority",
+                            Name = "Medium",
+                            SortOrder = 2,
+                            UpdatedAt = new DateTime(2026, 10, 13, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            Id = 10,
+                            CreatedAt = new DateTime(2026, 10, 13, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            Kind = "Priority",
+                            Name = "Low",
+                            SortOrder = 3,
+                            UpdatedAt = new DateTime(2026, 10, 13, 0, 0, 0, 0, DateTimeKind.Utc)
+                        });
+                });
+
             modelBuilder.Entity("Recruitment.Gorilla.API.Models.Notification", b =>
                 {
                     b.Property<int>("Id")

@@ -12,9 +12,10 @@ vi.mock('../../services/api', () => ({
   updateRoleOption: vi.fn(),
   deleteRoleOption: vi.fn(),
   getEvaluationRubrics: vi.fn().mockResolvedValue([]),
+  getJobOpeningOptions: vi.fn(),
 }));
 vi.mock('../../auth/AuthContext', () => ({ useAuth: () => ({ isSuperAdmin: true }) }));
-import { getRoleOptions, getRecruiterOptions } from '../../services/api';
+import { getRoleOptions, getRecruiterOptions, getJobOpeningOptions } from '../../services/api';
 
 const opening = (over: Partial<RoleAppliedOption> = {}): RoleAppliedOption => ({
   id: 5, name: 'Backend Engineer', sortOrder: 1, isActive: true,
@@ -35,6 +36,7 @@ describe('JobOpeningsTab recruiter picker', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(getRoleOptions).mockResolvedValue([opening()]);
+    vi.mocked(getJobOpeningOptions).mockResolvedValue([]);
     vi.mocked(getRecruiterOptions).mockResolvedValue([
       { id: 1, name: 'Rita Recruiter', email: 'rita@rg.local' },
     ]);
@@ -64,5 +66,38 @@ describe('JobOpeningsTab recruiter picker', () => {
     await waitFor(() =>
       expect(screen.getByText(/Ivy Interviewer — no candidate access/)).toBeInTheDocument(),
     );
+  });
+});
+
+describe('JobOpeningsTab field lists', () => {
+  const opt = (id: number, name: string) => ({ id, kind: '', name, sortOrder: id, isActive: true });
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(getRecruiterOptions).mockResolvedValue([]);
+    vi.mocked(getJobOpeningOptions).mockImplementation(async (kind) =>
+      kind === 'location'
+        ? [opt(1, 'Remote'), opt(2, 'Berlin HQ')]
+        : kind === 'priority'
+          ? [opt(3, 'Urgent')]
+          : [opt(4, 'Legal')],
+    );
+  });
+
+  it('offers the admin-managed values and keeps a deactivated current value selectable', async () => {
+    vi.mocked(getRoleOptions).mockResolvedValue([opening({ location: 'Old Office', priority: 'Urgent' })]);
+
+    renderWithProviders(<JobOpeningsTab />);
+    await openEditModal();
+
+    const option = (name: string) => screen.findByRole('option', { name });
+    expect(await option('Berlin HQ')).toBeInTheDocument();
+    expect(await option('Legal')).toBeInTheDocument();
+    expect(await option('Urgent')).toBeInTheDocument();
+    // Not in the active list, but this opening still has it, so it must not vanish.
+    expect(await option('Old Office')).toBeInTheDocument();
+    // The old hard-coded lists are gone.
+    expect(screen.queryByRole('option', { name: 'Hybrid' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('option', { name: 'Medium' })).not.toBeInTheDocument();
   });
 });

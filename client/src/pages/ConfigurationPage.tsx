@@ -17,6 +17,7 @@ import Page from '../components/common/Page';
 import Tabs, { TabPanel, type TabDef } from '../components/common/Tabs';
 import { useTabs } from '../components/common/useTabs';
 import JobOpeningsTab from './configuration/JobOpeningsTab';
+import JobOpeningFieldsTab from './configuration/JobOpeningFieldsTab';
 import OptionChipsTab, { type OptionApi } from './configuration/OptionChipsTab';
 import EmailSettingsTab from './configuration/EmailSettingsTab';
 import EmailDeliveryTab from './configuration/EmailDeliveryTab';
@@ -64,6 +65,7 @@ export default function ConfigurationPage() {
     ...(isSuperAdmin ? [{ id: 'email-delivery', label: 'Email delivery' }] : []),
     ...(isSuperAdmin ? [{ id: 'slack', label: 'Slack' }] : []),
     { id: 'jobs', label: 'Job openings' },
+    { id: 'job-fields', label: 'Job opening fields' },
   ];
 
   const [active, setActive] = useTabs(tabs);
@@ -75,6 +77,12 @@ export default function ConfigurationPage() {
       {active === 'jobs' && (
         <TabPanel id="jobs">
           <JobOpeningsTab />
+        </TabPanel>
+      )}
+
+      {active === 'job-fields' && (
+        <TabPanel id="job-fields">
+          <JobOpeningFieldsTab />
         </TabPanel>
       )}
 
