@@ -1,0 +1,562 @@
+# Recruitment.Gorilla CD: deploy prod to the droplet after CI passes. Modelled
+# on the GorillaHR CD workflow.
+#
+# The droplet cannot pull from GitHub, so the runner exports the commit with
+# `git archive`, streams it over SSH into /opt/recruitment/Recruitment.Gorilla,
+# and runs docker compose there through .github/scripts/recruitment-deploy.sh.
+# Files the new commit no longer tracks are removed from an explicit,
+# validated list, so the tree mirrors the commit without any wildcard removal.
+#
+# workflow_run always uses this file from the default branch (develop), so
+# this file and the deploy script must exist on develop AND on prod, and the
+# deploy script is taken from the same commit as this file (github.sha), not
+# from the commit being deployed. The target commit only supplies the
+# application code. CI must also run on pushes to prod (ci.yml lists prod in
+# its push branches), or this workflow never fires.
+#
+# Scope: compose project recruitment-gorilla only, always with an explicit
+# `-f docker-compose.yml` so no override file is loaded. apply builds api and
+# web and runs `up -d --no-deps api web`, so a deploy never recreates or
+# restarts the db service; the volumes db-data, api-uploads and api-logs are
+# never touched. The GorillaHR project, the host nginx and certbot are never
+# touched. No .env is created: the app runs on the committed compose defaults
+# and apply refuses any change to them.
+#
+# The droplet is shared, so the deploy holds /var/lock/droplet-deploy.lock
+# (flock) for its whole duration, and apply refuses to build without swap or
+# without enough memory plus free swap.
+#
+# Database safety: a verified mysqldump is taken on the server before every
+# deploy (gzip test, completion marker, size check) and a deploy aborts if it
+# fails. EF migrations run when the API starts, so a deploy that carries a new
+# migration is NOT rolled back automatically afterwards; the dump is the way
+# back. The dump is never uploaded anywhere: this repository is public, and
+# so are its Actions logs and artifacts.
+
+name: CD
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [prod]
+  workflow_dispatch:
+    inputs:
+      sha:
+        description: Full 40-character commit SHA on prod to deploy
+        required: true
+        type: string
+      mode:
+        description: dry-run reports what would change; deploy ships it
+        required: true
+        type: choice
+        options: [dry-run, deploy]
+        default: dry-run
+      bootstrap:
+        description: First CD deploy only (server has no .deployed-sha yet)
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-recruitment
+  cancel-in-progress: false
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  deploy:
+    name: Deploy Recruitment
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.event == 'push' &&
+       github.event.workflow_run.head_branch == 'prod' &&
+       github.event.workflow_run.head_repository.full_name == github.repository)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      SITE: https://recruitment.ajentica.ai
+      DEPLOY_SCRIPT: ${{ github.workspace }}/cd-tools/.github/scripts/recruitment-deploy.sh
+
+    steps:
+      - name: Resolve target
+        id: target
+        env:
+          EVENT: ${{ github.event_name }}
+          REF: ${{ github.ref }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+          RUN_SHA: ${{ github.event.workflow_run.head_sha }}
+          INPUT_SHA: ${{ inputs.sha }}
+          INPUT_MODE: ${{ inputs.mode }}
+          INPUT_BOOTSTRAP: ${{ inputs.bootstrap }}
+        run: |
+          if [ "$EVENT" = workflow_run ]; then
+            sha="$RUN_SHA"; mode=deploy; bootstrap=false
+          else
+            # Manual runs execute this file and the deploy script from the
+            # selected ref, so only the default branch may start them.
+            if [ -z "$DEFAULT_BRANCH" ] || [ "$REF" != "refs/heads/$DEFAULT_BRANCH" ]; then
+              echo "::error::Run CD from the default branch ($DEFAULT_BRANCH), not $REF"
+              exit 1
+            fi
+            sha="$INPUT_SHA"; mode="$INPUT_MODE"; bootstrap="$INPUT_BOOTSTRAP"
+          fi
+          if ! [[ $sha =~ ^[0-9a-f]{40}$ ]]; then
+            echo "::error::sha must be a full 40-character lowercase hex commit SHA"
+            exit 1
+          fi
+          case "$mode" in dry-run|deploy) ;; *) echo "::error::unknown mode '$mode'"; exit 1 ;; esac
+          case "$bootstrap" in true|false) ;; *) echo "::error::bootstrap must be true or false"; exit 1 ;; esac
+          {
+            echo "sha=$sha"
+            echo "mode=$mode"
+            echo "bootstrap=$bootstrap"
+          } >> "$GITHUB_OUTPUT"
+          echo "target=$sha mode=$mode bootstrap=$bootstrap"
+
+      - name: Check deploy secrets
+        env:
+          REC_DO_HOST: ${{ secrets.REC_DO_HOST }}
+          REC_DO_USER: ${{ secrets.REC_DO_USER }}
+          REC_DO_SSH_KEY: ${{ secrets.REC_DO_SSH_KEY }}
+          REC_DO_KNOWN_HOSTS: ${{ secrets.REC_DO_KNOWN_HOSTS }}
+        run: |
+          missing=""
+          for name in REC_DO_HOST REC_DO_USER REC_DO_SSH_KEY REC_DO_KNOWN_HOSTS; do
+            [ -n "${!name}" ] || missing="$missing $name"
+          done
+          if [ -n "$missing" ]; then
+            echo "::error::Repository secrets missing or empty:$missing"
+            exit 1
+          fi
+
+      - name: Check out target commit
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ steps.target.outputs.sha }}
+          path: src
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Check out deploy script
+        uses: actions/checkout@v7
+        with:
+          path: cd-tools
+          sparse-checkout: .github/scripts
+          persist-credentials: false
+
+      - name: Validate target
+        id: validate
+        working-directory: src
+        env:
+          EVENT: ${{ github.event_name }}
+          SHA: ${{ steps.target.outputs.sha }}
+        run: |
+          echo "skip=false" >> "$GITHUB_OUTPUT"
+          git cat-file -e "$SHA^{commit}" 2>/dev/null \
+            || { echo "::error::$SHA is not a commit in this repository"; exit 1; }
+          if ! git merge-base --is-ancestor "$SHA" origin/prod; then
+            echo "::error::$SHA is not on prod"
+            exit 1
+          fi
+          head=$(git rev-parse origin/prod)
+          if [ "$EVENT" = workflow_run ] && [ "$SHA" != "$head" ]; then
+            echo "::notice::Skipping $SHA: superseded by a newer prod commit ($head), whose own run will deploy it"
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          git cat-file -e "$SHA:docker-compose.yml" 2>/dev/null \
+            || { echo "::error::$SHA has no docker-compose.yml"; exit 1; }
+          git cat-file -e "$SHA:client/nginx.standalone.conf" 2>/dev/null \
+            || { echo "::error::$SHA has no client/nginx.standalone.conf (the web image copies it in)"; exit 1; }
+          # git archive extracts over /opt/recruitment/Recruitment.Gorilla, so
+          # the commit must not carry any server-only path.
+          protected=$(git ls-tree -r --name-only "$SHA" \
+            | grep -E '^(\.env|docker-compose\.override\.yml|\.deployed-sha|\.shipped-sha|\.deploy-history)$' || true)
+          if [ -n "$protected" ]; then
+            echo "::error::$SHA contains server-only paths, refusing to ship:"
+            echo "$protected"
+            exit 1
+          fi
+
+      - name: Configure SSH
+        if: steps.validate.outputs.skip != 'true'
+        env:
+          REC_DO_HOST: ${{ secrets.REC_DO_HOST }}
+          REC_DO_USER: ${{ secrets.REC_DO_USER }}
+          REC_DO_SSH_KEY: ${{ secrets.REC_DO_SSH_KEY }}
+          REC_DO_KNOWN_HOSTS: ${{ secrets.REC_DO_KNOWN_HOSTS }}
+        run: |
+          umask 077
+          mkdir -p ~/.ssh
+          printf '%s\n' "$REC_DO_SSH_KEY" > "$RUNNER_TEMP/deploy_key"
+          printf '%s\n' "$REC_DO_KNOWN_HOSTS" > "$RUNNER_TEMP/known_hosts"
+          chmod 600 "$RUNNER_TEMP/deploy_key" "$RUNNER_TEMP/known_hosts"
+          ssh-keygen -y -f "$RUNNER_TEMP/deploy_key" > /dev/null \
+            || { echo "::error::REC_DO_SSH_KEY is not a valid unencrypted private key"; exit 1; }
+          cat > ~/.ssh/config <<EOF
+          Host rec-prod
+            HostName $REC_DO_HOST
+            User $REC_DO_USER
+            IdentityFile $RUNNER_TEMP/deploy_key
+            IdentitiesOnly yes
+            UserKnownHostsFile $RUNNER_TEMP/known_hosts
+            StrictHostKeyChecking yes
+            BatchMode yes
+            ConnectTimeout 15
+            ServerAliveInterval 30
+          EOF
+          chmod 600 ~/.ssh/config
+          ssh rec-prod true || { echo "::error::SSH connection to the droplet failed"; exit 1; }
+
+      - name: Preflight
+        id: preflight
+        if: steps.validate.outputs.skip != 'true'
+        env:
+          BOOTSTRAP: ${{ steps.target.outputs.bootstrap }}
+        run: |
+          # BOOTSTRAP was validated as true|false, so expanding it here is safe.
+          # shellcheck disable=SC2029
+          ssh rec-prod "bash -s -- preflight $BOOTSTRAP" < "$DEPLOY_SCRIPT" | tee "$RUNNER_TEMP/preflight.log"
+          prev=$(sed -n 's/^REC_PREV_SHA=//p' "$RUNNER_TEMP/preflight.log")
+          shipped=$(sed -n 's/^REC_SHIPPED_SHA=//p' "$RUNNER_TEMP/preflight.log")
+          migrations=$(sed -n 's/^REC_MIGRATIONS=//p' "$RUNNER_TEMP/preflight.log")
+          admin=$(sed -n 's/^REC_ADMIN=//p' "$RUNNER_TEMP/preflight.log")
+          [[ $prev =~ ^([0-9a-f]{40}|none)$ ]] || { echo "::error::preflight returned no previous SHA"; exit 1; }
+          [[ $shipped =~ ^([0-9a-f]{40}|none)$ ]] || { echo "::error::preflight returned no shipped SHA"; exit 1; }
+          [[ $migrations =~ ^[0-9]+:[A-Za-z0-9_-]+$ ]] || migrations=unknown
+          [[ $admin =~ ^[a-z]+$ ]] || admin=unknown
+          {
+            echo "prev=$prev"
+            echo "shipped=$shipped"
+            echo "migrations=$migrations"
+            echo "admin=$admin"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Certificate expiry (non-blocking)
+        id: cert
+        if: steps.preflight.outcome == 'success'
+        run: |
+          days=$(ssh rec-prod 'bash -s -- cert-expiry' < "$DEPLOY_SCRIPT" | sed -n 's/^REC_CERT_DAYS=//p') || days=""
+          [[ $days =~ ^-?[0-9]+$ ]] || days=unknown
+          echo "days=$days" >> "$GITHUB_OUTPUT"
+          if [ "$days" = unknown ]; then
+            echo "::warning::Could not read the TLS certificate expiry"
+          elif [ "$days" -lt 21 ]; then
+            echo "::warning::TLS certificate expires in $days days"
+          else
+            echo "TLS certificate expires in $days days"
+          fi
+
+      - name: Changes since the shipped commit
+        if: steps.preflight.outcome == 'success'
+        working-directory: src
+        env:
+          FROM: ${{ steps.preflight.outputs.shipped }}
+          SHA: ${{ steps.target.outputs.sha }}
+        run: |
+          out="$RUNNER_TEMP/changes.md"
+          if [ "$FROM" = none ]; then
+            echo "No commit recorded on the server (bootstrap): no diff and no file removal." > "$out"
+          elif [ "$FROM" = "$SHA" ]; then
+            echo "The server tree already holds the target: redeploy only." > "$out"
+          elif ! git cat-file -e "$FROM^{commit}" 2>/dev/null; then
+            echo "The commit recorded on the server ($FROM) is not in this repository's history." > "$out"
+          else
+            {
+              echo "Commits: $(git rev-list --count "$FROM..$SHA") ahead, $(git rev-list --count "$SHA..$FROM") behind the commit in the server tree."
+              echo "Files to remove: $(git diff --no-renames --name-only --diff-filter=D "$FROM" "$SHA" | wc -l)."
+              migrations=$(git diff --name-status "$FROM" "$SHA" -- server/Recruitment.Gorilla.API/Migrations)
+              if [ -n "$migrations" ]; then
+                echo
+                echo "Migration changes (EF applies them when the API starts; no automatic rollback after a schema change):"
+                echo '```'
+                echo "$migrations"
+                echo '```'
+              fi
+              echo
+              echo "<details><summary>Changed files</summary>"
+              echo
+              echo '```'
+              git diff --no-renames --name-status "$FROM" "$SHA"
+              echo '```'
+              echo "</details>"
+            } > "$out"
+          fi
+          cat "$out"
+
+      - name: Deploy
+        id: deploy
+        if: steps.preflight.outcome == 'success' && steps.target.outputs.mode == 'deploy'
+        working-directory: src
+        env:
+          SHA: ${{ steps.target.outputs.sha }}
+          PREV: ${{ steps.preflight.outputs.prev }}
+          SHIPPED: ${{ steps.preflight.outputs.shipped }}
+          BEFORE: ${{ steps.preflight.outputs.migrations }}
+          BOOTSTRAP: ${{ steps.target.outputs.bootstrap }}
+        run: |
+          # Arguments are validated SHAs, migration states, base64 and fixed
+          # words, so they are expanded on the runner on purpose.
+          # shellcheck disable=SC2029
+          remote() { ssh rec-prod "bash -s -- $*" < "$DEPLOY_SCRIPT"; }
+          # Move the server tree from commit $1 to commit $2: remove the files
+          # $1 tracks and $2 does not, extract $2 over the rest, record it.
+          transition() {
+            local from="$1" to="$2" paths encoded
+            if [ "$from" != none ] && [ "$from" != "$to" ]; then
+              paths=$(git -c core.quotePath=false diff --no-renames --name-only --diff-filter=D "$from" "$to")
+              if grep -q '^"' <<< "$paths"; then
+                echo "::error::A path to remove needs quoting; remove it by hand"
+                return 1
+              fi
+              if [ -n "$paths" ]; then
+                encoded=$(printf '%s\n' "$paths" | base64 -w0)
+                if [ "${#encoded}" -gt 200000 ]; then
+                  echo "::error::Too many files to remove in one deploy"
+                  return 1
+                fi
+                echo "removing $(wc -l <<< "$paths") file(s) that $to does not track"
+                remote prune "$encoded" || return 1
+              fi
+            fi
+            git archive --format=tar "$to" | ssh rec-prod 'tar -x --no-same-owner -C /opt/recruitment/Recruitment.Gorilla' || return 1
+            remote mark-shipped "$to"
+          }
+          rollout() {
+            echo "::group::Ship, build and start $2 (tree held $1)"
+            transition "$1" "$2" && remote apply && remote wait-healthy 300 && remote site-check
+            local rc=$?
+            echo "::endgroup::"
+            return $rc
+          }
+          migrations_now() {
+            local state
+            state=$(remote migrations | sed -n 's/^REC_MIGRATIONS=//p') || state=""
+            [[ $state =~ ^[0-9]+:[A-Za-z0-9_-]+$ ]] && echo "$state" || echo unknown
+          }
+
+          {
+            echo "rollback=none"
+            echo "dump=none"
+          } >> "$GITHUB_OUTPUT"
+
+          # Hold the droplet deploy lock for the whole deploy through a separate
+          # SSH session. It is released when this step closes the pipe, or when
+          # the session drops if the runner dies.
+          lock_fifo="$RUNNER_TEMP/deploy-lock.fifo"
+          rm -f "$lock_fifo"
+          mkfifo "$lock_fifo"
+          ssh rec-prod 'exec 9>/var/lock/droplet-deploy.lock; flock -w 900 9 || { echo LOCK_TIMEOUT; exit 1; }; echo LOCKED; exec cat > /dev/null' \
+            < "$lock_fifo" > "$RUNNER_TEMP/lock.log" 2>&1 &
+          lock_pid=$!
+          exec 8> "$lock_fifo"
+          # Called by the EXIT trap below.
+          # shellcheck disable=SC2329
+          release_lock() {
+            exec 8>&-
+            wait "$lock_pid" 2>/dev/null || true
+          }
+          trap release_lock EXIT
+          for _ in $(seq 1 200); do
+            grep -qx LOCKED "$RUNNER_TEMP/lock.log" && break
+            kill -0 "$lock_pid" 2>/dev/null || break
+            sleep 5
+          done
+          if ! grep -qx LOCKED "$RUNNER_TEMP/lock.log"; then
+            echo "::error::Could not take the droplet deploy lock (/var/lock/droplet-deploy.lock) within 15 minutes; another deploy is running. Nothing was changed."
+            exit 1
+          fi
+          echo "holding the droplet deploy lock"
+
+          if [ "$SHIPPED" != none ] && ! git cat-file -e "$SHIPPED^{commit}" 2>/dev/null; then
+            echo "::error::The server tree holds $SHIPPED, which is not in this repository; cannot compute removals. Fix .shipped-sha by hand. Nothing was changed."
+            exit 1
+          fi
+
+          # A verified database dump before anything changes, on EVERY deploy,
+          # and a row count baseline to compare afterwards.
+          if ! remote dump | tee "$RUNNER_TEMP/dump.log"; then
+            echo "::error::Database dump failed; deploy aborted before shipping. Nothing was changed."
+            exit 1
+          fi
+          {
+            echo "dump=$(sed -n 's/^REC_DUMP_FILE=//p' "$RUNNER_TEMP/dump.log")"
+            echo "dump_size=$(sed -n 's/^REC_DUMP_SIZE=//p' "$RUNNER_TEMP/dump.log")"
+          } >> "$GITHUB_OUTPUT"
+          if ! remote rowcounts before; then
+            echo "::error::Row count baseline failed; deploy aborted before shipping. Nothing was changed."
+            exit 1
+          fi
+
+          if [ "$BOOTSTRAP" = true ] && [ "$PREV" = none ]; then
+            remote snapshot
+          fi
+
+          if rollout "$SHIPPED" "$SHA"; then
+            after=$(migrations_now)
+            {
+              echo "migrations_after=$after"
+              echo "health=passed"
+            } >> "$GITHUB_OUTPUT"
+            remote rowcounts after || echo "::warning::Row counts after the deploy could not be taken"
+            rowloss=$(remote rowcount-compare | tee "$RUNNER_TEMP/rowloss.log" | sed -n 's/^REC_ROWLOSS=//p') || rowloss=unknown
+            cat "$RUNNER_TEMP/rowloss.log" || true
+            [[ $rowloss =~ ^([0-9]+|unknown)$ ]] || rowloss=unknown
+            echo "rowloss=$rowloss" >> "$GITHUB_OUTPUT"
+            if [ "$rowloss" != 0 ]; then
+              echo "::warning::Row counts: $rowloss table(s) have fewer rows after the deploy than before (see the log; users can delete rows, so check)"
+            fi
+            remote record "$PREV" "$SHA" "$BEFORE" "$after"
+            exit 0
+          fi
+
+          after=$(migrations_now)
+          {
+            echo "migrations_after=$after"
+            echo "health=failed"
+          } >> "$GITHUB_OUTPUT"
+          echo "::group::Diagnostics"
+          remote diagnose || true
+          echo "::endgroup::"
+
+          # Roll back only when this run started from the last healthy deploy
+          # and the schema did not move. EF migrations are applied at API start
+          # and are not reversed here, so older code is never started against a
+          # newer schema automatically.
+          reason=""
+          if [ "$PREV" = none ]; then
+            reason="no previous healthy deploy"
+          elif [ "$SHIPPED" != "$PREV" ]; then
+            reason="the tree held $SHIPPED, not the last healthy deploy $PREV"
+          elif [ "$BEFORE" = unknown ] || [ "$after" = unknown ] || [ "$after" != "$BEFORE" ]; then
+            reason="EF migrations $BEFORE -> $after"
+          fi
+
+          if [ -z "$reason" ]; then
+            # Ask the server what the tree holds: a deploy that failed before
+            # mark-shipped (prune rejected, tar failed) left the old commit.
+            from=$(remote shipped-sha | sed -n 's/^REC_SHIPPED_SHA=//p') || from=""
+            if [[ $from =~ ^[0-9a-f]{40}$ ]] && git cat-file -e "$from^{commit}" 2>/dev/null; then
+              echo "Health failed, schema unchanged ($BEFORE): rolling back from $from to $PREV"
+              if rollout "$from" "$PREV"; then
+                echo "rollback=succeeded" >> "$GITHUB_OUTPUT"
+                echo "::error::Deploy of $SHA failed; rolled back to $PREV, which is healthy"
+              else
+                echo "rollback=failed" >> "$GITHUB_OUTPUT"
+                remote diagnose || true
+                echo "::error::Deploy of $SHA failed and the rollback to $PREV also failed"
+              fi
+              exit 1
+            fi
+            reason="the server reported '${from:-nothing}' as the commit in the tree"
+          fi
+
+          dump_file=$(sed -n 's/^REC_DUMP_FILE=//p' "$RUNNER_TEMP/dump.log" 2>/dev/null || true)
+          echo "::error::Deploy of $SHA failed; no automatic rollback ($reason)"
+          cat <<EOF
+          Manual recovery, no automatic rollback was attempted ($reason):
+            previous SHA:  $PREV
+            tree held:     $SHIPPED at the start of this run
+            EF migrations: $BEFORE before, $after now
+            database dump: ${dump_file:-none}   (on the droplet, in /root/recruitment-cd-dumps)
+            images:        docker images --filter 'reference=recruitment-gorilla-*:pre-cd-*'
+          Restoring an older schema needs the database dump; running older
+          code against a newer schema is not safe.
+          EOF
+          exit 1
+
+      - name: Public site check (non-blocking)
+        id: public
+        if: always() && (steps.deploy.outcome == 'success' || steps.deploy.outcome == 'failure')
+        run: |
+          result=ok
+          code=""
+          for _ in 1 2 3; do
+            code=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 10 "$SITE/" 2> "$RUNNER_TEMP/curl.err" || true)
+            [ "$code" = 200 ] && break
+            sleep 5
+          done
+          echo "public GET $SITE/ -> $code"
+          if [ "$code" != 200 ]; then
+            result="GET / returned ${code:-nothing} ($(head -c 200 "$RUNNER_TEMP/curl.err" | tr -d '\n'))"
+            echo "::warning::Public site check: $result"
+          fi
+          echo "result=$result" >> "$GITHUB_OUTPUT"
+
+      - name: Job summary
+        if: always()
+        env:
+          SHA: ${{ steps.target.outputs.sha }}
+          MODE: ${{ steps.target.outputs.mode }}
+          BOOTSTRAP: ${{ steps.target.outputs.bootstrap }}
+          SKIPPED: ${{ steps.validate.outputs.skip }}
+          PREV: ${{ steps.preflight.outputs.prev }}
+          SHIPPED: ${{ steps.preflight.outputs.shipped }}
+          BEFORE: ${{ steps.preflight.outputs.migrations }}
+          ADMIN: ${{ steps.preflight.outputs.admin }}
+          AFTER: ${{ steps.deploy.outputs.migrations_after }}
+          HEALTH: ${{ steps.deploy.outputs.health }}
+          ROLLBACK: ${{ steps.deploy.outputs.rollback }}
+          DUMP: ${{ steps.deploy.outputs.dump }}
+          DUMP_SIZE: ${{ steps.deploy.outputs.dump_size }}
+          ROWLOSS: ${{ steps.deploy.outputs.rowloss }}
+          PUBLIC: ${{ steps.public.outputs.result }}
+          CERT_DAYS: ${{ steps.cert.outputs.days }}
+          PREFLIGHT: ${{ steps.preflight.outcome }}
+        run: |
+          {
+            echo "## Recruitment CD"
+            echo
+            if [ "$SKIPPED" = true ]; then
+              echo "Skipped: \`$SHA\` was superseded by a newer prod commit, whose own run deploys it."
+              exit 0
+            fi
+            echo "| | |"
+            echo "|---|---|"
+            echo "| Target SHA | \`${SHA:-unresolved}\` |"
+            echo "| Last healthy deploy | \`${PREV:-unknown}\` |"
+            echo "| Tree held before | \`${SHIPPED:-unknown}\` |"
+            echo "| Mode | ${MODE:-unknown}$([ "$BOOTSTRAP" = true ] && echo ' (bootstrap)') |"
+            echo "| Preflight | ${PREFLIGHT:-skipped} |"
+            echo "| Seed admin hash vs configuration | ${ADMIN:-unknown} |"
+            echo "| Database dump | ${DUMP:-n/a}${DUMP_SIZE:+ ($DUMP_SIZE)} |"
+            echo "| EF migrations before (applied:newest) | ${BEFORE:-unknown} |"
+            echo "| EF migrations after | ${AFTER:-n/a} |"
+            echo "| Tables with fewer rows after | ${ROWLOSS:-n/a} |"
+            echo "| Health (loopback) | ${HEALTH:-not run} |"
+            echo "| Rollback | ${ROLLBACK:-not run} |"
+            echo "| Public site | ${PUBLIC:-not run} |"
+            echo "| Certificate | ${CERT_DAYS:-unknown} days left |"
+            echo
+            if [ -n "$ADMIN" ] && [ "$ADMIN" != equal ]; then
+              echo "> **Warning:** the seed admin's stored password hash is '$ADMIN' relative to the configuration; a deploy will refuse to run until it is \`equal\`."
+              echo
+            fi
+            if [ -n "$PUBLIC" ] && [ "$PUBLIC" != ok ]; then
+              echo "> **Warning:** the public site check failed: $PUBLIC"
+              echo
+            fi
+            if [[ $CERT_DAYS =~ ^-?[0-9]+$ ]] && [ "$CERT_DAYS" -lt 21 ]; then
+              echo "> **Warning:** the TLS certificate expires in $CERT_DAYS days."
+              echo
+            elif [ "$CERT_DAYS" = unknown ]; then
+              echo "> **Warning:** the TLS certificate expiry could not be read."
+              echo
+            fi
+            if [ -f "$RUNNER_TEMP/changes.md" ]; then
+              echo "### Changes"
+              echo
+              cat "$RUNNER_TEMP/changes.md"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Remove SSH material
+        if: always()
+        run: rm -f "$RUNNER_TEMP/deploy_key" "$RUNNER_TEMP/known_hosts" ~/.ssh/config
