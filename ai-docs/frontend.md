@@ -331,13 +331,18 @@ Query keys are `['config','roles','all']` / `['config','skills','all']` /
 mutations invalidate the `['config']` prefix so candidate forms refresh too.
 
 - **Job openings** (`JobOpeningsTab`) — **Role name**, a required **Closes**
-  (`datetime-local`), **Location**/**Department** as dropdowns (fixed sets
-  mirroring `JobOpeningOptions.cs`), **Priority**, and optional **Recruiters**:
+  (`datetime-local`), **Location**/**Department**/**Priority** as dropdowns fed by the active
+  lists from `getJobOpeningOptions` (the opening's current value stays selectable
+  even if deactivated), and optional **Recruiters**:
   a `SearchableMultiSelect` over active users (`getAssignableUsers`) whose
   option label is `"Name (email)"` so it matches on either. Each assigned
   recruiter can access every candidate under that role. **Delete is Super Admin
   only** and confirms first; the result toast reports whether the role was
   deleted or (having candidates) deactivated.
+- **Job opening fields** (`JobOpeningFieldsTab`) is three `OptionChipsTab`s (Location,
+  Department, Priority; query keys `['config','job-location'|'job-department'|'job-priority', ...]`)
+  backed by `/config/job-opening-options/{kind}`. `JobsPage` derives its Priority filter from
+  the loaded jobs, and a priority other than High/Medium/Low gets the neutral badge.
 - **Interview types** work exactly like Skills — used as multi-select tags on
   the interview schedule form and shown as coloured badges.
 - **Email** (`EmailSettingsTab`, `isSuperAdmin` only) — a `Segmented` provider

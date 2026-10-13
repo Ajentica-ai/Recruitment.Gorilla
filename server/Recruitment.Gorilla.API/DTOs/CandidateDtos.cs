@@ -300,6 +300,10 @@ public record InterviewTypeOptionDto(int Id, string Name, int SortOrder, bool Is
 
 public record UpsertInterviewTypeOptionDto(string Name, int SortOrder, bool IsActive);
 
+public record JobOpeningOptionDto(int Id, string Kind, string Name, int SortOrder, bool IsActive);
+
+public record UpsertJobOpeningOptionDto(string Name, int SortOrder, bool IsActive);
+
 public record PagedResult<T>(
     List<T> Items,
     int TotalCount,

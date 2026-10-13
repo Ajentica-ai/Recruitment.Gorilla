@@ -24,6 +24,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<InterviewEvaluation> InterviewEvaluations => Set<InterviewEvaluation>();
     public DbSet<InterviewEvaluationItem> InterviewEvaluationItems => Set<InterviewEvaluationItem>();
     public DbSet<InterviewTypeOption> InterviewTypeOptions => Set<InterviewTypeOption>();
+    public DbSet<JobOpeningOption> JobOpeningOptions => Set<JobOpeningOption>();
     public DbSet<InterviewTag> InterviewTags => Set<InterviewTag>();
     public DbSet<Notification> Notifications => Set<Notification>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
@@ -397,6 +398,31 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 new InterviewTypeOption { Id = 4, Name = "1st Level", SortOrder = 4, IsActive = true, CreatedAt = seededTypes, UpdatedAt = seededTypes },
                 new InterviewTypeOption { Id = 5, Name = "2nd Level", SortOrder = 5, IsActive = true, CreatedAt = seededTypes, UpdatedAt = seededTypes },
                 new InterviewTypeOption { Id = 6, Name = "Final Round", SortOrder = 6, IsActive = true, CreatedAt = seededTypes, UpdatedAt = seededTypes }
+            );
+        });
+
+        modelBuilder.Entity<JobOpeningOption>(e =>
+        {
+            e.HasKey(o => o.Id);
+            e.Property(o => o.Kind).HasMaxLength(20).IsRequired();
+            e.Property(o => o.Name).HasMaxLength(200).IsRequired();
+            e.Property(o => o.IsActive).HasDefaultValue(true);
+            e.HasIndex(o => new { o.Kind, o.Name }).IsUnique();
+
+            var seededJob = new DateTime(2026, 10, 13, 0, 0, 0, DateTimeKind.Utc);
+            JobOpeningOption Seed(int id, string kind, string name, int order) =>
+                new() { Id = id, Kind = kind, Name = name, SortOrder = order, IsActive = true, CreatedAt = seededJob, UpdatedAt = seededJob };
+            e.HasData(
+                Seed(1, JobOpeningOptionKinds.Location, "Remote", 1),
+                Seed(2, JobOpeningOptionKinds.Location, "Office", 2),
+                Seed(3, JobOpeningOptionKinds.Location, "Hybrid", 3),
+                Seed(4, JobOpeningOptionKinds.Location, "Contractual", 4),
+                Seed(5, JobOpeningOptionKinds.Department, "Engineering", 1),
+                Seed(6, JobOpeningOptionKinds.Department, "Admin", 2),
+                Seed(7, JobOpeningOptionKinds.Department, "HR", 3),
+                Seed(8, JobOpeningOptionKinds.Priority, "High", 1),
+                Seed(9, JobOpeningOptionKinds.Priority, "Medium", 2),
+                Seed(10, JobOpeningOptionKinds.Priority, "Low", 3)
             );
         });
 

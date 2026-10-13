@@ -46,6 +46,9 @@ const PRIORITY_BADGES: Record<string, { tone: string; border: string }> = {
   Low: { tone: 'text-muted-foreground bg-secondary', border: 'border-border' },
 };
 
+/** Admin-defined priority levels beyond High/Medium/Low get this neutral badge. */
+const NEUTRAL_PRIORITY_BADGE = PRIORITY_BADGES.Low;
+
 const PAGE_SIZE_OPTIONS = [10, 25, 50, 100];
 
 export default function JobsPage() {
@@ -68,6 +71,17 @@ export default function JobsPage() {
       if (j.department?.trim()) set.add(j.department.trim());
     });
     return Array.from(set).sort();
+  }, [jobs]);
+
+  // Priorities in use: High/Medium/Low first, then any admin-defined ones.
+  const priorities = useMemo(() => {
+    const set = new Set<string>();
+    jobs.forEach((j) => {
+      if (j.priority?.trim()) set.add(j.priority.trim());
+    });
+    const known = Object.keys(PRIORITY_BADGES).filter((p) => set.has(p));
+    const custom = Array.from(set).filter((p) => !(p in PRIORITY_BADGES)).sort();
+    return [...known, ...custom];
   }, [jobs]);
 
   // Aggregate KPI stats across jobs
@@ -247,9 +261,9 @@ export default function JobsPage() {
               aria-label="Filter by priority"
             >
               <option value="all">All Priorities</option>
-              <option value="High">High</option>
-              <option value="Medium">Medium</option>
-              <option value="Low">Low</option>
+              {priorities.map((p) => (
+                <option key={p} value={p}>{p}</option>
+              ))}
             </NativeSelect>
           </div>
 
@@ -304,7 +318,7 @@ export default function JobsPage() {
                 const badgeDef = JOB_STATUS_BADGE[status];
                 const remainingDays = daysUntil(job.endDate);
                 const progressPct = elapsedPercent(job.createdAt, job.endDate);
-                const prio = job.priority ? PRIORITY_BADGES[job.priority] : null;
+                const prio = job.priority ? (PRIORITY_BADGES[job.priority] ?? NEUTRAL_PRIORITY_BADGE) : null;
                 const count = job.candidateCount ?? 0;
 
               return (

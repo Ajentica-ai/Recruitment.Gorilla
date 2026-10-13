@@ -165,9 +165,14 @@ Admin-managed lookups (via the Configuration page / `/api/config/*`). Each: `Id`
 
 | Field | Type | Notes |
 |---|---|---|
-| Location | varchar(100) | nullable; one of Remote / Office / Hybrid / Contractual (`Models/JobOpeningOptions.cs`, validated) |
-| Department | varchar(100) | nullable; one of Engineering / Admin / HR (validated) |
-| Priority | varchar(20) | nullable; High / Medium / Low |
+| Location | varchar(100) | nullable; must be an active `JobOpeningOption` of kind Location (validated; seeded Remote / Office / Hybrid / Contractual) |
+| Department | varchar(100) | nullable; active `JobOpeningOption` of kind Department (seeded Engineering / Admin / HR) |
+| Priority | varchar(20) | nullable; active `JobOpeningOption` of kind Priority (seeded High / Medium / Low; admins may add levels) |
+
+The three fields stay plain text on the opening (no FK); an opening being edited may keep a value that was since deactivated.
+
+### JobOpeningOption (`JobOpeningOptions`)
+Admin-managed value lists for the opening's Location, Department and Priority (migration `AddJobOpeningOptions`, seeded with the original values). `Id`, `Kind` (`Location`/`Department`/`Priority`, ≤20), `Name` (≤200), `SortOrder`, `IsActive`, `CreatedAt`, `UpdatedAt`; unique on `(Kind, Name)`. Renaming a value rewrites the openings that use it in the same save; deleting a value still in use deactivates it instead.
 | EndDate | datetime | **required** closing deadline (migration `RoleOptionEndDate`; existing rows backfilled to `CreatedAt + 30 days`). After it passes, the role's candidates are **locked** from profile edits + status changes until an Admin extends it |
 
 Assigned **recruiters** are now a **many-to-many** via **`RoleRecruiter`** (`{ RoleAppliedOptionId, UserId }`, composite PK; cascade from both parents), replacing the old single `RecruiterUserId` FK (migration `RoleRecruitersManyToMany`, which copies existing assignments into the join). Every recruiter assigned to a role can access all candidates under it (see [auth.md](auth.md)).

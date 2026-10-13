@@ -301,6 +301,17 @@ export interface SkillOption {
   isActive: boolean;
 }
 
+/** Which job-opening field a value list belongs to; also the API route segment. */
+export type JobOpeningOptionKind = 'location' | 'department' | 'priority';
+
+export interface JobOpeningOption {
+  id: number;
+  kind: string;
+  name: string;
+  sortOrder: number;
+  isActive: boolean;
+}
+
 export interface InterviewTypeOption {
   id: number;
   name: string;
