@@ -324,3 +324,8 @@
 - 2026-10-13T00:00Z [claude] RG-54 PHASE PLAN->CONSTRUCT @0fe3157: plan approved; feature/RG-54/Job-opening-option-lists off origin/develop (user confirmed)
 - 2026-10-13T00:00Z [claude] RG-54 PHASE CONSTRUCT @0fe3157: 545 dotnet + 227 vitest pass, tsc+lint clean, migration applied locally; awaiting user browser check
 - 2026-10-13T00:00Z [claude] RG-54 DONE @0fe3157: user browser check passed; Down() rollback verified; 545 dotnet + 227 vitest; commit, push, PR (user confirmed)
+- 2026-10-13T00:00Z [claude] RG-55 CREATED @1232a27: issue #55 bug; already assigned to rayhan-ajentica; board status not moved (gh lacks read:project)
+- 2026-10-13T00:00Z [claude] RG-55 DECISION @1232a27: ticket = allow deleting Discarded drafts (user clarified); plan proposed, awaiting approval
+- 2026-10-13T00:00Z [claude] RG-55 BRANCH @1232a27: fix/RG-55/Delete-discarded-drafts created off origin/develop (user confirmed)
+- 2026-10-13T00:00Z [claude] RG-55 PHASE PLAN->CONSTRUCT @1232a27: plan approved; 552 dotnet + 230 vitest pass, tsc+lint clean; awaiting user browser check
+- 2026-10-13T00:00Z [claude] RG-55 DONE @1232a27: delete for Discarded drafts; 552 dotnet + 230 vitest; follow-up (discard on Approved) in backlog; commit, push, PR (user confirmed)
