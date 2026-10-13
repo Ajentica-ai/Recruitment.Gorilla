@@ -329,3 +329,10 @@
 - 2026-10-13T00:00Z [claude] RG-55 BRANCH @1232a27: fix/RG-55/Delete-discarded-drafts created off origin/develop (user confirmed)
 - 2026-10-13T00:00Z [claude] RG-55 PHASE PLAN->CONSTRUCT @1232a27: plan approved; 552 dotnet + 230 vitest pass, tsc+lint clean; awaiting user browser check
 - 2026-10-13T00:00Z [claude] RG-55 DONE @1232a27: delete for Discarded drafts; 552 dotnet + 230 vitest; follow-up (discard on Approved) in backlog; commit, push, PR (user confirmed)
+- 2026-10-13T12:28Z [claude] RG-56 CREATED @b4b25e0: issue #56 bug, relevant experience defaults to 3-5 Years
+- 2026-10-13T12:28Z [claude] RG-56 SIDE-EFFECT @b4b25e0: already assigned to rayhan-ajentica; board status NOT moved (gh token lacks read:project)
+- 2026-10-13T12:28Z [claude] RG-56 PHASE CLARIFY→PLAN @b4b25e0: assumptions stated, plan drafted
+- 2026-10-13T12:46Z [claude] RG-56 BRANCH @b4b25e0: fix/RG-56/Relevant-experience-default off origin/fix/RG-55/Delete-discarded-drafts (user confirmed)
+- 2026-10-13T12:46Z [claude] RG-56 PHASE PLAN→CONSTRUCT @b4b25e0: plan approved
+- 2026-10-13T12:50Z [claude] RG-56 DECISION @b4b25e0: no parseable dates leaves Relevant Experience empty (stated assumption, user approved plan)
+- 2026-10-13T13:09Z [claude] RG-56 DONE @b4b25e0: estimator + wiring + client fallback removed; tests green
