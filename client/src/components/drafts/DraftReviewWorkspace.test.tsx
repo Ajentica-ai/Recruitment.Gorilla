@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { screen, waitFor } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { renderWithProviders } from '../../test/renderWithProviders';
 import DraftReviewWorkspace from './DraftReviewWorkspace';
@@ -94,5 +94,27 @@ describe('DraftReviewWorkspace deleting discarded drafts', () => {
 
     expect(await screen.findByTitle('Discard Draft')).toBeInTheDocument();
     expect(screen.queryByTitle('Delete Draft permanently')).not.toBeInTheDocument();
+  });
+});
+
+describe('DraftReviewWorkspace relevant experience', () => {
+  const openPending = async (relevantExperience: string | null) => {
+    vi.mocked(getCandidateDrafts).mockImplementation(async () => page([item(7, 'Pending')]));
+    vi.mocked(getCandidateDraft).mockImplementation(
+      async (id) => ({ ...detail(item(id, 'Pending')), relevantExperience }) as CandidateDraft,
+    );
+    renderWithProviders(<DraftReviewWorkspace />);
+    return screen.findByLabelText('Relevant experience');
+  };
+
+  it('shows the parsed value as selected', async () => {
+    const group = await openPending('8+ Years');
+    expect(within(group).getByRole('radio', { name: '8+ Years' })).toBeChecked();
+  });
+
+  it('does not invent a 3-5 Years default when nothing was parsed', async () => {
+    const group = await openPending(null);
+    expect(within(group).getByRole('radio', { name: '3-5 Years' })).not.toBeChecked();
+    expect(screen.getByLabelText('Relevant experience, free text')).toHaveValue('');
   });
 });

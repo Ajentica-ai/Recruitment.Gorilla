@@ -515,6 +515,78 @@ public class CVParserService
         return lines.FirstOrDefault(l => l.Length is > 2 and <= 40 && !l.Contains('@') && !l.Any(char.IsDigit));
     }
 
+    private static readonly Regex DurationPartRegex =
+        new(@"(?:(?<mon>Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.?\s+)?(?<year>\d{4})", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+    private static readonly Regex DurationYearsRegex =
+        new(@"^\s*(?<n>\d+)\s+Years?\s*$", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+    private static readonly string[] MonthAbbreviations =
+        ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"];
+
+    /// <summary>
+    /// Estimates total relevant experience from the dated roles and returns one of the review-form presets
+    /// ("&lt; 1 Year", "1-2 Years", "3-5 Years", "5-8 Years", "8+ Years"). Overlapping roles are counted once.
+    /// Returns null when no role has a parseable duration, so the reviewer chooses instead of getting a guess.
+    /// </summary>
+    public static string? EstimateRelevantExperience(IEnumerable<ParsedExperience> experiences, DateTime now)
+    {
+        var nowIdx = now.Year * 12 + now.Month;           // exclusive end index of the current month
+        var spans = new List<(int Start, int End)>();
+        var standaloneMonths = 0;
+
+        foreach (var exp in experiences)
+        {
+            if (string.IsNullOrWhiteSpace(exp.Duration)) continue;
+
+            var years = DurationYearsRegex.Match(exp.Duration);
+            if (years.Success)
+            {
+                standaloneMonths += int.Parse(years.Groups["n"].Value) * 12;
+                continue;
+            }
+
+            var parts = DurationPartRegex.Matches(exp.Duration);
+            if (parts.Count == 0) continue;
+
+            var start = parts[0];
+            var startIdx = start.Groups["year"].Success
+                ? int.Parse(start.Groups["year"].Value) * 12 + MonthOf(start, 1)
+                : 0;
+            var isOpen = Regex.IsMatch(exp.Duration, @"Present|Current", RegexOptions.IgnoreCase) || parts.Count < 2;
+            var endIdx = isOpen
+                ? nowIdx
+                : int.Parse(parts[1].Groups["year"].Value) * 12 + MonthOf(parts[1], 12) + 1;
+            endIdx = Math.Min(endIdx, nowIdx);
+            if (endIdx > startIdx) spans.Add((startIdx, endIdx));
+        }
+
+        if (spans.Count == 0 && standaloneMonths == 0) return null;
+
+        var totalMonths = standaloneMonths;
+        var (curStart, curEnd) = (0, 0);
+        foreach (var (s, e) in spans.OrderBy(x => x.Start))
+        {
+            if (curEnd == 0) { (curStart, curEnd) = (s, e); continue; }
+            if (s <= curEnd) { curEnd = Math.Max(curEnd, e); continue; }
+            totalMonths += curEnd - curStart;
+            (curStart, curEnd) = (s, e);
+        }
+        if (curEnd > 0) totalMonths += curEnd - curStart;
+
+        return totalMonths switch
+        {
+            < 12 => "< 1 Year",
+            < 36 => "1-2 Years",
+            < 60 => "3-5 Years",
+            < 96 => "5-8 Years",
+            _ => "8+ Years"
+        };
+
+        static int MonthOf(Match m, int fallback) =>
+            m.Groups["mon"].Success ? Array.IndexOf(MonthAbbreviations, m.Groups["mon"].Value.ToLowerInvariant()[..3]) + 1 : fallback;
+    }
+
     public static (string Name, string? Title) ParseNameAndTitleFromFileName(string fileName)
     {
         var baseName = Path.GetFileNameWithoutExtension(fileName);

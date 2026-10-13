@@ -313,7 +313,8 @@ public class CandidateDraftService(
         List<ParsedEducation>? educations = null,
         List<ParsedExperience>? experiences = null,
         int? roleAppliedOptionId = null,
-        string? fileHash = null)
+        string? fileHash = null,
+        string? relevantExperience = null)
     {
         var eduDtos = educations?.Select((e, idx) => new CandidateEducationDto(idx + 1, e.Degree, e.Institution, e.GraduationYear, e.Cgpa)).ToList();
         var expDtos = experiences?.Select((e, idx) => new CandidateExperienceDto(idx + 1, e.JobTitle, e.Company, e.Duration, e.Description)).ToList();
@@ -334,6 +335,7 @@ public class CandidateDraftService(
             GithubUrl = github,
             Skills = skills,
             Summary = summary,
+            RelevantExperience = relevantExperience,
             Location = location,
             LeetCodeUrl = leetCode,
             CodeforcesUrl = codeforces,

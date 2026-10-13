@@ -78,7 +78,8 @@ public class CVUploadController(
             parsed.Location, parsed.LeetCode, parsed.Codeforces, parsed.HackerRank, parsed.GitLab,
             parsed.Educations, parsed.Experiences,
             roleAppliedOptionId: roleAppliedOptionId,
-            fileHash: fileHash);
+            fileHash: fileHash,
+            relevantExperience: CVParserService.EstimateRelevantExperience(parsed.Experiences, DateTime.UtcNow));
 
         var eduDtos = parsed.Educations.Select((e, i) => new CandidateEducationDto(i + 1, e.Degree, e.Institution, e.GraduationYear, e.Cgpa)).ToList();
         var expDtos = parsed.Experiences.Select((e, i) => new CandidateExperienceDto(i + 1, e.JobTitle, e.Company, e.Duration, e.Description)).ToList();
