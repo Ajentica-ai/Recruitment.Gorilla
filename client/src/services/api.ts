@@ -306,6 +306,18 @@ export const discardCandidateDraft = async (id: number): Promise<{ message: stri
   return data;
 };
 
+/** Permanently deletes a Discarded draft (and its CV file). */
+export const deleteCandidateDraft = async (id: number): Promise<void> => {
+  await api.delete(`/candidate-drafts/${id}`);
+};
+
+export const bulkDeleteCandidateDrafts = async (
+  payload: BulkDiscardDraftsRequest
+): Promise<{ deletedCount: number }> => {
+  const { data } = await api.post<{ deletedCount: number }>('/candidate-drafts/bulk-delete', payload);
+  return data;
+};
+
 export const bulkDiscardCandidateDrafts = async (
   payload: BulkDiscardDraftsRequest
 ): Promise<{ discardedCount: number }> => {

@@ -502,4 +502,109 @@ public class CandidateDraftServiceTests(MySqlDatabaseFixture fixture) : DbTestBa
         Assert.Null(candidate);
         Assert.Equal("You are not assigned to this job opening.", approveError);
     }
+
+    // ----- Deleting discarded drafts -----
+
+    /// <summary>A draft whose stored name is a real server-style name, with a file on disk to remove.</summary>
+    private async Task<(CandidateDraft Draft, string Path)> DraftWithFile(CurrentUser uploader, string tag)
+    {
+        var stored = $"{Guid.NewGuid()}.pdf";
+        var path = UploadPaths.Resolve(Path.GetTempPath(), stored)!;
+        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+        await File.WriteAllTextAsync(path, "cv");
+        var draft = await CandidateDrafts(uploader).CreateDraftAsync(
+            $"{tag}.pdf", stored, "PDF", 2, $"batch_{tag}", null, $"Del {tag}", $"{tag}@test.com", null, null, null, null, null);
+        return (draft, path);
+    }
+
+    [Fact]
+    public async Task DeleteDraft_removes_a_discarded_draft_and_its_file()
+    {
+        var uploader = NewRecruiter();
+        var (draft, path) = await DraftWithFile(uploader, "del1");
+        var service = CandidateDrafts(uploader);
+        await service.DiscardDraftAsync(draft.Id);
+
+        var result = await service.DeleteDraftAsync(draft.Id);
+
+        Assert.Equal(CandidateDraftService.DeleteDraftResult.Deleted, result);
+        Db.ChangeTracker.Clear();
+        Assert.Null(await Db.CandidateDrafts.FindAsync(draft.Id));
+        Assert.False(File.Exists(path));
+    }
+
+    [Fact]
+    public async Task DeleteDraft_refuses_pending_and_approved_drafts_and_unknown_ids()
+    {
+        var uploader = NewRecruiter();
+        var (pending, pendingPath) = await DraftWithFile(uploader, "del2");
+        var service = CandidateDrafts(uploader);
+
+        Assert.Equal(CandidateDraftService.DeleteDraftResult.NotDiscarded, await service.DeleteDraftAsync(pending.Id));
+        Assert.Equal(CandidateDraftService.DeleteDraftResult.NotFound, await service.DeleteDraftAsync(999999));
+
+        (await Db.CandidateDrafts.FindAsync(pending.Id))!.Status = "Approved";
+        await Db.SaveChangesAsync();
+        Assert.Equal(CandidateDraftService.DeleteDraftResult.NotDiscarded, await service.DeleteDraftAsync(pending.Id));
+
+        Assert.NotNull(await Db.CandidateDrafts.FindAsync(pending.Id));
+        Assert.True(File.Exists(pendingPath));
+    }
+
+    [Fact]
+    public async Task DeleteDraft_keeps_the_file_when_a_candidate_still_uses_it()
+    {
+        var uploader = NewRecruiter();
+        var (draft, path) = await DraftWithFile(uploader, "del3");
+        var candidate = Data.AddCandidate();
+        Db.CVFiles.Add(new CVFile { CandidateId = candidate.Id, OriginalFileName = "x.pdf", StoredFileName = draft.StoredFileName, FileType = "PDF", FileSizeBytes = 2 });
+        await Db.SaveChangesAsync();
+        var service = CandidateDrafts(uploader);
+        await service.DiscardDraftAsync(draft.Id);
+
+        Assert.Equal(CandidateDraftService.DeleteDraftResult.Deleted, await service.DeleteDraftAsync(draft.Id));
+
+        Assert.True(File.Exists(path));
+        File.Delete(path);
+    }
+
+    [Fact]
+    public async Task A_recruiter_cannot_delete_another_users_discarded_draft()
+    {
+        var owner = NewRecruiter();
+        var (draft, path) = await DraftWithFile(owner, "del4");
+        await CandidateDrafts(owner).DiscardDraftAsync(draft.Id);
+
+        var intruder = CandidateDrafts(NewRecruiter());
+        Assert.Equal(CandidateDraftService.DeleteDraftResult.NotFound, await intruder.DeleteDraftAsync(draft.Id));
+        Assert.Equal(0, await intruder.BulkDeleteAsync([draft.Id]));
+
+        Assert.NotNull(await Db.CandidateDrafts.FindAsync(draft.Id));
+        Assert.True(File.Exists(path));
+        File.Delete(path);
+    }
+
+    [Fact]
+    public async Task BulkDelete_removes_only_the_discarded_drafts_in_scope()
+    {
+        var uploader = NewRecruiter();
+        var service = CandidateDrafts(uploader);
+        var (d1, p1) = await DraftWithFile(uploader, "bulk1");
+        var (d2, p2) = await DraftWithFile(uploader, "bulk2");
+        var (keep, pKeep) = await DraftWithFile(uploader, "bulk3");
+        await service.DiscardDraftAsync(d1.Id);
+        await service.DiscardDraftAsync(d2.Id);
+
+        var deleted = await service.BulkDeleteAsync([d1.Id, d2.Id, keep.Id]);
+
+        Assert.Equal(2, deleted);
+        Db.ChangeTracker.Clear();
+        Assert.Null(await Db.CandidateDrafts.FindAsync(d1.Id));
+        Assert.Null(await Db.CandidateDrafts.FindAsync(d2.Id));
+        Assert.NotNull(await Db.CandidateDrafts.FindAsync(keep.Id)); // still Pending
+        Assert.False(File.Exists(p1));
+        Assert.False(File.Exists(p2));
+        Assert.True(File.Exists(pKeep));
+        File.Delete(pKeep);
+    }
 }

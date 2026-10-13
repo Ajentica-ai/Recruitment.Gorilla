@@ -68,6 +68,27 @@ public class CandidateDraftsController(CandidateDraftService draftService) : Con
         return Ok(new { message = $"Draft #{id} marked as discarded." });
     }
 
+    [HttpDelete("{id:int}")]
+    public async Task<IActionResult> Delete(int id)
+    {
+        return await draftService.DeleteDraftAsync(id) switch
+        {
+            CandidateDraftService.DeleteDraftResult.NotFound => NotFound($"Candidate draft #{id} not found."),
+            CandidateDraftService.DeleteDraftResult.NotDiscarded => BadRequest("Only discarded drafts can be deleted."),
+            _ => NoContent(),
+        };
+    }
+
+    [HttpPost("bulk-delete")]
+    public async Task<IActionResult> BulkDelete([FromBody] BulkDeleteDraftsDto dto)
+    {
+        if (dto.DraftIds is null or { Count: 0 })
+            return BadRequest("At least one draft ID must be provided.");
+
+        var deletedCount = await draftService.BulkDeleteAsync(dto.DraftIds);
+        return Ok(new { deletedCount });
+    }
+
     [HttpPost("bulk-discard")]
     public async Task<IActionResult> BulkDiscard([FromBody] BulkDiscardDraftsDto dto)
     {
