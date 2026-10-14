@@ -347,3 +347,4 @@
 - 2026-10-13T21:04Z [claude] RG-156 WRAP-UP @7256c6c: archived RG-139,RG-40,RG-74 (oldest completed) to stay within the 10-item retention cap; 2 findings to backlog
 - 2026-10-14T03:59Z [claude] RG-156 SIDE-EFFECT @c0273ee: committed and pushed fix/RG-156/Referral-on-review-screen, opened PR #158 against develop (user approved)
 - 2026-10-14T03:59Z [claude] RG-156 SIDE-EFFECT @c0273ee: posted summary comment on issue #156, board status In Development -> In review (user approved)
+- 2026-10-14T04:05Z [claude] RG-156 SIDE-EFFECT @5bc7a95: merged origin/develop (RG-55,RG-56); add/add conflict on DraftReviewWorkspace.test.tsx resolved by keeping both suites; 238 vitest pass
