@@ -58,6 +58,25 @@ async function openEvaluation(page: Page): Promise<boolean> {
     .catch(() => false);
 }
 
+/**
+ * Wait until the stylesheet is actually in effect before measuring. A page
+ * caught mid-reload renders the markup with no CSS applied, and an unstyled
+ * row measures exactly like the bug this spec guards, so without this the
+ * test can fail for a reason that has nothing to do with the fix.
+ */
+async function waitForActionsStyled(page: Page) {
+  await expect
+    .poll(
+      () =>
+        page
+          .locator('.eval-form-actions')
+          .first()
+          .evaluate((el) => getComputedStyle(el).display),
+      { timeout: 10_000, message: '.eval-form-actions should be laid out as flex' },
+    )
+    .toBe('flex');
+}
+
 test.describe('Evaluation actions row spacing', () => {
   test.skip(
     !email || !password || !interviewId,
@@ -70,6 +89,7 @@ test.describe('Evaluation actions row spacing', () => {
     await page.setViewportSize(DESKTOP);
     test.skip(!(await openEvaluation(page)), 'no interview with an evaluation form in this database');
 
+    await waitForActionsStyled(page);
     const save = page.getByRole('button', { name: /Save draft/i }).first();
     const submit = page.getByRole('button', { name: /Submit evaluation/i }).first();
     await expect(save).toBeVisible();
@@ -91,6 +111,7 @@ test.describe('Evaluation actions row spacing', () => {
     await page.setViewportSize(PHONE);
     test.skip(!(await openEvaluation(page)), 'no interview with an evaluation form in this database');
 
+    await waitForActionsStyled(page);
     const save = page.getByRole('button', { name: /Save draft/i }).first();
     const submit = page.getByRole('button', { name: /Submit evaluation/i }).first();
     const a = (await save.boundingBox())!;

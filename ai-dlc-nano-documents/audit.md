@@ -361,3 +361,4 @@
 - 2026-10-14T04:30Z [claude] RG-68 SIDE-EFFECT @1339d87: committed and pushed fix/RG-68/Eval-actions-spacing, opened PR #159 against develop (user approved)
 - 2026-10-14T04:30Z [claude] RG-68 SIDE-EFFECT @1339d87: posted summary comment on issue #68, board status In Development -> In review (user approved)
 - 2026-10-14T04:32Z [claude] RG-68 REVISED @118e5a2: .interview-grid is dead CSS from the Harbor redesign (#35), not a broken workspace; corrected PR #159 body and issue #68 comment
+- 2026-10-14T04:34Z [claude] RG-68 REVISED @a1ddb48: spec now waits for computed display:flex before measuring; one transient failure seen when the page was caught mid-reload
