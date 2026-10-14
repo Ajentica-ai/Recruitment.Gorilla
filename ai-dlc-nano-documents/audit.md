@@ -362,3 +362,9 @@
 - 2026-10-14T04:30Z [claude] RG-68 SIDE-EFFECT @1339d87: posted summary comment on issue #68, board status In Development -> In review (user approved)
 - 2026-10-14T04:32Z [claude] RG-68 REVISED @118e5a2: .interview-grid is dead CSS from the Harbor redesign (#35), not a broken workspace; corrected PR #159 body and issue #68 comment
 - 2026-10-14T04:34Z [claude] RG-68 REVISED @a1ddb48: spec now waits for computed display:flex before measuring; one transient failure seen when the page was caught mid-reload
+- 2026-10-13T13:59Z [claude] RG-39 CREATED @aba2029: issue #39 bug, Cancel on Edit User form shows User updated
+- 2026-10-13T13:59Z [claude] RG-39 SIDE-EFFECT @aba2029: already assigned to rayhan-ajentica; board status NOT moved (gh token lacks read:project)
+- 2026-10-13T13:59Z [claude] RG-39 PHASE CLARIFY→PLAN @aba2029: root cause found, plan drafted
+- 2026-10-13T14:00Z [claude] RG-39 BRANCH @aba2029: fix/RG-39/Cancel-user-edit-toast off origin/fix/RG-56/Relevant-experience-default (user confirmed)
+- 2026-10-13T14:00Z [claude] RG-39 PHASE PLAN→CONSTRUCT @aba2029: plan approved
+- 2026-10-13T14:03Z [claude] RG-39 DONE @aba2029: type=button on 5 Cancel buttons in forms; UsersPage tests; client suite green
