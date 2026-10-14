@@ -357,7 +357,7 @@ export default function UsersPage() {
             </div>
           </DialogBody>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowEdit(false)}>
+            <Button type="button" variant="outline" onClick={() => setShowEdit(false)}>
               Cancel
             </Button>
             <Button type="submit" disabled={saveMutation.isPending}>
@@ -399,7 +399,7 @@ export default function UsersPage() {
             </div>
           </DialogBody>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setResetTarget(null)}>
+            <Button type="button" variant="outline" onClick={() => setResetTarget(null)}>
               Cancel
             </Button>
             <Button type="submit" disabled={resetMutation.isPending}>
