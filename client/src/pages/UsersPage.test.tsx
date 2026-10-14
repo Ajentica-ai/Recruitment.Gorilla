@@ -60,3 +60,15 @@ describe('UsersPage dialogs', () => {
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 });
+
+describe('UsersPage table', () => {
+  it('left-aligns every data column header so it lines up with its cells', async () => {
+    vi.mocked(getUsers).mockResolvedValue([user]);
+    renderWithProviders(<UsersPage />);
+    await screen.findByText('Ada Lovelace');
+
+    for (const name of ['Name', 'Email', 'Roles', 'Status', 'Last login']) {
+      expect(screen.getByRole('columnheader', { name })).toHaveClass('text-left');
+    }
+  });
+});

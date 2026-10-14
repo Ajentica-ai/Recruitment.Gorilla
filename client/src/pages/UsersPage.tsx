@@ -215,11 +215,11 @@ export default function UsersPage() {
           <table className="table table-cards align-middle">
             <thead>
               <tr>
-                <th>Name</th>
-                <th>Email</th>
-                <th>Roles</th>
-                <th style={{ width: 110 }}>Status</th>
-                <th style={{ width: 180 }}>Last login</th>
+                <th className="text-left">Name</th>
+                <th className="text-left">Email</th>
+                <th className="text-left">Roles</th>
+                <th className="text-left" style={{ width: 110 }}>Status</th>
+                <th className="text-left" style={{ width: 180 }}>Last login</th>
                 {/* Was 300px, to fit three full-width buttons. That is what
                     pushed this table past the viewport and put a horizontal
                     scrollbar on the page — the "Add user" button in the header
