@@ -640,7 +640,7 @@ function ProfileEditor({
 
         <div className="col-span-12 md:col-span-12">
           <hr className="mb-2" />
-          <CheckboxField id="is-referred-edit" label="This candidate has been referred" checked={form.isReferred} onCheckedChange={(checked) => setForm((f) => ({ ...f, isReferred: checked }))} />
+          <CheckboxField id="is-referred-edit" label="Referred by an employee" checked={form.isReferred} onCheckedChange={(checked) => setForm((f) => ({ ...f, isReferred: checked }))} />
         </div>
         {form.isReferred && (
           <>

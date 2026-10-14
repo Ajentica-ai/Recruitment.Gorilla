@@ -336,3 +336,15 @@
 - 2026-10-13T12:46Z [claude] RG-56 PHASE PLAN→CONSTRUCT @b4b25e0: plan approved
 - 2026-10-13T12:50Z [claude] RG-56 DECISION @b4b25e0: no parseable dates leaves Relevant Experience empty (stated assumption, user approved plan)
 - 2026-10-13T13:09Z [claude] RG-56 DONE @b4b25e0: estimator + wiring + client fallback removed; tests green
+- 2026-10-13T20:45Z [claude] RG-156 CREATED @7256c6c: issue #156, employee referral cannot be recorded on the bulk-upload review screen (bug, UI)
+- 2026-10-13T20:45Z [claude] RG-156 SIDE-EFFECT @7256c6c: INTAKE claim - already assigned to tahmidsparrow, board status Backlog -> In Development
+- 2026-10-13T20:45Z [claude] RG-156 DECISION @7256c6c: standardise the checkbox label on 'Referred by an employee' across all four call sites (user confirmed)
+- 2026-10-13T20:45Z [claude] RG-156 DECISION @7256c6c: leave the ApproveDraftAsync duplicate-email backlog entry out of scope, stays frontend-only (user confirmed)
+- 2026-10-13T20:45Z [claude] RG-156 BRANCH @7256c6c: fix/RG-156/Referral-on-review-screen created off origin/develop (user confirmed)
+- 2026-10-13T20:45Z [claude] RG-156 PHASE PLAN->CONSTRUCT @7256c6c: 7 tasks, standard rigor, frontend only
+- 2026-10-13T21:04Z [claude] RG-156 PHASE CONSTRUCT->WRAP-UP @7256c6c: 7/7 tasks, 233 vitest pass (5 consecutive runs), tsc+oxlint clean, verified end to end in the running app
+- 2026-10-13T21:04Z [claude] RG-156 DONE @7256c6c: referral block on the review screen; frontend only, no schema change; uncommitted
+- 2026-10-13T21:04Z [claude] RG-156 WRAP-UP @7256c6c: archived RG-139,RG-40,RG-74 (oldest completed) to stay within the 10-item retention cap; 2 findings to backlog
+- 2026-10-14T03:59Z [claude] RG-156 SIDE-EFFECT @c0273ee: committed and pushed fix/RG-156/Referral-on-review-screen, opened PR #158 against develop (user approved)
+- 2026-10-14T03:59Z [claude] RG-156 SIDE-EFFECT @c0273ee: posted summary comment on issue #156, board status In Development -> In review (user approved)
+- 2026-10-14T04:05Z [claude] RG-156 SIDE-EFFECT @5bc7a95: merged origin/develop (RG-55,RG-56); add/add conflict on DraftReviewWorkspace.test.tsx resolved by keeping both suites; 238 vitest pass

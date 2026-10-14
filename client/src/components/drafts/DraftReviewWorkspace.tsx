@@ -20,7 +20,7 @@ import { SearchableSelect } from '../SearchableSelect';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Field } from '@/components/ui/field';
+import { CheckboxField, Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { InputGroup, InputGroupAddon } from '@/components/ui/input-group';
 import { NativeSelect } from '@/components/ui/native-select';
@@ -47,6 +47,21 @@ interface Props {
 }
 
 const EXPERIENCE_PRESETS = ['< 1 Year', '1-2 Years', '3-5 Years', '5-8 Years', '8+ Years'];
+
+/**
+ * A draft has nowhere to store a referral: `CandidateDrafts` has no referral columns, so
+ * neither `CandidateDraft` nor `UpdateCandidateDraftRequest` carries these fields. They are
+ * collected here purely so they can ride along on the approve payload, which does accept
+ * them, and are reset whenever the active draft changes.
+ */
+type ReferralFields = {
+  isReferred: boolean;
+  referenceName: string;
+  referenceEmail: string;
+  referenceEmployeeId: string;
+};
+
+type DraftEditForm = Partial<CandidateDraft> & Partial<ReferralFields>;
 
 export default function DraftReviewWorkspace({ initialBatchId, onCandidateCreated }: Props) {
   const queryClient = useQueryClient();
@@ -117,7 +132,7 @@ export default function DraftReviewWorkspace({ initialBatchId, onCandidateCreate
   }, [mobileDetailOpen]);
 
   // Form editing state for currently loaded draft
-  const [editForm, setEditForm] = useState<Partial<CandidateDraft>>({});
+  const [editForm, setEditForm] = useState<DraftEditForm>({});
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
@@ -249,6 +264,11 @@ export default function DraftReviewWorkspace({ initialBatchId, onCandidateCreate
         roleAppliedOptionId: activeDraft.roleAppliedOptionId ?? (roles.length > 0 ? roles[0].id : null),
         sourceOptionId: activeDraft.sourceOptionId,
         sourceDetail: activeDraft.sourceDetail || '',
+        // Not read back from the draft: it has no referral columns, so these always start empty.
+        isReferred: false,
+        referenceName: '',
+        referenceEmail: '',
+        referenceEmployeeId: '',
       });
       setFormErrors({});
     }
@@ -425,6 +445,17 @@ export default function DraftReviewWorkspace({ initialBatchId, onCandidateCreate
     if (!editForm.roleAppliedOptionId) {
       errors.role = 'Please assign an applied role before approving.';
     }
+    if (editForm.isReferred) {
+      const referenceNameError = validatePersonName(editForm.referenceName, 'Reference name');
+      if (referenceNameError) errors.referenceName = referenceNameError;
+      if (
+        !/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/i.test(
+          (editForm.referenceEmail ?? '').trim(),
+        )
+      ) {
+        errors.referenceEmail = 'A valid reference email is required.';
+      }
+    }
 
     if (Object.keys(errors).length > 0) {
       setFormErrors(errors);
@@ -455,6 +486,13 @@ export default function DraftReviewWorkspace({ initialBatchId, onCandidateCreate
         roleAppliedOptionId: editForm.roleAppliedOptionId!,
         sourceOptionId: editForm.sourceOptionId || null,
         sourceDetail: editForm.sourceDetail?.trim() || null,
+        // Mirrors CandidateService: the sub-fields only mean anything when the box is ticked.
+        isReferred: !!editForm.isReferred,
+        referenceName: editForm.isReferred ? editForm.referenceName!.trim() : null,
+        referenceEmail: editForm.isReferred ? editForm.referenceEmail!.trim() : null,
+        referenceEmployeeId: editForm.isReferred
+          ? editForm.referenceEmployeeId?.trim() || null
+          : null,
       },
     });
   };
@@ -1068,6 +1106,78 @@ export default function DraftReviewWorkspace({ initialBatchId, onCandidateCreate
                         />
                       )}
                     </Field>
+
+                    {/* Referral details */}
+                    <CheckboxField
+                      className="col-span-12"
+                      id="draft-is-referred"
+                      label="Referred by an employee"
+                      checked={!!editForm.isReferred}
+                      onCheckedChange={(checked: boolean) =>
+                        setEditForm((prev) => ({ ...prev, isReferred: checked }))
+                      }
+                    />
+
+                    {editForm.isReferred && (
+                      <>
+                        <Field
+                          className="col-span-12 md:col-span-4"
+                          label="Referrer Name"
+                          required
+                          error={formErrors.referenceName}
+                        >
+                          {(p) => (
+                            <Input
+                              {...p}
+                              placeholder="e.g. Nusrat Jahan"
+                              value={editForm.referenceName || ''}
+                              onChange={(e) => {
+                                setEditForm((prev) => ({ ...prev, referenceName: e.target.value }));
+                                if (formErrors.referenceName)
+                                  setFormErrors((fe) => ({ ...fe, referenceName: '' }));
+                              }}
+                            />
+                          )}
+                        </Field>
+
+                        <Field
+                          className="col-span-12 md:col-span-4"
+                          label="Referrer Email"
+                          required
+                          error={formErrors.referenceEmail}
+                        >
+                          {(p) => (
+                            <Input
+                              {...p}
+                              type="email"
+                              placeholder="e.g. nusrat.jahan@ajentica.ai"
+                              value={editForm.referenceEmail || ''}
+                              onChange={(e) => {
+                                setEditForm((prev) => ({ ...prev, referenceEmail: e.target.value }));
+                                if (formErrors.referenceEmail)
+                                  setFormErrors((fe) => ({ ...fe, referenceEmail: '' }));
+                              }}
+                            />
+                          )}
+                        </Field>
+
+                        <Field className="col-span-12 md:col-span-4" label="Employee ID">
+                          {(p) => (
+                            <Input
+                              {...p}
+                              placeholder="Optional"
+                              value={editForm.referenceEmployeeId || ''}
+                              onChange={(e) =>
+                                setEditForm((prev) => ({
+                                  ...prev,
+                                  referenceEmployeeId: e.target.value,
+                                }))
+                              }
+                            />
+                          )}
+                        </Field>
+                      </>
+                    )}
                   </div>
                 </div>
 
