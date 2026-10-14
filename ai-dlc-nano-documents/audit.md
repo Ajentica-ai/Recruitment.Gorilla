@@ -333,3 +333,5 @@
 - 2026-10-13T21:04Z [claude] RG-156 PHASE CONSTRUCT->WRAP-UP @7256c6c: 7/7 tasks, 233 vitest pass (5 consecutive runs), tsc+oxlint clean, verified end to end in the running app
 - 2026-10-13T21:04Z [claude] RG-156 DONE @7256c6c: referral block on the review screen; frontend only, no schema change; uncommitted
 - 2026-10-13T21:04Z [claude] RG-156 WRAP-UP @7256c6c: archived RG-139,RG-40,RG-74 (oldest completed) to stay within the 10-item retention cap; 2 findings to backlog
+- 2026-10-14T03:59Z [claude] RG-156 SIDE-EFFECT @c0273ee: committed and pushed fix/RG-156/Referral-on-review-screen, opened PR #158 against develop (user approved)
+- 2026-10-14T03:59Z [claude] RG-156 SIDE-EFFECT @c0273ee: posted summary comment on issue #156, board status In Development -> In review (user approved)
