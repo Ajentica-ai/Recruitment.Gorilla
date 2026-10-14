@@ -11,10 +11,10 @@ import { shotPath } from './helpers';
  * lost and "Save draft" sat flush against "Submit evaluation".
  *
  * The same rename orphaned `.eval-form-card .form-actions { flex-shrink: 0 }`,
- * repointed alongside this fix. That rule is inert today: it only bites once
- * the card is height-capped, which needs `.interview-grid`, and that class is
- * applied nowhere in the app. Repointed anyway so it is correct when it is.
- * Not tested here, because there is no pinned footer to assert yet.
+ * repointed alongside this fix. That rule is inert, and correctly so: it sits
+ * in a >=992px block keyed on `.interview-grid`, a two-panel layout the Harbor
+ * redesign (#35) replaced with the full-width `.interview-studio-container`.
+ * Repointing keeps the selector honest; there is no pinned footer to assert.
  *
  * Measured rather than eyeballed, following rubric-editor-layout.spec.ts: two
  * buttons with no space between them are both perfectly visible, so only the
