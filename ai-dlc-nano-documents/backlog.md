@@ -1,5 +1,7 @@
 # Backlog
 <!-- Out-of-scope findings, newest first. Delete a line when it is resolved. -->
+- [2026-10-13] client/e2e/test-cvs - Alex_Rivera CV is rejected on upload, "Could not parse 1 file" (found: RG-156)
+- [2026-10-13] client/date-picker.test - timed out once at 15s under full-suite load; passes in 3.7s alone (found: RG-156)
 - [2026-10-11] CandidateDraftService.ApproveDraftAsync - no duplicate-email check at all (the real create path; POST /api/candidates has one but is unused by the UI) (found: RG-98)
 - [2026-10-10] client/CountBarChart - Insights bar chart keeps a fixed tall height even with one bar (found: RG-134)
 - [2026-10-10] client/DashboardPage - KPI figures are org-wide but a Recruiter's drill-through list is owner-scoped (found: RG-134)

@@ -303,7 +303,7 @@ export default function CandidateForm({ draft, onSaved, onCancel }: Props) {
         </div>
         <div className="col-span-12 md:col-span-12">
           <div className="field-divider" />
-          <CheckboxField id="is-referred" label="This candidate has been referred" checked={isReferred} onCheckedChange={(checked) => setIsReferred(checked)} />
+          <CheckboxField id="is-referred" label="Referred by an employee" checked={isReferred} onCheckedChange={(checked) => setIsReferred(checked)} />
         </div>
         {isReferred && (
           <>

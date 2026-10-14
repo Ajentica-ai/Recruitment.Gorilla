@@ -324,3 +324,12 @@
 - 2026-10-13T00:00Z [claude] RG-54 PHASE PLAN->CONSTRUCT @0fe3157: plan approved; feature/RG-54/Job-opening-option-lists off origin/develop (user confirmed)
 - 2026-10-13T00:00Z [claude] RG-54 PHASE CONSTRUCT @0fe3157: 545 dotnet + 227 vitest pass, tsc+lint clean, migration applied locally; awaiting user browser check
 - 2026-10-13T00:00Z [claude] RG-54 DONE @0fe3157: user browser check passed; Down() rollback verified; 545 dotnet + 227 vitest; commit, push, PR (user confirmed)
+- 2026-10-13T20:45Z [claude] RG-156 CREATED @7256c6c: issue #156, employee referral cannot be recorded on the bulk-upload review screen (bug, UI)
+- 2026-10-13T20:45Z [claude] RG-156 SIDE-EFFECT @7256c6c: INTAKE claim - already assigned to tahmidsparrow, board status Backlog -> In Development
+- 2026-10-13T20:45Z [claude] RG-156 DECISION @7256c6c: standardise the checkbox label on 'Referred by an employee' across all four call sites (user confirmed)
+- 2026-10-13T20:45Z [claude] RG-156 DECISION @7256c6c: leave the ApproveDraftAsync duplicate-email backlog entry out of scope, stays frontend-only (user confirmed)
+- 2026-10-13T20:45Z [claude] RG-156 BRANCH @7256c6c: fix/RG-156/Referral-on-review-screen created off origin/develop (user confirmed)
+- 2026-10-13T20:45Z [claude] RG-156 PHASE PLAN->CONSTRUCT @7256c6c: 7 tasks, standard rigor, frontend only
+- 2026-10-13T21:04Z [claude] RG-156 PHASE CONSTRUCT->WRAP-UP @7256c6c: 7/7 tasks, 233 vitest pass (5 consecutive runs), tsc+oxlint clean, verified end to end in the running app
+- 2026-10-13T21:04Z [claude] RG-156 DONE @7256c6c: referral block on the review screen; frontend only, no schema change; uncommitted
+- 2026-10-13T21:04Z [claude] RG-156 WRAP-UP @7256c6c: archived RG-139,RG-40,RG-74 (oldest completed) to stay within the 10-item retention cap; 2 findings to backlog

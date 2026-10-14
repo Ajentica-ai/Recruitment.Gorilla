@@ -1,9 +1,10 @@
-﻿# AI-DLC Nano State
+# AI-DLC Nano State
 - Active work item: none
-- Phase: -
-- Branch: feature/RG-54/Job-opening-option-lists
-- Base SHA: 0fe3157
-- Next step: none. RG-54 done; PR opened.
-- Paused work items: none
-- Uncommitted code: no
-- Last updated: 2026-10-13T00:00Z by claude
+- Phase: —
+- Branch: fix/RG-156/Referral-on-review-screen
+- Base SHA: 7256c6c
+- Next step: none - RG-156 done and verified end to end; commit/PR on request
+- Paused work items:
+  - work-items/RG-52 (DONE, fix/RG-52/Recruiter-header-alignment, uncommitted - commit/PR on request)
+- Uncommitted code: yes
+- Last updated: 2026-10-13T21:05Z by claude
