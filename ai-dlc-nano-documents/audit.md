@@ -368,3 +368,10 @@
 - 2026-10-13T14:00Z [claude] RG-39 BRANCH @aba2029: fix/RG-39/Cancel-user-edit-toast off origin/fix/RG-56/Relevant-experience-default (user confirmed)
 - 2026-10-13T14:00Z [claude] RG-39 PHASE PLAN→CONSTRUCT @aba2029: plan approved
 - 2026-10-13T14:03Z [claude] RG-39 DONE @aba2029: type=button on 5 Cancel buttons in forms; UsersPage tests; client suite green
+- 2026-10-14T08:49Z [claude] RG-41 CREATED @cff0a28: issue #41, Users table headers misaligned
+- 2026-10-14T08:49Z [claude] RG-41 SIDE-EFFECT @cff0a28: already assigned to rayhan-ajentica; board status NOT moved (gh token lacks read:project)
+- 2026-10-14T08:49Z [claude] RG-41 PHASE CLARIFY→PLAN @cff0a28: root cause found, plan drafted
+- 2026-10-14T08:52Z [claude] RG-41 BRANCH @cff0a28: fix/RG-41/User-table-header-alignment off origin/develop (user confirmed)
+- 2026-10-14T08:52Z [claude] RG-41 DECISION @cff0a28: fix Users table only; Audit Log/Email Delivery to backlog (user confirmed)
+- 2026-10-14T08:52Z [claude] RG-41 PHASE PLAN→CONSTRUCT @cff0a28: plan approved
+- 2026-10-14T08:54Z [claude] RG-41 DONE @cff0a28: text-left on Users table headers; test added; suite green except known date-picker flake

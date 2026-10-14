@@ -17,3 +17,4 @@
 - [2026-09-30] server CandidateService - stores dto.FullName untrimmed while UserService trims; padded names save padded (found: RG-38)
 - [2026-09-30] client/e2e - seeded admin@recruitmentgorilla.com is named 'Super Admin' but holds only the Admin role (found: RG-38)
 - [2026-10-13] drafts/discard - DiscardDraftAsync and the Approved-tab Discard button allow discarding an Approved draft (found: RG-55)
+- [2026-10-14] client/AuditLogPage, EmailDeliveryTab - bare <th> has no text-align (browser centres), likely misaligned like Users (found: RG-41)
