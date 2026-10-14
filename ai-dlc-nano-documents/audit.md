@@ -382,3 +382,9 @@
 - 2026-10-14T11:40Z [claude] RG-63 DECISION @210a147: fix Candidates table only (user confirmed)
 - 2026-10-14T11:40Z [claude] RG-63 PHASE PLAN→CONSTRUCT @210a147: plan approved
 - 2026-10-14T11:43Z [claude] RG-63 DONE @210a147: text-left on Candidates headers; test added; browser-measured header==cell left edge; suite 242/242
+- 2026-10-14T13:17Z [claude] RG-64 CREATED @e65f126: issue #64, per-page dropdown list leaves the browser window
+- 2026-10-14T13:17Z [claude] RG-64 SIDE-EFFECT @e65f126: already assigned to rayhan-ajentica; board status NOT moved (gh token lacks read:project)
+- 2026-10-14T13:17Z [claude] RG-64 DECISION @e65f126: swap Pagination native select for Radix Select, Pagination only (user confirmed)
+- 2026-10-14T13:17Z [claude] RG-64 BRANCH @e65f126: fix/RG-64/Page-size-dropdown-in-viewport off origin/develop (user confirmed)
+- 2026-10-14T13:17Z [claude] RG-64 PHASE PLAN→CONSTRUCT @e65f126: plan approved
+- 2026-10-14T13:22Z [claude] RG-64 DONE @e65f126: Pagination page size now Radix Select; list stays in viewport (Playwright, 3 sizes); suite 245/245
