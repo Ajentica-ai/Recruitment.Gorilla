@@ -382,3 +382,5 @@
 - 2026-10-14T11:40Z [claude] RG-63 DECISION @210a147: fix Candidates table only (user confirmed)
 - 2026-10-14T11:40Z [claude] RG-63 PHASE PLAN→CONSTRUCT @210a147: plan approved
 - 2026-10-14T11:43Z [claude] RG-63 DONE @210a147: text-left on Candidates headers; test added; browser-measured header==cell left edge; suite 242/242
+- 2026-10-14T15:08Z [claude] RG-165 SIDE-EFFECT @1766318: opened issue #165, weighted multi-domain interview rubric and scorecard; deferred, board Backlog (user approved)
+- 2026-10-14T15:08Z [claude] RG-165 SIDE-EFFECT @1766318: pushed assets/weighted-scorecard-mockup @1766318 hosting the scorecard mockup for issue #165 (user approved)
