@@ -350,7 +350,7 @@ export default function AddStatusModal({
           </div>
         </SheetBody>
         <SheetFooter>
-          <Button variant="outline" onClick={handleHide}>
+          <Button type="button" variant="outline" onClick={handleHide}>
             Cancel
           </Button>
           <Button type="submit" disabled={mutation.isPending}>

@@ -400,7 +400,7 @@ export default function JobOpeningsTab() {
             </div>
           </SheetBody>
           <SheetFooter>
-            <Button variant="outline" onClick={() => setShowModal(false)}>Cancel</Button>
+            <Button type="button" variant="outline" onClick={() => setShowModal(false)}>Cancel</Button>
             <Button type="submit" disabled={saveMutation.isPending}>
               {saveMutation.isPending ? 'Saving…' : 'Save'}
             </Button>

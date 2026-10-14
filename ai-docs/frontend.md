@@ -120,6 +120,9 @@ No `max-width` queries, and the phone is never the exception. Concretely:
   pushes Save and Cancel below the fold, with no scrollbar to show anything was
   cut off (issues #70, #81). `e2e/dialog-footer-visible.spec.ts` guards this.
   The same applies to `SheetBody` in `components/ui/sheet.tsx`.
+  **A Cancel/Close button inside that form needs `type="button"`.** `Button` sets no default
+  type, so a bare one is a submit button: it runs the form's `onSubmit` (a save, a toast) and then
+  closes (issue #39). Only the real submit button should be `type="submit"`.
 - Drawers (`components/ui/sheet.tsx`) follow the same shape as modals: a bottom
   sheet below `sm` (`inset-x-0 bottom-0 max-h-[92dvh]`, rounded top, rising from
   the bottom) and a full-height right-hand panel from `sm` up, default 28rem.
