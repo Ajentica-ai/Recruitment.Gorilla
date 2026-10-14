@@ -105,6 +105,19 @@ public class CandidateDraftServiceTests(MySqlDatabaseFixture fixture) : DbTestBa
     }
 
     [Fact]
+    public async Task CreateDraft_stores_the_estimated_relevant_experience()
+    {
+        var service = AsAdmin();
+
+        var draft = await service.CreateDraftAsync(
+            "cv.pdf", "stored_cv.pdf", "PDF", 1000, "batch_x", "Batch X",
+            "Ten Years", "ten@test.com", null, null, null, null, null,
+            relevantExperience: "8+ Years");
+
+        Assert.Equal("8+ Years", draft.RelevantExperience);
+    }
+
+    [Fact]
     public async Task Create_and_ApproveDraft_transfers_Education_Experience_and_Profiles()
     {
         var service = AsAdmin();

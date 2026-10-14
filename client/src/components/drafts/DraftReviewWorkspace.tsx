@@ -233,7 +233,7 @@ export default function DraftReviewWorkspace({ initialBatchId, onCandidateCreate
         email: activeDraft.email || '',
         phone: activeDraft.phone || '',
         currentTitle: activeDraft.currentTitle || '',
-        relevantExperience: activeDraft.relevantExperience || '3-5 Years',
+        relevantExperience: activeDraft.relevantExperience || '',
         skills: activeDraft.skills || '',
         summary: activeDraft.summary || '',
         linkedInUrl: activeDraft.linkedInUrl || '',
