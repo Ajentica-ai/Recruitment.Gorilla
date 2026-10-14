@@ -423,11 +423,11 @@ export default function CandidatesPage() {
             <table className="table table-cards align-middle">
               <thead>
                 <tr>
-                  <th><SortHeader col="name" /></th>
-                  <th>Email</th>
-                  <th>Current title</th>
-                  <th><SortHeader col="status" /></th>
-                  <th><SortHeader col="added" /></th>
+                  <th className="text-left"><SortHeader col="name" /></th>
+                  <th className="text-left">Email</th>
+                  <th className="text-left">Current title</th>
+                  <th className="text-left"><SortHeader col="status" /></th>
+                  <th className="text-left"><SortHeader col="added" /></th>
                   {/* Delete is Admin/SuperAdmin-only (the API rejects recruiters). */}
                   {isAdminOrAbove && <th className="col-actions"><span className="sr-only">Actions</span></th>}
                 </tr>
