@@ -348,3 +348,17 @@
 - 2026-10-14T03:59Z [claude] RG-156 SIDE-EFFECT @c0273ee: committed and pushed fix/RG-156/Referral-on-review-screen, opened PR #158 against develop (user approved)
 - 2026-10-14T03:59Z [claude] RG-156 SIDE-EFFECT @c0273ee: posted summary comment on issue #156, board status In Development -> In review (user approved)
 - 2026-10-14T04:05Z [claude] RG-156 SIDE-EFFECT @5bc7a95: merged origin/develop (RG-55,RG-56); add/add conflict on DraftReviewWorkspace.test.tsx resolved by keeping both suites; 238 vitest pass
+- 2026-10-14T04:13Z [claude] RG-68 CREATED @d6f13ec: issue #68, no spacing between Save draft and Submit evaluation on the interview evaluation form (Improvements, UI)
+- 2026-10-14T04:13Z [claude] RG-68 SIDE-EFFECT @d6f13ec: INTAKE claim - assigned to tahmidsparrow, board status -> In Development
+- 2026-10-14T04:18Z [claude] RG-68 DECISION @27d2e9b: fix the dead .eval-form-card .form-actions selector too, same root cause as the missing gap (user confirmed)
+- 2026-10-14T04:18Z [claude] RG-68 DECISION @27d2e9b: branch prefix fix/ despite the Improvements label, it restores styling a rename dropped (user confirmed)
+- 2026-10-14T04:18Z [claude] RG-68 BRANCH @27d2e9b: fix/RG-68/Eval-actions-spacing created off origin/develop (user confirmed)
+- 2026-10-14T04:18Z [claude] RG-68 PHASE PLAN->CONSTRUCT @27d2e9b: 6 tasks, standard rigor, CSS fix plus a measured e2e guard
+- 2026-10-14T04:28Z [claude] RG-68 REVISED @27d2e9b: dropped the footer-pinning assertion; repointed selector is inert, .interview-grid is applied nowhere
+- 2026-10-14T04:28Z [claude] RG-68 PHASE CONSTRUCT->WRAP-UP @27d2e9b: gap measured 0px before, passes after; 238 vitest, tsc+lint clean, adjacent layout specs green
+- 2026-10-14T04:28Z [claude] RG-68 DONE @27d2e9b: eval actions row styled; 2 findings to backlog; uncommitted
+- 2026-10-14T04:28Z [claude] RG-68 WRAP-UP @27d2e9b: archived RG-96,RG-98,RG-51 (oldest completed) to stay within the 10-item retention cap
+- 2026-10-14T04:30Z [claude] RG-68 SIDE-EFFECT @1339d87: committed and pushed fix/RG-68/Eval-actions-spacing, opened PR #159 against develop (user approved)
+- 2026-10-14T04:30Z [claude] RG-68 SIDE-EFFECT @1339d87: posted summary comment on issue #68, board status In Development -> In review (user approved)
+- 2026-10-14T04:32Z [claude] RG-68 REVISED @118e5a2: .interview-grid is dead CSS from the Harbor redesign (#35), not a broken workspace; corrected PR #159 body and issue #68 comment
+- 2026-10-14T04:34Z [claude] RG-68 REVISED @a1ddb48: spec now waits for computed display:flex before measuring; one transient failure seen when the page was caught mid-reload
