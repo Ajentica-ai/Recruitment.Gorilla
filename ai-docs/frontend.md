@@ -123,6 +123,7 @@ No `max-width` queries, and the phone is never the exception. Concretely:
   **A Cancel/Close button inside that form needs `type="button"`.** `Button` sets no default
   type, so a bare one is a submit button: it runs the form's `onSubmit` (a save, a toast) and then
   closes (issue #39). Only the real submit button should be `type="submit"`.
+- **The pager's page-size control (`common/Pagination`) is a Radix `Select`, not a `NativeSelect`.** It sits at the bottom of the page, and a native option list is drawn by the browser, so it can hang past the window edge (issue #64). Radix draws the list in the page and flips it upward when there is no room below. Other plain lists stay native; see `ui/native-select.tsx`.
 - Drawers (`components/ui/sheet.tsx`) follow the same shape as modals: a bottom
   sheet below `sm` (`inset-x-0 bottom-0 max-h-[92dvh]`, rounded top, rising from
   the bottom) and a full-height right-hand panel from `sm` up, default 28rem.
