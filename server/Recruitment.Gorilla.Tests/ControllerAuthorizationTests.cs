@@ -45,6 +45,23 @@ public class ControllerAuthorizationTests(ApiFixture fx)
         Assert.Equal(HttpStatusCode.Unauthorized, anon.StatusCode);
     }
 
+    // ---- Delete discarded drafts: CanWriteCandidate (Interviewer excluded) ----
+
+    [Fact]
+    public async Task Delete_discarded_drafts_is_blocked_for_interviewers_and_anonymous()
+    {
+        await AssertStatus("Interviewer", HttpMethod.Delete, "/api/candidate-drafts/1", HttpStatusCode.Forbidden);
+        await AssertStatus("Interviewer", HttpMethod.Post, "/api/candidate-drafts/bulk-delete", HttpStatusCode.Forbidden);
+        var anon = await fx.SendAsync(HttpMethod.Delete, "/api/candidate-drafts/1", token: null);
+        Assert.Equal(HttpStatusCode.Unauthorized, anon.StatusCode);
+    }
+
+    [Fact]
+    public async Task Delete_draft_returns_404_for_an_unknown_draft_to_a_recruiter()
+    {
+        await AssertStatus("Recruiter", HttpMethod.Delete, "/api/candidate-drafts/999999999", HttpStatusCode.NotFound);
+    }
+
     // ---- Browse candidates: CanWriteCandidate (Interviewer excluded) ----
 
     [Theory]

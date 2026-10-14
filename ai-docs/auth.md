@@ -16,7 +16,7 @@ Four roles in a strict hierarchy **SuperAdmin → Admin → Recruiter → Interv
 | View / browse candidates | all | all | **own OR assigned-role** | – |
 | Create / upload candidate | ✅ | ✅ | ✅ (becomes owner, assigned roles only) | – |
 | **JSON + CVs import** (`/api/candidate-import/*`) | ✅ | ✅ | – | – |
-| CV **drafts**: view / edit / approve / discard (`/api/candidate-drafts/*`) | all | all | **own uploads OR assigned-role** | – |
+| CV **drafts**: view / edit / approve / discard / delete a discarded draft (`/api/candidate-drafts/*`) | all | all | **own uploads OR assigned-role** | – |
 | Edit / change status candidate | ✅ (all) | ✅ (all) | **own OR assigned-role** (role *reassignment* needs the new role too) | – |
 | **Delete** candidate | ✅ | ✅ | – | – |
 | Dashboard + assigned interviews + evaluations | ✅ | ✅ | ✅ | ✅ |

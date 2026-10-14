@@ -69,6 +69,8 @@ marked **Duplicate**.
   **Save Changes** keeps your edits for later. **Discard Draft** removes it.
 - Shortcuts: Ctrl+Enter approves, Ctrl+Left and Ctrl+Right move through the queue.
 - Tick several drafts to **Approve Selected** or **Discard Selected** at once.
+- On the **Discarded** tab, **Delete Draft** (or **Delete Selected**) removes discarded CVs for good, after
+  a confirmation. This cannot be undone. Only discarded drafts can be deleted.
 
 Required to approve: **Full name**, a valid **Email**, and a **Role applied for** that is
 active, not past its end date, and (for you) one you're assigned to.
