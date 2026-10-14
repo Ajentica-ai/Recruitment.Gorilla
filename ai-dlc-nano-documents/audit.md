@@ -375,3 +375,10 @@
 - 2026-10-14T08:52Z [claude] RG-41 DECISION @cff0a28: fix Users table only; Audit Log/Email Delivery to backlog (user confirmed)
 - 2026-10-14T08:52Z [claude] RG-41 PHASE PLAN→CONSTRUCT @cff0a28: plan approved
 - 2026-10-14T08:54Z [claude] RG-41 DONE @cff0a28: text-left on Users table headers; test added; suite green except known date-picker flake
+- 2026-10-14T11:38Z [claude] RG-63 CREATED @210a147: issue #63, Candidates table headers misaligned
+- 2026-10-14T11:38Z [claude] RG-63 SIDE-EFFECT @210a147: already assigned to rayhan-ajentica; board status NOT moved (gh token lacks read:project)
+- 2026-10-14T11:38Z [claude] RG-63 PHASE CLARIFY→PLAN @210a147: root cause found, plan drafted
+- 2026-10-14T11:40Z [claude] RG-63 BRANCH @210a147: fix/RG-63/Candidates-table-header-alignment off develop (user confirmed)
+- 2026-10-14T11:40Z [claude] RG-63 DECISION @210a147: fix Candidates table only (user confirmed)
+- 2026-10-14T11:40Z [claude] RG-63 PHASE PLAN→CONSTRUCT @210a147: plan approved
+- 2026-10-14T11:43Z [claude] RG-63 DONE @210a147: text-left on Candidates headers; test added; browser-measured header==cell left edge; suite 242/242
