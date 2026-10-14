@@ -5448,6 +5448,53 @@ a.job-tile:hover {
   overflow-y: auto;
 }
 
+/* ---------- Evaluation actions ----------
+   The row that closes the evaluation form: a progress hint on one side, Save
+   draft and Submit evaluation on the other.
+
+   These three classes went unstyled from the rubric rework (#24) until #68.
+   The row used to be a plain `.form-actions`, and the rename to the BEM trio
+   took its `display:flex` and `gap` with it, so the two buttons sat flush
+   against each other. Mirrors `.form-actions` above rather than inventing a
+   second look for the same job. */
+.eval-form-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin-top: var(--space-5);
+  padding-top: var(--space-5);
+  border-top: 1px solid var(--border);
+}
+
+/* Takes the slack so the hint wraps instead of squeezing the buttons, and may
+   shrink past its content (min-width:0) rather than forcing the row wider. */
+.eval-form-actions__hint {
+  flex: 1 1 16rem;
+  min-width: 0;
+}
+
+.eval-form-actions__buttons {
+  display: flex;
+  gap: var(--space-2);
+  flex-shrink: 0;
+}
+
+/* Below the hint's 16rem basis the row has already wrapped, so the buttons own
+   the line: spread them full width rather than leaving them bunched left.
+   Note `.form-actions > .btn` never applied here, the shadcn Button emits no
+   `.btn` class. */
+@media (max-width: 575.98px) {
+  .eval-form-actions__buttons {
+    width: 100%;
+  }
+
+  .eval-form-actions__buttons>* {
+    flex: 1 1 0;
+  }
+}
+
 /* ---------- Evaluation card ----------
    Twelve criteria across four open sections made this card ~2500px tall, so
    the progress bar was long gone by the time you reached section D and Submit
@@ -5497,7 +5544,7 @@ a.job-tile:hover {
   }
 
   .eval-form-card .eval-progress__bar,
-  .eval-form-card .form-actions {
+  .eval-form-card .eval-form-actions {
     flex-shrink: 0;
   }
 

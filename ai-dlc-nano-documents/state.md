@@ -1,10 +1,10 @@
 # AI-DLC Nano State
 - Active work item: none
 - Phase: —
-- Branch: fix/RG-156/Referral-on-review-screen
-- Base SHA: 7256c6c
-- Next step: none - RG-156 done, PR #158 open against develop
+- Branch: fix/RG-68/Eval-actions-spacing
+- Base SHA: 27d2e9b
+- Next step: none - RG-68 done and measured; commit/PR on request
 - Paused work items:
   - work-items/RG-52 (DONE, fix/RG-52/Recruiter-header-alignment, uncommitted - commit/PR on request)
-- Uncommitted code: no
-- Last updated: 2026-10-13T21:15Z by claude
+- Uncommitted code: yes
+- Last updated: 2026-10-14T04:40Z by claude

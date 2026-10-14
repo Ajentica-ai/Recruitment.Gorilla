@@ -520,10 +520,9 @@ export default function EvaluationForm({
             Save draft
           </Button>
           <Button
- 
             disabled={mutation.isPending}
             onClick={onSubmitClick}
-            >
+          >
             Submit evaluation
           </Button>
         </div>
