@@ -120,6 +120,10 @@ public record BulkDiscardDraftsDto(
     List<int> DraftIds
 );
 
+public record BulkDeleteDraftsDto(
+    List<int> DraftIds
+);
+
 public record DraftBatchSummaryDto(
     string BatchId,
     string BatchName,

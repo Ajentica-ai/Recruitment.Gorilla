@@ -11,6 +11,8 @@ import {
   bulkApproveCandidateDrafts,
   discardCandidateDraft,
   bulkDiscardCandidateDrafts,
+  deleteCandidateDraft,
+  bulkDeleteCandidateDrafts,
   getActiveRoleOptions,
   getActiveSourceOptions,
 } from '../../services/api';
@@ -28,6 +30,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '../ToastStack';
 import { initials } from '../../utils/initials';
 import EmptyState from '../common/EmptyState';
+import ConfirmModal from '../common/ConfirmModal';
 import LoadingPanel from '../common/Loading';
 import { SearchInput } from '@/components/ui/search-input';
 import { cn } from '@/lib/utils';
@@ -89,6 +92,8 @@ export default function DraftReviewWorkspace({ initialBatchId, onCandidateCreate
   const bulkBarRef = useRef<HTMLDivElement | null>(null);
   const [bulkBarInset, setBulkBarInset] = useState(0);
   const [bulkRoleId, setBulkRoleId] = useState<number | null>(null);
+  // What the delete confirmation is about: one draft, or the current bulk selection.
+  const [deleteTarget, setDeleteTarget] = useState<'single' | 'bulk' | null>(null);
 
   /**
    * The list rail and editor studio used a hardcoded `calc(100vh - 210px)`
@@ -243,7 +248,7 @@ export default function DraftReviewWorkspace({ initialBatchId, onCandidateCreate
         email: activeDraft.email || '',
         phone: activeDraft.phone || '',
         currentTitle: activeDraft.currentTitle || '',
-        relevantExperience: activeDraft.relevantExperience || '3-5 Years',
+        relevantExperience: activeDraft.relevantExperience || '',
         skills: activeDraft.skills || '',
         summary: activeDraft.summary || '',
         linkedInUrl: activeDraft.linkedInUrl || '',
@@ -407,6 +412,24 @@ export default function DraftReviewWorkspace({ initialBatchId, onCandidateCreate
     },
   });
 
+  const deleteMutation = useMutation({
+    mutationFn: async () =>
+      deleteTarget === 'bulk'
+        ? bulkDeleteCandidateDrafts({ draftIds: Array.from(selectedIds) }).then((r) => r.deletedCount)
+        : deleteCandidateDraft(activeDraft!.id).then(() => 1),
+    onSuccess: (count) => {
+      addToast(`Deleted ${count} discarded draft${count === 1 ? '' : 's'}.`, 'info');
+      setDeleteTarget(null);
+      setSelectedIds(new Set());
+      void queryClient.invalidateQueries({ queryKey: ['candidate-drafts'] });
+      void queryClient.invalidateQueries({ queryKey: ['draft-batches'] });
+    },
+    onError: (err: any) => {
+      setDeleteTarget(null);
+      addToast(err?.response?.data || 'Failed to delete the draft.', 'danger');
+    },
+  });
+
   // Handle Approve Action
   const handleApprove = () => {
     if (!activeDraft) return;
@@ -501,6 +524,8 @@ export default function DraftReviewWorkspace({ initialBatchId, onCandidateCreate
   const selectedDraftsList = useMemo(() => drafts.filter((d) => selectedIds.has(d.id)), [drafts, selectedIds]);
   const showApproveBulk = selectedDraftsList.some((d) => d.status !== 'Approved');
   const showDiscardBulk = selectedDraftsList.some((d) => d.status !== 'Discarded');
+  // Deleting is permanent, so it is offered only when every selected draft is already discarded.
+  const showDeleteBulk = selectedDraftsList.length > 0 && selectedDraftsList.every((d) => d.status === 'Discarded');
 
   return (
     <div
@@ -1553,18 +1578,33 @@ export default function DraftReviewWorkspace({ initialBatchId, onCandidateCreate
 
               {/* Studio Sticky Footer Actions */}
               <div className="draft-editor-studio__foot">
-                <Button
-                  variant="ghostDestructive"
-                  size="sm"
-                  className="gap-1 px-2 sm:px-3 shrink-0 text-xs sm:text-sm"
-                  disabled={discardMutation.isPending || activeDraft.status === 'Discarded'}
-                  onClick={() => discardMutation.mutate(activeDraft.id)}
-                  title="Discard Draft"
-                >
-                  <Trash2 size={14} />
-                  <span className="hidden sm:inline">Discard Draft</span>
-                  <span className="sm:hidden">Discard</span>
-                </Button>
+                {activeDraft.status === 'Discarded' ? (
+                  <Button
+                    variant="ghostDestructive"
+                    size="sm"
+                    className="gap-1 px-2 sm:px-3 shrink-0 text-xs sm:text-sm"
+                    disabled={deleteMutation.isPending}
+                    onClick={() => setDeleteTarget('single')}
+                    title="Delete Draft permanently"
+                  >
+                    <Trash2 size={14} />
+                    <span className="hidden sm:inline">Delete Draft</span>
+                    <span className="sm:hidden">Delete</span>
+                  </Button>
+                ) : (
+                  <Button
+                    variant="ghostDestructive"
+                    size="sm"
+                    className="gap-1 px-2 sm:px-3 shrink-0 text-xs sm:text-sm"
+                    disabled={discardMutation.isPending}
+                    onClick={() => discardMutation.mutate(activeDraft.id)}
+                    title="Discard Draft"
+                  >
+                    <Trash2 size={14} />
+                    <span className="hidden sm:inline">Discard Draft</span>
+                    <span className="sm:hidden">Discard</span>
+                  </Button>
+                )}
 
                 <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
                   <Button
@@ -1659,6 +1699,19 @@ export default function DraftReviewWorkspace({ initialBatchId, onCandidateCreate
               </Button>
             )}
 
+            {showDeleteBulk && (
+              <Button
+                variant="outlineDestructive"
+                size="sm"
+                className="whitespace-nowrap"
+                disabled={deleteMutation.isPending}
+                onClick={() => setDeleteTarget('bulk')}
+              >
+                <Trash2 />
+                Delete Selected
+              </Button>
+            )}
+
             <Button
               variant="ghost"
               size="sm"
@@ -1670,6 +1723,19 @@ export default function DraftReviewWorkspace({ initialBatchId, onCandidateCreate
           </div>
         </div>
       )}
+
+      <ConfirmModal
+        show={deleteTarget !== null}
+        title={deleteTarget === 'bulk' ? 'Delete discarded drafts' : 'Delete discarded draft'}
+        confirmLabel="Delete permanently"
+        pending={deleteMutation.isPending}
+        onCancel={() => setDeleteTarget(null)}
+        onConfirm={() => deleteMutation.mutate()}
+      >
+        {deleteTarget === 'bulk'
+          ? `Permanently delete ${selectedIds.size} discarded draft${selectedIds.size === 1 ? '' : 's'} and their CV files? This cannot be undone.`
+          : `Permanently delete the discarded draft for ${activeDraft?.fullName || activeDraft?.originalFileName} and its CV file? This cannot be undone.`}
+      </ConfirmModal>
     </div>
   );
 }

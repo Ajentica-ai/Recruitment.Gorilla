@@ -324,6 +324,18 @@
 - 2026-10-13T00:00Z [claude] RG-54 PHASE PLAN->CONSTRUCT @0fe3157: plan approved; feature/RG-54/Job-opening-option-lists off origin/develop (user confirmed)
 - 2026-10-13T00:00Z [claude] RG-54 PHASE CONSTRUCT @0fe3157: 545 dotnet + 227 vitest pass, tsc+lint clean, migration applied locally; awaiting user browser check
 - 2026-10-13T00:00Z [claude] RG-54 DONE @0fe3157: user browser check passed; Down() rollback verified; 545 dotnet + 227 vitest; commit, push, PR (user confirmed)
+- 2026-10-13T00:00Z [claude] RG-55 CREATED @1232a27: issue #55 bug; already assigned to rayhan-ajentica; board status not moved (gh lacks read:project)
+- 2026-10-13T00:00Z [claude] RG-55 DECISION @1232a27: ticket = allow deleting Discarded drafts (user clarified); plan proposed, awaiting approval
+- 2026-10-13T00:00Z [claude] RG-55 BRANCH @1232a27: fix/RG-55/Delete-discarded-drafts created off origin/develop (user confirmed)
+- 2026-10-13T00:00Z [claude] RG-55 PHASE PLAN->CONSTRUCT @1232a27: plan approved; 552 dotnet + 230 vitest pass, tsc+lint clean; awaiting user browser check
+- 2026-10-13T00:00Z [claude] RG-55 DONE @1232a27: delete for Discarded drafts; 552 dotnet + 230 vitest; follow-up (discard on Approved) in backlog; commit, push, PR (user confirmed)
+- 2026-10-13T12:28Z [claude] RG-56 CREATED @b4b25e0: issue #56 bug, relevant experience defaults to 3-5 Years
+- 2026-10-13T12:28Z [claude] RG-56 SIDE-EFFECT @b4b25e0: already assigned to rayhan-ajentica; board status NOT moved (gh token lacks read:project)
+- 2026-10-13T12:28Z [claude] RG-56 PHASE CLARIFY→PLAN @b4b25e0: assumptions stated, plan drafted
+- 2026-10-13T12:46Z [claude] RG-56 BRANCH @b4b25e0: fix/RG-56/Relevant-experience-default off origin/fix/RG-55/Delete-discarded-drafts (user confirmed)
+- 2026-10-13T12:46Z [claude] RG-56 PHASE PLAN→CONSTRUCT @b4b25e0: plan approved
+- 2026-10-13T12:50Z [claude] RG-56 DECISION @b4b25e0: no parseable dates leaves Relevant Experience empty (stated assumption, user approved plan)
+- 2026-10-13T13:09Z [claude] RG-56 DONE @b4b25e0: estimator + wiring + client fallback removed; tests green
 - 2026-10-13T20:45Z [claude] RG-156 CREATED @7256c6c: issue #156, employee referral cannot be recorded on the bulk-upload review screen (bug, UI)
 - 2026-10-13T20:45Z [claude] RG-156 SIDE-EFFECT @7256c6c: INTAKE claim - already assigned to tahmidsparrow, board status Backlog -> In Development
 - 2026-10-13T20:45Z [claude] RG-156 DECISION @7256c6c: standardise the checkbox label on 'Referred by an employee' across all four call sites (user confirmed)

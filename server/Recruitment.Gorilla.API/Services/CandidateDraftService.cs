@@ -313,7 +313,8 @@ public class CandidateDraftService(
         List<ParsedEducation>? educations = null,
         List<ParsedExperience>? experiences = null,
         int? roleAppliedOptionId = null,
-        string? fileHash = null)
+        string? fileHash = null,
+        string? relevantExperience = null)
     {
         var eduDtos = educations?.Select((e, idx) => new CandidateEducationDto(idx + 1, e.Degree, e.Institution, e.GraduationYear, e.Cgpa)).ToList();
         var expDtos = experiences?.Select((e, idx) => new CandidateExperienceDto(idx + 1, e.JobTitle, e.Company, e.Duration, e.Description)).ToList();
@@ -334,6 +335,7 @@ public class CandidateDraftService(
             GithubUrl = github,
             Skills = skills,
             Summary = summary,
+            RelevantExperience = relevantExperience,
             Location = location,
             LeetCodeUrl = leetCode,
             CodeforcesUrl = codeforces,
@@ -627,6 +629,70 @@ public class CandidateDraftService(
 
         logger.LogInformation("Discarded CandidateDraft {DraftId}.", id);
         return true;
+    }
+
+    /// <summary>Outcome of deleting a single draft.</summary>
+    public enum DeleteDraftResult { Deleted, NotFound, NotDiscarded }
+
+    /// <summary>
+    /// Permanently deletes a Discarded draft in the caller's scope, along with its stored CV file when
+    /// nothing else uses it. Pending and Approved drafts are refused.
+    /// </summary>
+    public async Task<DeleteDraftResult> DeleteDraftAsync(int id)
+    {
+        var draft = await ScopedDrafts().FirstOrDefaultAsync(d => d.Id == id);
+        if (draft == null) return DeleteDraftResult.NotFound;
+        if (draft.Status != "Discarded") return DeleteDraftResult.NotDiscarded;
+
+        await RemoveDraftsAsync([draft]);
+        return DeleteDraftResult.Deleted;
+    }
+
+    /// <summary>Permanently deletes the Discarded drafts among <paramref name="draftIds"/> that the caller can see.</summary>
+    public async Task<int> BulkDeleteAsync(List<int> draftIds)
+    {
+        var drafts = await ScopedDrafts()
+            .Where(d => draftIds.Contains(d.Id) && d.Status == "Discarded")
+            .ToListAsync();
+        if (drafts.Count == 0) return 0;
+
+        await RemoveDraftsAsync(drafts);
+        return drafts.Count;
+    }
+
+    private async Task RemoveDraftsAsync(List<CandidateDraft> drafts)
+    {
+        var deletedIds = drafts.Select(d => d.Id).ToList();
+        var storedNames = drafts.Select(d => d.StoredFileName).Where(n => !string.IsNullOrEmpty(n)).Distinct().ToList();
+
+        db.CandidateDrafts.RemoveRange(drafts);
+        await db.SaveChangesAsync();
+
+        // A stored file is shared between a draft and the candidate approved from it, so only remove
+        // files that no candidate CV and no remaining draft still points at.
+        foreach (var name in storedNames)
+        {
+            var stillUsed = await db.CVFiles.AnyAsync(f => f.StoredFileName == name)
+                || await db.CandidateDrafts.AnyAsync(d => d.StoredFileName == name);
+            if (stillUsed) continue;
+
+            var path = UploadPaths.Resolve(env.ContentRootPath, name);
+            try
+            {
+                if (path is not null && File.Exists(path)) File.Delete(path);
+            }
+            catch (IOException ex)
+            {
+                logger.LogWarning(ex, "Could not remove CV file {File} of a deleted draft.", name);
+            }
+        }
+
+        logger.LogInformation("Deleted {Count} discarded CandidateDraft(s): {Ids}.", deletedIds.Count, string.Join(",", deletedIds));
+        await audit.RecordAsync(
+            action: "CandidateDraft.Deleted",
+            entityType: nameof(CandidateDraft),
+            entityId: deletedIds.Count == 1 ? deletedIds[0] : null,
+            summary: $"Permanently deleted {deletedIds.Count} discarded draft(s): {string.Join(", ", deletedIds.Select(i => "#" + i))}.");
     }
 
     public async Task<int> BulkDiscardAsync(List<int> draftIds)

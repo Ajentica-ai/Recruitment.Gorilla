@@ -139,4 +139,68 @@ public class CVParserServiceTests
         const string text = "Line one\r\nLine two\tcolumn";
         Assert.Equal(text, CVParserService.NormalizeText(text));
     }
+
+    private static readonly DateTime Now = new(2026, 10, 13);
+
+    private static List<ParsedExperience> Jobs(params string[] durations) =>
+        durations.Select(d => new ParsedExperience("Engineer", "Co", d, null)).ToList();
+
+    [Theory]
+    [InlineData("Jan 2016 - Present", "8+ Years")]
+    [InlineData("2016 - 2026", "8+ Years")]
+    [InlineData("Jan 2023 - Present", "3-5 Years")]
+    [InlineData("Jun 2024 - Dec 2024", "< 1 Year")]
+    [InlineData("Jan 2024 - Present", "1-2 Years")]
+    [InlineData("Jan 2020 - Jan 2026", "5-8 Years")]
+    [InlineData("10 Years", "8+ Years")]
+    public void EstimateRelevantExperience_buckets_a_single_range(string duration, string expected)
+    {
+        Assert.Equal(expected, CVParserService.EstimateRelevantExperience(Jobs(duration), Now));
+    }
+
+    [Fact]
+    public void EstimateRelevantExperience_sums_roles_and_merges_overlaps()
+    {
+        // 2016-2021 and 2019-2026 overlap: union is 2016-2026 (~10 years), not 12.
+        var jobs = Jobs("2016 - 2021", "2019 - 2026");
+        Assert.Equal("8+ Years", CVParserService.EstimateRelevantExperience(jobs, Now));
+
+        // Two separate 2-year roles (year-only ranges are inclusive) = 4 years.
+        Assert.Equal("3-5 Years", CVParserService.EstimateRelevantExperience(Jobs("2010 - 2011", "2015 - 2016"), Now));
+    }
+
+    [Fact]
+    public void EstimateRelevantExperience_returns_null_when_nothing_is_dated()
+    {
+        Assert.Null(CVParserService.EstimateRelevantExperience(new List<ParsedExperience>(), Now));
+        Assert.Null(CVParserService.EstimateRelevantExperience(Jobs(null!, "recent"), Now));
+    }
+
+    [Fact]
+    public void Parsed_cv_with_ten_years_of_roles_estimates_8_plus_years()
+    {
+        const string rawText = """
+            Tahmid Rahman
+            tahmid@recruitmentgorilla.com
+
+            Experience
+            Senior Software Engineer — Brain Station 23 (Jan 2019 – Present)
+            • Built backend systems.
+            Software Engineer — Kaz Software (Mar 2016 – Dec 2018)
+            • Built web apps.
+
+            Education
+            BSc in Computer Science — BUET (2015)
+            """;
+
+        var tempFile = Path.Combine(Path.GetTempPath(), $"Ten_Years_{Guid.NewGuid():N}.txt");
+        File.WriteAllText(tempFile, rawText);
+        try
+        {
+            var result = new CVParserService().Parse(tempFile, "TXT");
+            Assert.Equal(2, result.Experiences.Count);
+            Assert.Equal("8+ Years", CVParserService.EstimateRelevantExperience(result.Experiences, Now));
+        }
+        finally { File.Delete(tempFile); }
+    }
 }
