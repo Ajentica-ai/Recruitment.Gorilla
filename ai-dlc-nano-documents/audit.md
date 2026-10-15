@@ -388,3 +388,9 @@
 - 2026-10-14T13:17Z [claude] RG-64 BRANCH @e65f126: fix/RG-64/Page-size-dropdown-in-viewport off origin/develop (user confirmed)
 - 2026-10-14T13:17Z [claude] RG-64 PHASE PLAN→CONSTRUCT @e65f126: plan approved
 - 2026-10-14T13:22Z [claude] RG-64 DONE @e65f126: Pagination page size now Radix Select; list stays in viewport (Playwright, 3 sizes); suite 245/245
+- 2026-10-14T13:35Z [claude] RG-66 CREATED @e65f126: issue #66, row actions menu overlaps another candidate row
+- 2026-10-14T13:35Z [claude] RG-66 SIDE-EFFECT @e65f126: user assigned #66 to self; board status NOT moved (gh token lacks read:project)
+- 2026-10-14T13:35Z [claude] RG-66 DECISION @e65f126: open shared RowActions menu to the left of the trigger (user confirmed)
+- 2026-10-14T13:35Z [claude] RG-66 BRANCH @e65f126: fix/RG-66/Row-menu-beside-row off origin/develop (user confirmed)
+- 2026-10-14T13:35Z [claude] RG-66 PHASE PLAN→CONSTRUCT @e65f126: plan approved
+- 2026-10-14T13:38Z [claude] RG-66 DONE @e65f126: RowActions side=left; measured inside own row on candidates table and cards; users menu taller than a row; suite 244/244

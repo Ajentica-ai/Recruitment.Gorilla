@@ -1,9 +1,9 @@
 # AI-DLC Nano State
 - Active work item: none
 - Phase: —
-- Branch: fix/RG-64/Page-size-dropdown-in-viewport
-- Base SHA: e65f126
-- Next step: none - RG-64 done, uncommitted until the user asks
+- Branch: fix/RG-66/Row-menu-beside-row
+- Base SHA: 4bb23b0
+- Next step: none - RG-66 done, PR #164 open against develop
 - Paused work items: none
-- Uncommitted code: yes
-- Last updated: 2026-10-14T13:22Z by claude
+- Uncommitted code: no
+- Last updated: 2026-10-15T06:57Z by claude
