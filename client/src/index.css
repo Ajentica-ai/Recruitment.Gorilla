@@ -4586,8 +4586,18 @@ a.hero-chip--accent:hover {
     grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
   }
 
+  /* One column beside the feed. A flex column rather than the grid above, whose
+     `align-content: start` left these cards at their natural height while the
+     feed card stretched to the row: the left column ended well above the right
+     one (#167). The last card takes the leftover height, so the bottom edges
+     line up and the first card keeps its natural size. */
   .dash-pair {
-    grid-template-columns: minmax(0, 1fr);
+    display: flex;
+    flex-direction: column;
+  }
+
+  .dash-pair > :last-child {
+    flex: 1 1 auto;
   }
 }
 
