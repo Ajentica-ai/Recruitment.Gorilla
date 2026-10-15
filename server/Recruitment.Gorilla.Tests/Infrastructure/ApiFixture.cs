@@ -164,6 +164,17 @@ public sealed class ApiFixture : IAsyncLifetime
         return role.Id;
     }
 
+    /// <summary>Inserts a deactivated account (same password as the other seeded users) and returns its email.</summary>
+    public async Task<string> NewInactiveUserAsync()
+    {
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var user = SeedUser(db, Roles.Recruiter);
+        user.IsActive = false;
+        await db.SaveChangesAsync();
+        return user.Email;
+    }
+
     /// <summary>Logs in via the real endpoint and returns the access token.</summary>
     public async Task<string> LoginAsync(string email, string password = Password)
     {

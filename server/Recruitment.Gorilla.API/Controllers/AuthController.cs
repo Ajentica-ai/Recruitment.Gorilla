@@ -20,7 +20,20 @@ public class AuthController(
     [HttpPost("login")]
     public async Task<IActionResult> Login([FromBody] LoginDto dto)
     {
-        var user = await auth.VerifyCredentialsAsync(dto.Email.Trim(), dto.Password);
+        var check = await auth.CheckLoginAsync(dto.Email.Trim(), dto.Password);
+        if (check.Status == LoginStatus.AccountInactive)
+        {
+            logger.LogWarning("Login refused for inactive account '{Email}'.", dto.Email);
+            await audit.RecordAsync("Auth.LoginFailed", actorUserId: null, actorName: dto.Email,
+                summary: $"Login refused for inactive account '{dto.Email}'");
+            return StatusCode(StatusCodes.Status403Forbidden, new
+            {
+                code = "account_inactive",
+                message = "Your account is inactive. Please contact your administrator.",
+            });
+        }
+
+        var user = check.User;
         if (user is null)
         {
             logger.LogWarning("Failed login attempt for '{Email}'.", dto.Email);

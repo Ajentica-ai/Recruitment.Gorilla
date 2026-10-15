@@ -12,6 +12,8 @@ import { Input } from '@/components/ui/input';
 import { Spinner } from '@/components/ui/spinner';
 import { useAuth } from '@/auth/AuthContext';
 
+const INACTIVE_MESSAGE = 'Your account is inactive. Please contact your administrator.';
+
 interface LocationState {
   from?: string;
 }
@@ -39,11 +41,13 @@ export default function LoginPage() {
       const user = await login({ email: email.trim(), password });
       navigate(user.mustChangePassword ? '/change-password' : from, { replace: true });
     } catch (err) {
-      setError(
-        isAxiosError(err) && err.response?.status === 401
-          ? 'Invalid email or password.'
-          : 'Unable to sign in. Please try again.',
-      );
+      const status = isAxiosError(err) ? err.response?.status : undefined;
+      // The server only says "inactive" once the password was correct (see AuthService.CheckLoginAsync).
+      if (isAxiosError(err) && status === 403 && err.response?.data?.code === 'account_inactive') {
+        setError(INACTIVE_MESSAGE);
+      } else {
+        setError(status === 401 ? 'Invalid email or password.' : 'Unable to sign in. Please try again.');
+      }
     } finally {
       setBusy(false);
     }
