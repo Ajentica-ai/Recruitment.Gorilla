@@ -17,6 +17,11 @@ public record TokenPair(
     DateTime RefreshExpiresAt,
     User User);
 
+public enum LoginStatus { Success, InvalidCredentials, AccountInactive }
+
+/// <summary><see cref="User"/> is set only for <see cref="LoginStatus.Success"/>.</summary>
+public record LoginCheck(LoginStatus Status, User? User);
+
 public class AuthService(AppDbContext db, IConfiguration config, EmailService emailService)
 {
     private int AccessTokenMinutes => config.GetValue("Jwt:AccessTokenMinutes", 15);
@@ -25,16 +30,27 @@ public class AuthService(AppDbContext db, IConfiguration config, EmailService em
     // ----- Credentials -----
 
     /// <summary>Returns the user when the email matches an active account with the given password; otherwise null.</summary>
-    public async Task<User?> VerifyCredentialsAsync(string email, string password)
+    public async Task<User?> VerifyCredentialsAsync(string email, string password) =>
+        (await CheckLoginAsync(email, password)).User;
+
+    /// <summary>
+    /// Checks a login attempt. The password is verified BEFORE the active flag, so an inactive account is
+    /// reported as such only to someone who already holds its correct password. A wrong password, or an
+    /// unknown email, is always <see cref="LoginStatus.InvalidCredentials"/>, which keeps the message from
+    /// revealing which emails exist or have been deactivated.
+    /// </summary>
+    public async Task<LoginCheck> CheckLoginAsync(string email, string password)
     {
         var user = await db.Users
             .Include(u => u.Roles)
             .FirstOrDefaultAsync(u => u.Email == email);
 
-        if (user is null || !user.IsActive)
-            return null;
+        if (user is null || !PasswordHasher.Verify(password, user.PasswordHash))
+            return new LoginCheck(LoginStatus.InvalidCredentials, null);
 
-        return PasswordHasher.Verify(password, user.PasswordHash) ? user : null;
+        return user.IsActive
+            ? new LoginCheck(LoginStatus.Success, user)
+            : new LoginCheck(LoginStatus.AccountInactive, null);
     }
 
     // ----- Token issuance -----
