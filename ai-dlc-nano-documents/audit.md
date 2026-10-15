@@ -400,3 +400,8 @@
 - 2026-10-15T06:16Z [claude] RG-37 BRANCH @e65f126: fix/RG-37/Inactive-login-message off origin/develop (user confirmed)
 - 2026-10-15T06:16Z [claude] RG-37 PHASE PLAN→CONSTRUCT @e65f126: plan approved
 - 2026-10-15T06:21Z [claude] RG-37 DONE @e65f126: CheckLoginAsync + 403 account_inactive + LoginPage msg; backend 568 green; UI verified; security review no high/med
+- 2026-10-15T11:48Z [claude] RG-167 CREATED @fde0630: issue #167, My pipeline cards not aligned
+- 2026-10-15T11:48Z [claude] RG-167 SIDE-EFFECT @fde0630: already assigned to rayhan-ajentica; board status NOT moved (gh token lacks read:project)
+- 2026-10-15T11:48Z [claude] RG-167 BRANCH @fde0630: fix/RG-167/Dashboard-pipeline-card-alignment off origin/develop (user confirmed)
+- 2026-10-15T11:48Z [claude] RG-167 PHASE PLAN→CONSTRUCT @fde0630: plan approved
+- 2026-10-15T11:51Z [claude] RG-167 DONE @fde0630: .dash-pair flex column at >=1200, last card grows; bottoms equal at 1920/1440/1200; suite 250/250
