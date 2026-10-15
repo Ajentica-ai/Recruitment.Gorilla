@@ -394,3 +394,9 @@
 - 2026-10-14T13:35Z [claude] RG-66 BRANCH @e65f126: fix/RG-66/Row-menu-beside-row off origin/develop (user confirmed)
 - 2026-10-14T13:35Z [claude] RG-66 PHASE PLAN→CONSTRUCT @e65f126: plan approved
 - 2026-10-14T13:38Z [claude] RG-66 DONE @e65f126: RowActions side=left; measured inside own row on candidates table and cards; users menu taller than a row; suite 244/244
+- 2026-10-15T06:16Z [claude] RG-37 CREATED @e65f126: issue #37, inactive account login shows generic message
+- 2026-10-15T06:16Z [claude] RG-37 SIDE-EFFECT @e65f126: already assigned to rayhan-ajentica; board status NOT moved (gh token lacks read:project)
+- 2026-10-15T06:16Z [claude] RG-37 DECISION @e65f126: reveal inactive only after correct password; 403 account_inactive; exact message (user confirmed)
+- 2026-10-15T06:16Z [claude] RG-37 BRANCH @e65f126: fix/RG-37/Inactive-login-message off origin/develop (user confirmed)
+- 2026-10-15T06:16Z [claude] RG-37 PHASE PLAN→CONSTRUCT @e65f126: plan approved
+- 2026-10-15T06:21Z [claude] RG-37 DONE @e65f126: CheckLoginAsync + 403 account_inactive + LoginPage msg; backend 568 green; UI verified; security review no high/med
