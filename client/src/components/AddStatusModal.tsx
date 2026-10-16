@@ -23,8 +23,7 @@ import {
   getAssignableUsers,
   getNextStatusOptions,
 } from '../services/api';
-
-const DURATION_OPTIONS = [15, 30, 45, 60, 90, 120];
+import { DURATION_OPTIONS } from '@/lib/interviewOptions';
 
 const Req = () => (
   <span className="text-[var(--danger-text)]" aria-hidden="true">

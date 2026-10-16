@@ -17,6 +17,9 @@ public class Interview
 
     public DateTime ScheduledAt { get; set; }
 
+    /// <summary>Scheduled | Cancelled. A string, not an enum, matching <see cref="Offer.Status"/>.</summary>
+    public string Status { get; set; } = InterviewStatuses.Scheduled;
+
     /// <summary>How long the interview runs. Calendar invites need an end time, not just a start.</summary>
     public int DurationMinutes { get; set; } = 60;
 
@@ -25,6 +28,26 @@ public class Interview
     public User? CreatedByUser { get; set; }
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+    /// <summary>The user who last moved or cancelled the interview (SetNull on user delete).</summary>
+    public int? UpdatedByUserId { get; set; }
+    public User? UpdatedByUser { get; set; }
+
+    public DateTime? UpdatedAt { get; set; }
+
+    /// <summary>
+    /// iCalendar SEQUENCE for this booking's UID. Clients ignore a re-issued invite whose
+    /// SEQUENCE has not increased, so it has to survive restarts and be stored per interview.
+    /// </summary>
+    public int CalendarSequence { get; set; }
+
+    /// <summary>
+    /// Recruiter notes for the interviewers. Reads fall back to the creating
+    /// <see cref="StatusHistory"/>'s comment, so interviews booked before this column keep working.
+    /// </summary>
+    public string? Notes { get; set; }
+
+    public ICollection<InterviewEvent> Events { get; set; } = [];
 
     public ICollection<InterviewInterviewer> Interviewers { get; set; } = [];
     public ICollection<InterviewEvaluation> Evaluations { get; set; } = [];

@@ -138,6 +138,7 @@ Some statuses need extra details. The form asks for them:
 | **Technical Assessment** | the **task details** and a comment |
 | **Submission Received** | the **submission link** |
 | **Interview Scheduled** | **date and time** and at least one **interviewer** |
+| **Call for Interview** (from Interview Scheduled) | reached by **cancelling** the booked interview, with a reason |
 | **Interview Completed** | a comment; at least one interviewer must have **submitted** their evaluation |
 | **Reject**, **Discontinued**, **Offer Declined** | a comment explaining why |
 | **Recommended** | the candidate must have passed **Code Review** or **Interview Completed** |
@@ -162,8 +163,33 @@ overall rating, the recommendations and the average per criterion. Use **Print**
 
 ![Evaluation report](images/02-evaluation-report.png)
 
+**Moving or cancelling a booked interview.** Open **Status history** on the candidate. The
+**Interview Scheduled** entry carries two buttons while the interview is still live:
+
+- **Reschedule** opens the booking as it stands now, so you only change what moved. You can edit
+  the date and time, the duration, the interview types, the panel and the notes, and add an
+  optional reason that goes into the email. The candidate's status does **not** change: moving a
+  booking is not progress through the pipeline. Everyone affected is emailed an updated calendar
+  invite, people added to the panel get the usual assignment message, and anyone removed is told
+  they are off it. The timeline then shows the new date with a quiet "Rescheduled from ..." line
+  beneath it.
+- **Cancel interview** asks for a reason, tells the panel, and returns the candidate to
+  **Call for Interview** so you can book a fresh one from there. The cancelled interview stays in
+  the history, struck through, with the reason.
+
+Two things to know. **Removing an interviewer who has started writing an evaluation deletes their
+draft** (the dialog warns you first). And once **anyone has submitted** an evaluation, the
+interview counts as having happened, so neither button works any more; use **Another round** below
+instead.
+
+One caveat on cancellations: the email is the reliable part. Because invites are sent as
+publications rather than meeting requests, Gmail and Outlook do not always remove the event from
+people's calendars on their own, so the panel may still need to delete it by hand.
+
 **Another round?** From **Interview Completed** you can schedule again. The new interview gets
-its own panel and evaluations, and the history keeps both rounds.
+its own panel and evaluations, and the history keeps both rounds. This is a *second interview after
+the first one finished*, which is a different thing from moving a booking that has not happened
+yet.
 
 ## 2.8 Offers
 

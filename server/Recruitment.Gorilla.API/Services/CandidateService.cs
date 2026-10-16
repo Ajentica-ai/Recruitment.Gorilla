@@ -130,6 +130,7 @@ public class CandidateService(AppDbContext db, IWebHostEnvironment env, Notifica
             .Include(x => x.Interviews).ThenInclude(i => i.Interviewers).ThenInclude(ii => ii.User)
             .Include(x => x.Interviews).ThenInclude(i => i.Tags).ThenInclude(t => t.InterviewTypeOption)
             .Include(x => x.Interviews).ThenInclude(i => i.Evaluations).ThenInclude(e => e.InterviewerUser)
+            .Include(x => x.Interviews).ThenInclude(i => i.Events)
             .Include(x => x.Educations)
             .Include(x => x.Experiences)
             .AsSplitQuery();
@@ -714,6 +715,15 @@ public class CandidateService(AppDbContext db, IWebHostEnvironment env, Notifica
                     .Select(tid => new InterviewTag { InterviewTypeOptionId = tid })
                     .ToList(),
             };
+            // The opening entry in the booking's narrative. Without it a later reschedule has no
+            // origin to point back to on the timeline.
+            interview.Events.Add(new InterviewEvent
+            {
+                EventType = InterviewEventTypes.Scheduled,
+                NewScheduledAt = interview.ScheduledAt,
+                ActorUserId = currentUserId,
+                ActorName = entry.ChangedBy,
+            });
             db.Interviews.Add(interview);
         }
 
@@ -769,7 +779,11 @@ public class CandidateService(AppDbContext db, IWebHostEnvironment env, Notifica
             interview?.Id,
             interviewers,
             interviewTags,
-            []);
+            [],
+            interview?.ScheduledAt,
+            interview?.Status,
+            interview is null ? null : [new InterviewEventDto(
+                InterviewEventTypes.Scheduled, null, interview.ScheduledAt, null, entry.ChangedBy, interview.CreatedAt)]);
     }
 
     private static CandidateDetailDto MapToDetail(Candidate c) => new(
@@ -831,6 +845,14 @@ public class CandidateService(AppDbContext db, IWebHostEnvironment env, Notifica
                 e.SubmittedAt))
             .ToList() ?? [];
 
+        // s.InterviewAt stays the honest record of what was first booked; InterviewScheduledAt is
+        // where the booking stands now, which is what the timeline headline should read.
+        var events = scheduled?.Events
+            .OrderBy(e => e.CreatedAt)
+            .Select(e => new InterviewEventDto(
+                e.EventType, e.PreviousScheduledAt, e.NewScheduledAt, e.Reason, e.ActorName, e.CreatedAt))
+            .ToList();
+
         return new StatusHistoryDto(
             s.Id,
             s.Status,
@@ -843,7 +865,10 @@ public class CandidateService(AppDbContext db, IWebHostEnvironment env, Notifica
             scheduled?.Id ?? s.InterviewId,
             interviewers,
             interviewTags,
-            evaluationSummaries);
+            evaluationSummaries,
+            scheduled?.ScheduledAt,
+            scheduled?.Status,
+            events is { Count: > 0 } ? events : null);
     }
 
     /// <summary>Trim to null so a blank source detail isn't persisted as an empty string.</summary>

@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Recruitment.Gorilla.API.Data;
 using Recruitment.Gorilla.API.DTOs;
+using Recruitment.Gorilla.API.Models;
 
 namespace Recruitment.Gorilla.API.Services;
 
@@ -186,6 +187,7 @@ public class DashboardService(AppDbContext db)
         var now = DateTime.UtcNow;
         var upcomingInterviews = await db.Interviews
             .Where(i => i.ScheduledAt >= now && i.Candidate.CurrentStatus == "Interview Scheduled")
+            .Where(i => i.Status != InterviewStatuses.Cancelled)
             .Where(i => candidates.Any(c => c.Id == i.CandidateId))
             .OrderBy(i => i.ScheduledAt)
             .Take(10)

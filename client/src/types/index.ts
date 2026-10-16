@@ -387,6 +387,11 @@ export interface StatusHistoryEntry {
   interviewers: { userId: number; name: string }[];
   interviewTags: string[];
   evaluationSummaries: EvaluationSummary[];
+  /** Where the booking stands now, after any reschedule. `interviewAt` above stays the
+   *  honest record of what was first booked, so the timeline headline reads this one. */
+  interviewScheduledAt: string | null;
+  interviewStatus: InterviewLifecycleStatus | null;
+  interviewEvents: InterviewEventEntry[] | null;
 }
 
 export interface EvaluationSummary {
@@ -670,6 +675,45 @@ export interface InterviewDetail {
   notes: string | null;
   interviewTags: string[];
   durationMinutes: number;
+  status: InterviewLifecycleStatus;
+}
+
+// ----- Interview lifecycle: move or cancel a booking (issue #173) -----
+
+export type InterviewLifecycleStatus = 'Scheduled' | 'Cancelled';
+
+export interface InterviewEventEntry {
+  eventType: 'Scheduled' | 'Rescheduled' | 'Cancelled';
+  previousScheduledAt: string | null;
+  newScheduledAt: string | null;
+  reason: string | null;
+  actorName: string;
+  createdAt: string;
+}
+
+/** Prefill for the reschedule form (GET /interviews/{id}/schedule). */
+export interface InterviewSchedule {
+  id: number;
+  candidateId: number;
+  candidateName: string;
+  status: InterviewLifecycleStatus;
+  scheduledAt: string;
+  durationMinutes: number;
+  notes: string | null;
+  interviewerUserIds: number[];
+  interviewTypeOptionIds: number[];
+  /** True once any interviewer has submitted: the interview happened, so both writes are refused. */
+  hasSubmittedEvaluation: boolean;
+  events: InterviewEventEntry[];
+}
+
+export interface ReschedulePayload {
+  scheduledAt: string;
+  durationMinutes: number;
+  notes: string | null;
+  interviewerUserIds: number[];
+  interviewTypeOptionIds: number[];
+  reason: string | null;
 }
 
 // ----- Candidate evaluation report (Recruiter+) -----

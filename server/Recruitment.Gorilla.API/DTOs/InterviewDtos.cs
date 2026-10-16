@@ -1,3 +1,5 @@
+using Recruitment.Gorilla.API.Models;
+
 namespace Recruitment.Gorilla.API.DTOs;
 
 public record AssignableUserDto(int Id, string Name, string Email);
@@ -39,8 +41,53 @@ public record InterviewDetailDto(
     List<InterviewEvaluationDto>? AllEvaluations, // Admin+ always; a peer only after submitting their own
     string? Notes,                             // recruiter's note = the scheduled entry's comment
     List<string> InterviewTags,                // interview type tags (Technical, HR, …)
-    int DurationMinutes                        // drives the calendar invite's end time
+    int DurationMinutes,                       // drives the calendar invite's end time
+    string Status = InterviewStatuses.Scheduled  // Scheduled | Cancelled (issue #173)
 );
+
+// ----- Reschedule / cancel (issue #173) -----
+
+/// <summary>One entry in a booking's narrative: scheduled, moved, cancelled.</summary>
+public record InterviewEventDto(
+    string EventType,                  // Scheduled | Rescheduled | Cancelled
+    DateTime? PreviousScheduledAt,
+    DateTime? NewScheduledAt,
+    string? Reason,
+    string ActorName,
+    DateTime CreatedAt
+);
+
+/// <summary>
+/// Narrow read model behind GET /api/interviews/{id}/schedule, for prefilling the edit form.
+/// Deliberately separate from <see cref="InterviewDetailDto"/>: that one is gated on being an
+/// assigned interviewer or Admin+, which would 404 the recruiter who owns the candidate.
+/// </summary>
+public record InterviewScheduleDto(
+    int Id,
+    int CandidateId,
+    string CandidateName,
+    string Status,                     // Scheduled | Cancelled
+    DateTime ScheduledAt,
+    int DurationMinutes,
+    string? Notes,
+    List<int> InterviewerUserIds,
+    List<int> InterviewTypeOptionIds,
+    bool HasSubmittedEvaluation,       // true once any interviewer has submitted: both writes are then blocked
+    List<InterviewEventDto> Events
+);
+
+/// <summary>Body of PUT /api/interviews/{id}. Fully replaces the schedulable fields.</summary>
+public record RescheduleInterviewDto(
+    DateTime ScheduledAt,
+    int DurationMinutes,
+    string? Notes,
+    List<int> InterviewerUserIds,
+    List<int>? InterviewTypeOptionIds,
+    string? Reason                     // optional; quoted in the interviewers' email
+);
+
+/// <summary>Body of POST /api/interviews/{id}/cancel.</summary>
+public record CancelInterviewDto(string Reason);
 
 public record UpsertEvaluationDto(
     string? GeneralAssessment,

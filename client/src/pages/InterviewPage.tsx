@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { isAxiosError } from 'axios';
-import { FileText, StickyNote } from 'lucide-react';
+import { CalendarClock, CalendarX, FileText, StickyNote } from 'lucide-react';
 import { getInterview, getInterviewEvaluationRubric } from '../services/api';
 import ReadOnlyCandidateProfile from '../components/ReadOnlyCandidateProfile';
 import EvaluationForm, { EvaluationReadOnly } from '../components/EvaluationForm';
@@ -15,6 +15,9 @@ import { Sheet, SheetBody, SheetContent, SheetHeader, SheetTitle } from '@/compo
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import RescheduleInterviewModal from '../components/RescheduleInterviewModal';
+import CancelInterviewModal from '../components/CancelInterviewModal';
+import { useAuth } from '../auth/AuthContext';
 
 const CalendarIcon = () => (
   <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
@@ -53,6 +56,9 @@ export default function InterviewPage() {
      some renders and not others, which desynchronises React's hook order the
      first time the query resolves. */
   const [showProfileDrawer, setShowProfileDrawer] = useState(false);
+  const [rescheduling, setRescheduling] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
+  const { isAdminOrAbove } = useAuth();
 
   if (isLoading) {
     return <LoadingPanel label="Loading interview…" />;
@@ -127,6 +133,21 @@ export default function InterviewPage() {
               <span className={`interview-chip${relative.soon ? ' interview-chip--soon' : ''}`}>
                 <CalendarIcon /> {scheduled} · {data.durationMinutes} min · {relative.label}
               </span>
+
+              {/* Read-only for everyone, so an interviewer landing on a stale link can see why
+                  nothing is expected of them. */}
+              {data.status === 'Cancelled' && <Badge variant="danger">Cancelled</Badge>}
+
+              {isAdminOrAbove && data.status === 'Scheduled' && (
+                <>
+                  <Button variant="outline" size="sm" onClick={() => setRescheduling(true)}>
+                    <CalendarClock size={14} aria-hidden="true" /> Reschedule
+                  </Button>
+                  <Button variant="ghost" size="sm" onClick={() => setCancelling(true)}>
+                    <CalendarX size={14} aria-hidden="true" /> Cancel
+                  </Button>
+                </>
+              )}
 
               {/* View Full Candidate Profile Button */}
               <Button
@@ -212,6 +233,24 @@ export default function InterviewPage() {
         </SheetBody>
       </SheetContent>
 </Sheet>
+      {isAdminOrAbove && rescheduling && (
+        <RescheduleInterviewModal
+          interviewId={interviewId}
+          candidateId={data.candidate.id}
+          candidateName={data.candidate.fullName}
+          show
+          onHide={() => setRescheduling(false)}
+        />
+      )}
+
+      {isAdminOrAbove && cancelling && (
+        <CancelInterviewModal
+          interviewId={interviewId}
+          candidateId={data.candidate.id}
+          show
+          onHide={() => setCancelling(false)}
+        />
+      )}
     </Page>
   );
 }

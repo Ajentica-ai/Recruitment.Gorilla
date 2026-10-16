@@ -11,8 +11,13 @@ namespace Recruitment.Gorilla.API.Services;
 /// interviewers or to Admin+ (this intentionally bypasses candidate owner-scoping —
 /// being assigned grants read access to the candidate snapshot).
 /// </summary>
-public class InterviewService(AppDbContext db, CandidateService candidateService, NotificationService notificationService)
+public class InterviewService(
+    AppDbContext db, CandidateService candidateService, NotificationService notificationService,
+    AuditService audit, IConfiguration config, IEmailSettingsResolver? emailSettings = null)
 {
+    private const string InterviewScheduledStatus = "Interview Scheduled";
+    private const string CallForInterviewStatus = "Call for Interview";
+
     /// <summary>True if the user is an assigned interviewer on any interview of this candidate.</summary>
     public Task<bool> IsAssignedInterviewerForCandidateAsync(int candidateId, int userId) =>
         db.Interviews.AnyAsync(i =>
@@ -31,6 +36,7 @@ public class InterviewService(AppDbContext db, CandidateService candidateService
     {
         var rows = await db.Interviews
             .Where(i => i.Interviewers.Any(ii => ii.UserId == userId))
+            .Where(i => i.Status != InterviewStatuses.Cancelled)
             .OrderByDescending(i => i.ScheduledAt)
             .Select(i => new
             {
@@ -112,7 +118,8 @@ public class InterviewService(AppDbContext db, CandidateService candidateService
         return new InterviewDetailDto(
             interview.Id, interview.ScheduledAt, candidate, interviewers,
             isAssigned, myEval is null ? null : ToDto(myEval), allEvals,
-            interview.StatusHistory?.Comment, tags, interview.DurationMinutes);
+            interview.Notes ?? interview.StatusHistory?.Comment, tags, interview.DurationMinutes,
+            interview.Status);
     }
 
     /// <summary>
@@ -351,6 +358,337 @@ public class InterviewService(AppDbContext db, CandidateService candidateService
                 $"/candidates/{candidate.Id}/evaluations",
                 category: NotificationCategories.EvaluationSubmitted);
     }
+
+
+    // ----- Reschedule / cancel (issue #173) -----
+
+    /// <summary>
+    /// Narrow read model for the edit form. Deliberately not <see cref="GetDetailAsync"/>, which is
+    /// gated on being an assigned interviewer or Admin+ and would 404 the recruiter who owns the
+    /// candidate. Owner-scoped instead, so it answers exactly the people allowed to edit.
+    /// </summary>
+    public async Task<(InterviewScheduleDto? Dto, string? Error, bool NotFound, bool Conflict)> GetScheduleAsync(
+        int id, int? ownerScope)
+    {
+        var interview = await LoadForScheduleAsync(id);
+        if (interview is null) return (null, null, true, false);
+
+        var candidate = await candidateService.GetByIdAsync(interview.CandidateId, ownerScope);
+        if (candidate is null) return (null, null, true, false);
+
+        return (ToScheduleDto(interview, candidate.FullName), null, false, false);
+    }
+
+    /// <summary>
+    /// Moves a booking in place: time, duration, interviewers, types and notes. Writes no
+    /// <see cref="StatusHistory"/> row - that table means "the candidate's status became X at
+    /// time T", and a reschedule changes neither the status nor the time it was reached.
+    /// </summary>
+    public async Task<(InterviewScheduleDto? Dto, string? Error, bool NotFound, bool Conflict)> RescheduleAsync(
+        int id, RescheduleInterviewDto dto, int? ownerScope, int actorUserId, string actorName)
+    {
+        var interview = await LoadForScheduleAsync(id);
+        if (interview is null) return (null, null, true, false);
+
+        var candidate = await candidateService.GetByIdAsync(interview.CandidateId, ownerScope);
+        if (candidate is null) return (null, null, true, false);
+
+        if (interview.Status == InterviewStatuses.Cancelled)
+            return (null, "This interview has been cancelled. Book a new one from Call for Interview.", false, true);
+
+        if (interview.Evaluations.Any(e => e.IsSubmitted))
+            return (null, "This interview already has a submitted evaluation, so it has taken place. " +
+                          "Move the candidate to Interview Completed and schedule another round instead.", false, true);
+
+        // Past Interview Scheduled covers Rejected and Discontinued too: there is nothing to move.
+        if (candidate.CurrentStatus != InterviewScheduledStatus)
+            return (null, $"The candidate is now at \"{candidate.CurrentStatus}\", so this interview can no longer be moved.", false, true);
+
+        var scheduledAt = dto.ScheduledAt.ToUniversalTime();
+        if (scheduledAt <= DateTime.UtcNow)
+            return (null, "Pick a time in the future.", false, false);
+
+        var newInterviewerIds = (dto.InterviewerUserIds ?? []).Distinct().ToList();
+        if (newInterviewerIds.Count == 0)
+            return (null, "Assign at least one interviewer.", false, false);
+
+        var activeCount = await db.Users
+            .CountAsync(u => u.IsActive && newInterviewerIds.Contains(u.Id));
+        if (activeCount != newInterviewerIds.Count)
+            return (null, "One of the selected interviewers is not an active user.", false, false);
+
+        var oldInterviewerIds = interview.Interviewers.Select(ii => ii.UserId).ToList();
+        var removedIds = oldInterviewerIds.Except(newInterviewerIds).ToList();
+        var addedIds = newInterviewerIds.Except(oldInterviewerIds).ToList();
+        var retainedIds = oldInterviewerIds.Intersect(newInterviewerIds).ToList();
+
+        // Defence in depth: the submitted-evaluation check above already refuses the whole
+        // reschedule, so this cannot currently fire. It stays because dropping an interviewer who
+        // has submitted would strand an evaluation the candidate's report still aggregates, and
+        // that must not become possible if the rule above is ever relaxed.
+        if (removedIds.Any(uid => interview.Evaluations.Any(e => e.InterviewerUserId == uid && e.IsSubmitted)))
+            return (null, "An interviewer who has already submitted an evaluation cannot be removed.", false, false);
+
+        var previousScheduledAt = interview.ScheduledAt;
+
+        // The cascade runs from Interview, not from the join row, so a dropped interviewer's draft
+        // would survive and reappear the moment they were re-added. Delete it explicitly.
+        var droppedDrafts = interview.Evaluations
+            .Where(e => removedIds.Contains(e.InterviewerUserId) && !e.IsSubmitted)
+            .ToList();
+        if (droppedDrafts.Count > 0) db.InterviewEvaluations.RemoveRange(droppedDrafts);
+
+        foreach (var removed in interview.Interviewers.Where(ii => removedIds.Contains(ii.UserId)).ToList())
+            interview.Interviewers.Remove(removed);
+        foreach (var added in addedIds)
+            interview.Interviewers.Add(new InterviewInterviewer { UserId = added });
+
+        var newTagIds = (dto.InterviewTypeOptionIds ?? []).Distinct().ToList();
+        interview.Tags.Clear();
+        foreach (var tagId in newTagIds)
+            interview.Tags.Add(new InterviewTag { InterviewTypeOptionId = tagId });
+
+        interview.ScheduledAt = scheduledAt;
+        interview.DurationMinutes = dto.DurationMinutes <= 0 ? 60 : dto.DurationMinutes;
+        interview.Notes = string.IsNullOrWhiteSpace(dto.Notes) ? null : dto.Notes.Trim();
+        interview.UpdatedAt = DateTime.UtcNow;
+        interview.UpdatedByUserId = actorUserId;
+        // Calendar clients ignore a re-issued invite for a known UID unless SEQUENCE has grown.
+        interview.CalendarSequence += 1;
+
+        var reason = string.IsNullOrWhiteSpace(dto.Reason) ? null : dto.Reason.Trim();
+        db.InterviewEvents.Add(new InterviewEvent
+        {
+            InterviewId = interview.Id,
+            EventType = InterviewEventTypes.Rescheduled,
+            PreviousScheduledAt = previousScheduledAt,
+            NewScheduledAt = scheduledAt,
+            Reason = reason,
+            ActorUserId = actorUserId,
+            ActorName = actorName,
+        });
+
+        await db.SaveChangesAsync();
+
+        await audit.RecordAsync(
+            "Interview.Rescheduled", "Interview", interview.Id,
+            $"Interview for {candidate.FullName} moved",
+            $"From {previousScheduledAt:u} to {scheduledAt:u}." + (reason is null ? "" : $" Reason: {reason}"));
+
+        await NotifyRescheduledAsync(interview, candidate.FullName, candidate.AppliedRole,
+            previousScheduledAt, reason, retainedIds, addedIds, removedIds, actorUserId);
+
+        var fresh = await LoadForScheduleAsync(id);
+        return (ToScheduleDto(fresh!, candidate.FullName), null, false, false);
+    }
+
+    /// <summary>
+    /// Cancels a booking. Unlike a reschedule this *does* move the candidate, back to Call for
+    /// Interview, so the existing 2 -> 3 transition can book a fresh one. The cancelled row stays
+    /// as history.
+    /// </summary>
+    public async Task<(InterviewScheduleDto? Dto, string? Error, bool NotFound, bool Conflict)> CancelAsync(
+        int id, string? reason, int? ownerScope, int actorUserId, string actorName)
+    {
+        var interview = await LoadForScheduleAsync(id);
+        if (interview is null) return (null, null, true, false);
+
+        var candidate = await candidateService.GetByIdAsync(interview.CandidateId, ownerScope);
+        if (candidate is null) return (null, null, true, false);
+
+        if (interview.Status == InterviewStatuses.Cancelled)
+            return (null, "This interview has already been cancelled.", false, true);
+
+        if (interview.Evaluations.Any(e => e.IsSubmitted))
+            return (null, "This interview already has a submitted evaluation, so it has taken place " +
+                          "and cannot be cancelled.", false, true);
+
+        var trimmedReason = reason?.Trim();
+        if (string.IsNullOrWhiteSpace(trimmedReason))
+            return (null, "A reason is required to cancel an interview.", false, false);
+
+        var scheduledAt = interview.ScheduledAt;
+        var recipientIds = interview.Interviewers.Select(ii => ii.UserId).ToList();
+
+        interview.Status = InterviewStatuses.Cancelled;
+        interview.UpdatedAt = DateTime.UtcNow;
+        interview.UpdatedByUserId = actorUserId;
+        interview.CalendarSequence += 1;
+
+        db.InterviewEvents.Add(new InterviewEvent
+        {
+            InterviewId = interview.Id,
+            EventType = InterviewEventTypes.Cancelled,
+            PreviousScheduledAt = scheduledAt,
+            NewScheduledAt = null,
+            Reason = trimmedReason,
+            ActorUserId = actorUserId,
+            ActorName = actorName,
+        });
+
+        await db.SaveChangesAsync();
+
+        // Only step the candidate back when the cancelled booking is what they are currently on.
+        // Cancelling a live invite for a Rejected or Discontinued candidate is calendar cleanup;
+        // moving them to Call for Interview would silently un-reject them.
+        if (candidate.CurrentStatus == InterviewScheduledStatus)
+        {
+            await candidateService.AddStatusAsync(
+                interview.CandidateId,
+                new StatusChangeDto(CallForInterviewStatus, Comment: $"Interview cancelled: {trimmedReason}"),
+                actorName, actorUserId);
+        }
+
+        await audit.RecordAsync(
+            "Interview.Cancelled", "Interview", interview.Id,
+            $"Interview for {candidate.FullName} cancelled",
+            $"Was scheduled for {scheduledAt:u}. Reason: {trimmedReason}");
+
+        await NotifyCancelledAsync(interview, candidate.FullName, candidate.AppliedRole,
+            scheduledAt, trimmedReason, recipientIds, actorUserId, removedFromPanel: false);
+
+        var fresh = await LoadForScheduleAsync(id);
+        return (ToScheduleDto(fresh!, candidate.FullName), null, false, false);
+    }
+
+    private Task<Interview?> LoadForScheduleAsync(int id) =>
+        db.Interviews
+            .Include(i => i.Interviewers)
+            .Include(i => i.Evaluations)
+            .Include(i => i.Tags)
+            .Include(i => i.Events)
+            .Include(i => i.StatusHistory)
+            .FirstOrDefaultAsync(i => i.Id == id);
+
+    private static InterviewScheduleDto ToScheduleDto(Interview i, string candidateName) => new(
+        i.Id,
+        i.CandidateId,
+        candidateName,
+        i.Status,
+        i.ScheduledAt,
+        i.DurationMinutes,
+        // Interviews booked before Interview.Notes existed kept the recruiter's note on the
+        // status entry that created them, so fall back to it rather than backfilling.
+        i.Notes ?? i.StatusHistory?.Comment,
+        i.Interviewers.Select(ii => ii.UserId).OrderBy(x => x).ToList(),
+        i.Tags.Select(t => t.InterviewTypeOptionId).OrderBy(x => x).ToList(),
+        i.Evaluations.Any(e => e.IsSubmitted),
+        i.Events.OrderBy(e => e.CreatedAt).Select(ToEventDto).ToList());
+
+    private static InterviewEventDto ToEventDto(InterviewEvent e) => new(
+        e.EventType, e.PreviousScheduledAt, e.NewScheduledAt, e.Reason, e.ActorName, e.CreatedAt);
+
+    private string InterviewUrl(int interviewId) =>
+        $"{config["App:ClientBaseUrl"]?.TrimEnd('/')}/interviews/{interviewId}";
+
+    /// <summary>
+    /// RFC 5545 requires an ORGANIZER on a METHOD:CANCEL and clients drop the message without one.
+    /// Use the configured outbound From address so it matches the envelope sender.
+    /// </summary>
+    private async Task<string?> OrganizerEmailAsync()
+    {
+        if (emailSettings is null) return null;
+        try
+        {
+            var options = await emailSettings.ResolveAsync();
+            return string.IsNullOrWhiteSpace(options.Smtp.FromAddress) ? null : options.Smtp.FromAddress;
+        }
+        catch
+        {
+            // A misconfigured mail provider must not stop the interview being moved.
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Each group hears the thing that is true for them: retained interviewers that it moved,
+    /// new ones the normal assignment message, dropped ones that they are off the panel.
+    /// </summary>
+    private async Task NotifyRescheduledAsync(
+        Interview interview, string candidateName, string? roleName, DateTime previousScheduledAt,
+        string? reason, List<int> retainedIds, List<int> addedIds, List<int> removedIds, int actorUserId)
+    {
+        var url = InterviewUrl(interview.Id);
+        var invite = new InterviewInviteDetails(
+            interview.Id, candidateName, roleName, interview.ScheduledAt, interview.DurationMinutes,
+            url, interview.CalendarSequence);
+        var calendar = CalendarInvite.Build(invite);
+
+        foreach (var uid in retainedIds)
+        {
+            var name = await UserNameAsync(uid);
+            var (subject, html) = EmailTemplates.InterviewRescheduled(
+                name, candidateName, roleName, previousScheduledAt, interview.ScheduledAt, url, reason, invite);
+            await notificationService.NotifyAsync(
+                uid, "Interview moved", $"The interview with {candidateName} has been moved.",
+                $"/interviews/{interview.Id}", subject, html, calendar,
+                category: NotificationCategories.InterviewRescheduled);
+        }
+
+        foreach (var uid in addedIds)
+        {
+            var name = await UserNameAsync(uid);
+            var (subject, html) = EmailTemplates.InterviewAssigned(
+                name, candidateName, roleName, interview.ScheduledAt, url, invite);
+            await notificationService.NotifyAsync(
+                uid, "Interview assigned", $"You have been assigned to interview {candidateName}.",
+                $"/interviews/{interview.Id}", subject, html, calendar,
+                category: NotificationCategories.InterviewAssigned);
+        }
+
+        if (removedIds.Count > 0)
+            await NotifyCancelledAsync(interview, candidateName, roleName, previousScheduledAt,
+                reason, removedIds, actorUserId, removedFromPanel: true);
+
+        await NotifyBookerAsync(interview, candidateName, actorUserId,
+            "Interview moved", $"{candidateName}'s interview was moved to {interview.ScheduledAt:dd MMM yyyy, HH:mm} UTC.");
+    }
+
+    private async Task NotifyCancelledAsync(
+        Interview interview, string candidateName, string? roleName, DateTime scheduledAt,
+        string? reason, List<int> recipientIds, int actorUserId, bool removedFromPanel)
+    {
+        var invite = new InterviewInviteDetails(
+            interview.Id, candidateName, roleName, scheduledAt, interview.DurationMinutes,
+            InterviewUrl(interview.Id), interview.CalendarSequence, await OrganizerEmailAsync());
+        var calendar = CalendarInvite.Build(invite, cancelled: true);
+
+        foreach (var uid in recipientIds)
+        {
+            var name = await UserNameAsync(uid);
+            var (subject, html) = EmailTemplates.InterviewCancelled(
+                name, candidateName, roleName, scheduledAt, reason, removedFromPanel);
+            await notificationService.NotifyAsync(
+                uid,
+                removedFromPanel ? "Removed from interview" : "Interview cancelled",
+                removedFromPanel
+                    ? $"You are no longer on the panel for {candidateName}."
+                    : $"The interview with {candidateName} has been cancelled.",
+                removedFromPanel ? null : $"/interviews/{interview.Id}",
+                subject, html, calendar,
+                category: NotificationCategories.InterviewCancelled);
+        }
+
+        if (!removedFromPanel)
+            await NotifyBookerAsync(interview, candidateName, actorUserId,
+                "Interview cancelled", $"{candidateName}'s interview was cancelled.");
+    }
+
+    /// <summary>
+    /// The recruiter who booked it should not hear about the change from the candidate. Skipped
+    /// when they are the one making it, and when they are already an interviewer being told.
+    /// </summary>
+    private async Task NotifyBookerAsync(Interview interview, string candidateName, int actorUserId, string title, string message)
+    {
+        if (interview.CreatedByUserId is not int bookerId || bookerId == actorUserId) return;
+        if (interview.Interviewers.Any(ii => ii.UserId == bookerId)) return;
+
+        await notificationService.NotifyAsync(
+            bookerId, title, message, $"/candidates/{interview.CandidateId}");
+    }
+
+    private async Task<string> UserNameAsync(int userId) =>
+        await db.Users.Where(u => u.Id == userId).Select(u => u.Name).FirstOrDefaultAsync() ?? "there";
 
     private static InterviewEvaluationDto ToDto(InterviewEvaluation e) =>
         ToDto(e, e.InterviewerUser?.Name ?? "Unknown");

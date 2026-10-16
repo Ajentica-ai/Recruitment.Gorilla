@@ -15,6 +15,8 @@ import StatusTimeline from '../components/StatusTimeline';
 import ReadOnlyCandidateProfile from '../components/ReadOnlyCandidateProfile';
 import CvPreviewDialog, { type CvPreview } from '../components/CvPreviewDialog';
 import AddStatusModal from '../components/AddStatusModal';
+import RescheduleInterviewModal from '../components/RescheduleInterviewModal';
+import CancelInterviewModal from '../components/CancelInterviewModal';
 import CandidatePipelineStepper from '../components/CandidatePipelineStepper';
 import { SearchableSelect, SearchableMultiSelect } from '../components/SearchableSelect';
 import { StatusBadge } from '../components/StatusBadge';
@@ -54,6 +56,9 @@ export default function CandidateDetailPage() {
   const [editing, setEditing] = useState(false);
   const [addingStatus, setAddingStatus] = useState(false);
   const [showHistoryDrawer, setShowHistoryDrawer] = useState(false);
+  // Which booking the reschedule / cancel dialogs are acting on (null = closed).
+  const [reschedulingInterviewId, setReschedulingInterviewId] = useState<number | null>(null);
+  const [cancellingInterviewId, setCancellingInterviewId] = useState<number | null>(null);
   /**
    * Whether closing the status drawer should put the history drawer back.
    *
@@ -355,7 +360,13 @@ export default function CandidateDetailPage() {
           )}
 
           <div className="mt-1">
-            <StatusTimeline history={data.statusHistory} canViewEvaluations={isAdminOrAbove} />
+            <StatusTimeline
+              history={data.statusHistory}
+              canViewEvaluations={isAdminOrAbove}
+              canManageInterview={canWrite}
+              onReschedule={setReschedulingInterviewId}
+              onCancelInterview={setCancellingInterviewId}
+            />
           </div>
         </SheetBody>
       </SheetContent>
@@ -370,6 +381,25 @@ export default function CandidateDetailPage() {
             closeStatusDrawer();
             void queryClient.invalidateQueries({ queryKey: ['candidate', candidateId] });
           }}
+        />
+      )}
+
+      {canWrite && reschedulingInterviewId !== null && (
+        <RescheduleInterviewModal
+          interviewId={reschedulingInterviewId}
+          candidateId={candidateId}
+          candidateName={data.fullName}
+          show
+          onHide={() => setReschedulingInterviewId(null)}
+        />
+      )}
+
+      {canWrite && cancellingInterviewId !== null && (
+        <CancelInterviewModal
+          interviewId={cancellingInterviewId}
+          candidateId={candidateId}
+          show
+          onHide={() => setCancellingInterviewId(null)}
         />
       )}
     </Page>

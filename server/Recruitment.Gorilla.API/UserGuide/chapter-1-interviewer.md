@@ -17,6 +17,15 @@ a calendar invite**. The interview also appears under **Up next** on your Dashbo
 
 ![Interviewer dashboard](images/01-dashboard-interviewer.png)
 
+**If an interview moves or is called off,** you get another notification and an email: "Interview
+moved" shows the old time struck through beside the new one and carries a fresh calendar invite,
+and "Interview cancelled" tells you it is off and why. A cancelled interview drops off **Up next**.
+If you had started an evaluation it is kept when the interview moves. Because invites are sent as
+publications rather than meeting requests, your calendar may not clear a cancelled event by
+itself, so delete it by hand if it is still there. You may also be taken off a panel while the
+interview itself goes ahead, in which case the email says you have been removed, and any evaluation
+notes you had drafted for it are discarded.
+
 - Upcoming interviews are grouped by day. Each row shows the time (with how long until it starts,
   for today), the candidate, the job opening and your evaluation state: **Pending**, **Draft** or
   **Submitted**.
