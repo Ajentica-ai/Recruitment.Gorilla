@@ -36,7 +36,7 @@ granular per-menu permissions beyond the four-role hierarchy.
 ## 4. Data model
 - `RoleAppliedOption`: `PostedDate` → **`EndDate`** (required). `CreatedAt` is the posted date;
   `Title` is computed (`"{Name} — {CreatedAt:dd MMM yyyy}"`, not stored). Location/Department
-  validated against `Models/JobOpeningOptions.cs` (Remote/Office/Hybrid/Contractual;
+  validated against the admin-managed `JobOpeningOption` lists (originally fixed in `Models/JobOpeningOptions.cs`) (Remote/Office/Hybrid/Contractual;
   Engineering/Admin/HR). Migration **`RoleOptionEndDate`** (existing rows → `CreatedAt + 30 days`).
 - `UserRole.Role` string `Viewer` → **`Interviewer`** via data migration
   **`RenameViewerRoleToInterviewer`**.

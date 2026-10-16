@@ -1,3 +1,4 @@
+using System.Security.Cryptography;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Recruitment.Gorilla.API.Auth;
@@ -11,6 +12,7 @@ public class CandidateDraftService(
     AppDbContext db,
     AuditService audit,
     CurrentUser currentUser,
+    IWebHostEnvironment env,
     ILogger<CandidateDraftService> logger)
 {
     private static readonly JsonSerializerOptions JsonOpts = new()
@@ -18,16 +20,101 @@ public class CandidateDraftService(
         PropertyNameCaseInsensitive = true
     };
 
+    /// <summary>SHA-256 of a file's content as uppercase hex (64 chars).</summary>
+    public static string ComputeFileHash(Stream content) => Convert.ToHexString(SHA256.HashData(content));
+
+    /// <summary>
+    /// Returns why a CV with this content can't be uploaded again, or null when it is new. A CV counts as
+    /// a duplicate while it sits in a Pending draft or is attached to a candidate; Discarded drafts and
+    /// deleted candidates free it up. Rows stored before hashing existed have no hash, so same-size ones
+    /// are hashed from disk here and the hash is saved for next time.
+    /// </summary>
+    public async Task<string?> FindDuplicateUploadAsync(string fileHash, long fileSizeBytes)
+    {
+        if (await db.CandidateDrafts.AnyAsync(d => d.Status == "Pending" && d.FileHash == fileHash))
+            return PendingDuplicateMessage;
+        if (await db.CVFiles.AnyAsync(f => f.FileHash == fileHash))
+            return CandidateDuplicateMessage;
+
+        var legacyDrafts = await db.CandidateDrafts
+            .Where(d => d.Status == "Pending" && d.FileHash == null && d.FileSizeBytes == fileSizeBytes)
+            .ToListAsync();
+        var legacyFiles = await db.CVFiles
+            .Where(f => f.FileHash == null && f.FileSizeBytes == fileSizeBytes)
+            .ToListAsync();
+        if (legacyDrafts.Count == 0 && legacyFiles.Count == 0) return null;
+
+        foreach (var d in legacyDrafts) d.FileHash = HashStoredFile(d.StoredFileName);
+        foreach (var f in legacyFiles) f.FileHash = HashStoredFile(f.StoredFileName);
+        await db.SaveChangesAsync();
+
+        if (legacyDrafts.Any(d => d.FileHash == fileHash)) return PendingDuplicateMessage;
+        if (legacyFiles.Any(f => f.FileHash == fileHash)) return CandidateDuplicateMessage;
+        return null;
+    }
+
+    private const string PendingDuplicateMessage =
+        "This CV has already been uploaded and is waiting for review in Drafts.";
+    private const string CandidateDuplicateMessage =
+        "This CV has already been uploaded for an existing candidate.";
+
+    /// <summary>
+    /// Checks a job opening (a <see cref="RoleAppliedOption"/>) is one the caller may use right now:
+    /// it must exist, be active, and not be past its end date. A Recruiter is further restricted to
+    /// openings they are assigned to; Admin and Super Admin may use any open opening.
+    /// Returns an error message, or null when the opening is fine to use.
+    /// </summary>
+    public async Task<string?> ValidateJobOpeningForCallerAsync(int? roleId, bool required)
+    {
+        if (roleId is not int id)
+            return required ? "Select a job opening." : null;
+
+        var role = await db.RoleAppliedOptions
+            .Include(r => r.Recruiters)
+            .FirstOrDefaultAsync(r => r.Id == id);
+
+        if (role is null || !role.IsActive || role.EndDate < DateTime.UtcNow)
+            return "The selected job opening is not open.";
+
+        if (!currentUser.IsInAnyRole(Roles.SuperAdmin, Roles.Admin) &&
+            !role.Recruiters.Any(rr => rr.UserId == currentUser.UserId))
+            return "You are not assigned to this job opening.";
+
+        return null;
+    }
+
+    private string? HashStoredFile(string storedFileName)
+    {
+        var path = UploadPaths.Resolve(env.ContentRootPath, storedFileName);
+        if (path is null || !File.Exists(path)) return null;
+        using var stream = File.OpenRead(path);
+        return ComputeFileHash(stream);
+    }
+
+    /// <summary>
+    /// Restricts a draft query to the drafts the caller may see or act on: every draft for Admin and
+    /// Super Admin; for a Recruiter, the ones they uploaded themselves plus any draft for a job opening
+    /// they are assigned to as a recruiter (matching <see cref="CandidateService"/>'s candidate scoping).
+    ///
+    /// Every read and write goes through this, not only the list. The list was scoped while the by-id
+    /// read, update, approve, discard and their bulk forms loaded drafts by id alone, so a Recruiter who
+    /// knew or guessed an id could read another user's parsed CV, or approve it and become the owner of
+    /// the candidate it produced.
+    ///
+    /// It fails closed. The old list check applied its filter only when the caller had a user id, so a
+    /// non-privileged caller without one fell through to every draft. Now that caller sees none.
+    /// </summary>
+    private IQueryable<CandidateDraft> ScopedDrafts()
+    {
+        if (currentUser.IsInAnyRole(Roles.SuperAdmin, Roles.Admin)) return db.CandidateDrafts;
+        if (currentUser.UserId is not int uid) return db.CandidateDrafts.Where(_ => false);
+        return db.CandidateDrafts.Where(d => d.UploadedByUserId == uid ||
+            (d.RoleAppliedOption != null && d.RoleAppliedOption.Recruiters.Any(rr => rr.UserId == uid)));
+    }
+
     public async Task<PagedDraftsResultDto> GetDraftsAsync(DraftsFilterQuery query)
     {
-        var baseQuery = db.CandidateDrafts.AsQueryable();
-
-        var isPrivileged = currentUser.IsInAnyRole(Roles.SuperAdmin, Roles.Admin);
-        // Scoping: recruiters only see drafts they uploaded
-        if (!isPrivileged && currentUser.UserId.HasValue)
-        {
-            baseQuery = baseQuery.Where(d => d.UploadedByUserId == currentUser.UserId.Value);
-        }
+        var baseQuery = ScopedDrafts();
 
         // Aggregate counts across statuses
         var totalPending = await baseQuery.CountAsync(d => d.Status == "Pending");
@@ -120,7 +207,7 @@ public class CandidateDraftService(
 
     public async Task<CandidateDraftDto?> GetDraftByIdAsync(int id)
     {
-        var d = await db.CandidateDrafts
+        var d = await ScopedDrafts()
             .Include(d => d.RoleAppliedOption)
             .Include(d => d.SourceOption)
             .Include(d => d.UploadedByUser)
@@ -180,13 +267,7 @@ public class CandidateDraftService(
 
     public async Task<List<DraftBatchSummaryDto>> GetBatchesAsync()
     {
-        var query = db.CandidateDrafts.AsQueryable();
-
-        var isPrivileged = currentUser.IsInAnyRole(Roles.SuperAdmin, Roles.Admin);
-        if (!isPrivileged && currentUser.UserId.HasValue)
-        {
-            query = query.Where(d => d.UploadedByUserId == currentUser.UserId.Value);
-        }
+        var query = ScopedDrafts();
 
         var flat = await query
             .Where(d => d.BatchId != null)
@@ -231,7 +312,9 @@ public class CandidateDraftService(
         string? gitLab = null,
         List<ParsedEducation>? educations = null,
         List<ParsedExperience>? experiences = null,
-        int? roleAppliedOptionId = null)
+        int? roleAppliedOptionId = null,
+        string? fileHash = null,
+        string? relevantExperience = null)
     {
         var eduDtos = educations?.Select((e, idx) => new CandidateEducationDto(idx + 1, e.Degree, e.Institution, e.GraduationYear, e.Cgpa)).ToList();
         var expDtos = experiences?.Select((e, idx) => new CandidateExperienceDto(idx + 1, e.JobTitle, e.Company, e.Duration, e.Description)).ToList();
@@ -242,6 +325,7 @@ public class CandidateDraftService(
             StoredFileName = storedFileName,
             FileType = fileType,
             FileSizeBytes = fileSizeBytes,
+            FileHash = fileHash,
             BatchId = batchId,
             BatchName = batchName,
             FullName = fullName,
@@ -251,6 +335,7 @@ public class CandidateDraftService(
             GithubUrl = github,
             Skills = skills,
             Summary = summary,
+            RelevantExperience = relevantExperience,
             Location = location,
             LeetCodeUrl = leetCode,
             CodeforcesUrl = codeforces,
@@ -259,26 +344,37 @@ public class CandidateDraftService(
             EducationJson = eduDtos is { Count: > 0 } ? JsonSerializer.Serialize(eduDtos) : null,
             ExperienceJson = expDtos is { Count: > 0 } ? JsonSerializer.Serialize(expDtos) : null,
             RoleAppliedOptionId = roleAppliedOptionId,
-            Status = "Pending",
-            UploadedByUserId = currentUser.UserId,
-            CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow
         };
+
+        return await AddDraftAsync(draft);
+    }
+
+    /// <summary>Saves a new draft as Pending, owned by the caller.</summary>
+    public async Task<CandidateDraft> AddDraftAsync(CandidateDraft draft)
+    {
+        draft.Status = "Pending";
+        draft.UploadedByUserId = currentUser.UserId;
+        draft.CreatedAt = DateTime.UtcNow;
+        draft.UpdatedAt = DateTime.UtcNow;
 
         db.CandidateDrafts.Add(draft);
         await db.SaveChangesAsync();
 
         logger.LogInformation(
             "Created CandidateDraft {DraftId} for file '{OriginalFileName}' in batch '{BatchId}'.",
-            draft.Id, originalFileName, batchId);
+            draft.Id, draft.OriginalFileName, draft.BatchId);
 
         return draft;
     }
 
-    public async Task<CandidateDraftDto?> UpdateDraftAsync(int id, UpdateCandidateDraftDto dto)
+    public async Task<(CandidateDraftDto? Draft, string? Error)> UpdateDraftAsync(int id, UpdateCandidateDraftDto dto)
     {
-        var draft = await db.CandidateDrafts.FindAsync(id);
-        if (draft == null) return null;
+        var draft = await ScopedDrafts().FirstOrDefaultAsync(d => d.Id == id);
+        if (draft == null) return (null, null);
+
+        if (dto.RoleAppliedOptionId != draft.RoleAppliedOptionId &&
+            await ValidateJobOpeningForCallerAsync(dto.RoleAppliedOptionId, required: false) is string roleError)
+            return (null, roleError);
 
         draft.FullName = dto.FullName?.Trim();
         draft.Email = dto.Email?.Trim();
@@ -313,12 +409,12 @@ public class CandidateDraftService(
 
         await db.SaveChangesAsync();
 
-        return await GetDraftByIdAsync(id);
+        return (await GetDraftByIdAsync(id), null);
     }
 
     public async Task<(Candidate? Candidate, string? Error)> ApproveDraftAsync(int id, ApproveCandidateDraftDto dto)
     {
-        var draft = await db.CandidateDrafts.FindAsync(id);
+        var draft = await ScopedDrafts().FirstOrDefaultAsync(d => d.Id == id);
         if (draft == null) return (null, "Draft not found.");
 
         var fullName = (dto.FullName ?? draft.FullName)?.Trim();
@@ -329,14 +425,10 @@ public class CandidateDraftService(
         var nameError = PersonNameValidator.Validate(fullName, "Full name");
         if (nameError is not null) return (null, nameError);
         if (string.IsNullOrWhiteSpace(email)) return (null, "Email is required.");
-        if (!roleId.HasValue) return (null, "Role applied for is required.");
         if (string.IsNullOrWhiteSpace(experience)) experience = "0 Years";
 
-        // Check if role is active and not expired
-        var role = await db.RoleAppliedOptions.FindAsync(roleId.Value);
-        if (role == null || !role.IsActive) return (null, "Selected role is not active.");
-        if (role.EndDate < DateTime.UtcNow)
-            return (null, $"Role '{role.Name}' expired on {role.EndDate:yyyy-MM-dd}.");
+        if (await ValidateJobOpeningForCallerAsync(roleId, required: true) is string roleError)
+            return (null, roleError);
 
         var candidate = new Candidate
         {
@@ -423,6 +515,7 @@ public class CandidateDraftService(
             OriginalFileName = draft.OriginalFileName,
             FileType = draft.FileType,
             FileSizeBytes = draft.FileSizeBytes,
+            FileHash = draft.FileHash,
             UploadedAt = DateTime.UtcNow
         };
         db.CVFiles.Add(cvFile);
@@ -475,7 +568,7 @@ public class CandidateDraftService(
     {
         var approvedCandidateIds = new List<int>();
 
-        var drafts = await db.CandidateDrafts
+        var drafts = await ScopedDrafts()
             .Where(d => dto.DraftIds.Contains(d.Id) && d.Status == "Pending")
             .ToListAsync();
 
@@ -527,7 +620,7 @@ public class CandidateDraftService(
 
     public async Task<bool> DiscardDraftAsync(int id)
     {
-        var draft = await db.CandidateDrafts.FindAsync(id);
+        var draft = await ScopedDrafts().FirstOrDefaultAsync(d => d.Id == id);
         if (draft == null) return false;
 
         draft.Status = "Discarded";
@@ -538,9 +631,73 @@ public class CandidateDraftService(
         return true;
     }
 
+    /// <summary>Outcome of deleting a single draft.</summary>
+    public enum DeleteDraftResult { Deleted, NotFound, NotDiscarded }
+
+    /// <summary>
+    /// Permanently deletes a Discarded draft in the caller's scope, along with its stored CV file when
+    /// nothing else uses it. Pending and Approved drafts are refused.
+    /// </summary>
+    public async Task<DeleteDraftResult> DeleteDraftAsync(int id)
+    {
+        var draft = await ScopedDrafts().FirstOrDefaultAsync(d => d.Id == id);
+        if (draft == null) return DeleteDraftResult.NotFound;
+        if (draft.Status != "Discarded") return DeleteDraftResult.NotDiscarded;
+
+        await RemoveDraftsAsync([draft]);
+        return DeleteDraftResult.Deleted;
+    }
+
+    /// <summary>Permanently deletes the Discarded drafts among <paramref name="draftIds"/> that the caller can see.</summary>
+    public async Task<int> BulkDeleteAsync(List<int> draftIds)
+    {
+        var drafts = await ScopedDrafts()
+            .Where(d => draftIds.Contains(d.Id) && d.Status == "Discarded")
+            .ToListAsync();
+        if (drafts.Count == 0) return 0;
+
+        await RemoveDraftsAsync(drafts);
+        return drafts.Count;
+    }
+
+    private async Task RemoveDraftsAsync(List<CandidateDraft> drafts)
+    {
+        var deletedIds = drafts.Select(d => d.Id).ToList();
+        var storedNames = drafts.Select(d => d.StoredFileName).Where(n => !string.IsNullOrEmpty(n)).Distinct().ToList();
+
+        db.CandidateDrafts.RemoveRange(drafts);
+        await db.SaveChangesAsync();
+
+        // A stored file is shared between a draft and the candidate approved from it, so only remove
+        // files that no candidate CV and no remaining draft still points at.
+        foreach (var name in storedNames)
+        {
+            var stillUsed = await db.CVFiles.AnyAsync(f => f.StoredFileName == name)
+                || await db.CandidateDrafts.AnyAsync(d => d.StoredFileName == name);
+            if (stillUsed) continue;
+
+            var path = UploadPaths.Resolve(env.ContentRootPath, name);
+            try
+            {
+                if (path is not null && File.Exists(path)) File.Delete(path);
+            }
+            catch (IOException ex)
+            {
+                logger.LogWarning(ex, "Could not remove CV file {File} of a deleted draft.", name);
+            }
+        }
+
+        logger.LogInformation("Deleted {Count} discarded CandidateDraft(s): {Ids}.", deletedIds.Count, string.Join(",", deletedIds));
+        await audit.RecordAsync(
+            action: "CandidateDraft.Deleted",
+            entityType: nameof(CandidateDraft),
+            entityId: deletedIds.Count == 1 ? deletedIds[0] : null,
+            summary: $"Permanently deleted {deletedIds.Count} discarded draft(s): {string.Join(", ", deletedIds.Select(i => "#" + i))}.");
+    }
+
     public async Task<int> BulkDiscardAsync(List<int> draftIds)
     {
-        var drafts = await db.CandidateDrafts
+        var drafts = await ScopedDrafts()
             .Where(d => draftIds.Contains(d.Id) && d.Status == "Pending")
             .ToListAsync();
 

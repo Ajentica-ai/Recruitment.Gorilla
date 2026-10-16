@@ -1,10 +1,15 @@
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
-import { NativeSelect } from '@/components/ui/native-select';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 /**
  * Prev/next pager with a result count and page size selector.
+ *
+ * The page size is a Radix Select, not a native <select>: the pager sits at the
+ * bottom of the page, and a native option list is drawn by the browser, so it
+ * can hang past the window edge. Radix draws the list in the page and keeps it
+ * inside the viewport (it opens upward when there is no room below).
  */
 export default function Pagination({
   page,
@@ -38,19 +43,18 @@ export default function Pagination({
         {onPageSizeChange && (
           <div className="flex items-center gap-1.5 text-[length:var(--text-sm)] text-muted-foreground">
             <span className="hidden sm:inline">Show</span>
-            <NativeSelect
-              size="sm"
-              value={pageSize}
-              onChange={(e) => onPageSizeChange(Number(e.target.value))}
-              className="h-8 py-0.5 text-xs w-20"
-              aria-label={`${noun}s per page`}
-            >
-              {pageSizeOptions.map((sz) => (
-                <option key={sz} value={sz}>
-                  {sz}
-                </option>
-              ))}
-            </NativeSelect>
+            <Select value={String(pageSize)} onValueChange={(v) => onPageSizeChange(Number(v))}>
+              <SelectTrigger size="sm" className="h-8 w-20 py-0.5 text-xs" aria-label={`${noun}s per page`}>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {pageSizeOptions.map((sz) => (
+                  <SelectItem key={sz} value={String(sz)}>
+                    {sz}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <span className="hidden sm:inline">per page</span>
           </div>
         )}

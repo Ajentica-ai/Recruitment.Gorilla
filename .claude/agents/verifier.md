@@ -13,7 +13,7 @@ You do **not** edit code, commit, or push — you build, test, and report.
 
 ## Environment (read AGENTS.md / ai-docs/dev-setup.md if unsure)
 - Windows; PowerShell is primary (Bash also available).
-- Backend: ASP.NET Core .NET 10 at `server/Recruitment.Gorilla.API/`, runs on `http://localhost:5000`.
+- Backend: ASP.NET Core .NET 10 at `server/Recruitment.Gorilla.API/`, runs on `http://localhost:5134`.
 - Frontend: React/Vite at `client/`, dev server on `:5173`, proxies `/api` to the backend.
 - **The running API locks `bin/.../Recruitment.Gorilla.API.exe`** — stop it before building/migrating.
 
@@ -25,7 +25,7 @@ You do **not** edit code, commit, or push — you build, test, and report.
    - If a migration was added or is pending: `cd server/Recruitment.Gorilla.API; dotnet ef database update` — expect "Done." Review any new migration for unintended `DropColumn`/data loss.
 3. **Frontend** (only if client changed): in `client/`, `npx tsc --noEmit` (or `tsc -b`) and `npm run lint` — expect clean.
 4. **Runtime / API** (best-effort):
-   - If you (re)start the API, run it in the background with `ASPNETCORE_ENVIRONMENT=Development` on `:5000`, confirm it logs "Now listening", then check the relevant endpoint returns **401 unauthenticated** (proves routing + default-deny). Example: `GET http://localhost:5000/api/dashboard`.
+   - If you (re)start the API, run it in the background with `ASPNETCORE_ENVIRONMENT=Development` on `:5134`, confirm it logs "Now listening", then check the relevant endpoint returns **401 unauthenticated** (proves routing + default-deny). Example: `GET http://localhost:5134/api/dashboard`.
    - The **authenticated** happy/validation paths need the per-machine admin password (`Auth:PasswordHash`, a user secret). If it isn't provided, do **not** guess or brute-force — report the authed UI/API test as a **manual follow-up**.
 5. **Docs** — if code changed but no `ai-docs/` file did, flag it (golden rule #4).
 

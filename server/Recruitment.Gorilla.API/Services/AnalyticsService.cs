@@ -50,15 +50,17 @@ public class AnalyticsService(AppDbContext db)
             .Include(c => c.OwnerUser)
             .AsQueryable();
 
-        if (query.RoleId.HasValue)
-        {
-            candidateQuery = candidateQuery.Where(c => c.RoleAppliedOptionId == query.RoleId.Value);
-        }
-        else if (allowedRoleIds != null)
+        // The role filter narrows the caller's scope; it never widens it.
+        if (allowedRoleIds != null)
         {
             candidateQuery = candidateQuery.Where(c =>
                 (c.RoleAppliedOptionId.HasValue && allowedRoleIds.Contains(c.RoleAppliedOptionId.Value)) ||
                 c.OwnerUserId == ownerScopeUserId);
+        }
+
+        if (query.RoleId.HasValue)
+        {
+            candidateQuery = candidateQuery.Where(c => c.RoleAppliedOptionId == query.RoleId.Value);
         }
 
         var allCandidates = await candidateQuery.ToListAsync();
@@ -421,16 +423,21 @@ public class AnalyticsService(AppDbContext db)
             .Where(u => u.Roles.Any(r => r.Role is "Recruiter" or "Admin" or "SuperAdmin"))
             .ToList();
 
-        var transitions = await db.StatusHistories
-            .AsNoTracking()
-            .Where(h => h.ChangedAt >= periodStart && h.ChangedAt <= periodEnd)
-            .ToListAsync();
+        // Activity counts only on candidates the caller can see, so the table matches the scoped columns.
+        var candidateIds = allCandidates.Select(c => c.Id).ToHashSet();
 
-        var interviews = await db.InterviewInterviewers
+        var transitions = allCandidates
+            .SelectMany(c => c.StatusHistories)
+            .Where(h => h.ChangedAt >= periodStart && h.ChangedAt <= periodEnd)
+            .ToList();
+
+        var interviews = (await db.InterviewInterviewers
             .AsNoTracking()
             .Include(ii => ii.Interview)
             .Where(ii => ii.Interview.CreatedAt >= periodStart && ii.Interview.CreatedAt <= periodEnd)
-            .ToListAsync();
+            .ToListAsync())
+            .Where(ii => candidateIds.Contains(ii.Interview.CandidateId))
+            .ToList();
 
         var result = new List<RecruiterWorkloadDto>();
 

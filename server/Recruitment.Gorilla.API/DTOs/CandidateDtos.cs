@@ -83,7 +83,9 @@ public record CreateCandidateDto(
 
 public record DuplicateCandidateDto(
     string Message,
-    CandidateListItemDto Existing
+    // Null when a duplicate exists but is outside the caller's access scope - the caller is
+    // told a duplicate exists, but not which candidate it is.
+    CandidateListItemDto? Existing
 );
 
 public record CvFileResult(
@@ -297,6 +299,10 @@ public record UpsertSkillOptionDto(string Name, int SortOrder, bool IsActive);
 public record InterviewTypeOptionDto(int Id, string Name, int SortOrder, bool IsActive);
 
 public record UpsertInterviewTypeOptionDto(string Name, int SortOrder, bool IsActive);
+
+public record JobOpeningOptionDto(int Id, string Kind, string Name, int SortOrder, bool IsActive);
+
+public record UpsertJobOpeningOptionDto(string Name, int SortOrder, bool IsActive);
 
 public record PagedResult<T>(
     List<T> Items,

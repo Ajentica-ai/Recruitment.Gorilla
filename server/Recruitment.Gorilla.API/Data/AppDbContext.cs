@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Recruitment.Gorilla.API.Models;
+using Recruitment.Gorilla.API.Services;
 
 namespace Recruitment.Gorilla.API.Data;
 
@@ -23,10 +24,14 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<InterviewEvaluation> InterviewEvaluations => Set<InterviewEvaluation>();
     public DbSet<InterviewEvaluationItem> InterviewEvaluationItems => Set<InterviewEvaluationItem>();
     public DbSet<InterviewTypeOption> InterviewTypeOptions => Set<InterviewTypeOption>();
+    public DbSet<JobOpeningOption> JobOpeningOptions => Set<JobOpeningOption>();
     public DbSet<InterviewTag> InterviewTags => Set<InterviewTag>();
     public DbSet<Notification> Notifications => Set<Notification>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
     public DbSet<EmailSetting> EmailSettings => Set<EmailSetting>();
+    public DbSet<OutboundEmail> OutboundEmails => Set<OutboundEmail>();
+    public DbSet<SlackSetting> SlackSettings => Set<SlackSetting>();
+    public DbSet<NotificationChannelSetting> NotificationChannelSettings => Set<NotificationChannelSetting>();
     public DbSet<Offer> Offers => Set<Offer>();
     public DbSet<OfferApproval> OfferApprovals => Set<OfferApproval>();
     public DbSet<EvaluationRubric> EvaluationRubrics => Set<EvaluationRubric>();
@@ -101,6 +106,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.Property(f => f.OriginalFileName).HasMaxLength(500).IsRequired();
             e.Property(f => f.StoredFileName).HasMaxLength(500).IsRequired();
             e.Property(f => f.FileType).HasMaxLength(10).IsRequired();
+            e.Property(f => f.FileHash).HasMaxLength(64);
+            e.HasIndex(f => f.FileHash);
             e.HasOne(f => f.Candidate)
              .WithMany(c => c.CVFiles)
              .HasForeignKey(f => f.CandidateId)
@@ -142,11 +149,46 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         modelBuilder.Entity<EmailSetting>(e =>
         {
             e.HasKey(s => s.Id);
+            e.Property(s => s.Provider).HasMaxLength(16).IsRequired().HasDefaultValue(EmailProviders.Smtp);
             e.Property(s => s.Host).HasMaxLength(200).IsRequired();
             e.Property(s => s.User).HasMaxLength(200);
             e.Property(s => s.PasswordEncrypted).HasMaxLength(1000);
             e.Property(s => s.FromAddress).HasMaxLength(200).IsRequired();
             e.Property(s => s.FromName).HasMaxLength(200).IsRequired();
+            e.Property(s => s.ApiBaseUrl).HasMaxLength(500);
+            e.Property(s => s.ApiKeyEncrypted).HasMaxLength(1000);
+            e.Property(s => s.AllowedRecipientDomains).HasMaxLength(500);
+        });
+
+        modelBuilder.Entity<SlackSetting>(e =>
+        {
+            e.HasKey(s => s.Id);
+            e.Property(s => s.BotTokenEncrypted).HasMaxLength(1000);
+        });
+
+        modelBuilder.Entity<OutboundEmail>(e =>
+        {
+            e.HasKey(o => o.Id);
+            e.Property(o => o.Reference).HasMaxLength(36).IsRequired();
+            e.Property(o => o.ToEmail).HasMaxLength(320).IsRequired();
+            e.Property(o => o.ToName).HasMaxLength(200).IsRequired();
+            e.Property(o => o.Subject).HasMaxLength(400).IsRequired();
+            e.Property(o => o.HtmlBody).HasColumnType("longtext").IsRequired();
+            e.Property(o => o.CalendarFileName).HasMaxLength(255);
+            e.Property(o => o.CalendarMethod).HasMaxLength(20);
+            e.Property(o => o.Status).HasMaxLength(16).IsRequired();
+            e.Property(o => o.Provider).HasMaxLength(16);
+            e.Property(o => o.LastError).HasMaxLength(1000);
+            e.Property(o => o.ProviderMessageId).HasMaxLength(200);
+            e.HasIndex(o => o.Reference).IsUnique();
+            // The processor's due-work query filters on exactly these two columns.
+            e.HasIndex(o => new { o.Status, o.NextAttemptAt });
+        });
+
+        modelBuilder.Entity<NotificationChannelSetting>(e =>
+        {
+            e.HasKey(s => s.Category);
+            e.Property(s => s.Category).HasMaxLength(64);
         });
 
         modelBuilder.Entity<RefreshToken>(e =>
@@ -356,6 +398,31 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 new InterviewTypeOption { Id = 4, Name = "1st Level", SortOrder = 4, IsActive = true, CreatedAt = seededTypes, UpdatedAt = seededTypes },
                 new InterviewTypeOption { Id = 5, Name = "2nd Level", SortOrder = 5, IsActive = true, CreatedAt = seededTypes, UpdatedAt = seededTypes },
                 new InterviewTypeOption { Id = 6, Name = "Final Round", SortOrder = 6, IsActive = true, CreatedAt = seededTypes, UpdatedAt = seededTypes }
+            );
+        });
+
+        modelBuilder.Entity<JobOpeningOption>(e =>
+        {
+            e.HasKey(o => o.Id);
+            e.Property(o => o.Kind).HasMaxLength(20).IsRequired();
+            e.Property(o => o.Name).HasMaxLength(200).IsRequired();
+            e.Property(o => o.IsActive).HasDefaultValue(true);
+            e.HasIndex(o => new { o.Kind, o.Name }).IsUnique();
+
+            var seededJob = new DateTime(2026, 10, 13, 0, 0, 0, DateTimeKind.Utc);
+            JobOpeningOption Seed(int id, string kind, string name, int order) =>
+                new() { Id = id, Kind = kind, Name = name, SortOrder = order, IsActive = true, CreatedAt = seededJob, UpdatedAt = seededJob };
+            e.HasData(
+                Seed(1, JobOpeningOptionKinds.Location, "Remote", 1),
+                Seed(2, JobOpeningOptionKinds.Location, "Office", 2),
+                Seed(3, JobOpeningOptionKinds.Location, "Hybrid", 3),
+                Seed(4, JobOpeningOptionKinds.Location, "Contractual", 4),
+                Seed(5, JobOpeningOptionKinds.Department, "Engineering", 1),
+                Seed(6, JobOpeningOptionKinds.Department, "Admin", 2),
+                Seed(7, JobOpeningOptionKinds.Department, "HR", 3),
+                Seed(8, JobOpeningOptionKinds.Priority, "High", 1),
+                Seed(9, JobOpeningOptionKinds.Priority, "Medium", 2),
+                Seed(10, JobOpeningOptionKinds.Priority, "Low", 3)
             );
         });
 
@@ -591,6 +658,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.Property(d => d.OriginalFileName).HasMaxLength(255).IsRequired();
             e.Property(d => d.StoredFileName).HasMaxLength(255).IsRequired();
             e.Property(d => d.FileType).HasMaxLength(20).HasDefaultValue("PDF");
+            e.Property(d => d.FileHash).HasMaxLength(64);
             e.Property(d => d.Status).HasMaxLength(50).HasDefaultValue("Pending");
             e.Property(d => d.BatchId).HasMaxLength(100);
             e.Property(d => d.BatchName).HasMaxLength(200);
@@ -599,6 +667,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.HasIndex(d => d.BatchId);
             e.HasIndex(d => d.UploadedByUserId);
             e.HasIndex(d => d.CreatedAt);
+            e.HasIndex(d => d.FileHash);
 
             e.HasOne(d => d.RoleAppliedOption)
              .WithMany()

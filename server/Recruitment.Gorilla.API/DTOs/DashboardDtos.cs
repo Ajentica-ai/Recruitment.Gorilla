@@ -7,8 +7,17 @@ public record DashboardKpisDto(
     int Rejected,          // negative-terminal bucket
     int NewThisWeek,       // CreatedAt >= UtcNow.AddDays(-7)
     int ReferredCount,
-    double ReferredPercent // 0 when TotalCandidates == 0
+    double ReferredPercent, // 0 when TotalCandidates == 0
+    int NewPrevWeek,        // CreatedAt in [UtcNow-14d, UtcNow-7d): the week before NewThisWeek
+    int RecommendedThisWeek, // now in the positive bucket, first entered it in the last 7 days
+    int RejectedThisWeek     // now in the negative bucket, first entered it in the last 7 days
 );
+
+/// <summary>
+/// Headline for the applications trend: candidates created in the last <see cref="Days"/> UTC days
+/// (the same window the trend points cover) and in the equally long window before it.
+/// </summary>
+public record ApplicationsSummaryDto(int Days, int Total, int PreviousTotal);
 
 public record StatusCountDto(string Status, int Count, int SortOrder);
 

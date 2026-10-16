@@ -39,6 +39,12 @@ export interface CVDraft {
   experiences?: CandidateExperience[] | null;
 }
 
+/** What POST /candidate-import returns: the Pending draft an entry became, and what to check in review. */
+export interface ImportCandidateResult {
+  draft: CVDraft;
+  warnings: string[];
+}
+
 export interface CandidateDraft {
   id: number;
   fullName: string | null;
@@ -229,7 +235,9 @@ export interface CreateCandidatePayload {
 
 export interface DuplicateCandidate {
   message: string;
-  existing: CandidateListItem;
+  // Null when the duplicate exists outside the caller's own access scope: a duplicate was
+  // found, but which candidate it is isn't disclosed.
+  existing: CandidateListItem | null;
 }
 
 export interface UpdateCandidatePayload {
@@ -288,6 +296,17 @@ export interface RoleAppliedOption {
 
 export interface SkillOption {
   id: number;
+  name: string;
+  sortOrder: number;
+  isActive: boolean;
+}
+
+/** Which job-opening field a value list belongs to; also the API route segment. */
+export type JobOpeningOptionKind = 'location' | 'department' | 'priority';
+
+export interface JobOpeningOption {
+  id: number;
+  kind: string;
   name: string;
   sortOrder: number;
   isActive: boolean;
@@ -456,6 +475,19 @@ export type Role = 'SuperAdmin' | 'Admin' | 'Recruiter' | 'Interviewer';
 
 export const ALL_ROLES: Role[] = ['SuperAdmin', 'Admin', 'Recruiter', 'Interviewer'];
 
+export interface UserGuideChapter {
+  id: string;
+  title: string;
+  markdown: string;
+}
+
+/** The user guide cut to the caller's edition — see `GET /api/user-guide`. */
+export interface UserGuide {
+  edition: string;
+  label: string;
+  chapters: UserGuideChapter[];
+}
+
 export interface LoginPayload {
   email: string;
   password: string;
@@ -519,6 +551,19 @@ export interface DashboardKpis {
   newThisWeek: number;
   referredCount: number;
   referredPercent: number;
+  /** Created in the 7 days before `newThisWeek`'s window. */
+  newPrevWeek: number;
+  /** Now in the positive bucket and first entered it in the last 7 days. */
+  recommendedThisWeek: number;
+  /** Now in the negative bucket and first entered it in the last 7 days. */
+  rejectedThisWeek: number;
+}
+
+/** Totals behind the applications trend: its own window and the equally long one before it. */
+export interface ApplicationsSummary {
+  days: number;
+  total: number;
+  previousTotal: number;
 }
 
 export interface StatusCount {
@@ -685,19 +730,26 @@ export interface NotificationList {
 }
 
 // ----- Email / SMTP settings (SuperAdmin) -----
+export type EmailProvider = 'Smtp' | 'HttpApi';
+
 export interface EmailSettings {
+  provider: EmailProvider;
   host: string;
   port: number;
   user: string | null;
   fromAddress: string;
   fromName: string;
   useStartTls: boolean;
+  apiBaseUrl: string;
+  allowedRecipientDomains: string;
   enabled: boolean;
   passwordSet: boolean;
+  apiKeySet: boolean;
   updatedAt: string | null;
 }
 
 export interface UpsertEmailSettings {
+  provider: EmailProvider;
   host: string;
   port: number;
   user: string | null;
@@ -705,7 +757,67 @@ export interface UpsertEmailSettings {
   fromAddress: string;
   fromName: string;
   useStartTls: boolean;
+  apiBaseUrl: string | null;
+  apiKey: string | null; // write-only; blank keeps the stored key
+  allowedRecipientDomains: string | null;
   enabled: boolean;
+}
+
+export interface TestEmailResult {
+  ok: boolean;
+  error: string | null;
+  messageId?: string | null;
+}
+
+// ----- Email delivery log (SuperAdmin) -----
+export type OutboundEmailStatus = 'Pending' | 'Sending' | 'Sent' | 'Failed' | 'Unknown';
+
+export interface OutboundEmail {
+  id: number;
+  toEmail: string;
+  toName: string;
+  subject: string;
+  status: OutboundEmailStatus;
+  provider: string | null;
+  attempts: number;
+  lastError: string | null;
+  providerMessageId: string | null;
+  nextAttemptAt: string;
+  createdAt: string;
+  sentAt: string | null;
+  updatedAt: string;
+}
+
+export interface OutboundEmailQuery {
+  status?: OutboundEmailStatus;
+  page?: number;
+  pageSize?: number;
+}
+
+export interface ResendEmailResult {
+  ok: boolean;
+  error: string | null;
+}
+
+// ----- Slack settings (SuperAdmin) -----
+export interface SlackCategorySetting {
+  key: string;
+  label: string;
+  slackEnabled: boolean;
+}
+
+export interface SlackSettings {
+  enabled: boolean;
+  botTokenSet: boolean;
+  configFallback: boolean;
+  updatedAt: string | null;
+  categories: SlackCategorySetting[];
+}
+
+export interface UpsertSlackSettings {
+  botToken: string | null; // write-only; blank keeps the stored token
+  enabled: boolean;
+  categories: { key: string; slackEnabled: boolean }[];
 }
 
 // ----- Offers & Compensation -----

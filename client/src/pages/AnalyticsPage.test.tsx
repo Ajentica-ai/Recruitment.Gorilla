@@ -167,4 +167,61 @@ describe('AnalyticsPage', () => {
       expect.objectContaining({ preset: '7d' })
     );
   });
+
+  describe('funnel progress bars', () => {
+    const stage = (key: string, name: string, step: number, entered: number, pct: number) => ({
+      stageKey: key,
+      stageName: `${step}. ${name}`,
+      stepNumber: step,
+      totalEntered: entered,
+      conversionFromStartPercent: pct,
+      conversionFromPreviousPercent: pct,
+      dropoffCount: 0,
+    });
+    const fills = () =>
+      Array.from(document.querySelectorAll<HTMLElement>('.stepped-funnel__node-bar-fill')).map(
+        (el) => el.style.width,
+      );
+
+    it('draws no fill for a stage with 0% conversion', async () => {
+      vi.mocked(getRecruitingAnalytics).mockResolvedValue({
+        ...mockSummary,
+        totalCandidatesInPeriod: 0,
+        funnelStages: [
+          stage('Applied', 'Applied / Uploaded', 1, 0, 0),
+          stage('Assessment', 'Screening & Assessment', 2, 0, 0),
+          stage('hired', 'Hired / Accepted', 3, 0, 0),
+        ],
+      });
+      renderWithClient();
+      await waitFor(() => expect(fills()).toHaveLength(3));
+      expect(fills()).toEqual(['0%', '0%', '0%']);
+    });
+
+    it('keeps a visible sliver for a small non-zero stage and full width for 100%', async () => {
+      vi.mocked(getRecruitingAnalytics).mockResolvedValue({
+        ...mockSummary,
+        funnelStages: [
+          stage('Applied', 'Applied / Uploaded', 1, 300, 100),
+          stage('Assessment', 'Screening & Assessment', 2, 3, 1),
+          stage('hired', 'Hired / Accepted', 3, 0, 0),
+        ],
+      });
+      renderWithClient();
+      await waitFor(() => expect(fills()).toHaveLength(3));
+      expect(fills()).toEqual(['100%', '4%', '0%']);
+    });
+  });
+
+  it('left-aligns the first-column headers over their left-aligned cells', async () => {
+    vi.mocked(getRecruitingAnalytics).mockResolvedValue(mockSummary);
+    renderWithClient();
+
+    for (const name of ['Recruiter', 'Sourcing Channel']) {
+      const header = await screen.findByRole('columnheader', { name });
+      expect(header).toHaveClass('text-left');
+    }
+    // The numeric columns stay centred over their centred values.
+    expect(screen.getByRole('columnheader', { name: 'Active Pipeline' })).toHaveClass('text-center');
+  });
 });

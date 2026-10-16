@@ -30,6 +30,13 @@ import {
  *
  * On Radix, so the menu portals out of the table's scroll container instead of
  * clipping at its edge.
+ *
+ * `side="left"`: a menu opened above or below the trigger always floats over a
+ * neighbouring candidate's row. Downward it covered the next row (#65, #66);
+ * the upward fix for #65 then covered the row above. To the left it sits on the
+ * trigger's own row (or, in the stacked card layout below 1024px, inside its
+ * own card), so it never hides another record. Radix still flips it to the right
+ * when there is no room on the left.
  */
 export default function RowActions({
   children,
@@ -46,7 +53,7 @@ export default function RowActions({
           <MoreVertical strokeWidth={2} aria-hidden="true" />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">{children}</DropdownMenuContent>
+      <DropdownMenuContent align="center" side="left">{children}</DropdownMenuContent>
     </DropdownMenu>
   );
 }

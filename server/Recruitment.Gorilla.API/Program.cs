@@ -4,6 +4,7 @@ using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Recruitment.Gorilla.API.Auth;
 using Recruitment.Gorilla.API.Authorization;
@@ -51,19 +52,52 @@ builder.Services.AddScoped<OfferService>();
 builder.Services.AddScoped<EvaluationRubricService>();
 builder.Services.AddScoped<AnalyticsService>();
 builder.Services.AddScoped<CandidateDraftService>();
+builder.Services.AddScoped<CvFileIntake>();
+builder.Services.AddScoped<CandidateImportService>();
 builder.Services.AddScoped<AuditService>();
-builder.Services.AddSingleton<IEmailQueue, EmailQueue>();
-builder.Services.AddHostedService<EmailQueueWorker>();
+builder.Services.AddSingleton<UserGuideService>();
 builder.Services.AddSingleton<IAuditLogQueue, AuditLogQueue>();
 builder.Services.AddHostedService<AuditLogBatchWorker>();
 builder.Services.AddScoped<ICVUploadProgressNotifier, CVUploadProgressNotifier>();
 builder.Services.AddSignalR();
 builder.Services.Configure<SmtpOptions>(builder.Configuration.GetSection("Smtp"));
 builder.Services.AddScoped<ISmtpTransport, MailKitSmtpTransport>();
+builder.Services.Configure<EmailApiOptions>(builder.Configuration.GetSection("EmailApi"));
+builder.Services.Configure<EmailProviderOptions>(builder.Configuration.GetSection("Email"));
+builder.Services.AddHttpClient<IEmailApiTransport, HttpEmailApiTransport>((sp, http) =>
+{
+    // The base URL itself is admin-editable at any time, so it's resolved per request rather than
+    // baked into this HttpClient; only the timeout is fixed at startup (config-only, not stored on
+    // the settings row — see EmailApiOptions).
+    var options = sp.GetRequiredService<IOptions<EmailApiOptions>>().Value;
+    http.Timeout = TimeSpan.FromSeconds(options.TimeoutSeconds);
+})
+    // No automatic redirects: .NET forwards custom headers (including X-API-Key) and, for 307/308,
+    // the request body across a redirect. A compromised or misconfigured notification service could
+    // otherwise redirect the key and the email content to a host nobody approved.
+    .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler { AllowAutoRedirect = false });
 builder.Services.AddSingleton<SecretProtector>();
 builder.Services.AddScoped<IEmailSettingsResolver, EmailSettingsResolver>();
 builder.Services.AddScoped<EmailSettingsService>();
+builder.Services.AddScoped<IEmailDispatcher, EmailDispatcher>();
 builder.Services.AddScoped<EmailService>();
+builder.Services.AddScoped<EmailOutboxService>();
+builder.Services.AddSingleton(TimeProvider.System);
+builder.Services.AddScoped<EmailOutboxProcessor>();
+builder.Services.AddSingleton<IEmailOutboxSignal, EmailOutboxSignal>();
+builder.Services.AddHostedService<EmailOutboxWorker>();
+builder.Services.Configure<SlackOptions>(builder.Configuration.GetSection("Slack"));
+builder.Services.AddHttpClient<ISlackTransport, HttpSlackTransport>((sp, http) =>
+{
+    var options = sp.GetRequiredService<IOptions<SlackOptions>>().Value;
+    http.BaseAddress = new Uri(options.ApiBaseUrl);
+    http.Timeout = TimeSpan.FromSeconds(options.TimeoutSeconds);
+});
+builder.Services.AddScoped<ISlackSettingsResolver, SlackSettingsResolver>();
+builder.Services.AddScoped<SlackSettingsService>();
+builder.Services.AddScoped<SlackService>();
+builder.Services.AddSingleton<ISlackQueue, SlackQueue>();
+builder.Services.AddHostedService<SlackQueueWorker>();
 builder.Services.AddSingleton<IAuthorizationHandler, PasswordChangedHandler>();
 
 var jwtKey = builder.Configuration["Jwt:Key"]

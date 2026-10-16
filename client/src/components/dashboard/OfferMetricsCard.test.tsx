@@ -13,15 +13,15 @@ describe('OfferMetricsCard', () => {
     acceptanceRatePercentage: 87.5,
   };
 
-  it('renders all key offer and hiring conversion statistics', () => {
+  it('renders the offer steps, the active count and the acceptance rate', () => {
     render(<OfferMetricsCard metrics={mockMetrics} />);
 
-    expect(screen.getByText(/Offer & Hiring Conversion/i)).toBeInTheDocument();
-    expect(screen.getByText('87.5% Acceptance Rate')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Offers' })).toBeInTheDocument();
+    expect(screen.getByText('4 offers still active.')).toBeInTheDocument();
+    expect(screen.getByText('87.5% accepted')).toBeInTheDocument();
     expect(screen.getByText('12')).toBeInTheDocument();
-    expect(screen.getByText('4')).toBeInTheDocument();
     expect(screen.getByText('7')).toBeInTheDocument();
     expect(screen.getByText('6')).toBeInTheDocument();
-    expect(screen.getByText(/7 Accepted \/ 8 Decided/i)).toBeInTheDocument();
+    expect(screen.getByText('7 of 8 decided')).toBeInTheDocument();
   });
 });

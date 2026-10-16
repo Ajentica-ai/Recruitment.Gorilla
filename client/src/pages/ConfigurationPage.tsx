@@ -17,8 +17,11 @@ import Page from '../components/common/Page';
 import Tabs, { TabPanel, type TabDef } from '../components/common/Tabs';
 import { useTabs } from '../components/common/useTabs';
 import JobOpeningsTab from './configuration/JobOpeningsTab';
+import JobOpeningFieldsTab from './configuration/JobOpeningFieldsTab';
 import OptionChipsTab, { type OptionApi } from './configuration/OptionChipsTab';
 import EmailSettingsTab from './configuration/EmailSettingsTab';
+import EmailDeliveryTab from './configuration/EmailDeliveryTab';
+import SlackSettingsTab from './configuration/SlackSettingsTab';
 import EvaluationRubricsTab from './configuration/EvaluationRubricsTab';
 
 const skillsApi: OptionApi = {
@@ -47,8 +50,8 @@ const sourcesApi: OptionApi = {
  * stacked cards on one long scroll. The active tab lives in the query string,
  * so a refresh keeps your place and a section can be linked to.
  *
- * Email is Super Admin only; the tab is absent for everyone else rather than
- * present-and-failing, matching how the sidebar handles role-gated routes.
+ * Email and Slack are Super Admin only; the tabs are absent for everyone else
+ * rather than present-and-failing, matching how the sidebar handles role-gated routes.
  */
 export default function ConfigurationPage() {
   const { isSuperAdmin } = useAuth();
@@ -59,7 +62,10 @@ export default function ConfigurationPage() {
     { id: 'sources', label: 'Candidate sources' },
     { id: 'interview-types', label: 'Interview types' },
     ...(isSuperAdmin ? [{ id: 'email', label: 'Email' }] : []),
+    ...(isSuperAdmin ? [{ id: 'email-delivery', label: 'Email delivery' }] : []),
+    ...(isSuperAdmin ? [{ id: 'slack', label: 'Slack' }] : []),
     { id: 'jobs', label: 'Job openings' },
+    { id: 'job-fields', label: 'Job opening fields' },
   ];
 
   const [active, setActive] = useTabs(tabs);
@@ -71,6 +77,12 @@ export default function ConfigurationPage() {
       {active === 'jobs' && (
         <TabPanel id="jobs">
           <JobOpeningsTab />
+        </TabPanel>
+      )}
+
+      {active === 'job-fields' && (
+        <TabPanel id="job-fields">
+          <JobOpeningFieldsTab />
         </TabPanel>
       )}
 
@@ -119,6 +131,18 @@ export default function ConfigurationPage() {
       {active === 'email' && isSuperAdmin && (
         <TabPanel id="email">
           <EmailSettingsTab />
+        </TabPanel>
+      )}
+
+      {active === 'email-delivery' && isSuperAdmin && (
+        <TabPanel id="email-delivery">
+          <EmailDeliveryTab />
+        </TabPanel>
+      )}
+
+      {active === 'slack' && isSuperAdmin && (
+        <TabPanel id="slack">
+          <SlackSettingsTab />
         </TabPanel>
       )}
     </Page>

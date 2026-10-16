@@ -83,6 +83,10 @@ namespace Recruitment.Gorilla.API.Migrations
                     b.Property<int>("CandidateId")
                         .HasColumnType("int");
 
+                    b.Property<string>("FileHash")
+                        .HasMaxLength(64)
+                        .HasColumnType("varchar(64)");
+
                     b.Property<long>("FileSizeBytes")
                         .HasColumnType("bigint");
 
@@ -107,6 +111,8 @@ namespace Recruitment.Gorilla.API.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("CandidateId");
+
+                    b.HasIndex("FileHash");
 
                     b.ToTable("CVFiles");
                 });
@@ -279,6 +285,10 @@ namespace Recruitment.Gorilla.API.Migrations
                     b.Property<string>("ExperienceJson")
                         .HasColumnType("longtext");
 
+                    b.Property<string>("FileHash")
+                        .HasMaxLength(64)
+                        .HasColumnType("varchar(64)");
+
                     b.Property<long>("FileSizeBytes")
                         .HasColumnType("bigint");
 
@@ -372,6 +382,8 @@ namespace Recruitment.Gorilla.API.Migrations
                     b.HasIndex("BatchId");
 
                     b.HasIndex("CreatedAt");
+
+                    b.HasIndex("FileHash");
 
                     b.HasIndex("RoleAppliedOptionId");
 
@@ -602,6 +614,18 @@ namespace Recruitment.Gorilla.API.Migrations
 
                     MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<string>("AllowedRecipientDomains")
+                        .HasMaxLength(500)
+                        .HasColumnType("varchar(500)");
+
+                    b.Property<string>("ApiBaseUrl")
+                        .HasMaxLength(500)
+                        .HasColumnType("varchar(500)");
+
+                    b.Property<string>("ApiKeyEncrypted")
+                        .HasMaxLength(1000)
+                        .HasColumnType("varchar(1000)");
+
                     b.Property<bool>("Enabled")
                         .HasColumnType("tinyint(1)");
 
@@ -626,6 +650,13 @@ namespace Recruitment.Gorilla.API.Migrations
 
                     b.Property<int>("Port")
                         .HasColumnType("int");
+
+                    b.Property<string>("Provider")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(16)
+                        .HasColumnType("varchar(16)")
+                        .HasDefaultValue("Smtp");
 
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("datetime(6)");
@@ -936,6 +967,148 @@ namespace Recruitment.Gorilla.API.Migrations
                         });
                 });
 
+            modelBuilder.Entity("Recruitment.Gorilla.API.Models.JobOpeningOption", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("tinyint(1)")
+                        .HasDefaultValue(true);
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("varchar(20)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("varchar(200)");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Kind", "Name")
+                        .IsUnique();
+
+                    b.ToTable("JobOpeningOptions");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            CreatedAt = new DateTime(2026, 10, 13, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            Kind = "Location",
+                            Name = "Remote",
+                            SortOrder = 1,
+                            UpdatedAt = new DateTime(2026, 10, 13, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            Id = 2,
+                            CreatedAt = new DateTime(2026, 10, 13, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            Kind = "Location",
+                            Name = "Office",
+                            SortOrder = 2,
+                            UpdatedAt = new DateTime(2026, 10, 13, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            Id = 3,
+                            CreatedAt = new DateTime(2026, 10, 13, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            Kind = "Location",
+                            Name = "Hybrid",
+                            SortOrder = 3,
+                            UpdatedAt = new DateTime(2026, 10, 13, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            Id = 4,
+                            CreatedAt = new DateTime(2026, 10, 13, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            Kind = "Location",
+                            Name = "Contractual",
+                            SortOrder = 4,
+                            UpdatedAt = new DateTime(2026, 10, 13, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            Id = 5,
+                            CreatedAt = new DateTime(2026, 10, 13, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            Kind = "Department",
+                            Name = "Engineering",
+                            SortOrder = 1,
+                            UpdatedAt = new DateTime(2026, 10, 13, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            Id = 6,
+                            CreatedAt = new DateTime(2026, 10, 13, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            Kind = "Department",
+                            Name = "Admin",
+                            SortOrder = 2,
+                            UpdatedAt = new DateTime(2026, 10, 13, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            Id = 7,
+                            CreatedAt = new DateTime(2026, 10, 13, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            Kind = "Department",
+                            Name = "HR",
+                            SortOrder = 3,
+                            UpdatedAt = new DateTime(2026, 10, 13, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            Id = 8,
+                            CreatedAt = new DateTime(2026, 10, 13, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            Kind = "Priority",
+                            Name = "High",
+                            SortOrder = 1,
+                            UpdatedAt = new DateTime(2026, 10, 13, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            Id = 9,
+                            CreatedAt = new DateTime(2026, 10, 13, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            Kind = "Priority",
+                            Name = "Medium",
+                            SortOrder = 2,
+                            UpdatedAt = new DateTime(2026, 10, 13, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            Id = 10,
+                            CreatedAt = new DateTime(2026, 10, 13, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            Kind = "Priority",
+                            Name = "Low",
+                            SortOrder = 3,
+                            UpdatedAt = new DateTime(2026, 10, 13, 0, 0, 0, 0, DateTimeKind.Utc)
+                        });
+                });
+
             modelBuilder.Entity("Recruitment.Gorilla.API.Models.Notification", b =>
                 {
                     b.Property<int>("Id")
@@ -972,6 +1145,20 @@ namespace Recruitment.Gorilla.API.Migrations
                     b.HasIndex("UserId", "IsRead");
 
                     b.ToTable("Notifications");
+                });
+
+            modelBuilder.Entity("Recruitment.Gorilla.API.Models.NotificationChannelSetting", b =>
+                {
+                    b.Property<string>("Category")
+                        .HasMaxLength(64)
+                        .HasColumnType("varchar(64)");
+
+                    b.Property<bool>("SlackEnabled")
+                        .HasColumnType("tinyint(1)");
+
+                    b.HasKey("Category");
+
+                    b.ToTable("NotificationChannelSettings");
                 });
 
             modelBuilder.Entity("Recruitment.Gorilla.API.Models.Offer", b =>
@@ -1086,6 +1273,97 @@ namespace Recruitment.Gorilla.API.Migrations
                     b.HasIndex("OfferId");
 
                     b.ToTable("OfferApprovals");
+                });
+
+            modelBuilder.Entity("Recruitment.Gorilla.API.Models.OutboundEmail", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<int>("Attempts")
+                        .HasColumnType("int");
+
+                    b.Property<string>("CalendarContent")
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("CalendarFileName")
+                        .HasMaxLength(255)
+                        .HasColumnType("varchar(255)");
+
+                    b.Property<string>("CalendarMethod")
+                        .HasMaxLength(20)
+                        .HasColumnType("varchar(20)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("HtmlBody")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("LastError")
+                        .HasMaxLength(1000)
+                        .HasColumnType("varchar(1000)");
+
+                    b.Property<DateTime?>("LockedUntil")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<bool>("NeedsStatusCheck")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<DateTime>("NextAttemptAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("Provider")
+                        .HasMaxLength(16)
+                        .HasColumnType("varchar(16)");
+
+                    b.Property<string>("ProviderMessageId")
+                        .HasMaxLength(200)
+                        .HasColumnType("varchar(200)");
+
+                    b.Property<string>("Reference")
+                        .IsRequired()
+                        .HasMaxLength(36)
+                        .HasColumnType("varchar(36)");
+
+                    b.Property<DateTime?>("SentAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("varchar(16)");
+
+                    b.Property<string>("Subject")
+                        .IsRequired()
+                        .HasMaxLength(400)
+                        .HasColumnType("varchar(400)");
+
+                    b.Property<string>("ToEmail")
+                        .IsRequired()
+                        .HasMaxLength(320)
+                        .HasColumnType("varchar(320)");
+
+                    b.Property<string>("ToName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("varchar(200)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Reference")
+                        .IsUnique();
+
+                    b.HasIndex("Status", "NextAttemptAt");
+
+                    b.ToTable("OutboundEmails");
                 });
 
             modelBuilder.Entity("Recruitment.Gorilla.API.Models.RefreshToken", b =>
@@ -1546,6 +1824,32 @@ namespace Recruitment.Gorilla.API.Migrations
                             SortOrder = 8,
                             UpdatedAt = new DateTime(2026, 6, 29, 0, 0, 0, 0, DateTimeKind.Utc)
                         });
+                });
+
+            modelBuilder.Entity("Recruitment.Gorilla.API.Models.SlackSetting", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("BotTokenEncrypted")
+                        .HasMaxLength(1000)
+                        .HasColumnType("varchar(1000)");
+
+                    b.Property<bool>("Enabled")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<int?>("UpdatedByUserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("SlackSettings");
                 });
 
             modelBuilder.Entity("Recruitment.Gorilla.API.Models.StatusHistory", b =>

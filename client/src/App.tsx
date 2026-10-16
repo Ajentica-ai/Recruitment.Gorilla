@@ -14,6 +14,7 @@ import ConfigurationPage from './pages/ConfigurationPage';
 import UsersPage from './pages/UsersPage';
 import AuditLogPage from './pages/AuditLogPage';
 import ChangePasswordPage from './pages/ChangePasswordPage';
+import UserGuidePage from './pages/UserGuidePage';
 import InterviewPage from './pages/InterviewPage';
 import AppShell from './components/shell/AppShell';
 
@@ -21,8 +22,8 @@ import AppShell from './components/shell/AppShell';
  * Auth gate for everything behind the login page. The chrome itself lives in
  * AppShell; this only decides whether the user gets to see it.
  */
-function ProtectedLayout() {
-  const { isAuthenticated, loading, mustChangePassword } = useAuth();
+export function ProtectedLayout() {
+  const { isAuthenticated, loading, mustChangePassword, loggedOut } = useAuth();
   const location = useLocation();
 
   if (loading) {
@@ -30,7 +31,9 @@ function ProtectedLayout() {
   }
 
   if (!isAuthenticated) {
-    return <Navigate to="/login" replace state={{ from: location.pathname }} />;
+    // An expired session remembers the page so the same person lands back on it. A deliberate
+    // logout does not: the next person to sign in is not necessarily the one who left.
+    return <Navigate to="/login" replace state={loggedOut ? null : { from: location.pathname }} />;
   }
 
   // First-login (or post-reset) users are confined to the change-password page
@@ -124,6 +127,7 @@ export default function App() {
               }
             />
             <Route path="/change-password" element={<ChangePasswordPage />} />
+            <Route path="/user-guide" element={<UserGuidePage />} />
           </Route>
         </Routes>
       </AuthProvider>

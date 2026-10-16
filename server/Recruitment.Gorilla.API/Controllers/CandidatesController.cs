@@ -96,15 +96,25 @@ public class CandidatesController(
         if (referenceError is not null)
             return BadRequest(referenceError);
 
-        var (created, duplicate) = await candidateService.CreateAsync(dto, currentUser.UserId, currentUser.Name);
+        var fileError = await candidateService.ValidateCvFileAsync(
+            dto.StoredFileName, currentUser.IsInAnyRole(Roles.SuperAdmin, Roles.Admin), currentUser.UserId);
+        if (fileError is not null)
+            return BadRequest(fileError);
 
-        if (duplicate is not null)
+        var (created, duplicate, duplicateExists, roleError) = await candidateService.CreateAsync(
+            dto, currentUser.UserId, currentUser.Name, WriteOwnerScope);
+        if (roleError is not null)
+            return BadRequest(roleError);
+
+        if (duplicateExists)
         {
             logger.LogWarning(
-                "Duplicate candidate email '{Email}' — matches existing candidate {ExistingId}.",
-                dto.Email, duplicate.Id);
-            return Conflict(new DuplicateCandidateDto(
-                $"A candidate with email '{duplicate.Email}' already exists.", duplicate));
+                "Duplicate candidate email '{Email}' — matches existing candidate{Detail}.",
+                dto.Email, duplicate is not null ? $" {duplicate.Id}" : " (outside caller's access scope)");
+            var message = duplicate is not null
+                ? $"A candidate with email '{duplicate.Email}' already exists."
+                : "A candidate with this email already exists.";
+            return Conflict(new DuplicateCandidateDto(message, duplicate));
         }
 
         logger.LogInformation("Created candidate {Id} ('{Name}') by {ChangedBy}.",
@@ -222,7 +232,8 @@ public class CandidatesController(
         if (lockError is not null)
             return BadRequest(lockError);
 
-        var updated = await candidateService.UpdateAsync(id, dto, WriteOwnerScope);
+        var (updated, roleError) = await candidateService.UpdateAsync(id, dto, WriteOwnerScope);
+        if (roleError is not null) return BadRequest(roleError);
         if (updated is null) return NotFound();
 
         await audit.RecordAsync("Candidate.Updated", "Candidate", id,

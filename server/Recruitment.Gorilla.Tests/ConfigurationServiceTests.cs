@@ -99,6 +99,51 @@ public class ConfigurationServiceTests(MySqlDatabaseFixture fixture) : DbTestBas
     }
 
     [Fact]
+    public async Task CreateRole_notifies_newly_assigned_recruiters_but_not_the_actor()
+    {
+        var actor = Data.AddUser(Roles.Admin);
+        var r1 = Data.AddUser(Roles.Recruiter);
+
+        var (created, _, error) = await Config().CreateRoleAsync(
+            RoleDto($"R-{Guid.NewGuid():N}", actor.Id, r1.Id), actorUserId: actor.Id);
+
+        Assert.Null(error);
+        Assert.False(await Db.Notifications.AnyAsync(n => n.UserId == actor.Id)); // the actor isn't notified of their own change
+        var notification = await Db.Notifications.SingleAsync(n => n.UserId == r1.Id);
+        Assert.Equal("Assigned to job opening", notification.Title);
+        Assert.Contains(created!.Name, notification.Message);
+        Assert.Equal("/jobs", notification.LinkUrl);
+    }
+
+    [Fact]
+    public async Task UpdateRole_notifies_only_the_newly_added_recruiters()
+    {
+        var r1 = Data.AddUser(Roles.Recruiter);
+        var r2 = Data.AddUser(Roles.Recruiter);
+        var (created, _, _) = await Config().CreateRoleAsync(RoleDto($"R-{Guid.NewGuid():N}", r1.Id));
+
+        // Clear the create-time notification so only the update's notifications are asserted below.
+        Db.Notifications.RemoveRange(Db.Notifications.Where(n => n.UserId == r1.Id));
+        await Db.SaveChangesAsync();
+
+        await Config().UpdateRoleAsync(created!.Id, RoleDto(created.Name, r1.Id, r2.Id));
+
+        Assert.False(await Db.Notifications.AnyAsync(n => n.UserId == r1.Id)); // already assigned — not re-notified
+        Assert.True(await Db.Notifications.AnyAsync(n => n.UserId == r2.Id)); // newly added — notified
+    }
+
+    [Fact]
+    public async Task UpdateRole_does_not_notify_recruiters_when_the_opening_is_inactive()
+    {
+        var r1 = Data.AddUser(Roles.Recruiter);
+        var (created, _, _) = await Config().CreateRoleAsync(RoleDto($"R-{Guid.NewGuid():N}"));
+
+        await Config().UpdateRoleAsync(created!.Id, RoleDto(created.Name, r1.Id) with { IsActive = false });
+
+        Assert.False(await Db.Notifications.AnyAsync(n => n.UserId == r1.Id));
+    }
+
+    [Fact]
     public async Task GetAssignedRoles_returns_only_the_users_roles()
     {
         var r1 = Data.AddUser(Roles.Recruiter);
@@ -207,6 +252,127 @@ public class ConfigurationServiceTests(MySqlDatabaseFixture fixture) : DbTestBas
     {
         var result = await Config().DeleteSourceAsync(999999);
         Assert.False(result.Found);
+    }
+
+    // ----- Job opening field options (Location / Department / Priority) -----
+
+    private static UpsertRoleAppliedOptionDto FieldsDto(string name, string? location = null, string? department = null, string? priority = null) =>
+        new(name, 100, true, DateTime.UtcNow.AddDays(30), Location: location, Department: department, Priority: priority);
+
+    [Fact]
+    public async Task JobOpeningOptions_are_seeded_with_the_original_values()
+    {
+        var locations = await Config().GetJobOpeningOptionsAsync(JobOpeningOptionKinds.Location, false);
+        var priorities = await Config().GetJobOpeningOptionsAsync(JobOpeningOptionKinds.Priority, false);
+
+        Assert.Contains(locations, o => o.Name == "Remote");
+        Assert.Equal(["High", "Medium", "Low"], priorities.Select(o => o.Name));
+    }
+
+    [Fact]
+    public async Task CreateJobOpeningOption_adds_a_value_and_rejects_a_duplicate_within_the_kind()
+    {
+        var name = $"Loc-{Guid.NewGuid():N}";
+        var (created, conflict) = await Config().CreateJobOpeningOptionAsync(JobOpeningOptionKinds.Location, new UpsertJobOpeningOptionDto(name, 50, true));
+        Assert.False(conflict);
+        Assert.Equal(JobOpeningOptionKinds.Location, created!.Kind);
+
+        var (_, dup) = await Config().CreateJobOpeningOptionAsync(JobOpeningOptionKinds.Location, new UpsertJobOpeningOptionDto(name, 51, true));
+        Assert.True(dup);
+
+        // Same name under another kind is a different value.
+        var (other, otherConflict) = await Config().CreateJobOpeningOptionAsync(JobOpeningOptionKinds.Department, new UpsertJobOpeningOptionDto(name, 50, true));
+        Assert.False(otherConflict);
+        Assert.NotNull(other);
+    }
+
+    [Fact]
+    public async Task CreateRole_accepts_an_added_option_and_rejects_unknown_or_inactive_ones()
+    {
+        var added = $"Dept-{Guid.NewGuid():N}";
+        await Config().CreateJobOpeningOptionAsync(JobOpeningOptionKinds.Department, new UpsertJobOpeningOptionDto(added, 50, true));
+        var hidden = $"Prio-{Guid.NewGuid():N}";
+        await Config().CreateJobOpeningOptionAsync(JobOpeningOptionKinds.Priority, new UpsertJobOpeningOptionDto(hidden, 50, false));
+
+        var (ok, _, okErr) = await Config().CreateRoleAsync(FieldsDto($"R-{Guid.NewGuid():N}", department: added));
+        Assert.Null(okErr);
+        Assert.Equal(added, ok!.Department);
+
+        var (_, _, badLoc) = await Config().CreateRoleAsync(FieldsDto($"R-{Guid.NewGuid():N}", location: "Mars"));
+        Assert.Equal("Invalid location.", badLoc);
+        var (_, _, badDept) = await Config().CreateRoleAsync(FieldsDto($"R-{Guid.NewGuid():N}", department: "Remote"));
+        Assert.Equal("Invalid department.", badDept);
+        var (_, _, inactivePrio) = await Config().CreateRoleAsync(FieldsDto($"R-{Guid.NewGuid():N}", priority: hidden));
+        Assert.Equal("Invalid priority.", inactivePrio);
+    }
+
+    [Fact]
+    public async Task RenameJobOpeningOption_updates_the_openings_that_use_it()
+    {
+        var oldName = $"Loc-{Guid.NewGuid():N}";
+        var (opt, _) = await Config().CreateJobOpeningOptionAsync(JobOpeningOptionKinds.Location, new UpsertJobOpeningOptionDto(oldName, 50, true));
+        var (role, _, _) = await Config().CreateRoleAsync(FieldsDto($"R-{Guid.NewGuid():N}", location: oldName));
+        var (untouched, _, _) = await Config().CreateRoleAsync(FieldsDto($"R-{Guid.NewGuid():N}", location: "Remote"));
+
+        var newName = $"Site-{Guid.NewGuid():N}";
+        var (updated, notFound, conflict) = await Config().UpdateJobOpeningOptionAsync(
+            JobOpeningOptionKinds.Location, opt!.Id, new UpsertJobOpeningOptionDto(newName, 50, true));
+
+        Assert.False(notFound);
+        Assert.False(conflict);
+        Assert.Equal(newName, updated!.Name);
+        Db.ChangeTracker.Clear();
+        Assert.Equal(newName, (await Db.RoleAppliedOptions.FindAsync(role!.Id))!.Location);
+        Assert.Equal("Remote", (await Db.RoleAppliedOptions.FindAsync(untouched!.Id))!.Location);
+    }
+
+    [Fact]
+    public async Task UpdateJobOpeningOption_conflicts_on_a_taken_name_and_ignores_a_wrong_kind()
+    {
+        var (opt, _) = await Config().CreateJobOpeningOptionAsync(JobOpeningOptionKinds.Priority, new UpsertJobOpeningOptionDto($"P-{Guid.NewGuid():N}", 50, true));
+
+        var (_, _, conflict) = await Config().UpdateJobOpeningOptionAsync(
+            JobOpeningOptionKinds.Priority, opt!.Id, new UpsertJobOpeningOptionDto("High", 50, true));
+        Assert.True(conflict);
+
+        var (_, notFound, _) = await Config().UpdateJobOpeningOptionAsync(
+            JobOpeningOptionKinds.Location, opt.Id, new UpsertJobOpeningOptionDto("X", 50, true));
+        Assert.True(notFound);
+    }
+
+    [Fact]
+    public async Task UpdateRole_keeps_a_value_that_was_since_deactivated()
+    {
+        var name = $"Loc-{Guid.NewGuid():N}";
+        var (opt, _) = await Config().CreateJobOpeningOptionAsync(JobOpeningOptionKinds.Location, new UpsertJobOpeningOptionDto(name, 50, true));
+        var (role, _, _) = await Config().CreateRoleAsync(FieldsDto($"R-{Guid.NewGuid():N}", location: name));
+        await Config().UpdateJobOpeningOptionAsync(JobOpeningOptionKinds.Location, opt!.Id, new UpsertJobOpeningOptionDto(name, 50, false));
+
+        var (kept, _, _, keptErr) = await Config().UpdateRoleAsync(role!.Id, FieldsDto(role.Name, location: name));
+        Assert.Null(keptErr);
+        Assert.Equal(name, kept!.Location);
+
+        // ...but another opening cannot newly pick it.
+        var (_, _, newErr) = await Config().CreateRoleAsync(FieldsDto($"R-{Guid.NewGuid():N}", location: name));
+        Assert.Equal("Invalid location.", newErr);
+    }
+
+    [Fact]
+    public async Task DeleteJobOpeningOption_deactivates_when_in_use_else_hard_deletes()
+    {
+        var used = $"Dept-{Guid.NewGuid():N}";
+        var (usedOpt, _) = await Config().CreateJobOpeningOptionAsync(JobOpeningOptionKinds.Department, new UpsertJobOpeningOptionDto(used, 50, true));
+        await Config().CreateRoleAsync(FieldsDto($"R-{Guid.NewGuid():N}", department: used));
+
+        Assert.True(await Config().DeleteJobOpeningOptionAsync(JobOpeningOptionKinds.Department, usedOpt!.Id));
+        Db.ChangeTracker.Clear();
+        Assert.False((await Db.JobOpeningOptions.FindAsync(usedOpt.Id))!.IsActive);
+
+        var (free, _) = await Config().CreateJobOpeningOptionAsync(JobOpeningOptionKinds.Department, new UpsertJobOpeningOptionDto($"Dept-{Guid.NewGuid():N}", 51, true));
+        Assert.True(await Config().DeleteJobOpeningOptionAsync(JobOpeningOptionKinds.Department, free!.Id));
+        Assert.Null(await Db.JobOpeningOptions.FindAsync(free.Id));
+
+        Assert.False(await Config().DeleteJobOpeningOptionAsync(JobOpeningOptionKinds.Department, 999999));
     }
 
     [Fact]

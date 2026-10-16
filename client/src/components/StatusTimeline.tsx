@@ -4,6 +4,7 @@ import { StatusBadge, StatusDot } from './StatusBadge';
 import EmptyState from './common/EmptyState';
 import { skillColorClass } from '../utils/skillColors';
 import { initials } from '../utils/initials';
+import { externalUrl } from '../utils/externalUrl';
 import type { EvaluationSummary, StatusHistoryEntry } from '../types';
 
 interface Props {
@@ -132,10 +133,10 @@ export default function StatusTimeline({ history, canViewEvaluations = false }: 
                   <span className="font-semibold">Task:</span> {entry.taskDetails}
                 </div>
               )}
-              {entry.submissionUrl && (
+              {externalUrl(entry.submissionUrl) && (
                 <div className="mt-1 text-[length:var(--text-sm)]">
                   <span className="font-semibold">Submission:</span>{' '}
-                  <a href={entry.submissionUrl} target="_blank" rel="noreferrer">
+                  <a href={externalUrl(entry.submissionUrl)} target="_blank" rel="noreferrer">
                     {entry.submissionUrl}
                   </a>
                 </div>

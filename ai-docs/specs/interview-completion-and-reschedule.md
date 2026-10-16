@@ -98,9 +98,13 @@ No new endpoints or DTO shape changes on the request side. Behavior/field change
   `['my-interviews']` as today. See [../frontend.md](../frontend.md).
 
 ## 8. Security & auth
-- The **evaluations link** is client-gated to `isAdminOrAbove`, matching the backend rule that only
-  Admin/SuperAdmin receive `AllEvaluations` from `GET /api/interviews/{id}`; a non-admin who follows
-  a crafted URL still only sees their own evaluation (or 404 if unassigned) — no new exposure.
+- The **evaluations link** is client-gated to `isAdminOrAbove`. On the backend, `AllEvaluations` from
+  `GET /api/interviews/{id}` goes to Admin/SuperAdmin always, and to an assigned interviewer only once
+  they have submitted and locked their own (submitted peers only, never drafts, never their own); a
+  non-admin who follows a crafted URL gets 404 if unassigned, so no new exposure.
+- The same endpoint returns the candidate **without** their status history for non-admins: the timeline
+  carries every status comment and, via `EvaluationSummaries`, other rounds' ratings and
+  recommendations, which would route around the rule above (issue #116).
 - The completion **gate** and **summary** run server-side in `CandidateService`; the summary is
   built only from submitted evaluations. `InterviewDetailDto.Notes` is returned under the existing
   assigned-or-Admin+ access check — unassigned non-admins already 404.

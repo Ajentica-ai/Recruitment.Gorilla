@@ -183,8 +183,13 @@ export default function CandidateForm({ draft, onSaved, onCancel }: Props) {
       {duplicate && (
         <div className="alert-warning-soft mb-6">
           <div>
-            {duplicate.message}{' '}
-            <Link to={`/candidates/${duplicate.existing.id}`}>Open existing candidate</Link>.
+            {duplicate.message}
+            {duplicate.existing && (
+              <>
+                {' '}
+                <Link to={`/candidates/${duplicate.existing.id}`}>Open existing candidate</Link>.
+              </>
+            )}
           </div>
           <div className="mt-4">
             <Button
@@ -298,7 +303,7 @@ export default function CandidateForm({ draft, onSaved, onCancel }: Props) {
         </div>
         <div className="col-span-12 md:col-span-12">
           <div className="field-divider" />
-          <CheckboxField id="is-referred" label="This candidate has been referred" checked={isReferred} onCheckedChange={(checked) => setIsReferred(checked)} />
+          <CheckboxField id="is-referred" label="Referred by an employee" checked={isReferred} onCheckedChange={(checked) => setIsReferred(checked)} />
         </div>
         {isReferred && (
           <>

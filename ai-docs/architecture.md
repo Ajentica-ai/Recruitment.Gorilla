@@ -1,7 +1,7 @@
 # Architecture
 
 ## What it is
-A single-admin recruitment management system (Phase 1). The admin bulk-uploads CVs (PDF / `.docx`), the API extracts candidate fields for review, candidates are stored in MySQL, and each candidate has an **append-only status history** rendered as a vertical timeline.
+A recruitment management system for four roles (Super Admin, Admin, Recruiter, Interviewer). An admin or recruiter bulk-uploads CVs (PDF / `.docx`), the API extracts candidate fields for review, candidates are stored in MySQL, and each candidate has an **append-only status history** rendered as a vertical timeline.
 
 ## Monorepo layout
 ```
@@ -13,11 +13,13 @@ Recruitment.Gorilla/
 ├── client/                    # React 19 + TypeScript (Vite)
 │   └── src/
 │       ├── auth/AuthContext.tsx
-│       ├── components/        # BulkUploader, CandidateForm, StatusTimeline, dashboard/*
-│       ├── pages/             # DashboardPage, LoginPage, UploadPage, CandidatesPage, CandidateDetailPage, ConfigurationPage
+│       ├── components/        # BulkUploader, CandidateForm, StatusTimeline, dashboard/*, drafts/*, kanban/*, offers/*, shell/*, ui/*
+│       ├── pages/             # DashboardPage, CandidatesPage, CandidateDetailPage, InterviewPage, UploadPage, ConfigurationPage, UsersPage, AuditLogPage, AnalyticsPage, JobsPage, LoginPage
 │       ├── services/api.ts    # typed Axios layer + auth interceptors
 │       ├── types/index.ts     # shared TS types
-│       └── index.css          # Microsoft Fluent theme
+│       ├── styles/tokens.css  # design tokens (Harbor)
+│       ├── styles/theme.css   # Tailwind v4 + shadcn/ui bridge, cascade-layer order
+│       └── index.css          # legacy semantic component layer (cards, status badges, tables, kanban)
 └── server/
     └── Recruitment.Gorilla.API/
         ├── Controllers/       # Auth, Candidates, CVUpload, Configuration, Dashboard
@@ -41,10 +43,12 @@ Recruitment.Gorilla/
 | API docs | Swashbuckle (Swagger) | 10.x |
 | CV parsing | PdfPig (PDF) + DocumentFormat.OpenXml (Word) | 0.1.15 / 3.5.1 |
 | Frontend | React + TypeScript + Vite | 19 / Vite 8 |
-| UI | react-bootstrap 2 + Bootstrap 5, Fluent theme | — |
+| UI | Tailwind v4 + shadcn/Radix, Harbor design system | — |
 | Routing | react-router-dom | 7 |
-| Background Queues | System.Threading.Channels (Email & AuditLog) | .NET 10 |
+| Background Queues | System.Threading.Channels (AuditLog & Slack); Email is a DB-backed outbox, polled by a BackgroundService | .NET 10 |
 | Real-time WebSockets | Microsoft.AspNetCore.SignalR & @microsoft/signalr | 10.0.x / 8.0.x |
+| Slack notifications | Slack Web API over `HttpClient` (no SDK) | — |
+| Email (HTTP API provider) | A company HR notification service over `HttpClient` (no SDK); SMTP via MailKit remains the other provider | — |
 
 > EF Core packages are pinned to **9.0.0** to stay inside Pomelo 9.x's compatibility window. Do not bump them independently.
 
@@ -54,9 +58,9 @@ Browser (http://<host>:5173)
    │  React app makes same-origin calls to /api/...
    ▼
 Vite dev server (port 5173, exposed on LAN)
-   │  server.proxy forwards /api → http://localhost:5000   (vite.config.ts)
+   │  server.proxy forwards /api → http://localhost:5134   (vite.config.ts)
    ▼
-ASP.NET Core API (localhost:5000 ONLY — never bound to 0.0.0.0)
+ASP.NET Core API (localhost:5134 ONLY — never bound to 0.0.0.0)
    │  Controller → Service → AppDbContext (EF Core)
    ▼
 MySQL (localhost:3306, database "RecruitmentGorilla")
@@ -65,7 +69,7 @@ MySQL (localhost:3306, database "RecruitmentGorilla")
 ### Why the backend is localhost-only
 The API must **not** be reachable directly from other machines. Only the Vite frontend is exposed on the LAN; it proxies `/api` to the backend running on the same host. This means:
 - The browser always calls **same-origin `/api`** (see `client/src/services/api.ts`, `baseURL` built from `import.meta.env.BASE_URL` + `api`).
-- The backend runs with `--urls http://localhost:5000` (loopback only).
+- The backend runs with `--urls http://localhost:5134` (loopback only).
 - Firewall opens **only** port 5173.
 
 Do not change the frontend to call the backend by IP/port, and do not bind the backend to `0.0.0.0`.

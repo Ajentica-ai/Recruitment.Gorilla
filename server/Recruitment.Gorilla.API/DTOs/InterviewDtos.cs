@@ -36,7 +36,7 @@ public record InterviewDetailDto(
     List<InterviewInterviewerDto> Interviewers,
     bool CanEvaluate,                          // caller is an assigned interviewer
     InterviewEvaluationDto? MyEvaluation,      // the caller's evaluation, if any
-    List<InterviewEvaluationDto>? AllEvaluations, // Admin+ only; null otherwise
+    List<InterviewEvaluationDto>? AllEvaluations, // Admin+ always; a peer only after submitting their own
     string? Notes,                             // recruiter's note = the scheduled entry's comment
     List<string> InterviewTags,                // interview type tags (Technical, HR, …)
     int DurationMinutes                        // drives the calendar invite's end time

@@ -1,7 +1,9 @@
+using System.Net.Mail;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Recruitment.Gorilla.API.Auth;
 using Recruitment.Gorilla.API.DTOs;
+using Recruitment.Gorilla.API.Models;
 using Recruitment.Gorilla.API.Services;
 
 namespace Recruitment.Gorilla.API.Controllers;
@@ -13,11 +15,14 @@ public class ConfigurationController(
     ConfigurationService config,
     EmailSettingsService emailSettings,
     EmailService emailService,
+    EmailOutboxService emailOutbox,
+    SlackSettingsService slackSettings,
+    SlackService slackService,
     CurrentUser currentUser,
     AuditService audit,
     ILogger<ConfigurationController> logger) : ControllerBase
 {
-    // ----- Email / SMTP settings (SuperAdmin only — sensitive credentials) -----
+    // ----- Email settings (SuperAdmin only — sensitive credentials) -----
 
     [Authorize(Roles = Roles.SuperAdmin)]
     [HttpGet("email")]
@@ -27,12 +32,31 @@ public class ConfigurationController(
     [HttpPut("email")]
     public async Task<IActionResult> SaveEmailSettings([FromBody] UpsertEmailSettingsDto dto)
     {
-        if (string.IsNullOrWhiteSpace(dto.Host)) return BadRequest("SMTP host is required.");
-        if (string.IsNullOrWhiteSpace(dto.FromAddress)) return BadRequest("From address is required.");
-        if (dto.Port is < 1 or > 65535) return BadRequest("Port must be between 1 and 65535.");
+        if (dto.Provider is not (EmailProviders.Smtp or EmailProviders.HttpApi))
+            return BadRequest($"Unknown provider '{dto.Provider}'.");
 
-        await emailSettings.SaveAsync(dto, currentUser.UserId);
-        logger.LogInformation("SMTP settings updated by user {UserId}.", currentUser.UserId);
+        if (dto.Provider != EmailProviders.HttpApi)
+        {
+            if (string.IsNullOrWhiteSpace(dto.Host)) return BadRequest("SMTP host is required.");
+            if (string.IsNullOrWhiteSpace(dto.FromAddress)) return BadRequest("From address is required.");
+            if (dto.Port is < 1 or > 65535) return BadRequest("Port must be between 1 and 65535.");
+        }
+
+        // Matches the EmailSetting column lengths (AppDbContext) — caught here as a clear 400 rather
+        // than surfacing as a 500 from a DbUpdateException once EF tries to save an over-long value.
+        // ApiKey is capped well under ApiKeyEncrypted's 1000 chars to leave room for the AES-GCM
+        // nonce/tag and base64 overhead the encrypted form adds on top of the plaintext.
+        if ((dto.ApiBaseUrl?.Length ?? 0) > 500) return BadRequest("The Notification API base URL is too long.");
+        if ((dto.AllowedRecipientDomains?.Length ?? 0) > 500) return BadRequest("Allowed recipient domains is too long.");
+        if ((dto.ApiKey?.Length ?? 0) > 500) return BadRequest("The API key is too long.");
+
+        // The Notification API base URL's format (and the host-change-without-a-new-key rule) is
+        // validated in EmailSettingsService.SaveAsync: it must hold regardless of which provider this
+        // particular save is for, since ApiBaseUrl/ApiKeyEncrypted are shared state on the one row.
+        var (ok, error) = await emailSettings.SaveAsync(dto, currentUser.UserId);
+        if (!ok) return BadRequest(error);
+
+        logger.LogInformation("Email settings updated by user {UserId}.", currentUser.UserId);
         return Ok(await emailSettings.GetAsync());
     }
 
@@ -43,15 +67,77 @@ public class ConfigurationController(
         if (string.IsNullOrWhiteSpace(dto.ToEmail)) return BadRequest("A recipient email is required.");
         try
         {
-            await emailService.SendTestAsync(dto.ToEmail.Trim(), dto.ToEmail.Trim(),
-                "Recruitment Gorilla — SMTP test",
-                "<p>✅ This is a test email from Recruitment Gorilla. Your SMTP settings are working.</p>");
-            return Ok(new TestEmailResultDto(true, null));
+            var result = await emailService.SendTestAsync(dto.ToEmail.Trim(), dto.ToEmail.Trim(),
+                "Recruitment Gorilla email test",
+                "<p>This is a test email from Recruitment Gorilla. Your email settings are working.</p>");
+            return Ok(new TestEmailResultDto(true, null, result.MessageId));
         }
         catch (Exception ex)
         {
             logger.LogWarning(ex, "Test email to {ToEmail} failed.", dto.ToEmail);
             return Ok(new TestEmailResultDto(false, ex.Message));
+        }
+    }
+
+    // ----- Email delivery log (SuperAdmin only) -----
+
+    [Authorize(Roles = Roles.SuperAdmin)]
+    [HttpGet("email/outbox")]
+    public async Task<IActionResult> GetEmailOutbox(
+        [FromQuery] string? status, [FromQuery] int page = 1, [FromQuery] int pageSize = 50)
+    {
+        // The upper bound keeps (page-1)*pageSize well clear of int overflow further down in
+        // EmailOutboxService.QueryAsync, however large pageSize is within its own 200 cap.
+        if (page is < 1 or > 1_000_000) page = 1;
+        if (pageSize is < 1 or > 200) pageSize = 50;
+        return Ok(await emailOutbox.QueryAsync(status, page, pageSize));
+    }
+
+    [Authorize(Roles = Roles.SuperAdmin)]
+    [HttpPost("email/outbox/{id:long}/resend")]
+    public async Task<IActionResult> ResendEmail(long id)
+    {
+        var (ok, notFound, error) = await emailOutbox.ResendAsync(id);
+        if (notFound) return NotFound();
+        if (!ok) return BadRequest(error);
+
+        logger.LogInformation("Email {Id} queued for resend by user {UserId}.", id, currentUser.UserId);
+        return Ok(new ResendEmailResultDto(true, null));
+    }
+
+    // ----- Slack settings (SuperAdmin only — sensitive credentials) -----
+
+    [Authorize(Roles = Roles.SuperAdmin)]
+    [HttpGet("slack")]
+    public async Task<IActionResult> GetSlackSettings() => Ok(await slackSettings.GetAsync());
+
+    [Authorize(Roles = Roles.SuperAdmin)]
+    [HttpPut("slack")]
+    public async Task<IActionResult> SaveSlackSettings([FromBody] UpsertSlackSettingsDto dto)
+    {
+        var (ok, error) = await slackSettings.SaveAsync(dto, currentUser.UserId);
+        if (!ok) return BadRequest(error);
+
+        logger.LogInformation("Slack settings updated by user {UserId}.", currentUser.UserId);
+        return Ok(await slackSettings.GetAsync());
+    }
+
+    [Authorize(Roles = Roles.SuperAdmin)]
+    [HttpPost("slack/test")]
+    public async Task<IActionResult> SendTestSlackMessage([FromBody] TestSlackRequestDto dto)
+    {
+        var toEmail = dto.ToEmail?.Trim();
+        if (string.IsNullOrWhiteSpace(toEmail)) return BadRequest("A recipient email is required.");
+        if (!MailAddress.TryCreate(toEmail, out _)) return BadRequest("That doesn't look like a valid email address.");
+        try
+        {
+            await slackService.SendTestAsync(toEmail);
+            return Ok(new TestSlackResultDto(true, null));
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Test Slack DM to {ToEmail} failed.", toEmail);
+            return Ok(new TestSlackResultDto(false, ex.Message));
         }
     }
 
@@ -72,7 +158,7 @@ public class ConfigurationController(
     [HttpPost("roles")]
     public async Task<IActionResult> CreateRole([FromBody] UpsertRoleAppliedOptionDto dto)
     {
-        var (created, conflict, error) = await config.CreateRoleAsync(dto);
+        var (created, conflict, error) = await config.CreateRoleAsync(dto, currentUser.UserId);
         if (error is not null) return BadRequest(error);
         if (conflict) return Conflict("A role with that name already exists.");
 
@@ -84,7 +170,7 @@ public class ConfigurationController(
     [HttpPut("roles/{id:int}")]
     public async Task<IActionResult> UpdateRole(int id, [FromBody] UpsertRoleAppliedOptionDto dto)
     {
-        var (updated, notFound, conflict, error) = await config.UpdateRoleAsync(id, dto);
+        var (updated, notFound, conflict, error) = await config.UpdateRoleAsync(id, dto, currentUser.UserId);
         if (error is not null) return BadRequest(error);
         if (notFound) return NotFound();
         if (conflict) return Conflict("A role with that name already exists.");
@@ -228,6 +314,55 @@ public class ConfigurationController(
         logger.LogInformation("Updated interview type option {Id}.", id);
         await audit.RecordAsync("InterviewType.Updated", "InterviewType", id, $"Updated interview type '{updated!.Name}' (#{id})");
         return Ok(updated);
+    }
+
+    // ----- Job opening fields (Location / Department / Priority) -----
+
+    [HttpGet("job-opening-options/{kind}")]
+    public async Task<IActionResult> GetJobOpeningOptions(string kind, [FromQuery] bool includeInactive = false)
+    {
+        if (JobOpeningOptionKinds.FromRoute(kind) is not string k) return NotFound();
+        return Ok(await config.GetJobOpeningOptionsAsync(k, includeInactive));
+    }
+
+    [HttpPost("job-opening-options/{kind}")]
+    public async Task<IActionResult> CreateJobOpeningOption(string kind, [FromBody] UpsertJobOpeningOptionDto dto)
+    {
+        if (JobOpeningOptionKinds.FromRoute(kind) is not string k) return NotFound();
+        if (string.IsNullOrWhiteSpace(dto.Name)) return BadRequest("Name is required.");
+
+        var (created, conflict) = await config.CreateJobOpeningOptionAsync(k, dto);
+        if (conflict) return Conflict($"A {k.ToLowerInvariant()} with that name already exists.");
+
+        logger.LogInformation("Created job opening {Kind} option {Id} ('{Name}').", k, created!.Id, created.Name);
+        await audit.RecordAsync($"JobOpening{k}.Created", $"JobOpening{k}", created.Id, $"Created {k.ToLowerInvariant()} option '{created.Name}' (#{created.Id})");
+        return Ok(created);
+    }
+
+    [HttpPut("job-opening-options/{kind}/{id:int}")]
+    public async Task<IActionResult> UpdateJobOpeningOption(string kind, int id, [FromBody] UpsertJobOpeningOptionDto dto)
+    {
+        if (JobOpeningOptionKinds.FromRoute(kind) is not string k) return NotFound();
+        if (string.IsNullOrWhiteSpace(dto.Name)) return BadRequest("Name is required.");
+
+        var (updated, notFound, conflict) = await config.UpdateJobOpeningOptionAsync(k, id, dto);
+        if (notFound) return NotFound();
+        if (conflict) return Conflict($"A {k.ToLowerInvariant()} with that name already exists.");
+
+        logger.LogInformation("Updated job opening {Kind} option {Id}.", k, id);
+        await audit.RecordAsync($"JobOpening{k}.Updated", $"JobOpening{k}", id, $"Updated {k.ToLowerInvariant()} option '{updated!.Name}' (#{id})");
+        return Ok(updated);
+    }
+
+    [HttpDelete("job-opening-options/{kind}/{id:int}")]
+    public async Task<IActionResult> DeleteJobOpeningOption(string kind, int id)
+    {
+        if (JobOpeningOptionKinds.FromRoute(kind) is not string k) return NotFound();
+        if (!await config.DeleteJobOpeningOptionAsync(k, id)) return NotFound();
+
+        logger.LogInformation("Deleted/disabled job opening {Kind} option {Id}.", k, id);
+        await audit.RecordAsync($"JobOpening{k}.Deleted", $"JobOpening{k}", id, $"Deleted/disabled {k.ToLowerInvariant()} option #{id}");
+        return NoContent();
     }
 
     [HttpDelete("interview-types/{id:int}")]

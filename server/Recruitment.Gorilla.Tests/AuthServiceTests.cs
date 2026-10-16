@@ -51,6 +51,26 @@ public class AuthServiceTests(MySqlDatabaseFixture fixture) : DbTestBase(fixture
     }
 
     [Fact]
+    public async Task CheckLogin_reports_an_inactive_account_only_after_the_password_is_verified()
+    {
+        var active = SeedUser("correct-horse");
+        var ok = await Auth().CheckLoginAsync(active.Email, "correct-horse");
+        Assert.Equal(LoginStatus.Success, ok.Status);
+        Assert.NotNull(ok.User);
+
+        var inactive = SeedUser("pw", active: false);
+        var inactiveCorrect = await Auth().CheckLoginAsync(inactive.Email, "pw");
+        Assert.Equal(LoginStatus.AccountInactive, inactiveCorrect.Status);
+        Assert.Null(inactiveCorrect.User); // never hand back a user to sign in
+
+        // Without the right password, an inactive account looks exactly like any other failure,
+        // so the message cannot be used to discover which emails exist or are deactivated.
+        Assert.Equal(LoginStatus.InvalidCredentials, (await Auth().CheckLoginAsync(inactive.Email, "wrong")).Status);
+        Assert.Equal(LoginStatus.InvalidCredentials, (await Auth().CheckLoginAsync(active.Email, "wrong")).Status);
+        Assert.Equal(LoginStatus.InvalidCredentials, (await Auth().CheckLoginAsync("nobody@test.local", "pw")).Status);
+    }
+
+    [Fact]
     public async Task CreateTokenPair_issues_a_jwt_with_role_claims_and_stores_a_refresh_token()
     {
         var user = SeedUser("pw", role: Roles.Admin);

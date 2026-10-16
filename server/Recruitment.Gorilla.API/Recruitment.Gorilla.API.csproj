@@ -28,6 +28,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <EmbeddedResource Include="Resources\candidate-import-template.jsonc" LogicalName="CandidateImportTemplate" />
+    <EmbeddedResource Include="UserGuide\*.md" LogicalName="UserGuide.%(Filename)%(Extension)" />
+  </ItemGroup>
+
+  <ItemGroup>
     <None Update="log4net.config">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>

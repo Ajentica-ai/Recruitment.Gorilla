@@ -51,6 +51,8 @@ The core profile. Holds a **denormalized `CurrentStatus`** for fast list queries
 ### CVFile (`CVFiles`)
 One row per uploaded file. The physical file is on disk under `Uploads/` as `{GUID}{ext}`; the DB keeps the mapping and original name.
 
+**Stored names are issued by the server, never accepted from a client.** `CVUploadController` names every upload `{GUID}{ext}`, and `UploadPaths` (`Services/UploadPaths.cs`) is the one place that defines that shape. Creating a candidate takes the stored name from the request body, so `CandidatesController.Create` checks it with `CandidateService.ValidateCvFileAsync` before saving: it must be a name the server issued, and it must belong to a draft in the caller's own scope (any draft for Admin+, otherwise the caller's own uploads). Every path built from a stored name, to serve, delete or hash a file, goes through `UploadPaths.Resolve`, which refuses anything that would land outside `Uploads/`. That second check holds even for a bad name already in the database.
+
 | Field | Type | Notes |
 |---|---|---|
 | Id | int PK | |
@@ -59,7 +61,10 @@ One row per uploaded file. The physical file is on disk under `Uploads/` as `{GU
 | StoredFileName | varchar(500) | `{GUID}.pdf`/`.docx` on disk |
 | FileType | varchar(10) | `"PDF"` or `"Word"` |
 | FileSizeBytes | bigint | |
+| FileHash | varchar(64)? | SHA-256 of the content (hex), indexed. Copied from the draft on approval. Null on rows stored before hashing existed until a same-size upload backfills it. |
 | UploadedAt | datetime | |
+
+**Duplicate CVs are blocked.** `CandidateDrafts.FileHash` holds the same hash. `POST /api/cvupload` returns **409** when an identical file is in a `Pending` draft or attached to a candidate (`CandidateDraftService.FindDuplicateUploadAsync`). Discarded drafts and deleted candidates do not block. The check is global, not owner-scoped, and its message names no candidate.
 
 ### StatusHistory (`StatusHistories`)
 **Append-only** audit log of status changes; never updated/deleted (except via candidate cascade). The timeline UI reads this newest-first.
@@ -160,9 +165,14 @@ Admin-managed lookups (via the Configuration page / `/api/config/*`). Each: `Id`
 
 | Field | Type | Notes |
 |---|---|---|
-| Location | varchar(100) | nullable; one of Remote / Office / Hybrid / Contractual (`Models/JobOpeningOptions.cs`, validated) |
-| Department | varchar(100) | nullable; one of Engineering / Admin / HR (validated) |
-| Priority | varchar(20) | nullable; High / Medium / Low |
+| Location | varchar(100) | nullable; must be an active `JobOpeningOption` of kind Location (validated; seeded Remote / Office / Hybrid / Contractual) |
+| Department | varchar(100) | nullable; active `JobOpeningOption` of kind Department (seeded Engineering / Admin / HR) |
+| Priority | varchar(20) | nullable; active `JobOpeningOption` of kind Priority (seeded High / Medium / Low; admins may add levels) |
+
+The three fields stay plain text on the opening (no FK); an opening being edited may keep a value that was since deactivated.
+
+### JobOpeningOption (`JobOpeningOptions`)
+Admin-managed value lists for the opening's Location, Department and Priority (migration `AddJobOpeningOptions`, seeded with the original values). `Id`, `Kind` (`Location`/`Department`/`Priority`, ≤20), `Name` (≤200), `SortOrder`, `IsActive`, `CreatedAt`, `UpdatedAt`; unique on `(Kind, Name)`. Renaming a value rewrites the openings that use it in the same save; deleting a value still in use deactivates it instead.
 | EndDate | datetime | **required** closing deadline (migration `RoleOptionEndDate`; existing rows backfilled to `CreatedAt + 30 days`). After it passes, the role's candidates are **locked** from profile edits + status changes until an Admin extends it |
 
 Assigned **recruiters** are now a **many-to-many** via **`RoleRecruiter`** (`{ RoleAppliedOptionId, UserId }`, composite PK; cascade from both parents), replacing the old single `RecruiterUserId` FK (migration `RoleRecruitersManyToMany`, which copies existing assignments into the join). Every recruiter assigned to a role can access all candidates under it (see [auth.md](auth.md)).
@@ -249,7 +259,19 @@ Internal sign-off workflow for offers before candidate extension.
 | CreatedAt | datetime | UTC |
 
 ### Notification (`Notifications`)
-Per-user in-app notification (e.g. interview assignment, offer approval request). `Id`, `UserId` (FK → User, cascade), `Title` varchar(200), `Message` varchar(500), `LinkUrl` varchar(300)? (client route), `IsRead` bool (index `(UserId, IsRead)`), `CreatedAt`. In-app and transactional email dispatched via `NotificationService`.
+Per-user in-app notification (e.g. interview assignment, offer approval request). `Id`, `UserId` (FK → User, cascade), `Title` varchar(200), `Message` varchar(500), `LinkUrl` varchar(300)? (client route), `IsRead` bool (index `(UserId, IsRead)`), `CreatedAt`. In-app, transactional email, and Slack DM all dispatched via `NotificationService.NotifyAsync` (see [backend.md](backend.md)).
+
+### EmailSetting (`EmailSettings`)
+Single-row (`Id = 1`) outbound email configuration, managed at Configuration → Email (SuperAdmin): one active `Provider` at a time. `Provider` varchar(16) (`Smtp`/`HttpApi`, default `Smtp`). SMTP fields: `Host` varchar(200), `Port` int, `User` varchar(200)?, `PasswordEncrypted` varchar(1000)? (base64(nonce|tag|ciphertext) via `SecretProtector`, never plaintext), `FromAddress` varchar(200), `UseStartTls` bool. HTTP notification API fields: `ApiBaseUrl` varchar(500)?, `ApiKeyEncrypted` varchar(1000)? (same `SecretProtector` pattern), `AllowedRecipientDomains` varchar(500)? (comma-separated; the API only delivers to these domains). Shared: `FromName` varchar(200) (the sender display name for either provider), `Enabled` bool, `UpdatedAt`, `UpdatedByUserId` int?. No row, or `Enabled=false`, means "not configured here": falls back to config, picked between the `Smtp`/`EmailApi` sections by `Email:Provider`.
+
+### OutboundEmail (`OutboundEmails`)
+One queued transactional email, the durable outbox `EmailService.SendAsync` writes to and `EmailOutboxProcessor` works off (see [backend.md](backend.md)), replacing an earlier in-memory queue that lost pending emails on restart. `Id` bigint, `Reference` char(36) unique (the idempotency key a future HTTP provider would recognize), `ToEmail` varchar(320), `ToName` varchar(200), `Subject` varchar(400), `HtmlBody` longtext, `CalendarFileName`/`CalendarMethod` varchar? + `CalendarContent` longtext? (the interview `.ics` invite, when there is one), `Status` varchar(16) (`Pending`/`Sending`/`Sent`/`Failed`/`Unknown`, see `OutboundEmailStatus`), `Provider` varchar(16)? (`Smtp` today), `Attempts` int, `NextAttemptAt` datetime, `LockedUntil` datetime? (claimed-by-a-worker marker; a past value after a crash means the row is picked up again), `NeedsStatusCheck` bool (unused by the SMTP-only path; reserved for a provider whose send can time out ambiguously), `LastError` varchar(1000)?, `ProviderMessageId` varchar(200)?, `CreatedAt`/`SentAt`?/`UpdatedAt`. Index on `(Status, NextAttemptAt)` (the processor's "what's due" query) and a unique index on `Reference`. The body is never exposed by the Configuration → Email delivery log API (`OutboundEmailDto`), only metadata.
+
+### SlackSetting (`SlackSettings`)
+Single-row (`Id = 1`) Slack bot configuration, managed at Configuration → Slack (SuperAdmin). `BotTokenEncrypted` varchar(1000)? (base64(nonce|tag|ciphertext) via `SecretProtector`, never plaintext), `Enabled` bool, `UpdatedAt`, `UpdatedByUserId` int?. No row, or `Enabled=false`, means "not configured here" — falls back to the `Slack:BotToken` config/user-secret.
+
+### NotificationChannelSetting (`NotificationChannelSettings`)
+Per-category routing for notification channels beyond in-app/email. `Category` varchar(64) (PK — one of `NotificationCategories`: `InterviewAssigned`, `EvaluationSubmitted`, `RecruiterAssigned`), `SlackEnabled` bool. A missing row means every extra channel is off for that category. Named generically so a future channel (e.g. Teams) can be added as another column rather than a parallel table.
 
 ## Key design rules
 - **Status choices come from `StatusOptions`** and valid next steps come from `StatusTransitions`. Keep `Candidate.CurrentStatus` and `StatusHistory.Status` as strings for readable history and low-risk future edits. Seed includes `Uploaded → Call for Interview`.

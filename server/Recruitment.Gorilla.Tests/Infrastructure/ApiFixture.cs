@@ -1,11 +1,14 @@
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.Text;
 using System.Text.Json;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Recruitment.Gorilla.API.Auth;
 using Recruitment.Gorilla.API.Data;
 using Recruitment.Gorilla.API.Models;
+using Recruitment.Gorilla.API.Services;
 
 namespace Recruitment.Gorilla.Tests.Infrastructure;
 
@@ -28,6 +31,8 @@ public sealed class ApiFixture : IAsyncLifetime
     public string RecruiterEmail { get; private set; } = "";
     public string InterviewerEmail { get; private set; } = "";
     public int AdminId { get; private set; }
+    public int RecruiterId { get; private set; }
+    public int InterviewerId { get; private set; }
     public int RoleId { get; private set; }
     public int CandidateId { get; private set; }
 
@@ -50,6 +55,8 @@ public sealed class ApiFixture : IAsyncLifetime
         RecruiterEmail = recruiter.Email;
         InterviewerEmail = interviewer.Email;
         AdminId = admin.Id;
+        RecruiterId = recruiter.Id;
+        InterviewerId = interviewer.Id;
 
         var role = new RoleAppliedOption
         {
@@ -100,14 +107,14 @@ public sealed class ApiFixture : IAsyncLifetime
     }
 
     /// <summary>Inserts a candidate (committed — the whole DB is dropped at teardown) and returns its id.</summary>
-    public async Task<int> NewCandidateAsync(int ownerUserId, int? roleId = null)
+    public async Task<int> NewCandidateAsync(int ownerUserId, int? roleId = null, string? email = null)
     {
         using var scope = _factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var candidate = new Candidate
         {
             FullName = $"Cand-{Guid.NewGuid():N}",
-            Email = $"{Guid.NewGuid():N}@test.local",
+            Email = email ?? $"{Guid.NewGuid():N}@test.local",
             RelevantExperience = "3 Years",
             OwnerUserId = ownerUserId,
             RoleAppliedOptionId = roleId,
@@ -118,19 +125,54 @@ public sealed class ApiFixture : IAsyncLifetime
         return candidate.Id;
     }
 
-    /// <summary>Inserts a role and returns its id.</summary>
-    public async Task<int> NewRoleAsync()
+    /// <summary>
+    /// Inserts a pending CV draft uploaded by <paramref name="uploaderUserId"/> under a server-style
+    /// stored name, and returns that name. No file is written; nothing here reads it from disk.
+    /// </summary>
+    public async Task<string> NewDraftAsync(int uploaderUserId, string fileType = "PDF", long fileSizeBytes = 2048)
+    {
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var extension = fileType == "PDF" ? ".pdf" : ".docx";
+        var draft = new CandidateDraft
+        {
+            OriginalFileName = $"cv{extension}",
+            StoredFileName = $"{Guid.NewGuid()}{extension}",
+            FileType = fileType,
+            FileSizeBytes = fileSizeBytes,
+            UploadedByUserId = uploaderUserId,
+        };
+        db.CandidateDrafts.Add(draft);
+        await db.SaveChangesAsync();
+        return draft.StoredFileName;
+    }
+
+    /// <summary>Inserts a role (job opening), open and active unless overridden, and returns its id.
+    /// Pass recruiter user ids to assign them to it.</summary>
+    public async Task<int> NewRoleAsync(DateTime? endDate = null, bool isActive = true, params int[] recruiterUserIds)
     {
         using var scope = _factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var role = new RoleAppliedOption
         {
-            Name = $"Role-{Guid.NewGuid():N}", SortOrder = 1, IsActive = true,
-            EndDate = DateTime.UtcNow.AddDays(30),
+            Name = $"Role-{Guid.NewGuid():N}", SortOrder = 1, IsActive = isActive,
+            EndDate = endDate ?? DateTime.UtcNow.AddDays(30),
+            Recruiters = recruiterUserIds.Distinct().Select(uid => new RoleRecruiter { UserId = uid }).ToList(),
         };
         db.RoleAppliedOptions.Add(role);
         await db.SaveChangesAsync();
         return role.Id;
+    }
+
+    /// <summary>Inserts a deactivated account (same password as the other seeded users) and returns its email.</summary>
+    public async Task<string> NewInactiveUserAsync()
+    {
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var user = SeedUser(db, Roles.Recruiter);
+        user.IsActive = false;
+        await db.SaveChangesAsync();
+        return user.Email;
     }
 
     /// <summary>Logs in via the real endpoint and returns the access token.</summary>
@@ -149,6 +191,121 @@ public sealed class ApiFixture : IAsyncLifetime
         if (token is not null)
             req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
         return Client.SendAsync(req);
+    }
+
+    /// <summary>
+    /// Sends a request with a JSON body. Needed for gates on POST actions: without a valid body the
+    /// action answers 400 before authorization is the deciding factor, which proves nothing.
+    /// </summary>
+    public Task<HttpResponseMessage> SendAsync(HttpMethod method, string url, string? token, object body)
+    {
+        var req = new HttpRequestMessage(method, url) { Content = JsonContent.Create(body) };
+        if (token is not null)
+            req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        return Client.SendAsync(req);
+    }
+
+    /// <summary>Sends a multipart form, as the upload and import endpoints expect, with an optional bearer token.</summary>
+    public Task<HttpResponseMessage> SendMultipartAsync(string url, string? token, MultipartFormDataContent form)
+    {
+        var req = new HttpRequestMessage(HttpMethod.Post, url) { Content = form };
+        if (token is not null)
+            req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        return Client.SendAsync(req);
+    }
+
+    /// <summary>
+    /// Deletes a file an upload test stored. The API under test writes into its real Uploads folder, so
+    /// every test that stores a CV removes it again.
+    /// </summary>
+    public void DeleteStoredUpload(string storedFileName)
+    {
+        var env = _factory.Services.GetRequiredService<IWebHostEnvironment>();
+        var path = UploadPaths.Resolve(env.ContentRootPath, storedFileName);
+        if (path is not null && File.Exists(path)) File.Delete(path);
+    }
+
+    /// <summary>
+    /// A one-page PDF carrying a single line of text that PdfPig can read. Unique text gives a unique
+    /// hash, so the duplicate-CV check never trips across tests. Mirrors minimalPdf in client/e2e/seed.ts.
+    /// </summary>
+    public static byte[] MinimalPdf(string text)
+    {
+        var safe = text.Replace("\\", "").Replace("(", "").Replace(")", "");
+        var content = $"BT /F1 12 Tf 56 760 Td ({safe}) Tj ET\n";
+        string[] objects =
+        [
+            "<< /Type /Catalog /Pages 2 0 R >>",
+            "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+            "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 5 0 R >> >> /Contents 4 0 R >>",
+            $"<< /Length {Encoding.Latin1.GetByteCount(content)} >>\nstream\n{content}endstream",
+            "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
+        ];
+        var pdf = new StringBuilder("%PDF-1.4\n");
+        var offsets = new List<int>();
+        for (var i = 0; i < objects.Length; i++)
+        {
+            offsets.Add(Encoding.Latin1.GetByteCount(pdf.ToString()));
+            pdf.Append($"{i + 1} 0 obj\n{objects[i]}\nendobj\n");
+        }
+        var xref = Encoding.Latin1.GetByteCount(pdf.ToString());
+        pdf.Append($"xref\n0 {objects.Length + 1}\n0000000000 65535 f \n");
+        foreach (var off in offsets) pdf.Append($"{off:D10} 00000 n \n");
+        pdf.Append($"trailer\n<< /Size {objects.Length + 1} /Root 1 0 R >>\nstartxref\n{xref}\n%%EOF\n");
+        return Encoding.Latin1.GetBytes(pdf.ToString());
+    }
+
+    /// <summary>
+    /// Inserts a candidate carrying a status history plus an interview on it, and returns the
+    /// interview id. The history is the point: it is what the interview endpoint must not hand to
+    /// an interviewer (issue #116).
+    /// </summary>
+    public async Task<int> NewInterviewWithHistoryAsync(bool assignInterviewer = true)
+    {
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+        var candidate = new Candidate
+        {
+            FullName = $"Cand-{Guid.NewGuid():N}",
+            Email = $"{Guid.NewGuid():N}@test.local",
+            RelevantExperience = "3 Years",
+            CurrentStatus = "Interview Scheduled",
+        };
+        candidate.StatusHistories.Add(new StatusHistory { Status = "Uploaded", ChangedBy = "test" });
+        candidate.StatusHistories.Add(new StatusHistory
+        {
+            Status = "Interview Scheduled",
+            ChangedBy = "test",
+            Comment = "Focus on test design.",
+        });
+        db.Candidates.Add(candidate);
+        await db.SaveChangesAsync();
+
+        var interview = new Interview { CandidateId = candidate.Id, ScheduledAt = DateTime.UtcNow.AddDays(1) };
+        if (assignInterviewer) interview.Interviewers.Add(new InterviewInterviewer { UserId = InterviewerId });
+        db.Interviews.Add(interview);
+        await db.SaveChangesAsync();
+        return interview.Id;
+    }
+
+    /// <summary>Inserts an offer in the given status (committed) and returns its id.</summary>
+    public async Task<int> NewOfferAsync(int candidateId, string status = "Draft")
+    {
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var offer = new Offer
+        {
+            CandidateId = candidateId,
+            JobTitle = "Engineer",
+            BaseSalary = 90000,
+            Currency = "USD",
+            Status = status,
+            CreatedByUserId = AdminId,
+        };
+        db.Offers.Add(offer);
+        await db.SaveChangesAsync();
+        return offer.Id;
     }
 }
 

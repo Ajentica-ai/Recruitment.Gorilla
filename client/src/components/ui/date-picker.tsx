@@ -44,6 +44,15 @@ function parseValue(value: string): Date | undefined {
   return Number.isNaN(d.getTime()) ? undefined : d;
 }
 
+/**
+ * Firefox has no CSS hook equivalent to `::-webkit-calendar-picker-indicator`,
+ * so `.date-field`'s suppression rule (index.css) only works in Chromium and
+ * WebKit. Without this check Firefox shows its own native calendar icon next
+ * to the custom one below, the exact duplicate-affordance index.css's comment
+ * says to avoid. Read once: the engine doesn't change mid-session.
+ */
+const isFirefox = typeof navigator !== 'undefined' && /firefox/i.test(navigator.userAgent);
+
 export interface DatePickerProps {
   value: string;
   onChange: (value: string) => void;
@@ -94,51 +103,57 @@ export function DatePicker({
           disabled={disabled}
           placeholder={placeholder}
           onChange={(e) => setDate(e.target.value)}
-          // The browser's own calendar button is suppressed in index.css; this
-          // field keeps the typing and the date validation, and the picker
-          // below supplies the visual calendar.
-          className="date-field min-w-[8.5rem] pr-8"
+          // The browser's own calendar button is suppressed in index.css (Chromium
+          // and WebKit only, see isFirefox above); this field keeps the typing
+          // and the date validation, and the picker below supplies the visual
+          // calendar on the browsers where the native one is actually hidden.
+          className={cn('date-field min-w-[8.5rem]', !isFirefox && 'pr-8')}
           {...aria}
         />
-        <Popover open={open} onOpenChange={setOpen}>
-          <PopoverTrigger asChild>
-            <Button
-              type="button"
-              variant="ghost"
-              size="iconSm"
-              disabled={disabled}
-              aria-label="Open calendar"
-              className="absolute top-1/2 right-1 -translate-y-1/2"
-            >
-              <CalendarDays />
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent align="start" className="w-auto p-0">
-            <Calendar
-              mode="single"
-              selected={selected}
-              defaultMonth={selected}
-              onSelect={(d) => {
-                if (d) setDate(toLocalValue(d, false));
-                setOpen(false);
-              }}
-              autoFocus
-            />
-            <div className="flex items-center justify-between border-t border-border p-2">
-              <Button variant="ghost" size="sm" onClick={() => { onChange(''); setOpen(false); }}>
-                <X />
-                Clear
-              </Button>
+        {/* Firefox can't suppress its own native calendar icon, so adding ours
+            on top would be the exact duplicate-affordance this field exists to
+            avoid. Firefox's native icon and picker are the only one there. */}
+        {!isFirefox && (
+          <Popover open={open} onOpenChange={setOpen}>
+            <PopoverTrigger asChild>
               <Button
+                type="button"
                 variant="ghost"
-                size="sm"
-                onClick={() => { setDate(toLocalValue(new Date(), false)); setOpen(false); }}
+                size="iconSm"
+                disabled={disabled}
+                aria-label="Open calendar"
+                className="absolute top-1/2 right-1 -translate-y-1/2"
               >
-                Today
+                <CalendarDays />
               </Button>
-            </div>
-          </PopoverContent>
-        </Popover>
+            </PopoverTrigger>
+            <PopoverContent align="start" className="w-auto p-0">
+              <Calendar
+                mode="single"
+                selected={selected}
+                defaultMonth={selected}
+                onSelect={(d) => {
+                  if (d) setDate(toLocalValue(d, false));
+                  setOpen(false);
+                }}
+                autoFocus
+              />
+              <div className="flex items-center justify-between border-t border-border p-2">
+                <Button variant="ghost" size="sm" onClick={() => { onChange(''); setOpen(false); }}>
+                  <X />
+                  Clear
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => { setDate(toLocalValue(new Date(), false)); setOpen(false); }}
+                >
+                  Today
+                </Button>
+              </div>
+            </PopoverContent>
+          </Popover>
+        )}
       </div>
 
       {withTime && (

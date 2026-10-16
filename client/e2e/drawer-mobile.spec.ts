@@ -1,4 +1,5 @@
 import { expect, test, type Page, type APIRequestContext } from '@playwright/test';
+import { seedCandidate } from './seed';
 
 /**
  * Regression guard for #84: a drawer is a bottom sheet on a phone and a
@@ -27,29 +28,6 @@ async function authHeader(request: APIRequestContext) {
   const res = await request.post('/api/auth/login', { data: { email, password } });
   expect(res.ok(), `login failed: ${res.status()}`).toBeTruthy();
   return { Authorization: `Bearer ${(await res.json()).token}` };
-}
-
-/** A throwaway candidate, so the drawer has something to open against. */
-async function seedCandidate(request: APIRequestContext, auth: Record<string, string>) {
-  const initial = await (await request.get('/api/status-options/initial', { headers: auth })).json();
-  const res = await request.post('/api/candidates', {
-    headers: auth,
-    data: {
-      fullName: 'RG84 Drawer Probe',
-      email: 'rg84.drawer.probe@example.invalid',
-      relevantExperience: '5 years',
-      isReferred: false,
-      storedFileName: 'probe.pdf',
-      originalFileName: 'probe.pdf',
-      fileType: 'PDF',
-      fileSizeBytes: 1024,
-      initialStatus: initial[0].name,
-      initialStatusComment: 'Seeded by e2e/drawer-mobile.spec.ts.',
-      allowDuplicate: true,
-    },
-  });
-  expect(res.ok(), `seed failed: ${res.status()} ${await res.text()}`).toBeTruthy();
-  return (await res.json()).id as number;
 }
 
 async function signIn(page: Page) {
@@ -83,7 +61,7 @@ test.describe('drawers are bottom sheets on a phone', () => {
 
   test('status history drawer at 390x844 and 1280x800', async ({ page, request }) => {
     const auth = await authHeader(request);
-    const candidateId = await seedCandidate(request, auth);
+    const candidateId = await seedCandidate(request, auth, 'RG84 Drawer Probe');
 
     try {
       await signIn(page);

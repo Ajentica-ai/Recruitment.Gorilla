@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { useQuery } from '@tanstack/react-query';
-import { CheckCircle2, FileText, UploadCloud, XCircle } from 'lucide-react';
+import { CheckCircle2, Copy, FileText, UploadCloud, XCircle } from 'lucide-react';
 import { getActiveRoleOptions, uploadCV } from '../services/api';
 import { getCVUploadHubConnection, startCVUploadHub, type CVUploadProgressEvent } from '../services/signalr';
+import { jobStatus } from '../utils/jobStatus';
 import type { CVDraft } from '../types';
 import { Alert } from '@/components/ui/alert';
 import { Spinner } from '@/components/ui/spinner';
@@ -18,7 +19,7 @@ interface Props {
 
 interface FileProgressState {
   fileName: string;
-  status: 'queued' | 'parsing' | 'completed' | 'error';
+  status: 'queued' | 'parsing' | 'completed' | 'error' | 'duplicate';
   error?: string | null;
 }
 
@@ -34,13 +35,16 @@ export default function BulkUploader({ onDraftsParsed }: Props) {
   const [done, setDone] = useState(0);
   const [total, setTotal] = useState(0);
   const [errors, setErrors] = useState<string[]>([]);
+  const [duplicates, setDuplicates] = useState<string[]>([]);
   const [fileProgresses, setFileProgresses] = useState<FileProgressState[]>([]);
   const currentBatchId = useRef<string | null>(null);
 
-  const { data: roles = [] } = useQuery({
+  const { data: allRoles = [] } = useQuery({
     queryKey: ['active-role-options'],
     queryFn: getActiveRoleOptions,
   });
+  // A job opening must be selected to upload; only ones still open are offerable.
+  const roles = allRoles.filter((r) => jobStatus(r) === 'open' || jobStatus(r) === 'closing-soon');
 
   useEffect(() => {
     let active = true;
@@ -49,7 +53,8 @@ export default function BulkUploader({ onDraftsParsed }: Props) {
       if (!active || !hub) return;
 
       const handleProgress = (event: CVUploadProgressEvent) => {
-        if (event.batchId === currentBatchId.current) {
+        // The upload's own response decides the final state; a duplicate arrives here as a generic error.
+        if (event.batchId === currentBatchId.current && event.status !== 'error') {
           setFileProgresses((prev) => {
             const next = [...prev];
             if (next[event.fileIndex]) {
@@ -78,7 +83,7 @@ export default function BulkUploader({ onDraftsParsed }: Props) {
 
   const onDrop = useCallback(
     async (files: File[]) => {
-      if (files.length === 0) return;
+      if (files.length === 0 || selectedRoleId == null) return;
       const batchId = `batch_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
       currentBatchId.current = batchId;
 
@@ -93,6 +98,7 @@ export default function BulkUploader({ onDraftsParsed }: Props) {
 
       setBusy(true);
       setErrors([]);
+      setDuplicates([]);
       setDone(0);
       setTotal(files.length);
       setFileProgresses(
@@ -104,6 +110,7 @@ export default function BulkUploader({ onDraftsParsed }: Props) {
 
       const drafts: CVDraft[] = [];
       const failures: string[] = [];
+      const skipped: string[] = [];
 
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
@@ -129,13 +136,15 @@ export default function BulkUploader({ onDraftsParsed }: Props) {
             return next;
           });
         } catch (err: any) {
-          failures.push(file.name);
+          // 409 = the server already holds a CV with identical content.
+          const isDuplicate = err?.response?.status === 409;
+          (isDuplicate ? skipped : failures).push(file.name);
           setFileProgresses((prev) => {
             const next = [...prev];
             if (next[i])
               next[i] = {
                 fileName: file.name,
-                status: 'error',
+                status: isDuplicate ? 'duplicate' : 'error',
                 error: err?.response?.data || 'Failed to extract file',
               };
             return next;
@@ -146,6 +155,7 @@ export default function BulkUploader({ onDraftsParsed }: Props) {
       }
 
       setErrors(failures);
+      setDuplicates(skipped);
       setBusy(false);
       if (drafts.length > 0) onDraftsParsed(drafts, batchId);
     },
@@ -155,7 +165,7 @@ export default function BulkUploader({ onDraftsParsed }: Props) {
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
     accept: ACCEPTED,
-    disabled: busy,
+    disabled: busy || selectedRoleId == null,
   });
 
   const className = [
@@ -163,6 +173,7 @@ export default function BulkUploader({ onDraftsParsed }: Props) {
     'dropzone',
     isDragActive && 'dropzone--active',
     busy && 'dropzone--busy',
+    selectedRoleId == null && !busy && 'dropzone--disabled',
   ]
     .filter(Boolean)
     .join(' ');
@@ -191,12 +202,13 @@ export default function BulkUploader({ onDraftsParsed }: Props) {
           <NativeSelect
             id="job-role-select"
             size="sm"
+            required
             value={selectedRoleId ?? ''}
             disabled={busy}
             onChange={(e) => setSelectedRoleId(e.target.value ? Number(e.target.value) : null)}
             aria-label="Target Job Opening"
           >
-            <option value="">Select Job Opening (Optional)…</option>
+            <option value="">Select Job Opening…</option>
             {roles.map((r) => (
               <option key={r.id} value={r.id}>
                 {r.name}
@@ -221,6 +233,16 @@ export default function BulkUploader({ onDraftsParsed }: Props) {
               aria-label={`Parsed ${done} of ${total} files`}
             />
           </div>
+        ) : selectedRoleId == null ? (
+          <>
+            <span className="empty-state__icon">
+              <UploadCloud size={20} strokeWidth={1.75} aria-hidden="true" />
+            </span>
+            <div className="empty-state-title">Choose a job opening first</div>
+            <div className="empty-state-description">
+              Select the job opening these CVs are for, then drag &amp; drop or click to browse.
+            </div>
+          </>
         ) : (
           <>
             <span className="empty-state__icon">
@@ -264,6 +286,12 @@ export default function BulkUploader({ onDraftsParsed }: Props) {
                       Extracted
                     </Badge>
                   )}
+                  {fp.status === 'duplicate' && (
+                    <Badge variant="warning" title={fp.error ?? undefined}>
+                      <Copy />
+                      Duplicate
+                    </Badge>
+                  )}
                   {fp.status === 'error' && (
                     <Badge variant="danger">
                       <XCircle />
@@ -275,6 +303,13 @@ export default function BulkUploader({ onDraftsParsed }: Props) {
             ))}
           </div>
         </div>
+      )}
+
+      {duplicates.length > 0 && (
+        <Alert variant="warning" className="mb-0">
+          Skipped {duplicates.length} duplicate CV{duplicates.length === 1 ? '' : 's'} that{' '}
+          {duplicates.length === 1 ? 'has' : 'have'} already been uploaded: {duplicates.join(', ')}
+        </Alert>
       )}
 
       {errors.length > 0 && (

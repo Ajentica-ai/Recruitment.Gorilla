@@ -33,6 +33,8 @@ public class CandidateDraft
     public string StoredFileName { get; set; } = string.Empty;
     public string FileType { get; set; } = "PDF";
     public long FileSizeBytes { get; set; }
+    /// <summary>SHA-256 of the file content (hex). Used to block re-uploading the same CV.</summary>
+    public string? FileHash { get; set; }
 
     /// <summary>Status of the draft: "Pending", "Approved", "Discarded"</summary>
     public string Status { get; set; } = "Pending";

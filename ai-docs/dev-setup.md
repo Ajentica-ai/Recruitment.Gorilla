@@ -25,22 +25,48 @@ dotnet user-secrets set "Auth:PasswordHash" "<pbkdf2 hash>"
 # ciphertext becomes undecryptable. 32+ random chars.
 dotnet user-secrets set "Encryption:Key" "<random base64 key>"
 
-# Outbound email — OPTIONAL fallback. SMTP is normally configured in-app (Configuration →
-# Email / SMTP, SuperAdmin) and stored encrypted in the DB. These user-secrets/config values
-# are only used as a fallback when no DB row exists (or it's disabled). If neither is set,
-# EmailService logs a warning and skips sending (never breaks the underlying operation).
+# Outbound email — OPTIONAL fallback. Email is normally configured in-app (Configuration →
+# Email, SuperAdmin) and stored encrypted in the DB. These user-secrets/config values are only
+# used as a fallback when no DB row exists (or it's disabled). If neither is set, the queued
+# email is marked Failed by the outbox worker; EmailService.SendAsync itself never throws, so
+# the operation that triggered the email (creating a user, scheduling an interview, ...) is
+# never broken by it.
 dotnet user-secrets set "Smtp:User" "notifications@yourdomain.com"
 dotnet user-secrets set "Smtp:Password" "<16-char app password>"
 dotnet user-secrets set "Smtp:FromAddress" "notifications@yourdomain.com"
+
+# Outbound email via the HTTP notification API — OPTIONAL fallback, used only when there's no
+# EmailSetting row at all, or it's disabled, and Email:Provider resolves to HttpApi. An enabled
+# in-app row with the Notification API selected always uses its own key (or none); it never falls
+# back to this value, so a blank key on an enabled row is never silently filled in from config.
+# This value itself is a plain user-secret/env var, not encrypted at rest the way the DB row's key is.
+dotnet user-secrets set "EmailApi:ApiKey" "<notification API key>"
+
+# Outbound Slack — OPTIONAL fallback, same pattern as Smtp above. Slack is normally configured
+# in-app (Configuration → Slack, SuperAdmin) and stored encrypted in the DB. This is only used
+# when no DB row exists (or it's disabled). If neither is set, SlackService skips sending.
+dotnet user-secrets set "Slack:BotToken" "<xoxb-... bot token>"
 ```
-**SMTP is configured in-app** by a SuperAdmin at **Configuration → Email / SMTP** (host, port,
-username, password, from-address, STARTTLS, enabled) with a **Send test email** button; the password
-is encrypted at rest (`SecretProtector`, AES-GCM keyed by `Encryption:Key`) and never returned to the
-client. The `Smtp:*` config/`appsettings` values (`Smtp:Host`/`Smtp:Port`/`Smtp:FromName` default to
-`smtp.gmail.com`/`587`/`Recruitment Gorilla`) are a **fallback** only. Gmail/Workspace app passwords
-require 2-Step Verification; `App:ClientBaseUrl` (default `http://localhost:5173`) builds absolute
-links in emails — set it to your real frontend origin in other environments. In Docker, provide
-`Encryption__Key` (and any fallback `Smtp__*`) as environment variables.
+**Email is configured in-app** by a SuperAdmin at **Configuration → Email**: a provider choice
+(SMTP, or the HTTP notification API), each with its own fields (SMTP: host, port, username,
+password, from-address, STARTTLS; Notification API: base URL, API key, allowed recipient domains)
+plus a shared sender display name, an Enabled toggle and a **Send test email** button. Every secret
+(the SMTP password, the API key) is encrypted at rest (`SecretProtector`, AES-GCM keyed by
+`Encryption:Key`) and never returned to the client. The `Smtp:*`/`EmailApi:*` config/`appsettings`
+values are a **fallback** only, picked between by `Email:Provider` (default `Smtp`). Gmail/Workspace
+app passwords require 2-Step Verification; `App:ClientBaseUrl` (default `http://localhost:5173`)
+builds absolute links in emails — set it to your real frontend origin in other environments. In
+Docker, provide `Encryption__Key` (and any fallback `Smtp__*`/`EmailApi__ApiKey`/`Slack__BotToken`)
+as environment variables. See [specs/email-outbox-and-notification-api.md](specs/email-outbox-and-notification-api.md).
+
+**Slack is configured in-app** the same way, at **Configuration → Slack** (SuperAdmin): a bot
+token, an Enabled toggle, and a per-category checklist of which notifications also go to Slack
+(the rest stay in-app/email only) — plus a **Send test message** button. Create the bot at
+api.slack.com/apps with the scopes `chat:write`, `users:read`, `users:read.email`, install it to
+your workspace, and paste the Bot User OAuth Token (`xoxb-...`). Recipients are matched by their
+Recruitment Gorilla **email address** via Slack's `users.lookupByEmail`, so a user only gets a DM
+if that same email exists in the Slack workspace — there is no separate Slack user mapping to
+maintain. See [specs/slack-notifications.md](specs/slack-notifications.md).
 
 ### Generate a JWT key + password hash (PowerShell)
 ```powershell
@@ -68,14 +94,14 @@ dotnet ef database update     # creates the DB + tables if needed
 # Backend — localhost only (do NOT bind 0.0.0.0)
 cd server/Recruitment.Gorilla.API
 $env:ASPNETCORE_ENVIRONMENT="Development"      # loads user secrets, enables Swagger
-dotnet run --urls http://localhost:5000
+dotnet run --urls http://localhost:5134
 
 # Frontend
 cd client
 npm install
 npm run dev                                    # http://localhost:5173
 ```
-Login: **admin / admin**. Swagger: `http://localhost:5000/swagger`.
+Login: **admin / admin**. Swagger: `http://localhost:5134/swagger`.
 
 ## 4. Verify a change
 ```bash
@@ -111,10 +137,13 @@ tests** (real HTTP pipeline + JWT auth, asserting the `[Authorize]` attributes p
 - Isolation/pattern: one migrated DB per run (xUnit collection fixture, classes run sequentially) +
   a **transaction rolled back per test** (unit) or committed-then-dropped (integration). Data builders
   live in `Recruitment.Gorilla.Tests/Infrastructure/` (`TestData.cs`, `ApiFixture.cs`).
+- A service test that depends on who is calling builds that caller with `DbTestBase.SignedIn(userId,
+  roles)`. Don't build a `CurrentUser` over the framework's `HttpContextAccessor`: it keeps the context
+  in shared ambient state, so every `CurrentUser` in the test becomes whoever signed in last.
 
 ### E2E suite (Playwright)
 ```bash
-# 1. Start the dev stack (API :5000 + client :5173) as in §3.
+# 1. Start the dev stack (API :5134 + client :5173) as in §3.
 # 2. One-time browser download:
 cd client && npx playwright install chromium
 # 3. Fill in credentials: copy e2e/.env.e2e.example to e2e/.env.e2e.
@@ -131,6 +160,7 @@ missing, which is why a red run means something real:
 | Spec | Skips when |
 |---|---|
 | `smoke`, `dialog-footer-visible`, `drawer-*`, `rubric-editor-layout` | credentials are unset |
+| `recruiter-scope` | either the Recruiter (`E2E_EMAIL`) or the Admin (`E2E_ADMIN_EMAIL`) credentials are unset |
 | `analytics-and-upload`, `offer-management` | the signed-in user can see no candidates |
 | `responsive-card-header` | the dashboard has no cards; its interview leg also needs an interview the account is **assigned to** (not merely able to view), which it checks via `canEvaluate` |
 | `screenshot-interview` | `E2E_INTERVIEW_ID` is unset |
@@ -140,11 +170,21 @@ Credentials worth knowing: `E2E_EMAIL` is a **Recruiter**, so candidate access i
 several specs skip for that account alone. The upload specs need `E2E_ADMIN_EMAIL`, because
 approving a draft means assigning an applied role and a Recruiter only sees roles assigned to them.
 
-**CV fixtures are generated, not committed.** `e2e/test-cvs/` is gitignored; the upload specs
-generate it on demand, or run `npm run e2e:cvs` yourself. The PDFs carry invented people with
-`.invalid` emails. `e2e/make-test-cvs.mjs` writes them by hand rather than pulling in a PDF
+**CV fixtures are generated, not committed, and never reused.** The PDFs carry invented people
+with `.invalid` emails. `e2e/make-test-cvs.mjs` writes them by hand rather than pulling in a PDF
 library, and the filenames matter: `CVParserService.ParseNameAndTitleFromFileName` reads
 `First-Last-Title-Words.pdf`, so a numeric prefix would be parsed as the first name.
+
+Since #93 the API refuses a CV whose bytes it already holds, matched by content hash against pending
+drafts **and every approved candidate's CV**, which never goes away. So the upload specs call
+`freshTestCvs()`, which writes a new set under `client/test-results/cvs/<uuid>/` with that UUID as a
+salt in a PDF comment. The comment changes every file's hash and none of the text the parser reads, so
+no two runs, and no two specs in one run, ever upload the same bytes. `npm run e2e:cvs` still writes an
+unsalted set into `e2e/test-cvs/` for poking at by hand; the specs do not use it.
+
+**Seed candidates through `e2e/seed.ts`.** `POST /api/candidates` only accepts a CV the caller
+uploaded, so a spec cannot invent a stored file name. `seedCandidate` uploads a small unique PDF,
+creates the candidate from it, and discards the leftover draft. `uploadDraft` does just the upload, for a spec that needs a pending draft owned by a given user.
 
 Screenshots go under `client/test-results/screenshots` (gitignored); set `E2E_SHOT_DIR` to collect
 them elsewhere.
@@ -156,7 +196,7 @@ that matters.
 ## 5. LAN access (frontend only)
 Other PCs on the network use the **frontend only**; the backend stays private behind the proxy.
 - Vite is exposed via `server.host: true` in `vite.config.ts` (or `npm run dev -- --host`). It prints a `Network:` URL like `http://<your-ip>:5173`.
-- The browser calls same-origin `/api`, which Vite proxies to `localhost:5000` — so **only port 5173** needs to be open.
+- The browser calls same-origin `/api`, which Vite proxies to `localhost:5134` — so **only port 5173** needs to be open.
 - Windows firewall (admin), works on a Public network too:
   ```powershell
   New-NetFirewallRule -DisplayName "RecruitmentGorilla Web 5173" -Direction Inbound -Protocol TCP -LocalPort 5173 -Action Allow -Profile Any

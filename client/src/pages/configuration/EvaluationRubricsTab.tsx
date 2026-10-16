@@ -739,7 +739,7 @@ export default function EvaluationRubricsTab() {
           </SheetBody>
 
           <SheetFooter>
-            <Button variant="outline" onClick={() => setShowModal(false)}>
+            <Button type="button" variant="outline" onClick={() => setShowModal(false)}>
               Cancel
             </Button>
             <Button type="submit" disabled={saveMutation.isPending}>

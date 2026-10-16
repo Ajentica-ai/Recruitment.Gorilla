@@ -18,6 +18,7 @@ import { SkeletonRows } from '../components/common/Loading';
 import { ALL_ROLES, type Role, type UserListItem } from '../types';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
+import PasswordInput from '../components/common/PasswordInput';
 import { Button } from '@/components/ui/button';
 import { CheckboxField } from '@/components/ui/field';
 import { Badge, type BadgeVariant } from '@/components/ui/badge';
@@ -214,11 +215,11 @@ export default function UsersPage() {
           <table className="table table-cards align-middle">
             <thead>
               <tr>
-                <th>Name</th>
-                <th>Email</th>
-                <th>Roles</th>
-                <th style={{ width: 110 }}>Status</th>
-                <th style={{ width: 180 }}>Last login</th>
+                <th className="text-left">Name</th>
+                <th className="text-left">Email</th>
+                <th className="text-left">Roles</th>
+                <th className="text-left" style={{ width: 110 }}>Status</th>
+                <th className="text-left" style={{ width: 180 }}>Last login</th>
                 {/* Was 300px, to fit three full-width buttons. That is what
                     pushed this table past the viewport and put a horizontal
                     scrollbar on the page — the "Add user" button in the header
@@ -340,7 +341,7 @@ export default function UsersPage() {
               {!editing && (
                 <div className="flex flex-col gap-1.5">
                   <Label>Temporary password <span className="required-star" aria-hidden="true">*</span></Label>
-                  <Input
+                  <PasswordInput
                     value={temporaryPassword}
                     onChange={(e) => setTemporaryPassword(e.target.value)}
                     autoComplete="off"
@@ -356,7 +357,7 @@ export default function UsersPage() {
             </div>
           </DialogBody>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowEdit(false)}>
+            <Button type="button" variant="outline" onClick={() => setShowEdit(false)}>
               Cancel
             </Button>
             <Button type="submit" disabled={saveMutation.isPending}>
@@ -387,7 +388,7 @@ export default function UsersPage() {
               </p>
               <div className="flex flex-col gap-1.5">
                 <Label>Temporary password <span className="required-star" aria-hidden="true">*</span></Label>
-                <Input
+                <PasswordInput
                   value={resetPassword}
                   onChange={(e) => setResetPassword(e.target.value)}
                   autoComplete="off"
@@ -398,7 +399,7 @@ export default function UsersPage() {
             </div>
           </DialogBody>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setResetTarget(null)}>
+            <Button type="button" variant="outline" onClick={() => setResetTarget(null)}>
               Cancel
             </Button>
             <Button type="submit" disabled={resetMutation.isPending}>

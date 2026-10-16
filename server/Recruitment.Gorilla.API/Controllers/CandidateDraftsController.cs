@@ -36,7 +36,8 @@ public class CandidateDraftsController(CandidateDraftService draftService) : Con
     [HttpPut("{id:int}")]
     public async Task<ActionResult<CandidateDraftDto>> Update(int id, [FromBody] UpdateCandidateDraftDto dto)
     {
-        var updated = await draftService.UpdateDraftAsync(id, dto);
+        var (updated, error) = await draftService.UpdateDraftAsync(id, dto);
+        if (error != null) return BadRequest(error);
         if (updated == null) return NotFound($"Candidate draft #{id} not found.");
         return Ok(updated);
     }
@@ -65,6 +66,27 @@ public class CandidateDraftsController(CandidateDraftService draftService) : Con
         var success = await draftService.DiscardDraftAsync(id);
         if (!success) return NotFound($"Candidate draft #{id} not found.");
         return Ok(new { message = $"Draft #{id} marked as discarded." });
+    }
+
+    [HttpDelete("{id:int}")]
+    public async Task<IActionResult> Delete(int id)
+    {
+        return await draftService.DeleteDraftAsync(id) switch
+        {
+            CandidateDraftService.DeleteDraftResult.NotFound => NotFound($"Candidate draft #{id} not found."),
+            CandidateDraftService.DeleteDraftResult.NotDiscarded => BadRequest("Only discarded drafts can be deleted."),
+            _ => NoContent(),
+        };
+    }
+
+    [HttpPost("bulk-delete")]
+    public async Task<IActionResult> BulkDelete([FromBody] BulkDeleteDraftsDto dto)
+    {
+        if (dto.DraftIds is null or { Count: 0 })
+            return BadRequest("At least one draft ID must be provided.");
+
+        var deletedCount = await draftService.BulkDeleteAsync(dto.DraftIds);
+        return Ok(new { deletedCount });
     }
 
     [HttpPost("bulk-discard")]

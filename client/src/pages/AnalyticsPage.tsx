@@ -273,8 +273,14 @@ export default function AnalyticsPage() {
                                position — which the bar's length already says.
                                "Hired" is the one stage with an outcome, so it
                                is the one that gets a colour of its own. */
+                            /* A stage nobody reached stays an empty track. Any value
+                               above zero keeps a 4% sliver so it is still visible. */
                             style={{
-                              width: `${Math.max(4, stage.conversionFromStartPercent)}%`,
+                              width: `${
+                                stage.conversionFromStartPercent > 0
+                                  ? Math.max(4, stage.conversionFromStartPercent)
+                                  : 0
+                              }%`,
                               background: isHired ? 'var(--success)' : 'var(--primary)',
                             }}
                           />
@@ -378,7 +384,7 @@ export default function AnalyticsPage() {
               <table className="analytics-table">
                 <thead>
                   <tr>
-                    <th>Sourcing Channel</th>
+                    <th className="text-left pl-3">Sourcing Channel</th>
                     <th className="text-center">Applicants</th>
                     <th className="text-center">Screened</th>
                     <th className="text-center">Interviewed</th>
@@ -442,7 +448,7 @@ export default function AnalyticsPage() {
               <table className="analytics-table">
                 <thead>
                   <tr>
-                    <th>Recruiter</th>
+                    <th className="text-left pl-3">Recruiter</th>
                     <th className="text-center">Active Pipeline</th>
                     <th className="text-center">Total Assigned</th>
                     <th className="text-center">Status Actions</th>

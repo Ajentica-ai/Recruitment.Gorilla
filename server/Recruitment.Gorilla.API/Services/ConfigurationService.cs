@@ -11,7 +11,7 @@ namespace Recruitment.Gorilla.API.Services;
 /// Returned outcomes use a small result type so controllers can map to HTTP
 /// (null name conflict, not found) without throwing.
 /// </summary>
-public class ConfigurationService(AppDbContext db)
+public class ConfigurationService(AppDbContext db, NotificationService notificationService)
 {
     // ----- Role Applied options -----
 
@@ -63,9 +63,10 @@ public class ConfigurationService(AppDbContext db)
         return roles.Select(r => ToDto(r, counts.GetValueOrDefault(r.Id, 0))).ToList();
     }
 
-    public async Task<(RoleAppliedOptionDto? Created, bool Conflict, string? Error)> CreateRoleAsync(UpsertRoleAppliedOptionDto dto)
+    public async Task<(RoleAppliedOptionDto? Created, bool Conflict, string? Error)> CreateRoleAsync(
+        UpsertRoleAppliedOptionDto dto, int? actorUserId = null)
     {
-        if (ValidateRole(dto) is string error) return (null, false, error);
+        if (await ValidateRoleAsync(dto) is string error) return (null, false, error);
         if (await ValidateRecruitersAsync(dto.RecruiterUserIds) is string recErr) return (null, false, recErr);
         if (dto.EvaluationRubricId is int rubricId && !await db.EvaluationRubrics.AnyAsync(r => r.Id == rubricId))
             return (null, false, "The selected evaluation rubric does not exist.");
@@ -91,20 +92,26 @@ public class ConfigurationService(AppDbContext db)
         await LoadRecruitersAsync(entity);
         if (entity.EvaluationRubricId is not null)
             await db.Entry(entity).Reference(r => r.EvaluationRubric).LoadAsync();
+
+        if (entity.IsActive)
+            await NotifyNewRecruitersAsync(entity.Name, entity.Recruiters.Select(r => r.UserId), actorUserId);
+
         return (ToDto(entity), false, null);
     }
 
-    public async Task<(RoleAppliedOptionDto? Updated, bool NotFound, bool Conflict, string? Error)> UpdateRoleAsync(int id, UpsertRoleAppliedOptionDto dto)
+    public async Task<(RoleAppliedOptionDto? Updated, bool NotFound, bool Conflict, string? Error)> UpdateRoleAsync(
+        int id, UpsertRoleAppliedOptionDto dto, int? actorUserId = null)
     {
-        if (ValidateRole(dto) is string error) return (null, false, false, error);
-        if (await ValidateRecruitersAsync(dto.RecruiterUserIds) is string recErr) return (null, false, false, recErr);
-        if (dto.EvaluationRubricId is int rubricId && !await db.EvaluationRubrics.AnyAsync(r => r.Id == rubricId))
-            return (null, false, false, "The selected evaluation rubric does not exist.");
-
         var entity = await db.RoleAppliedOptions
             .Include(r => r.Recruiters)
             .Include(r => r.EvaluationRubric)
             .FirstOrDefaultAsync(r => r.Id == id);
+
+        if (await ValidateRoleAsync(dto, entity) is string error) return (null, false, false, error);
+        if (await ValidateRecruitersAsync(dto.RecruiterUserIds) is string recErr) return (null, false, false, recErr);
+        if (dto.EvaluationRubricId is int rubricId && !await db.EvaluationRubrics.AnyAsync(r => r.Id == rubricId))
+            return (null, false, false, "The selected evaluation rubric does not exist.");
+
         if (entity is null) return (null, true, false, null);
 
         var name = dto.Name.Trim();
@@ -119,16 +126,38 @@ public class ConfigurationService(AppDbContext db)
         entity.Priority = Clean(dto.Priority);
         entity.EndDate = dto.EndDate;
         entity.EvaluationRubricId = dto.EvaluationRubricId;
-        // Replace the recruiter assignments with the new selection.
+        // Replace the recruiter assignments with the new selection, but remember who was on it
+        // before so we only notify recruiters newly added by this update, not everyone again.
+        var oldRecruiterIds = entity.Recruiters.Select(r => r.UserId).ToHashSet();
+        var newRecruiterIds = (dto.RecruiterUserIds ?? []).Distinct().ToList();
         entity.Recruiters.Clear();
-        foreach (var uid in (dto.RecruiterUserIds ?? []).Distinct())
+        foreach (var uid in newRecruiterIds)
             entity.Recruiters.Add(new RoleRecruiter { UserId = uid });
         entity.UpdatedAt = DateTime.UtcNow;
         await db.SaveChangesAsync();
         await LoadRecruitersAsync(entity);
         if (entity.EvaluationRubricId is not null)
             await db.Entry(entity).Reference(r => r.EvaluationRubric).LoadAsync();
+
+        if (entity.IsActive)
+            await NotifyNewRecruitersAsync(entity.Name, newRecruiterIds.Where(uid => !oldRecruiterIds.Contains(uid)), actorUserId);
+
         return (ToDto(entity), false, false, null);
+    }
+
+    /// <summary>
+    /// Notifies each newly-assigned recruiter (in-app plus Slack) that they were added to a job
+    /// opening. Skips the person who made the change and anyone when the opening isn't active.
+    /// </summary>
+    private async Task NotifyNewRecruitersAsync(string roleName, IEnumerable<int> recruiterUserIds, int? actorUserId)
+    {
+        foreach (var uid in recruiterUserIds)
+        {
+            if (uid == actorUserId) continue;
+            await notificationService.NotifyAsync(
+                uid, "Assigned to job opening", $"You were added as a recruiter on '{roleName}'.",
+                "/jobs", category: NotificationCategories.RecruiterAssigned);
+        }
     }
 
     private static List<RoleRecruiter> BuildRecruiters(List<int>? ids) =>
@@ -137,18 +166,31 @@ public class ConfigurationService(AppDbContext db)
     private async Task LoadRecruitersAsync(RoleAppliedOption entity) =>
         await db.Entry(entity).Collection(e => e.Recruiters).Query().Include(rr => rr.User).LoadAsync();
 
-    /// <summary>Validates required fields and the Location/Department option sets. Null when valid.</summary>
-    private static string? ValidateRole(UpsertRoleAppliedOptionDto dto)
+    /// <summary>
+    /// Validates required fields and that Location/Department/Priority are active admin-managed
+    /// options. An opening being edited may keep a value that has since been deactivated.
+    /// Null when valid.
+    /// </summary>
+    private async Task<string?> ValidateRoleAsync(UpsertRoleAppliedOptionDto dto, RoleAppliedOption? existing = null)
     {
         if (string.IsNullOrWhiteSpace(dto.Name))
             return "Role name is required.";
         if (dto.EndDate == default)
             return "End date is required.";
-        if (dto.Location is not null && !JobOpeningOptions.Locations.Contains(dto.Location))
+        if (!await IsAllowedAsync(JobOpeningOptionKinds.Location, dto.Location, existing?.Location))
             return "Invalid location.";
-        if (dto.Department is not null && !JobOpeningOptions.Departments.Contains(dto.Department))
+        if (!await IsAllowedAsync(JobOpeningOptionKinds.Department, dto.Department, existing?.Department))
             return "Invalid department.";
+        if (!await IsAllowedAsync(JobOpeningOptionKinds.Priority, dto.Priority, existing?.Priority))
+            return "Invalid priority.";
         return null;
+    }
+
+    private async Task<bool> IsAllowedAsync(string kind, string? value, string? currentValue)
+    {
+        var cleaned = Clean(value);
+        if (cleaned is null || cleaned == currentValue) return true;
+        return await db.JobOpeningOptions.AnyAsync(o => o.Kind == kind && o.Name == cleaned && o.IsActive);
     }
 
     /// <summary>
@@ -414,6 +456,92 @@ public class ConfigurationService(AppDbContext db)
         return true;
     }
 
+    // ----- Job opening field options (Location / Department / Priority) -----
+
+    public async Task<List<JobOpeningOptionDto>> GetJobOpeningOptionsAsync(string kind, bool includeInactive) =>
+        await db.JobOpeningOptions
+            .Where(o => o.Kind == kind && (includeInactive || o.IsActive))
+            .OrderBy(o => o.SortOrder).ThenBy(o => o.Name)
+            .Select(o => new JobOpeningOptionDto(o.Id, o.Kind, o.Name, o.SortOrder, o.IsActive))
+            .ToListAsync();
+
+    public async Task<(JobOpeningOptionDto? Created, bool Conflict)> CreateJobOpeningOptionAsync(string kind, UpsertJobOpeningOptionDto dto)
+    {
+        var name = dto.Name.Trim();
+        if (await db.JobOpeningOptions.AnyAsync(o => o.Kind == kind && o.Name == name))
+            return (null, true);
+
+        var entity = new JobOpeningOption { Kind = kind, Name = name, SortOrder = dto.SortOrder, IsActive = dto.IsActive };
+        db.JobOpeningOptions.Add(entity);
+        await db.SaveChangesAsync();
+        return (ToDto(entity), false);
+    }
+
+    /// <summary>Updates an option. Renaming it also rewrites the openings that use the old value,
+    /// in the same save, so no opening is left pointing at a value that no longer exists.</summary>
+    public async Task<(JobOpeningOptionDto? Updated, bool NotFound, bool Conflict)> UpdateJobOpeningOptionAsync(
+        string kind, int id, UpsertJobOpeningOptionDto dto)
+    {
+        var entity = await db.JobOpeningOptions.FirstOrDefaultAsync(o => o.Id == id && o.Kind == kind);
+        if (entity is null) return (null, true, false);
+
+        var name = dto.Name.Trim();
+        if (await db.JobOpeningOptions.AnyAsync(o => o.Kind == kind && o.Id != id && o.Name == name))
+            return (null, false, true);
+
+        var oldName = entity.Name;
+        entity.Name = name;
+        entity.SortOrder = dto.SortOrder;
+        entity.IsActive = dto.IsActive;
+        entity.UpdatedAt = DateTime.UtcNow;
+
+        if (oldName != name)
+        {
+            var users = await RolesUsingAsync(kind, oldName);
+            foreach (var role in users) SetRoleField(role, kind, name);
+        }
+
+        await db.SaveChangesAsync();
+        return (ToDto(entity), false, false);
+    }
+
+    /// <summary>Deletes an option, or deactivates it when any opening still uses it.</summary>
+    public async Task<bool> DeleteJobOpeningOptionAsync(string kind, int id)
+    {
+        var entity = await db.JobOpeningOptions.FirstOrDefaultAsync(o => o.Id == id && o.Kind == kind);
+        if (entity is null) return false;
+
+        if ((await RolesUsingAsync(kind, entity.Name)).Count > 0)
+        {
+            entity.IsActive = false;
+            entity.UpdatedAt = DateTime.UtcNow;
+        }
+        else
+        {
+            db.JobOpeningOptions.Remove(entity);
+        }
+        await db.SaveChangesAsync();
+        return true;
+    }
+
+    private Task<List<RoleAppliedOption>> RolesUsingAsync(string kind, string value) => kind switch
+    {
+        JobOpeningOptionKinds.Location => db.RoleAppliedOptions.Where(r => r.Location == value).ToListAsync(),
+        JobOpeningOptionKinds.Department => db.RoleAppliedOptions.Where(r => r.Department == value).ToListAsync(),
+        _ => db.RoleAppliedOptions.Where(r => r.Priority == value).ToListAsync(),
+    };
+
+    private static void SetRoleField(RoleAppliedOption role, string kind, string value)
+    {
+        switch (kind)
+        {
+            case JobOpeningOptionKinds.Location: role.Location = value; break;
+            case JobOpeningOptionKinds.Department: role.Department = value; break;
+            default: role.Priority = value; break;
+        }
+        role.UpdatedAt = DateTime.UtcNow;
+    }
+
     /// <summary>Auto-generated title: role name + the posted (created) date.</summary>
     public static string RoleTitle(string name, DateTime createdAt) => $"{name} — {createdAt:dd MMM yyyy}";
 
@@ -429,4 +557,5 @@ public class ConfigurationService(AppDbContext db)
     private static SkillOptionDto ToDto(SkillOption s) => new(s.Id, s.Name, s.SortOrder, s.IsActive);
     private static CandidateSourceOptionDto ToDto(CandidateSourceOption s) => new(s.Id, s.Name, s.SortOrder, s.IsActive);
     private static InterviewTypeOptionDto ToDto(InterviewTypeOption t) => new(t.Id, t.Name, t.SortOrder, t.IsActive);
+    private static JobOpeningOptionDto ToDto(JobOpeningOption o) => new(o.Id, o.Kind, o.Name, o.SortOrder, o.IsActive);
 }

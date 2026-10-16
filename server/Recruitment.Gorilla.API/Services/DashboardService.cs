@@ -32,13 +32,31 @@ public class DashboardService(AppDbContext db)
         var inProcess = total - recommended - rejected;
 
         var weekAgo = DateTime.UtcNow.AddDays(-CandidateBuckets.NewWindowDays);
+        var twoWeeksAgo = weekAgo.AddDays(-CandidateBuckets.NewWindowDays);
         var newThisWeek = await db.Candidates.CountAsync(c => c.CreatedAt >= weekAgo);
+        var newPrevWeek = await db.Candidates.CountAsync(c => c.CreatedAt >= twoWeeksAgo && c.CreatedAt < weekAgo);
         var referredCount = await db.Candidates.CountAsync(c => c.IsReferred);
         var referredPercent = total == 0 ? 0 : Math.Round(referredCount * 100.0 / total, 1);
+        var recommendedThisWeek = await EnteredBucketSinceAsync(PositiveTerminal, weekAgo);
+        var rejectedThisWeek = await EnteredBucketSinceAsync(NegativeTerminal, weekAgo);
 
         return new DashboardKpisDto(
-            total, inProcess, recommended, rejected, newThisWeek, referredCount, referredPercent);
+            total, inProcess, recommended, rejected, newThisWeek, referredCount, referredPercent,
+            newPrevWeek, recommendedThisWeek, rejectedThisWeek);
     }
+
+    /// <summary>
+    /// Candidates now in <paramref name="bucket"/> whose FIRST status-history entry into it is on or
+    /// after <paramref name="since"/>. Moving within a bucket (Recommended to Offer Extended) is not a
+    /// new arrival, so the figure only rises when the tile's own count does.
+    /// </summary>
+    private Task<int> EnteredBucketSinceAsync(HashSet<string> bucket, DateTime since) =>
+        db.Candidates
+            .Where(c => bucket.Contains(c.CurrentStatus))
+            .Where(c => c.StatusHistories
+                .Where(h => bucket.Contains(h.Status))
+                .Min(h => (DateTime?)h.ChangedAt) >= since)
+            .CountAsync();
 
     /// <summary>Org-wide current-status breakdown, ordered by the status option sort order.</summary>
     public async Task<List<StatusCountDto>> GetStatusBreakdownAsync()
@@ -55,8 +73,8 @@ public class DashboardService(AppDbContext db)
     /// <summary>Org-wide applications-per-day, zero-filled over the last <paramref name="days"/>.</summary>
     public async Task<List<TrendPointDto>> GetApplicationsTrendAsync(int days = 30)
     {
-        days = days is 7 or 30 or 90 ? days : 30;
-        var startDate = DateTime.UtcNow.Date.AddDays(-(days - 1));
+        days = NormalizeTrendDays(days);
+        var startDate = TrendWindowStart(days);
         // Grouped in memory, not in SQL: DateTime columns carry a UTC value converter, and EF cannot
         // translate member access like .Date on a converted property. The row set is bounded by the
         // window above. Buckets are UTC days — a pre-existing behaviour, not introduced here.
@@ -75,6 +93,27 @@ public class DashboardService(AppDbContext db)
                 d.ToString("yyyy-MM-dd"), dailyCounts.TryGetValue(d, out var n) ? n : 0))
             .ToList();
     }
+
+    /// <summary>
+    /// Org-wide totals behind the trend's headline: the trend's own window and the equally long one
+    /// before it, so "N new, +M vs prior period" always agrees with the bars drawn under it.
+    /// </summary>
+    public async Task<ApplicationsSummaryDto> GetApplicationsSummaryAsync(int days = 30)
+    {
+        days = NormalizeTrendDays(days);
+        var start = TrendWindowStart(days);
+        var previousStart = start.AddDays(-days);
+
+        var total = await db.Candidates.CountAsync(c => c.CreatedAt >= start);
+        var previousTotal = await db.Candidates.CountAsync(c => c.CreatedAt >= previousStart && c.CreatedAt < start);
+        return new ApplicationsSummaryDto(days, total, previousTotal);
+    }
+
+    /// <summary>The trend ranges the UI offers; anything else falls back to 30.</summary>
+    private static int NormalizeTrendDays(int days) => days is 7 or 30 or 90 ? days : 30;
+
+    /// <summary>First UTC day of a <paramref name="days"/>-long window ending today (inclusive).</summary>
+    private static DateTime TrendWindowStart(int days) => DateTime.UtcNow.Date.AddDays(-(days - 1));
 
     /// <summary>Org-wide **open** job openings (active and not past their End Date) + applicant counts.</summary>
     public async Task<List<JobOpeningDto>> GetJobOpeningsAsync()

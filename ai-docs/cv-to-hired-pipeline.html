@@ -1,0 +1,618 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CV-to-Hired Pipeline — Recruitment Gorilla</title>
+<style>
+  :root {
+    --bg: #f5f6f8;
+    --surface: #ffffff;
+    --border: #d6dbe2;
+    --fg: #1b2430;
+    --fg-muted: #5c6773;
+    --accent: #2f6fed;
+    --accent-2: #8457e6;
+    --success: #1f9254;
+    --success-bg: #e8f6ee;
+    --danger: #c6424a;
+    --danger-bg: #fbecec;
+    --sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+    --mono: ui-monospace, "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #10151c;
+      --surface: #161d27;
+      --border: #2b3543;
+      --fg: #e7ecf2;
+      --fg-muted: #8d97a5;
+      --accent: #6fa0ff;
+      --accent-2: #b89bf2;
+      --success: #3fce82;
+      --success-bg: #11291c;
+      --danger: #ef8a8e;
+      --danger-bg: #2c1618;
+      color-scheme: dark;
+    }
+  }
+
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font-family: var(--sans); }
+
+  .wrap { max-width: 1200px; margin: 0 auto; padding: 36px 20px 56px; }
+
+  .eyebrow-label {
+    font-size: 11px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase;
+    color: var(--accent); margin: 0 0 8px;
+  }
+  h1 { font-size: 27px; font-weight: 700; letter-spacing: -0.01em; margin: 0 0 12px; }
+  .lede { font-size: 15px; line-height: 1.6; color: var(--fg-muted); max-width: 72ch; margin: 0 0 24px; }
+  .lede strong { color: var(--fg); font-weight: 600; }
+
+  .controls {
+    display: flex; align-items: center; gap: 18px; flex-wrap: wrap;
+    margin-bottom: 16px; font-size: 13px; color: var(--fg-muted);
+  }
+  .toggle { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; user-select: none; }
+  .toggle input { accent-color: var(--danger); width: 15px; height: 15px; cursor: pointer; }
+  .hint { font-size: 12.5px; color: var(--fg-muted); }
+  .hint kbd {
+    font-family: var(--mono); font-size: 11px; border: 1px solid var(--border);
+    border-radius: 4px; padding: 1px 5px; background: var(--surface);
+  }
+
+  .layout { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 20px; align-items: start; }
+  @media (max-width: 860px) { .layout { grid-template-columns: 1fr; } }
+
+  .diagram-scroll {
+    overflow-x: auto; border: 1px solid var(--border); border-radius: 14px;
+    background: var(--surface); padding: 8px 4px;
+  }
+  svg.diagram { display: block; width: 720px; max-width: none; height: auto; margin: 0 auto; color: var(--fg-muted); }
+
+  figcaption { font-size: 13px; line-height: 1.5; color: var(--fg-muted); margin-top: 10px; max-width: 72ch; }
+  figcaption code { font-family: var(--mono); font-size: 12px; }
+
+  .box { fill: var(--surface); stroke-width: 1.6; }
+  .box-neutral { stroke: var(--border); }
+  .box-accent { stroke: var(--accent); }
+  .box-accent2 { stroke: var(--accent-2); }
+  .box-success { stroke: var(--success); fill: var(--success-bg); }
+  .box-danger { stroke: var(--danger); stroke-dasharray: 5 4; fill: var(--danger-bg); }
+
+  .box-title { font-family: var(--sans); font-weight: 600; font-size: 13.5px; fill: var(--fg); }
+  .box-title-success { fill: var(--success); font-size: 16px; }
+  .box-title-danger { fill: var(--danger); }
+  .box-sub { font-family: var(--mono); font-size: 9.3px; fill: var(--fg-muted); }
+
+  .eyebrow { font-family: var(--sans); font-size: 11px; font-weight: 600; letter-spacing: 0.08em; fill: var(--fg-muted); text-transform: uppercase; }
+
+  .flow-line { stroke: currentColor; stroke-width: 1.8; fill: none; }
+  .flow-line-danger { stroke: var(--danger); stroke-width: 1.8; stroke-dasharray: 6 5; fill: none; }
+  .arrow-head { fill: currentColor; }
+  .arrow-head-danger { fill: var(--danger); }
+
+  /* interactivity */
+  .node { cursor: pointer; }
+  .node rect { transition: stroke-width .15s ease, opacity .15s ease; }
+  .node text { transition: opacity .15s ease; }
+  .node:hover rect { stroke-width: 2.4; }
+  .node:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 6px; }
+  .node.is-selected rect { stroke-width: 3; }
+  .node.is-related rect { stroke-width: 2.2; }
+  .edge { transition: opacity .15s ease, stroke-width .15s ease; }
+  .edge.is-emph { stroke-width: 2.6; }
+  svg.diagram-active .node:not(.is-selected):not(.is-related) { opacity: .32; }
+  svg.diagram-active .edge:not(.is-emph) { opacity: .18; }
+  svg.hide-rejects .reject-group { display: none; }
+
+  .legend {
+    display: flex; flex-wrap: wrap; gap: 14px 22px; font-size: 12.5px;
+    color: var(--fg-muted); margin: 16px 0 36px;
+  }
+  .legend-item { display: flex; align-items: center; gap: 7px; }
+  .swatch { width: 13px; height: 13px; border-radius: 4px; border: 1.6px solid; flex: none; }
+  .sw-accent { border-color: var(--accent); background: var(--surface); }
+  .sw-accent2 { border-color: var(--accent-2); background: var(--surface); }
+  .sw-success { border-color: var(--success); background: var(--success-bg); }
+  .sw-danger { border-color: var(--danger); background: var(--danger-bg); border-style: dashed; }
+  .sw-neutral { border-color: var(--border); background: var(--surface); }
+
+  /* detail panel */
+  #panel {
+    position: sticky; top: 20px; border: 1px solid var(--border); border-radius: 12px;
+    background: var(--surface); padding: 18px; font-size: 13px; line-height: 1.55; min-height: 220px;
+  }
+  #panel-empty { color: var(--fg-muted); font-size: 13px; }
+  #panel-content h3 { margin: 0 0 4px; font-size: 16px; }
+  .panel-trigger {
+    font-family: var(--mono); font-size: 11.5px; color: var(--accent); margin: 0 0 10px;
+    word-break: break-word;
+  }
+  .panel-body { margin: 0 0 10px; color: var(--fg); }
+  .panel-effects { margin: 0 0 12px; color: var(--fg-muted); font-size: 12.5px; }
+  #panel-files { list-style: none; margin: 0; padding: 10px 0 0; border-top: 1px solid var(--border); }
+  #panel-files li {
+    font-family: var(--mono); font-size: 11.5px; color: var(--fg-muted); padding: 2px 0;
+    white-space: nowrap; overflow-x: auto;
+  }
+  #panel-files li::before { content: "› "; color: var(--accent); }
+  .panel-close {
+    display: inline-block; margin-top: 12px; font-size: 12px; color: var(--accent);
+    background: none; border: none; padding: 0; cursor: pointer; font-family: var(--sans);
+  }
+
+  details {
+    border: 1px solid var(--border); border-radius: 12px; background: var(--surface); padding: 4px 18px;
+  }
+  summary { cursor: pointer; font-size: 13.5px; font-weight: 600; padding: 12px 0; }
+  .files { font-family: var(--mono); font-size: 12px; line-height: 1.9; color: var(--fg-muted);
+    padding: 0 0 16px; margin: 0; border-top: 1px solid var(--border); padding-top: 12px; }
+  .files div { white-space: nowrap; overflow-x: auto; }
+  .files b { color: var(--fg); font-weight: 600; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <p class="eyebrow-label">Recruitment Gorilla — ai-docs</p>
+  <h1>CV-to-hired pipeline</h1>
+  <p class="lede">
+    From the moment an Admin or Recruiter drops a CV in, to the moment a candidate is marked
+    <strong>Hired</strong>. Both roles can upload and review drafts; only Admin and Super Admin can
+    use the JSON + CVs import. Every upload or import now requires an open job opening, and a
+    Recruiter can review and approve a draft only if they uploaded it themselves or are assigned to
+    that opening. Parsing is an automatic step inside one upload request; everything after
+    <strong>Uploaded</strong> is an explicit status change recorded by hand, except two offer
+    outcomes a background service writes on the candidate's behalf.
+  </p>
+
+  <div class="controls">
+    <label class="toggle">
+      <input type="checkbox" id="toggle-rejects" checked>
+      Show rejection branches
+    </label>
+    <span class="hint">Click any stage for detail · click it again (or press <kbd>Esc</kbd>) to clear</span>
+  </div>
+
+  <div class="layout">
+    <figure style="margin:0">
+      <div class="diagram-scroll">
+        <svg class="diagram" id="diagram" viewBox="0 0 1040 1500" role="img" aria-label="Flow diagram: an admin uploads a CV, which is validated and parsed automatically into a CandidateDraft pending review; approving it creates a Candidate with status Uploaded. From there, an admin manually adds each further status through either an interview track or an assessment track, converging on Recommended, then Offer Preparation. Offer Extended and Offer Accepted are written automatically by the offer service; Hired is always a manual final step, gated on Offer Accepted already existing in the history. Rejection branches peel off at the Uploaded stage, after evaluation, and after an offer is extended.">
+          <defs>
+            <marker id="arrow" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <polygon points="0,0 10,5 0,10" class="arrow-head"/>
+            </marker>
+            <marker id="arrowDanger" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <polygon points="0,0 10,5 0,10" class="arrow-head-danger"/>
+            </marker>
+          </defs>
+
+          <text class="eyebrow" x="520" y="34" text-anchor="middle">Intake — one CV per request, a job opening required</text>
+          <text class="eyebrow" x="520" y="464" text-anchor="middle">Status pipeline — admin adds each status by hand</text>
+
+          <line class="edge flow-line" data-from="upload" data-to="validate" x1="520" y1="116" x2="520" y2="136" marker-end="url(#arrow)"/>
+          <line class="edge flow-line" data-from="validate" data-to="parse" x1="520" y1="202" x2="520" y2="222" marker-end="url(#arrow)"/>
+          <line class="edge flow-line" data-from="parse" data-to="draft" x1="520" y1="288" x2="520" y2="308" marker-end="url(#arrow)"/>
+          <line class="edge flow-line" data-from="json-import" data-to="draft" x1="190" y1="202" x2="460" y2="308" marker-end="url(#arrow)"/>
+          <line class="edge flow-line" data-from="draft" data-to="approve" x1="520" y1="374" x2="520" y2="394" marker-end="url(#arrow)"/>
+          <line class="edge flow-line" data-from="approve" data-to="candidate" x1="520" y1="460" x2="520" y2="480" marker-end="url(#arrow)"/>
+
+          <line class="edge flow-line-danger reject-group" data-from="candidate" data-to="reject-early" x1="660" y1="515" x2="716" y2="515" marker-end="url(#arrowDanger)"/>
+
+          <line class="edge flow-line" data-from="candidate" data-to="call-interview" x1="520" y1="550" x2="190" y2="596" marker-end="url(#arrow)"/>
+          <line class="edge flow-line" data-from="candidate" data-to="ask-assessment" x1="520" y1="550" x2="850" y2="596" marker-end="url(#arrow)"/>
+
+          <line class="edge flow-line" data-from="call-interview" data-to="interview-scheduled" x1="190" y1="666" x2="190" y2="686" marker-end="url(#arrow)"/>
+          <line class="edge flow-line" data-from="interview-scheduled" data-to="interview-completed" x1="190" y1="752" x2="190" y2="772" marker-end="url(#arrow)"/>
+
+          <line class="edge flow-line" data-from="ask-assessment" data-to="technical-assessment" x1="850" y1="666" x2="850" y2="686" marker-end="url(#arrow)"/>
+          <line class="edge flow-line" data-from="technical-assessment" data-to="submission-received" x1="850" y1="752" x2="850" y2="772" marker-end="url(#arrow)"/>
+          <line class="edge flow-line" data-from="submission-received" data-to="code-review" x1="850" y1="838" x2="850" y2="858" marker-end="url(#arrow)"/>
+
+          <line class="edge flow-line" data-from="interview-completed" data-to="recommended" x1="190" y1="838" x2="520" y2="1034" marker-end="url(#arrow)"/>
+          <polyline class="edge flow-line-danger reject-group" data-from="interview-completed" data-to="reject-eval" points="190,838 190,900 716,980" marker-end="url(#arrowDanger)"/>
+
+          <polyline class="edge flow-line" data-from="code-review" data-to="recommended" points="720,891 580,891 520,1034" marker-end="url(#arrow)"/>
+          <line class="edge flow-line-danger reject-group" data-from="code-review" data-to="reject-eval" x1="850" y1="924" x2="850" y2="944" marker-end="url(#arrowDanger)"/>
+
+          <line class="edge flow-line" data-from="recommended" data-to="offer-prep" x1="520" y1="1104" x2="520" y2="1124" marker-end="url(#arrow)"/>
+          <line class="edge flow-line" data-from="offer-prep" data-to="offer-extended" x1="520" y1="1190" x2="520" y2="1210" marker-end="url(#arrow)"/>
+
+          <line class="edge flow-line-danger reject-group" data-from="offer-extended" data-to="reject-declined" x1="660" y1="1243" x2="716" y2="1243" marker-end="url(#arrowDanger)"/>
+
+          <line class="edge flow-line" data-from="offer-extended" data-to="offer-accepted" x1="520" y1="1276" x2="520" y2="1296" marker-end="url(#arrow)"/>
+          <line class="edge flow-line" data-from="offer-accepted" data-to="hired" x1="520" y1="1362" x2="520" y2="1382" marker-end="url(#arrow)"/>
+
+          <g class="node" data-node="upload" tabindex="0" role="button" aria-label="Admin or Recruiter uploads CV">
+            <rect class="box box-neutral" x="380" y="50" width="280" height="66" rx="10"/>
+            <text class="box-title" x="520" y="77" text-anchor="middle">Admin / Recruiter uploads CV</text>
+            <text class="box-sub" x="520" y="95" text-anchor="middle">1 file/request · CVUploadController</text>
+          </g>
+          <g class="node" data-node="json-import" tabindex="0" role="button" aria-label="Admin or Super Admin imports JSON plus CVs">
+            <rect class="box box-neutral" x="60" y="136" width="260" height="66" rx="10"/>
+            <text class="box-title" x="190" y="163" text-anchor="middle">JSON + CVs import</text>
+            <text class="box-sub" x="190" y="181" text-anchor="middle">Admin+ only · no parsing needed</text>
+          </g>
+          <g class="node" data-node="validate" tabindex="0" role="button" aria-label="Validate and save">
+            <rect class="box box-neutral" x="380" y="136" width="280" height="66" rx="10"/>
+            <text class="box-title" x="520" y="163" text-anchor="middle">Validate &amp; save</text>
+            <text class="box-sub" x="520" y="181" text-anchor="middle">type/size/hash check · CvFileIntake</text>
+          </g>
+          <g class="node" data-node="parse" tabindex="0" role="button" aria-label="Parse CV">
+            <rect class="box box-neutral" x="380" y="222" width="280" height="66" rx="10"/>
+            <text class="box-title" x="520" y="249" text-anchor="middle">Parse CV</text>
+            <text class="box-sub" x="520" y="267" text-anchor="middle">regex extraction (no AI) · Parser</text>
+          </g>
+          <g class="node" data-node="draft" tabindex="0" role="button" aria-label="CandidateDraft pending">
+            <rect class="box box-neutral" x="380" y="308" width="280" height="66" rx="10"/>
+            <text class="box-title" x="520" y="335" text-anchor="middle">CandidateDraft — Pending</text>
+            <text class="box-sub" x="520" y="353" text-anchor="middle">staging row, not a Candidate yet</text>
+          </g>
+          <g class="node" data-node="approve" tabindex="0" role="button" aria-label="Admin or Recruiter reviews and approves">
+            <rect class="box box-neutral" x="380" y="394" width="280" height="66" rx="10"/>
+            <text class="box-title" x="520" y="421" text-anchor="middle">Reviews &amp; approves</text>
+            <text class="box-sub" x="520" y="439" text-anchor="middle">Admin or Recruiter · edits &amp; confirms</text>
+          </g>
+
+          <g class="node" data-node="candidate" tabindex="0" role="button" aria-label="Candidate created, status Uploaded">
+            <rect class="box box-accent" x="380" y="480" width="280" height="70" rx="10"/>
+            <text class="box-title" x="520" y="509" text-anchor="middle">Candidate created</text>
+            <text class="box-sub" x="520" y="528" text-anchor="middle">status: Uploaded + StatusHistory #1</text>
+          </g>
+          <g class="node reject-group" data-node="reject-early" tabindex="0" role="button" aria-label="Rejected early: Not Available, Discontinued, or Reject">
+            <rect class="box box-danger" x="720" y="480" width="260" height="70" rx="10"/>
+            <text class="box-title box-title-danger" x="850" y="509" text-anchor="middle">Rejected</text>
+            <text class="box-sub" x="850" y="528" text-anchor="middle">Not Available · Discontinued · Reject</text>
+          </g>
+
+          <g class="node" data-node="call-interview" tabindex="0" role="button" aria-label="Call for Interview">
+            <rect class="box box-accent" x="60" y="596" width="260" height="66" rx="10"/>
+            <text class="box-title" x="190" y="623" text-anchor="middle">Call for Interview</text>
+            <text class="box-sub" x="190" y="641" text-anchor="middle">admin: Add Status</text>
+          </g>
+          <g class="node" data-node="interview-scheduled" tabindex="0" role="button" aria-label="Interview Scheduled">
+            <rect class="box box-accent" x="60" y="686" width="260" height="66" rx="10"/>
+            <text class="box-title" x="190" y="713" text-anchor="middle">Interview Scheduled</text>
+            <text class="box-sub" x="190" y="731" text-anchor="middle">notifies interviewers (Slack, email)</text>
+          </g>
+          <g class="node" data-node="interview-completed" tabindex="0" role="button" aria-label="Interview Completed">
+            <rect class="box box-accent" x="60" y="772" width="260" height="66" rx="10"/>
+            <text class="box-title" x="190" y="799" text-anchor="middle">Interview Completed</text>
+            <text class="box-sub" x="190" y="817" text-anchor="middle">needs a submitted evaluation</text>
+          </g>
+
+          <g class="node" data-node="ask-assessment" tabindex="0" role="button" aria-label="Ask for Assessment">
+            <rect class="box box-accent" x="720" y="596" width="260" height="66" rx="10"/>
+            <text class="box-title" x="850" y="623" text-anchor="middle">Ask for Assessment</text>
+            <text class="box-sub" x="850" y="641" text-anchor="middle">admin: Add Status</text>
+          </g>
+          <g class="node" data-node="technical-assessment" tabindex="0" role="button" aria-label="Technical Assessment">
+            <rect class="box box-accent" x="720" y="686" width="260" height="66" rx="10"/>
+            <text class="box-title" x="850" y="713" text-anchor="middle">Technical Assessment</text>
+            <text class="box-sub" x="850" y="731" text-anchor="middle">candidate given take-home task</text>
+          </g>
+          <g class="node" data-node="submission-received" tabindex="0" role="button" aria-label="Submission Received">
+            <rect class="box box-accent" x="720" y="772" width="260" height="66" rx="10"/>
+            <text class="box-title" x="850" y="799" text-anchor="middle">Submission Received</text>
+            <text class="box-sub" x="850" y="817" text-anchor="middle">candidate's work received</text>
+          </g>
+          <g class="node" data-node="code-review" tabindex="0" role="button" aria-label="Code Review">
+            <rect class="box box-accent" x="720" y="858" width="260" height="66" rx="10"/>
+            <text class="box-title" x="850" y="885" text-anchor="middle">Code Review</text>
+            <text class="box-sub" x="850" y="903" text-anchor="middle">reviewer assesses submission</text>
+          </g>
+
+          <g class="node reject-group" data-node="reject-eval" tabindex="0" role="button" aria-label="Rejected after evaluation: Not Recommended or No Submission">
+            <rect class="box box-danger" x="720" y="944" width="260" height="66" rx="10"/>
+            <text class="box-title box-title-danger" x="850" y="971" text-anchor="middle">Rejected</text>
+            <text class="box-sub" x="850" y="989" text-anchor="middle">Not Recommended · No Submission</text>
+          </g>
+
+          <g class="node" data-node="recommended" tabindex="0" role="button" aria-label="Recommended">
+            <rect class="box box-accent" x="380" y="1034" width="280" height="66" rx="10"/>
+            <text class="box-title" x="520" y="1061" text-anchor="middle">Recommended</text>
+            <text class="box-sub" x="520" y="1079" text-anchor="middle">positive evaluation outcome</text>
+          </g>
+          <g class="node" data-node="offer-prep" tabindex="0" role="button" aria-label="Offer Preparation">
+            <rect class="box box-accent" x="380" y="1124" width="280" height="66" rx="10"/>
+            <text class="box-title" x="520" y="1151" text-anchor="middle">Offer Preparation</text>
+            <text class="box-sub" x="520" y="1169" text-anchor="middle">admin drafts the offer</text>
+          </g>
+
+          <g class="node" data-node="offer-extended" tabindex="0" role="button" aria-label="Offer Extended, written automatically">
+            <rect class="box box-accent2" x="380" y="1210" width="280" height="66" rx="10"/>
+            <text class="box-title" x="520" y="1237" text-anchor="middle">Offer Extended</text>
+            <text class="box-sub" x="520" y="1255" text-anchor="middle">auto-write · ExtendOfferAsync</text>
+          </g>
+          <g class="node reject-group" data-node="reject-declined" tabindex="0" role="button" aria-label="Rejected: Offer Declined">
+            <rect class="box box-danger" x="720" y="1210" width="260" height="66" rx="10"/>
+            <text class="box-title box-title-danger" x="850" y="1237" text-anchor="middle">Rejected</text>
+            <text class="box-sub" x="850" y="1255" text-anchor="middle">Offer Declined</text>
+          </g>
+          <g class="node" data-node="offer-accepted" tabindex="0" role="button" aria-label="Offer Accepted, written automatically">
+            <rect class="box box-accent2" x="380" y="1296" width="280" height="66" rx="10"/>
+            <text class="box-title" x="520" y="1323" text-anchor="middle">Offer Accepted</text>
+            <text class="box-sub" x="520" y="1341" text-anchor="middle">auto-write · RecordDecisionAsync</text>
+          </g>
+
+          <g class="node" data-node="hired" tabindex="0" role="button" aria-label="Hired">
+            <rect class="box box-success" x="380" y="1382" width="280" height="74" rx="10"/>
+            <text class="box-title box-title-success" x="520" y="1414" text-anchor="middle">Hired</text>
+            <text class="box-sub" x="520" y="1433" text-anchor="middle">requires Offer Accepted first</text>
+          </g>
+        </svg>
+      </div>
+      <figcaption>
+        Every box below "Candidate created" is a row an admin or recruiter writes by hand through
+        <code>POST /candidates/{id}/status</code>, each appending a new <code>StatusHistory</code> entry that
+        is never edited or deleted. The two violet boxes are the exception: the offer service writes those
+        statuses itself as a side effect of extending an offer and recording the candidate's decision. Dashed
+        red boxes are terminal rejections, reachable from the stage where the admin or recruiter decides not
+        to continue. Both intake boxes at the top require an open job opening before anything else happens.
+      </figcaption>
+
+      <div class="legend">
+        <div class="legend-item"><span class="swatch sw-neutral"></span>Intake processing (pre-candidate)</div>
+        <div class="legend-item"><span class="swatch sw-accent"></span>Manual status change (admin action)</div>
+        <div class="legend-item"><span class="swatch sw-accent2"></span>Automatic status write (OfferService)</div>
+        <div class="legend-item"><span class="swatch sw-success"></span>Terminal — hired</div>
+        <div class="legend-item"><span class="swatch sw-danger"></span>Terminal — rejected</div>
+      </div>
+
+      <details>
+        <summary>Key files for this flow</summary>
+        <div class="files">
+          <div><b>Upload</b> — Controllers/CVUploadController.cs</div>
+          <div><b>JSON + CVs import</b> — Controllers/CandidateImportController.cs, Services/CandidateImportService.cs</div>
+          <div><b>Validate/dedupe/save</b> — Services/CvFileIntake.cs</div>
+          <div><b>Parse</b> — Services/CVParserService.cs</div>
+          <div><b>Job-opening validation + draft scope</b> — Services/CandidateDraftService.cs (ValidateJobOpeningForCallerAsync, ScopedDrafts)</div>
+          <div><b>Draft + approve</b> — Services/CandidateDraftService.cs, Controllers/CandidateDraftsController.cs</div>
+          <div><b>Status model</b> — Models/Candidate.cs, StatusOption.cs, StatusTransition.cs</div>
+          <div><b>Seeded statuses/transitions</b> — Data/AppDbContext.cs</div>
+          <div><b>Status change + gating</b> — Services/CandidateService.cs (ValidateStatusChangeAsync, AddStatusAsync)</div>
+          <div><b>Status endpoint</b> — Controllers/CandidatesController.cs (AddStatus)</div>
+          <div><b>Offer-driven auto writes</b> — Services/OfferService.cs (ExtendOfferAsync, RecordDecisionAsync)</div>
+          <div><b>Notifications</b> — Services/NotificationService.cs, NotificationCategories.cs</div>
+          <div><b>Frontend</b> — pages/UploadPage.tsx, components/drafts/DraftReviewWorkspace.tsx, pages/CandidateDetailPage.tsx, components/StatusTimeline.tsx, AddStatusModal.tsx</div>
+        </div>
+      </details>
+    </figure>
+
+    <aside id="panel">
+      <div id="panel-empty">Click any stage in the diagram to see its trigger, mechanism, and source files. Click a selected stage again, or press Esc, to clear.</div>
+      <div id="panel-content" hidden>
+        <h3 id="panel-title"></h3>
+        <p class="panel-trigger" id="panel-trigger"></p>
+        <p class="panel-body" id="panel-body"></p>
+        <p class="panel-effects" id="panel-effects"></p>
+        <ul id="panel-files"></ul>
+        <button class="panel-close" id="panel-close" type="button">Clear selection</button>
+      </div>
+    </aside>
+  </div>
+</div>
+
+<script>
+(function () {
+  var DETAILS = {
+    "upload": {
+      title: "Admin / Recruiter uploads CV",
+      trigger: "POST /api/cvupload",
+      body: "One CV file per HTTP request — \"bulk\" means the client repeats this request per file, not a single batched call. Accepts PDF or DOCX, attached to a batch by id/name/index so the UI can track overall progress. Both Admin and Recruiter can call this.",
+      effects: "Requires a job opening (open, active, not expired, and — for a Recruiter — one they are assigned to) before anything else happens. Starts a SignalR progress broadcast (parsing / completed / error) to the uploading user for this batch.",
+      files: ["Controllers/CVUploadController.cs", "Services/CVUploadProgressNotifier.cs", "Services/CandidateDraftService.cs (ValidateJobOpeningForCallerAsync)"]
+    },
+    "json-import": {
+      title: "JSON + CVs import",
+      trigger: "POST /api/candidate-import",
+      body: "Admin and Super Admin only (Recruiter gets 403). The client sends one JSON entry and its CV per request, read from a file made from a downloadable template. Fields come from the JSON, not from parsing the CV.",
+      effects: "The batch's job opening is required up front. An entry's own named role, if given, overrides it when that opening is open; otherwise the entry falls back to the batch's opening with a warning.",
+      files: ["Controllers/CandidateImportController.cs", "Services/CandidateImportService.cs (ResolveRoleAsync)"]
+    },
+    "validate": {
+      title: "Validate & save",
+      trigger: "same request, immediately after upload",
+      body: "Checks the extension (.pdf/.docx), a 10MB size cap, and a magic-byte signature (%PDF- or the zip header for docx). Hashes the file with SHA-256 and rejects it if that hash already matches a pending draft or an existing CV file.",
+      effects: "Saves the file to disk as {guid}{ext} under server/Recruitment.Gorilla.API/Uploads/ (gitignored).",
+      files: ["Services/CvFileIntake.cs", "Services/UploadPaths.cs"]
+    },
+    "parse": {
+      title: "Parse CV",
+      trigger: "same request, synchronous",
+      body: "Extracts text with PdfPig (PDF) or OpenXml (docx), then pulls fields with regex and heuristics: name, email, phone, LinkedIn/GitHub, location, skills, education, experience. No AI/LLM call is involved. Falls back to the filename for name/title when the body yields none.",
+      effects: "Blocks the HTTP response until parsing finishes — there is no background job or queue for this step.",
+      files: ["Services/CVParserService.cs"]
+    },
+    "draft": {
+      title: "CandidateDraft — Pending",
+      trigger: "created right after parsing, or right after a JSON import entry validates",
+      body: "A staging row holding the parsed (or JSON-given) fields. It is not a real Candidate yet and won't become one unless approved. A Recruiter sees drafts they uploaded themselves, plus any draft for a job opening they are assigned to as a recruiter — not just their own uploads. Admin/SuperAdmin see every draft.",
+      effects: "Shown in the Review Staging Workspace for editing before approval.",
+      files: ["Models/CandidateDraft.cs", "Services/CandidateDraftService.cs (ScopedDrafts)", "Controllers/CandidateDraftsController.cs"]
+    },
+    "approve": {
+      title: "Reviews & approves",
+      trigger: "POST /api/candidate-drafts/{id}/approve",
+      body: "Admin or Recruiter can edit any parsed field — name, email, role applied, source, skills, education, experience — then click Approve. This is the only path that turns a draft into a real candidate; it validates the full name, email, and the job opening (open, active, not expired, and assigned to the caller if they are a Recruiter).",
+      files: ["components/drafts/DraftReviewWorkspace.tsx", "Services/CandidateDraftService.cs (ApproveDraftAsync)"]
+    },
+    "candidate": {
+      title: "Candidate created",
+      trigger: "inside ApproveDraftAsync",
+      body: "Creates the Candidate row with CurrentStatus = \"Uploaded\", attaches the CV file, and writes the very first StatusHistory entry. The draft itself flips to Approved so it can't be approved twice.",
+      effects: "StatusHistory #1: Status = Uploaded, comment references the upload batch.",
+      files: ["Models/Candidate.cs", "Models/StatusHistory.cs"]
+    },
+    "reject-early": {
+      title: "Rejected (early)",
+      trigger: "admin: POST /api/candidates/{id}/status",
+      body: "Not Available, Discontinued, or Reject can all be recorded directly from Uploaded instead of moving the candidate into an interview or assessment track. Each of these requires a comment explaining why.",
+      effects: "Terminal — the status-transition table has no outgoing edges from here.",
+      files: ["Services/CandidateService.cs (ValidateStatusChangeAsync)"]
+    },
+    "call-interview": {
+      title: "Call for Interview",
+      trigger: "admin: POST /api/candidates/{id}/status",
+      body: "Starts the interview track. A manual status change, same call as every other status in this pipeline.",
+      files: ["Controllers/CandidatesController.cs (AddStatus)", "Services/CandidateService.cs (AddStatusAsync)"]
+    },
+    "interview-scheduled": {
+      title: "Interview Scheduled",
+      trigger: "admin: POST /api/candidates/{id}/status",
+      body: "Requires an interview time and at least one assigned interviewer. Creates an Interview row linked back to this StatusHistory entry.",
+      effects: "Notifies each assigned interviewer: in-app notification + email with a calendar (.ics) attachment + Slack DM, category InterviewAssigned.",
+      files: ["Models/Interview.cs", "Services/CandidateService.cs (AddStatusAsync)", "Services/NotificationService.cs"]
+    },
+    "interview-completed": {
+      title: "Interview Completed",
+      trigger: "admin: POST /api/candidates/{id}/status",
+      body: "Gated: the validator requires a prior Interview Scheduled entry to already exist, and at least one interviewer evaluation to have been submitted for it.",
+      effects: "Links back to the most recent Interview, used to render the evaluation-summary cards.",
+      files: ["Services/CandidateService.cs (ValidateStatusChangeAsync)"]
+    },
+    "ask-assessment": {
+      title: "Ask for Assessment",
+      trigger: "admin: POST /api/candidates/{id}/status",
+      body: "Starts the assessment track as an alternative to the interview track.",
+      files: ["Controllers/CandidatesController.cs (AddStatus)"]
+    },
+    "technical-assessment": {
+      title: "Technical Assessment",
+      trigger: "admin: POST /api/candidates/{id}/status",
+      body: "Requires a comment and task details. The candidate is given a take-home task to complete.",
+      files: ["Services/CandidateService.cs (ValidateStatusChangeAsync)"]
+    },
+    "submission-received": {
+      title: "Submission Received",
+      trigger: "admin: POST /api/candidates/{id}/status",
+      body: "Records that the candidate's take-home work has arrived, ahead of review."
+    },
+    "code-review": {
+      title: "Code Review",
+      trigger: "admin: POST /api/candidates/{id}/status",
+      body: "A reviewer assesses the submission before the candidate moves to Recommended or a rejection."
+    },
+    "reject-eval": {
+      title: "Rejected (after evaluation)",
+      trigger: "admin: POST /api/candidates/{id}/status",
+      body: "Not Recommended or No Submission — recorded instead of Recommended once the interview or assessment track concludes without a positive outcome.",
+      effects: "Terminal.",
+      files: ["Services/CandidateService.cs (ValidateStatusChangeAsync)"]
+    },
+    "recommended": {
+      title: "Recommended",
+      trigger: "admin: POST /api/candidates/{id}/status",
+      body: "Where the interview and assessment tracks converge: a positive evaluation outcome. Grouped under PositiveTerminal in CandidateBuckets for dashboard filtering, even though the pipeline continues from here.",
+      files: ["Services/CandidateBuckets.cs"]
+    },
+    "offer-prep": {
+      title: "Offer Preparation",
+      trigger: "admin: POST /api/candidates/{id}/status",
+      body: "The admin drafts an offer for the candidate before it goes out for approval and extension."
+    },
+    "offer-extended": {
+      title: "Offer Extended",
+      trigger: "auto-write, not a manual status click",
+      body: "OfferService.ExtendOfferAsync calls AddStatusAsync itself when an offer is sent to the candidate — no one clicks \"Add Status: Offer Extended\" directly.",
+      effects: "Also notifies each named approver (in-app only, no email/Slack) when the offer was first submitted for approval.",
+      files: ["Services/OfferService.cs (ExtendOfferAsync, SubmitForApprovalAsync)"]
+    },
+    "reject-declined": {
+      title: "Rejected — Offer Declined",
+      trigger: "auto-write, not a manual status click",
+      body: "Also written by OfferService.RecordDecisionAsync, the same call that writes Offer Accepted — the outcome depends on the decision recorded for the candidate.",
+      files: ["Services/OfferService.cs (RecordDecisionAsync)"]
+    },
+    "offer-accepted": {
+      title: "Offer Accepted",
+      trigger: "auto-write, not a manual status click",
+      body: "Written automatically by OfferService.RecordDecisionAsync when the candidate's acceptance is recorded.",
+      files: ["Services/OfferService.cs (RecordDecisionAsync)"]
+    },
+    "hired": {
+      title: "Hired",
+      trigger: "admin: POST /api/candidates/{id}/status",
+      body: "Always a manual, explicit admin action — no code path sets Hired automatically. Gated: the validator requires an \"Offer Accepted\" entry to already exist in this candidate's history before Hired can be recorded.",
+      effects: "No notification fires specifically at Hired; it only appears in analytics bucket logic.",
+      files: ["Controllers/CandidatesController.cs (AddStatus)", "Services/CandidateService.cs (ValidateStatusChangeAsync)"]
+    }
+  };
+
+  var svg = document.getElementById("diagram");
+  var panelEmpty = document.getElementById("panel-empty");
+  var panelContent = document.getElementById("panel-content");
+  var selected = null;
+
+  function clearSelection() {
+    svg.classList.remove("diagram-active");
+    svg.querySelectorAll(".node").forEach(function (n) { n.classList.remove("is-selected", "is-related"); });
+    svg.querySelectorAll(".edge").forEach(function (e) { e.classList.remove("is-emph"); });
+    panelContent.hidden = true;
+    panelEmpty.hidden = false;
+    selected = null;
+  }
+
+  function renderPanel(id) {
+    var d = DETAILS[id];
+    if (!d) return;
+    panelEmpty.hidden = true;
+    panelContent.hidden = false;
+    document.getElementById("panel-title").textContent = d.title;
+    document.getElementById("panel-trigger").textContent = d.trigger;
+    document.getElementById("panel-body").textContent = d.body;
+    var fx = document.getElementById("panel-effects");
+    if (d.effects) { fx.hidden = false; fx.textContent = "Side effect: " + d.effects; }
+    else { fx.hidden = true; fx.textContent = ""; }
+    var list = document.getElementById("panel-files");
+    list.innerHTML = "";
+    (d.files || []).forEach(function (f) {
+      var li = document.createElement("li");
+      li.textContent = f;
+      list.appendChild(li);
+    });
+  }
+
+  function selectNode(id, el) {
+    if (selected === id) { clearSelection(); return; }
+    svg.querySelectorAll(".node").forEach(function (n) { n.classList.remove("is-selected", "is-related"); });
+    svg.querySelectorAll(".edge").forEach(function (e) { e.classList.remove("is-emph"); });
+    svg.classList.add("diagram-active");
+    el.classList.add("is-selected");
+    svg.querySelectorAll(".edge").forEach(function (e) {
+      var from = e.getAttribute("data-from"), to = e.getAttribute("data-to");
+      if (from === id || to === id) {
+        e.classList.add("is-emph");
+        var other = from === id ? to : from;
+        var otherNode = svg.querySelector('.node[data-node="' + other + '"]');
+        if (otherNode) otherNode.classList.add("is-related");
+      }
+    });
+    renderPanel(id);
+    selected = id;
+  }
+
+  svg.querySelectorAll(".node").forEach(function (g) {
+    var id = g.getAttribute("data-node");
+    g.addEventListener("click", function () { selectNode(id, g); });
+    g.addEventListener("keydown", function (ev) {
+      if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); selectNode(id, g); }
+    });
+  });
+
+  svg.addEventListener("click", function (ev) {
+    if (ev.target === svg) clearSelection();
+  });
+  document.addEventListener("keydown", function (ev) {
+    if (ev.key === "Escape") clearSelection();
+  });
+  document.getElementById("panel-close").addEventListener("click", clearSelection);
+
+  document.getElementById("toggle-rejects").addEventListener("change", function (ev) {
+    svg.classList.toggle("hide-rejects", !ev.target.checked);
+  });
+})();
+</script>
+</body>
+</html>

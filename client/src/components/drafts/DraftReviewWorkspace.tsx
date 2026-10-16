@@ -11,6 +11,8 @@ import {
   bulkApproveCandidateDrafts,
   discardCandidateDraft,
   bulkDiscardCandidateDrafts,
+  deleteCandidateDraft,
+  bulkDeleteCandidateDrafts,
   getActiveRoleOptions,
   getActiveSourceOptions,
 } from '../../services/api';
@@ -18,7 +20,7 @@ import { SearchableSelect } from '../SearchableSelect';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Field } from '@/components/ui/field';
+import { CheckboxField, Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { InputGroup, InputGroupAddon } from '@/components/ui/input-group';
 import { NativeSelect } from '@/components/ui/native-select';
@@ -28,6 +30,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '../ToastStack';
 import { initials } from '../../utils/initials';
 import EmptyState from '../common/EmptyState';
+import ConfirmModal from '../common/ConfirmModal';
 import LoadingPanel from '../common/Loading';
 import { SearchInput } from '@/components/ui/search-input';
 import { cn } from '@/lib/utils';
@@ -44,6 +47,21 @@ interface Props {
 }
 
 const EXPERIENCE_PRESETS = ['< 1 Year', '1-2 Years', '3-5 Years', '5-8 Years', '8+ Years'];
+
+/**
+ * A draft has nowhere to store a referral: `CandidateDrafts` has no referral columns, so
+ * neither `CandidateDraft` nor `UpdateCandidateDraftRequest` carries these fields. They are
+ * collected here purely so they can ride along on the approve payload, which does accept
+ * them, and are reset whenever the active draft changes.
+ */
+type ReferralFields = {
+  isReferred: boolean;
+  referenceName: string;
+  referenceEmail: string;
+  referenceEmployeeId: string;
+};
+
+type DraftEditForm = Partial<CandidateDraft> & Partial<ReferralFields>;
 
 export default function DraftReviewWorkspace({ initialBatchId, onCandidateCreated }: Props) {
   const queryClient = useQueryClient();
@@ -74,9 +92,47 @@ export default function DraftReviewWorkspace({ initialBatchId, onCandidateCreate
   const bulkBarRef = useRef<HTMLDivElement | null>(null);
   const [bulkBarInset, setBulkBarInset] = useState(0);
   const [bulkRoleId, setBulkRoleId] = useState<number | null>(null);
+  // What the delete confirmation is about: one draft, or the current bulk selection.
+  const [deleteTarget, setDeleteTarget] = useState<'single' | 'bulk' | null>(null);
+
+  /**
+   * The list rail and editor studio used a hardcoded `calc(100vh - 210px)`
+   * (`calc(100vh - 220px)` under 992px) to size themselves, guessing how much
+   * chrome sits above them. At widths where the status pills/dropdowns wrap
+   * onto extra lines, the real chrome is taller than the guess, so the panel
+   * computes taller than the space actually left and its footer lands below
+   * the viewport - which is also why the floating bulk bar (fixed to the
+   * viewport) could appear to sit on top of it. Measuring the split-view's
+   * own top and the page's own bottom gutter replaces the guess with the
+   * real number, at any width or height.
+   */
+  const splitViewRef = useRef<HTMLDivElement | null>(null);
+  const [splitPanelHeight, setSplitPanelHeight] = useState(0);
+
+  useEffect(() => {
+    const el = splitViewRef.current;
+    if (!el) {
+      setSplitPanelHeight(0);
+      return;
+    }
+    const measure = () => {
+      const top = el.getBoundingClientRect().top;
+      const page = el.closest('.rg-content');
+      const bottomGutter = page ? parseFloat(getComputedStyle(page).paddingBottom) || 0 : 0;
+      setSplitPanelHeight(Math.max(0, window.innerHeight - top - bottomGutter));
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    window.addEventListener('resize', measure);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener('resize', measure);
+    };
+  }, [mobileDetailOpen]);
 
   // Form editing state for currently loaded draft
-  const [editForm, setEditForm] = useState<Partial<CandidateDraft>>({});
+  const [editForm, setEditForm] = useState<DraftEditForm>({});
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
@@ -192,7 +248,7 @@ export default function DraftReviewWorkspace({ initialBatchId, onCandidateCreate
         email: activeDraft.email || '',
         phone: activeDraft.phone || '',
         currentTitle: activeDraft.currentTitle || '',
-        relevantExperience: activeDraft.relevantExperience || '3-5 Years',
+        relevantExperience: activeDraft.relevantExperience || '',
         skills: activeDraft.skills || '',
         summary: activeDraft.summary || '',
         linkedInUrl: activeDraft.linkedInUrl || '',
@@ -208,6 +264,11 @@ export default function DraftReviewWorkspace({ initialBatchId, onCandidateCreate
         roleAppliedOptionId: activeDraft.roleAppliedOptionId ?? (roles.length > 0 ? roles[0].id : null),
         sourceOptionId: activeDraft.sourceOptionId,
         sourceDetail: activeDraft.sourceDetail || '',
+        // Not read back from the draft: it has no referral columns, so these always start empty.
+        isReferred: false,
+        referenceName: '',
+        referenceEmail: '',
+        referenceEmployeeId: '',
       });
       setFormErrors({});
     }
@@ -351,6 +412,24 @@ export default function DraftReviewWorkspace({ initialBatchId, onCandidateCreate
     },
   });
 
+  const deleteMutation = useMutation({
+    mutationFn: async () =>
+      deleteTarget === 'bulk'
+        ? bulkDeleteCandidateDrafts({ draftIds: Array.from(selectedIds) }).then((r) => r.deletedCount)
+        : deleteCandidateDraft(activeDraft!.id).then(() => 1),
+    onSuccess: (count) => {
+      addToast(`Deleted ${count} discarded draft${count === 1 ? '' : 's'}.`, 'info');
+      setDeleteTarget(null);
+      setSelectedIds(new Set());
+      void queryClient.invalidateQueries({ queryKey: ['candidate-drafts'] });
+      void queryClient.invalidateQueries({ queryKey: ['draft-batches'] });
+    },
+    onError: (err: any) => {
+      setDeleteTarget(null);
+      addToast(err?.response?.data || 'Failed to delete the draft.', 'danger');
+    },
+  });
+
   // Handle Approve Action
   const handleApprove = () => {
     if (!activeDraft) return;
@@ -365,6 +444,17 @@ export default function DraftReviewWorkspace({ initialBatchId, onCandidateCreate
     }
     if (!editForm.roleAppliedOptionId) {
       errors.role = 'Please assign an applied role before approving.';
+    }
+    if (editForm.isReferred) {
+      const referenceNameError = validatePersonName(editForm.referenceName, 'Reference name');
+      if (referenceNameError) errors.referenceName = referenceNameError;
+      if (
+        !/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/i.test(
+          (editForm.referenceEmail ?? '').trim(),
+        )
+      ) {
+        errors.referenceEmail = 'A valid reference email is required.';
+      }
     }
 
     if (Object.keys(errors).length > 0) {
@@ -396,6 +486,13 @@ export default function DraftReviewWorkspace({ initialBatchId, onCandidateCreate
         roleAppliedOptionId: editForm.roleAppliedOptionId!,
         sourceOptionId: editForm.sourceOptionId || null,
         sourceDetail: editForm.sourceDetail?.trim() || null,
+        // Mirrors CandidateService: the sub-fields only mean anything when the box is ticked.
+        isReferred: !!editForm.isReferred,
+        referenceName: editForm.isReferred ? editForm.referenceName!.trim() : null,
+        referenceEmail: editForm.isReferred ? editForm.referenceEmail!.trim() : null,
+        referenceEmployeeId: editForm.isReferred
+          ? editForm.referenceEmployeeId?.trim() || null
+          : null,
       },
     });
   };
@@ -427,11 +524,18 @@ export default function DraftReviewWorkspace({ initialBatchId, onCandidateCreate
   const selectedDraftsList = useMemo(() => drafts.filter((d) => selectedIds.has(d.id)), [drafts, selectedIds]);
   const showApproveBulk = selectedDraftsList.some((d) => d.status !== 'Approved');
   const showDiscardBulk = selectedDraftsList.some((d) => d.status !== 'Discarded');
+  // Deleting is permanent, so it is offered only when every selected draft is already discarded.
+  const showDeleteBulk = selectedDraftsList.length > 0 && selectedDraftsList.every((d) => d.status === 'Discarded');
 
   return (
     <div
       className="draft-workspace"
-      style={{ '--bulk-bar-inset': `${bulkBarInset}px` } as React.CSSProperties}
+      style={
+        {
+          '--bulk-bar-inset': `${bulkBarInset}px`,
+          '--split-panel-height': splitPanelHeight ? `${splitPanelHeight}px` : undefined,
+        } as React.CSSProperties
+      }
     >
       {/* 1. Header Toolbar & Command Row */}
       <div className="draft-toolbar">
@@ -528,7 +632,7 @@ export default function DraftReviewWorkspace({ initialBatchId, onCandidateCreate
       </div>
 
       {/* 2. Workspace Split-Screen: Master Rail + Studio */}
-      <div className="draft-split-view">
+      <div className="draft-split-view" ref={splitViewRef}>
         {/* LEFT RAIL: Queue Cards List */}
         <div className={cn('draft-list-rail', mobileDetailOpen ? 'hidden lg:flex' : 'flex')}>
           <div className="flex items-stretch justify-between border-b border-border shrink-0 bg-card">
@@ -1002,6 +1106,78 @@ export default function DraftReviewWorkspace({ initialBatchId, onCandidateCreate
                         />
                       )}
                     </Field>
+
+                    {/* Referral details */}
+                    <CheckboxField
+                      className="col-span-12"
+                      id="draft-is-referred"
+                      label="Referred by an employee"
+                      checked={!!editForm.isReferred}
+                      onCheckedChange={(checked: boolean) =>
+                        setEditForm((prev) => ({ ...prev, isReferred: checked }))
+                      }
+                    />
+
+                    {editForm.isReferred && (
+                      <>
+                        <Field
+                          className="col-span-12 md:col-span-4"
+                          label="Referrer Name"
+                          required
+                          error={formErrors.referenceName}
+                        >
+                          {(p) => (
+                            <Input
+                              {...p}
+                              placeholder="e.g. Nusrat Jahan"
+                              value={editForm.referenceName || ''}
+                              onChange={(e) => {
+                                setEditForm((prev) => ({ ...prev, referenceName: e.target.value }));
+                                if (formErrors.referenceName)
+                                  setFormErrors((fe) => ({ ...fe, referenceName: '' }));
+                              }}
+                            />
+                          )}
+                        </Field>
+
+                        <Field
+                          className="col-span-12 md:col-span-4"
+                          label="Referrer Email"
+                          required
+                          error={formErrors.referenceEmail}
+                        >
+                          {(p) => (
+                            <Input
+                              {...p}
+                              type="email"
+                              placeholder="e.g. nusrat.jahan@ajentica.ai"
+                              value={editForm.referenceEmail || ''}
+                              onChange={(e) => {
+                                setEditForm((prev) => ({ ...prev, referenceEmail: e.target.value }));
+                                if (formErrors.referenceEmail)
+                                  setFormErrors((fe) => ({ ...fe, referenceEmail: '' }));
+                              }}
+                            />
+                          )}
+                        </Field>
+
+                        <Field className="col-span-12 md:col-span-4" label="Employee ID">
+                          {(p) => (
+                            <Input
+                              {...p}
+                              placeholder="Optional"
+                              value={editForm.referenceEmployeeId || ''}
+                              onChange={(e) =>
+                                setEditForm((prev) => ({
+                                  ...prev,
+                                  referenceEmployeeId: e.target.value,
+                                }))
+                              }
+                            />
+                          )}
+                        </Field>
+                      </>
+                    )}
                   </div>
                 </div>
 
@@ -1161,7 +1337,7 @@ export default function DraftReviewWorkspace({ initialBatchId, onCandidateCreate
                           ...prev,
                           educations: [
                             ...(prev.educations || []),
-                            { degree: 'BSc in CSE', institution: 'University', graduationYear: '2024', cgpa: '' },
+                            { degree: '', institution: '', graduationYear: '', cgpa: '' },
                                 ],
                               }))
                             }
@@ -1287,7 +1463,7 @@ export default function DraftReviewWorkspace({ initialBatchId, onCandidateCreate
                           ...prev,
                           experiences: [
                             ...(prev.experiences || []),
-                            { jobTitle: 'Software Engineer', company: 'Company Name', duration: '2022 - Present', description: '' },
+                            { jobTitle: '', company: '', duration: '', description: '' },
                                 ],
                               }))
                             }
@@ -1402,18 +1578,33 @@ export default function DraftReviewWorkspace({ initialBatchId, onCandidateCreate
 
               {/* Studio Sticky Footer Actions */}
               <div className="draft-editor-studio__foot">
-                <Button
-                  variant="ghostDestructive"
-                  size="sm"
-                  className="gap-1 px-2 sm:px-3 shrink-0 text-xs sm:text-sm"
-                  disabled={discardMutation.isPending || activeDraft.status === 'Discarded'}
-                  onClick={() => discardMutation.mutate(activeDraft.id)}
-                  title="Discard Draft"
-                >
-                  <Trash2 size={14} />
-                  <span className="hidden sm:inline">Discard Draft</span>
-                  <span className="sm:hidden">Discard</span>
-                </Button>
+                {activeDraft.status === 'Discarded' ? (
+                  <Button
+                    variant="ghostDestructive"
+                    size="sm"
+                    className="gap-1 px-2 sm:px-3 shrink-0 text-xs sm:text-sm"
+                    disabled={deleteMutation.isPending}
+                    onClick={() => setDeleteTarget('single')}
+                    title="Delete Draft permanently"
+                  >
+                    <Trash2 size={14} />
+                    <span className="hidden sm:inline">Delete Draft</span>
+                    <span className="sm:hidden">Delete</span>
+                  </Button>
+                ) : (
+                  <Button
+                    variant="ghostDestructive"
+                    size="sm"
+                    className="gap-1 px-2 sm:px-3 shrink-0 text-xs sm:text-sm"
+                    disabled={discardMutation.isPending}
+                    onClick={() => discardMutation.mutate(activeDraft.id)}
+                    title="Discard Draft"
+                  >
+                    <Trash2 size={14} />
+                    <span className="hidden sm:inline">Discard Draft</span>
+                    <span className="sm:hidden">Discard</span>
+                  </Button>
+                )}
 
                 <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
                   <Button
@@ -1508,6 +1699,19 @@ export default function DraftReviewWorkspace({ initialBatchId, onCandidateCreate
               </Button>
             )}
 
+            {showDeleteBulk && (
+              <Button
+                variant="outlineDestructive"
+                size="sm"
+                className="whitespace-nowrap"
+                disabled={deleteMutation.isPending}
+                onClick={() => setDeleteTarget('bulk')}
+              >
+                <Trash2 />
+                Delete Selected
+              </Button>
+            )}
+
             <Button
               variant="ghost"
               size="sm"
@@ -1519,6 +1723,19 @@ export default function DraftReviewWorkspace({ initialBatchId, onCandidateCreate
           </div>
         </div>
       )}
+
+      <ConfirmModal
+        show={deleteTarget !== null}
+        title={deleteTarget === 'bulk' ? 'Delete discarded drafts' : 'Delete discarded draft'}
+        confirmLabel="Delete permanently"
+        pending={deleteMutation.isPending}
+        onCancel={() => setDeleteTarget(null)}
+        onConfirm={() => deleteMutation.mutate()}
+      >
+        {deleteTarget === 'bulk'
+          ? `Permanently delete ${selectedIds.size} discarded draft${selectedIds.size === 1 ? '' : 's'} and their CV files? This cannot be undone.`
+          : `Permanently delete the discarded draft for ${activeDraft?.fullName || activeDraft?.originalFileName} and its CV file? This cannot be undone.`}
+      </ConfirmModal>
     </div>
   );
 }

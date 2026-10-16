@@ -12,14 +12,12 @@ namespace Recruitment.Gorilla.API.Controllers;
 public class CVUploadController(
     CVParserService parser,
     CandidateDraftService draftService,
+    CvFileIntake intake,
     IWebHostEnvironment env,
     ICVUploadProgressNotifier progressNotifier,
     CurrentUser currentUser,
     ILogger<CVUploadController> logger) : ControllerBase
 {
-    private static readonly HashSet<string> AllowedExtensions = [".pdf", ".docx"];
-    private const long MaxFileSizeBytes = 10 * 1024 * 1024; // 10 MB
-
     [HttpPost]
     public async Task<IActionResult> Upload(
         IFormFile file,
@@ -33,42 +31,39 @@ public class CVUploadController(
         var idx = fileIndex ?? 0;
         var total = totalFiles ?? 1;
 
-        if (file is null || file.Length == 0)
+        var invalid = CvFileIntake.Validate(file);
+        if (invalid is not null)
         {
+            logger.LogWarning("Rejected upload '{FileName}': {Reason}", file?.FileName, invalid);
             await progressNotifier.NotifyProgressAsync(currentUser.UserId?.ToString(), bId, new CVUploadProgressEvent(
-                bId, idx, total, "unknown", "error", 0, null, "No file provided."));
-            return BadRequest("No file provided.");
+                bId, idx, total, file?.FileName ?? "unknown", "error", 0, null, invalid));
+            return BadRequest(invalid);
         }
 
-        var ext = Path.GetExtension(file.FileName).ToLowerInvariant();
-        if (!AllowedExtensions.Contains(ext))
+        if (await draftService.ValidateJobOpeningForCallerAsync(roleAppliedOptionId, required: true) is string roleError)
         {
-            logger.LogWarning("Rejected upload '{FileName}': unsupported extension {Ext}.", file.FileName, ext);
+            logger.LogWarning("Rejected upload '{FileName}': {Reason}", file.FileName, roleError);
             await progressNotifier.NotifyProgressAsync(currentUser.UserId?.ToString(), bId, new CVUploadProgressEvent(
-                bId, idx, total, file.FileName, "error", 0, null, "Only PDF and Word (.docx) files are accepted."));
-            return BadRequest("Only PDF and Word (.docx) files are accepted.");
+                bId, idx, total, file.FileName, "error", 0, null, roleError));
+            return BadRequest(roleError);
         }
 
-        if (file.Length > MaxFileSizeBytes)
+        var (fileHash, duplicateError) = await intake.CheckDuplicateAsync(file);
+        if (duplicateError is not null)
         {
-            logger.LogWarning("Rejected upload '{FileName}': size {Size} exceeds limit.", file.FileName, file.Length);
+            logger.LogWarning("Rejected upload '{FileName}': duplicate of an already uploaded CV.", file.FileName);
             await progressNotifier.NotifyProgressAsync(currentUser.UserId?.ToString(), bId, new CVUploadProgressEvent(
-                bId, idx, total, file.FileName, "error", 0, null, "File exceeds the 10 MB size limit."));
-            return BadRequest("File exceeds the 10 MB size limit.");
+                bId, idx, total, file.FileName, "error", 0, null, duplicateError));
+            return Conflict(duplicateError);
         }
 
         // Notify client parsing has started
         await progressNotifier.NotifyProgressAsync(currentUser.UserId?.ToString(), bId, new CVUploadProgressEvent(
             bId, idx, total, file.FileName, "parsing", 30, null, null));
 
-        var fileType = ext == ".pdf" ? "PDF" : "Word";
-        var storedName = $"{Guid.NewGuid()}{ext}";
-        var uploadsPath = Path.Combine(env.ContentRootPath, "Uploads");
-        Directory.CreateDirectory(uploadsPath);
-        var fullPath = Path.Combine(uploadsPath, storedName);
-
-        using (var stream = System.IO.File.Create(fullPath))
-            await file.CopyToAsync(stream);
+        var stored = await intake.SaveAsync(file, fileHash);
+        var (storedName, fileType) = (stored.StoredFileName, stored.FileType);
+        var fullPath = UploadPaths.Resolve(env.ContentRootPath, storedName)!;
 
         var parsed = parser.Parse(fullPath, fileType);
         var name = parsed.Name;
@@ -82,7 +77,9 @@ public class CVUploadController(
             bId, batchName, name, parsed.Email, parsed.Phone, parsed.LinkedIn, parsed.Github, parsed.Skills, parsed.Summary,
             parsed.Location, parsed.LeetCode, parsed.Codeforces, parsed.HackerRank, parsed.GitLab,
             parsed.Educations, parsed.Experiences,
-            roleAppliedOptionId: roleAppliedOptionId);
+            roleAppliedOptionId: roleAppliedOptionId,
+            fileHash: fileHash,
+            relevantExperience: CVParserService.EstimateRelevantExperience(parsed.Experiences, DateTime.UtcNow));
 
         var eduDtos = parsed.Educations.Select((e, i) => new CandidateEducationDto(i + 1, e.Degree, e.Institution, e.GraduationYear, e.Cgpa)).ToList();
         var expDtos = parsed.Experiences.Select((e, i) => new CandidateExperienceDto(i + 1, e.JobTitle, e.Company, e.Duration, e.Description)).ToList();

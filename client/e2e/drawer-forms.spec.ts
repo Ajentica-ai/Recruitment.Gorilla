@@ -1,4 +1,5 @@
 import { expect, test, type APIRequestContext, type Page } from '@playwright/test';
+import { seedCandidate } from './seed';
 
 /**
  * Guards the four forms moved from Dialog to Sheet in #85: add status, draft
@@ -46,28 +47,6 @@ async function authHeader(request: APIRequestContext) {
   return { Authorization: `Bearer ${(await res.json()).token}` };
 }
 
-async function seedCandidate(request: APIRequestContext, auth: Record<string, string>) {
-  const initial = await (await request.get('/api/status-options/initial', { headers: auth })).json();
-  const res = await request.post('/api/candidates', {
-    headers: auth,
-    data: {
-      fullName: 'RG85 Form Probe',
-      email: 'rg85.form.probe@example.invalid',
-      relevantExperience: '5 years',
-      isReferred: false,
-      storedFileName: 'probe.pdf',
-      originalFileName: 'probe.pdf',
-      fileType: 'PDF',
-      fileSizeBytes: 1024,
-      initialStatus: initial[0].name,
-      initialStatusComment: 'Seeded by e2e/drawer-forms.spec.ts.',
-      allowDuplicate: true,
-    },
-  });
-  expect(res.ok(), `seed failed: ${res.status()} ${await res.text()}`).toBeTruthy();
-  return (await res.json()).id as number;
-}
-
 async function signIn(page: Page) {
   // Sign in wide: the nav collapses behind a hamburger at phone width.
   await page.setViewportSize({ width: 1440, height: 900 });
@@ -106,7 +85,7 @@ test.describe('converted form drawers', () => {
     test(`all four are usable at ${vp.name} (${vp.width}x${vp.height})`, async ({ page, request }) => {
       test.setTimeout(120_000);
       const auth = await authHeader(request);
-      const candidateId = await seedCandidate(request, auth);
+      const candidateId = await seedCandidate(request, auth, 'RG85 Form Probe');
 
       try {
         await signIn(page);
@@ -184,7 +163,7 @@ test.describe('converted form drawers', () => {
   }) => {
     test.setTimeout(120_000);
     const auth = await authHeader(request);
-    const candidateId = await seedCandidate(request, auth);
+    const candidateId = await seedCandidate(request, auth, 'RG85 Form Probe');
 
     const historyTitle = page.getByRole('heading', { name: /Status History/i });
     const statusTitle = page.getByRole('heading', { name: /Add a status|Advance Status/i });
