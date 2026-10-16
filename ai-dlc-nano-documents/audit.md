@@ -419,3 +419,5 @@
 - 2026-10-16T12:30Z [claude] RG-173 PHASE CONSTRUCT->WRAP-UP @fe76b20: 15/15 tasks; 613 server tests, 259 client, tsc+lint clean, Playwright reschedule spec green
 - 2026-10-16T12:30Z [claude] RG-173 DONE @fe76b20: move/cancel a scheduled interview shipped end to end; 4 findings to backlog; uncommitted on feature/RG-173/Interview-reschedule-cancel
 - 2026-10-16T12:30Z [claude] RG-173 WRAP-UP @fe76b20: archived RG-53,RG-62,RG-65,RG-71,RG-156,RG-39,RG-54 to stay within the 10-item retention cap
+- 2026-10-17T06:05Z [claude] RG-173 SIDE-EFFECT @15d727c: committed and pushed feature/RG-173/Interview-reschedule-cancel, opened PR #174 against develop (user approved)
+- 2026-10-17T06:05Z [claude] RG-173 SIDE-EFFECT @15d727c: posted summary comment on issue #173, board status In Development -> In review (user approved)
