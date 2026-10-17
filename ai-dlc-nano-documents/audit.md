@@ -432,3 +432,5 @@
 - 2026-10-18T07:10Z [claude] RG-169 PHASE CONSTRUCT->WRAP-UP @58e13bd: 8/8 tasks; 270 client tests (10 new), 613 server, tsc+lint clean, verified in-browser with the role list stubbed empty
 - 2026-10-18T07:10Z [claude] RG-169 DONE @58e13bd: the four surfaces now explain the empty job-opening list instead of dead-ending; 3 findings to backlog; uncommitted
 - 2026-10-18T07:10Z [claude] RG-169 WRAP-UP @58e13bd: archived RG-55 for the 10-item retention cap; frontend.md anchors re-stamped in codebase-map
+- 2026-10-18T09:50Z [claude] RG-169 SIDE-EFFECT @673822d: committed and pushed fix/RG-169/Recruiter-upload-no-opening, opened PR #176 against develop (user approved)
+- 2026-10-18T09:50Z [claude] RG-169 REVISED @b644212: 4 review findings fixed (expired-assignment wording, expired openings still offered, busy panel replaced, failed load silent) plus a render-loop regression from the unmemoised filter
