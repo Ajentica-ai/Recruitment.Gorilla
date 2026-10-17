@@ -30,6 +30,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '../ToastStack';
 import { initials } from '../../utils/initials';
 import EmptyState from '../common/EmptyState';
+import NoJobOpeningNotice from '../common/NoJobOpeningNotice';
+import { offerableJobOpenings } from '../../utils/jobOpenings';
 import ConfirmModal from '../common/ConfirmModal';
 import LoadingPanel from '../common/Loading';
 import { SearchInput } from '@/components/ui/search-input';
@@ -168,10 +170,20 @@ export default function DraftReviewWorkspace({ initialBatchId, onCandidateCreate
     queryFn: getDraftBatches,
   });
 
-  const { data: roles = [] } = useQuery({
+  const {
+    data: allRoles = [],
+    isSuccess: rolesLoaded,
+    isError: rolesFailed,
+    refetch: refetchRoles,
+  } = useQuery({
     queryKey: ['role-options', 'active'],
     queryFn: getActiveRoleOptions,
   });
+  // Approving files the candidate against an *open* opening, so an expired one must not be
+  // offered here either; the server would reject it on approve.
+  // Memoised: `roles` is in an effect's dependency list below, so an unstable reference
+  // would re-run it, set state and loop.
+  const roles = useMemo(() => offerableJobOpenings(allRoles), [allRoles]);
 
   const { data: sources = [] } = useQuery({
     queryKey: ['source-options', 'active'],
@@ -1037,6 +1049,18 @@ export default function DraftReviewWorkspace({ initialBatchId, onCandidateCreate
                         />
                       )}
                     </Field>
+                    {/* Approving a draft files the candidate against an opening, so with none to
+                        choose the approve can only fail. Say why beside the field. */}
+                    {(rolesFailed || (rolesLoaded && roles.length === 0)) && (
+                      <div className="col-span-12">
+                        <NoJobOpeningNotice
+                          compact
+                          reason={allRoles.length > 0 ? 'expired' : 'unassigned'}
+                          failed={rolesFailed}
+                          onRetry={() => void refetchRoles()}
+                        />
+                      </div>
+                    )}
 
                     {/* Relevant Experience */}
                     <Field className="col-span-12 md:col-span-6" label="Relevant Experience" required>

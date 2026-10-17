@@ -144,6 +144,19 @@ Some statuses need extra details. The form asks for them:
 | **Recommended** | the candidate must have passed **Code Review** or **Interview Completed** |
 | **Hired** | the candidate must have **Offer Accepted** |
 
+**"You are not assigned to a job opening."** Every CV is filed against a job opening, and you can
+only use the openings an admin has assigned to you. When you have none, the upload area says so
+instead of letting you drop files, and the same note appears on JSON import, on the candidate form
+and when approving a staged CV. Ask an admin to assign you to an open opening; there is nothing
+you can do from your own account.
+
+**"Your job openings have ended."** A different case with a different fix: you *are* assigned, but
+every opening you have is past its end date, and a CV can only be filed against an open one. Ask
+an admin to extend the end date, or to assign you to another opening. Openings past their end date
+are never offered in the dropdown, so this cannot be worked around by picking one anyway.
+
+Admins are not restricted this way and can upload against any open opening.
+
 ## 2.7 Scheduling interviews
 
 Choose **Interview Scheduled** in Add status and the form expands:
