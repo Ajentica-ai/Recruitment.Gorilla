@@ -1,9 +1,10 @@
 # AI-DLC Nano State
 - Active work item: none
 - Phase: —
-- Branch: fix/RG-167/Dashboard-pipeline-card-alignment
-- Base SHA: fde0630
-- Next step: none - RG-167 done, uncommitted until the user asks
-- Paused work items: none
-- Uncommitted code: yes
-- Last updated: 2026-10-15T11:51Z by claude
+- Branch: feature/RG-173/Interview-reschedule-cancel
+- Base SHA: 15d727c
+- Next step: none - RG-173 done, PR #174 open against develop
+- Paused work items:
+  - work-items/RG-52 (DONE, fix/RG-52/Recruiter-header-alignment, uncommitted - commit/PR on request)
+- Uncommitted code: no
+- Last updated: 2026-10-17T06:05Z by claude

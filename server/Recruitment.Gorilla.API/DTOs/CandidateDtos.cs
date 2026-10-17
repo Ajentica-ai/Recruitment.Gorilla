@@ -241,7 +241,12 @@ public record StatusHistoryDto(
     List<InterviewInterviewerDto> Interviewers,
     List<string> InterviewTags,
     // Live per-interviewer evaluation summary for an "Interview Completed" entry (empty otherwise).
-    List<EvaluationSummaryDto> EvaluationSummaries
+    List<EvaluationSummaryDto> EvaluationSummaries,
+    // Interview lifecycle (issue #173). InterviewAt above stays the honest record of what was
+    // first booked; these three carry where the booking stands now.
+    DateTime? InterviewScheduledAt = null,   // current time, after any reschedule
+    string? InterviewStatus = null,          // Scheduled | Cancelled
+    List<InterviewEventDto>? InterviewEvents = null
 );
 
 public record EvaluationSummaryDto(

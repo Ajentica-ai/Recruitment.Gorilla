@@ -31,7 +31,7 @@
 | Submission Received | Code Review |
 | Code Review | Call for Interview, Not Recommended, Not Available, Discontinued |
 | Call for Interview | Interview Scheduled, Not Available, Discontinued |
-| Interview Scheduled | Interview Completed, Not Available, Discontinued |
+| Interview Scheduled | Interview Completed, Call for Interview (by cancelling the booking), Not Available, Discontinued |
 | Interview Completed | Recommended, Not Recommended, Interview Scheduled (another round), Not Available, Discontinued |
 | Recommended | Offer Preparation, Offer Extended, Reject, Discontinued |
 | Offer Preparation | Offer Extended, Offer Declined, Reject, Discontinued |

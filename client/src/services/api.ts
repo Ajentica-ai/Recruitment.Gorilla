@@ -28,6 +28,8 @@ import type {
   JobOpening,
   DuplicateCandidate,
   InterviewDetail,
+  InterviewSchedule,
+  ReschedulePayload,
   InterviewEvaluation,
   LoginPayload,
   LoginResult,
@@ -671,6 +673,31 @@ export const getMyInterviews = async (): Promise<MyInterview[]> => {
 
 export const getInterview = async (id: number): Promise<InterviewDetail> => {
   const { data } = await api.get<InterviewDetail>(`/interviews/${id}`);
+  return data;
+};
+
+/** Prefill for the reschedule form. A narrower read model than getInterview, which 404s a
+ *  recruiter who owns the candidate but is not an assigned interviewer. */
+export const getInterviewSchedule = async (id: number): Promise<InterviewSchedule> => {
+  const { data } = await api.get<InterviewSchedule>(`/interviews/${id}/schedule`);
+  return data;
+};
+
+/** Moves a booking. The body fully replaces the schedulable fields. */
+export const rescheduleInterview = async (
+  id: number,
+  payload: ReschedulePayload
+): Promise<InterviewSchedule> => {
+  const { data } = await api.put<InterviewSchedule>(`/interviews/${id}`, payload);
+  return data;
+};
+
+/** Cancels a booking and returns the candidate to Call for Interview. */
+export const cancelInterview = async (
+  id: number,
+  payload: { reason: string }
+): Promise<InterviewSchedule> => {
+  const { data } = await api.post<InterviewSchedule>(`/interviews/${id}/cancel`, payload);
   return data;
 };
 

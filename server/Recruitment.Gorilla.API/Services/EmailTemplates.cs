@@ -81,6 +81,84 @@ public static class EmailTemplates
         return (subject, Wrap(subject, body, interviewUrl, "View interview"));
     }
 
+    public static (string Subject, string Html) InterviewRescheduled(
+        string interviewerName, string candidateName, string? roleName,
+        DateTime previousScheduledAt, DateTime scheduledAt, string interviewUrl,
+        string? reason = null, InterviewInviteDetails? invite = null)
+    {
+        var subject = $"Interview moved: {candidateName}";
+        var roleLine = string.IsNullOrWhiteSpace(roleName) ? "" : $"<p>Role: {roleName}</p>";
+        var was = Utc(previousScheduledAt);
+        var now = Utc(scheduledAt);
+
+        var calendarLinks = invite is null ? "" : $"""
+            <p style="margin-top:20px;font-size:13px;color:#555555;">
+              Add the new time to your calendar:
+              <a href="{CalendarInvite.GoogleUrl(invite)}" style="color:#2b579a;">Google Calendar</a>
+              &nbsp;&middot;&nbsp;
+              <a href="{CalendarInvite.OutlookUrl(invite)}" style="color:#2b579a;">Outlook</a>
+              <br />
+              <span style="color:#777777;">{CalendarNotePlaceholder}</span>
+            </p>
+            """;
+
+        var duration = invite is null ? "" : $"<p>Duration: {invite.DurationMinutes} minutes</p>";
+        var reasonLine = string.IsNullOrWhiteSpace(reason) ? "" : $"<p>Reason: {reason}</p>";
+
+        var body = $"""
+            <p>Hi {interviewerName},</p>
+            <p>Your interview with <strong>{candidateName}</strong> has been moved.</p>
+            {roleLine}
+            <p>Previously: <span style="text-decoration:line-through;color:#777777;">{was} UTC</span></p>
+            <p>Now scheduled for: <strong>{now} UTC</strong></p>
+            {duration}
+            {reasonLine}
+            {calendarLinks}
+            """;
+        return (subject, Wrap(subject, body, interviewUrl, "View interview"));
+    }
+
+    /// <summary>
+    /// Also used to tell a dropped interviewer they are off the panel. No add-to-calendar links:
+    /// there is nothing left to add, and the cancellation .ics is only best effort.
+    /// </summary>
+    public static (string Subject, string Html) InterviewCancelled(
+        string interviewerName, string candidateName, string? roleName,
+        DateTime scheduledAt, string? reason, bool removedFromPanel = false)
+    {
+        var subject = removedFromPanel
+            ? $"Interview removed: {candidateName}"
+            : $"Interview cancelled: {candidateName}";
+        var roleLine = string.IsNullOrWhiteSpace(roleName) ? "" : $"<p>Role: {roleName}</p>";
+        var when = Utc(scheduledAt);
+        var reasonLine = string.IsNullOrWhiteSpace(reason) ? "" : $"<p>Reason: {reason}</p>";
+
+        var lead = removedFromPanel
+            ? $"<p>You are no longer on the interview panel for <strong>{candidateName}</strong>.</p>"
+            : $"<p>The interview with <strong>{candidateName}</strong> has been cancelled.</p>";
+
+        var body = $"""
+            <p>Hi {interviewerName},</p>
+            {lead}
+            {roleLine}
+            <p>It was scheduled for: <span style="text-decoration:line-through;color:#777777;">{when} UTC</span></p>
+            {reasonLine}
+            <p style="margin-top:20px;font-size:13px;color:#555555;">
+              Please remove it from your calendar if it is still there.
+              <br />
+              <span style="color:#777777;">{CalendarNotePlaceholder}</span>
+            </p>
+            """;
+        return (subject, Wrap(subject, body));
+    }
+
+    /// <summary>
+    /// Labelled UTC, formatted invariantly: email is the one surface that cannot know the
+    /// recipient's timezone, and the server's culture must not change how the time reads.
+    /// </summary>
+    private static string Utc(DateTime value) => value.ToUniversalTime()
+        .ToString("dd MMM yyyy, HH:mm", CultureInfo.InvariantCulture);
+
     public static (string Subject, string Html) PasswordChanged(string userName)
     {
         const string subject = "Your password was changed";

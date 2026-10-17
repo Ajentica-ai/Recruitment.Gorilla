@@ -38,8 +38,8 @@ rough **effort**. This is advisory — turn any item into a `specs/` spec before
 - **Start with:** candidate-facing transactional email (status-change → candidate) behind a template system, reusing the existing dispatch path.
 
 ### 2. Real interview scheduling 🔴 (M–L)
-- **Now:** "Interview Scheduled" is a raw `datetime-local` + assigned users (`CandidateService.AddStatusAsync` → `Interview`). Interviewer notes + a re-schedule loop exist.
-- **Missing:** **timezones**, calendar invites (`.ics` / Google / Outlook), availability & conflict checks, candidate-facing reschedule notice.
+- **Now:** "Interview Scheduled" is a raw `datetime-local` + assigned users (`CandidateService.AddStatusAsync` → `Interview`). Interviewer notes exist, calendar invites ship (`Services/CalendarInvite.cs`: `.ics` + Google/Outlook links), and a booking can be **moved or cancelled in place** with the interviewers notified (issue #173, `specs/interview-reschedule-and-cancel.md`). The `8 → 3` transition is a *second round after one finished*, not a reschedule.
+- **Missing:** **timezones**, availability & conflict checks, candidate-facing reschedule notice (there is still no candidate-facing email path at all), and a `.ics` cancel that reliably removes the event (today's `PUBLISH` invites carry no `ATTENDEE`, so the cancellation email is the real notification).
 - **Why:** nobody outside the app currently knows an interview exists.
 
 ### 3. Aggregate scorecards + candidate comparison 🟢 (mostly done)

@@ -1,5 +1,7 @@
+using Microsoft.EntityFrameworkCore;
 using Recruitment.Gorilla.API.Auth;
 using Recruitment.Gorilla.API.DTOs;
+using Recruitment.Gorilla.API.Models;
 using Recruitment.Gorilla.Tests.Infrastructure;
 
 namespace Recruitment.Gorilla.Tests;
@@ -118,5 +120,82 @@ public class CandidateServiceStatusTests(MySqlDatabaseFixture fixture) : DbTestB
         // Even an otherwise-legal transition is blocked by the end-date lock.
         var error = await Candidates().ValidateStatusChangeAsync(c.Id, Change("Ask for Assessment"));
         Assert.Contains("extend", error);
+    }
+
+    // ---- Interview lifecycle on the timeline (issue #173) ----
+
+    [Fact]
+    public async Task Booking_an_interview_opens_the_event_trail()
+    {
+        var interviewer = Data.AddUser(Roles.Interviewer);
+        var c = Data.AddCandidate(status: "Call for Interview");
+        var at = DateTime.UtcNow.AddDays(3);
+
+        var entry = await Candidates().AddStatusAsync(
+            c.Id, Change("Interview Scheduled", interviewAt: at, interviewerIds: [interviewer.Id]),
+            "Rhonda Recruiter", null);
+
+        Assert.NotNull(entry);
+        // Without an opening Scheduled event a later move has no origin to point back to.
+        var events = await Db.InterviewEvents
+            .Where(e => e.InterviewId == entry!.InterviewId)
+            .ToListAsync();
+        var opening = Assert.Single(events);
+        Assert.Equal(InterviewEventTypes.Scheduled, opening.EventType);
+        Assert.Equal(at, opening.NewScheduledAt!.Value, TimeSpan.FromSeconds(1));
+        Assert.Null(opening.PreviousScheduledAt);
+        Assert.Equal("Rhonda Recruiter", opening.ActorName);
+    }
+
+    [Fact]
+    public async Task A_rescheduled_interview_shows_the_new_date_while_InterviewAt_keeps_the_original()
+    {
+        var interviewer = Data.AddUser(Roles.Interviewer);
+        var actor = Data.AddUser(Roles.Admin);
+        var c = Data.AddCandidate(status: "Call for Interview");
+        var originalAt = DateTime.UtcNow.AddDays(2);
+
+        await Candidates().AddStatusAsync(
+            c.Id, Change("Interview Scheduled", interviewAt: originalAt, interviewerIds: [interviewer.Id]),
+            "Rhonda Recruiter", actor.Id);
+
+        var interview = await Db.Interviews.FirstAsync(i => i.CandidateId == c.Id);
+        var movedTo = DateTime.UtcNow.AddDays(9);
+        await Interviews().RescheduleAsync(
+            interview.Id,
+            new RescheduleInterviewDto(movedTo, 60, null, [interviewer.Id], null, "Candidate asked"),
+            null, actor.Id, actor.Name);
+
+        var detail = await Candidates().GetByIdAsync(c.Id);
+        var scheduledEntry = detail!.StatusHistory.First(h => h.Status == "Interview Scheduled");
+
+        // InterviewAt is the honest record of what was first booked; the headline reads the new one.
+        Assert.Equal(originalAt, scheduledEntry.InterviewAt!.Value, TimeSpan.FromSeconds(1));
+        Assert.Equal(movedTo, scheduledEntry.InterviewScheduledAt!.Value, TimeSpan.FromSeconds(1));
+        Assert.Equal(InterviewStatuses.Scheduled, scheduledEntry.InterviewStatus);
+        Assert.Contains(scheduledEntry.InterviewEvents!, e => e.EventType == InterviewEventTypes.Rescheduled);
+    }
+
+    [Fact]
+    public async Task A_cancelled_interview_is_marked_on_the_timeline_entry()
+    {
+        var interviewer = Data.AddUser(Roles.Interviewer);
+        var actor = Data.AddUser(Roles.Admin);
+        var c = Data.AddCandidate(status: "Call for Interview");
+
+        await Candidates().AddStatusAsync(
+            c.Id, Change("Interview Scheduled", interviewAt: DateTime.UtcNow.AddDays(2), interviewerIds: [interviewer.Id]),
+            "Rhonda Recruiter", actor.Id);
+
+        var interview = await Db.Interviews.FirstAsync(i => i.CandidateId == c.Id);
+        await Interviews().CancelAsync(interview.Id, "Role put on hold", null, actor.Id, actor.Name);
+
+        var detail = await Candidates().GetByIdAsync(c.Id);
+        var scheduledEntry = detail!.StatusHistory.First(h => h.Status == "Interview Scheduled");
+
+        Assert.Equal(InterviewStatuses.Cancelled, scheduledEntry.InterviewStatus);
+        Assert.Contains(scheduledEntry.InterviewEvents!,
+            e => e.EventType == InterviewEventTypes.Cancelled && e.Reason == "Role put on hold");
+        Assert.Equal("Call for Interview", detail.CurrentStatus);
     }
 }

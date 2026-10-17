@@ -154,7 +154,12 @@ Lookup table for allowed movement from one status option to another. The UI hide
 | IsActive | bool | inactive transitions are hidden/blocked |
 
 Seed includes `Interview Completed → Interview Scheduled` (Id 31, migration
-`AddInterviewCompletionLinkAndReschedule`) so a second interview round can be scheduled.
+`AddInterviewCompletionLinkAndReschedule`) so a second interview round can be scheduled, and
+`Interview Scheduled → Call for Interview` (Id 50, migration `AddInterviewLifecycle`) so a
+**cancelled** booking returns the candidate somewhere they can be re-booked from. Note the two are
+different things: Id 31 books another round *after* one finished, Id 50 is the cleanup after a
+booking is called off. Moving a booking uses neither (see
+[specs/interview-reschedule-and-cancel.md](specs/interview-reschedule-and-cancel.md)).
 
 ### RoleAppliedOption (`RoleAppliedOptions`), SkillOption (`SkillOptions`) & CandidateSourceOption (`CandidateSourceOptions`)
 Admin-managed lookups (via the Configuration page / `/api/config/*`). Each: `Id`, `Name` (unique, ≤200), `SortOrder`, `IsActive`, `CreatedAt`, `UpdatedAt`. Inactive values are hidden from candidate forms but kept for history. All are seeded with starter values.
@@ -190,9 +195,37 @@ Created when a candidate moves to **Interview Scheduled** (see `CandidateService
 | Id | int PK | |
 | CandidateId | int FK → Candidate | cascade delete |
 | StatusHistoryId | int? FK → StatusHistory | the "Interview Scheduled" entry; SetNull |
-| ScheduledAt | datetime | mirrors the history entry's InterviewAt |
+| ScheduledAt | datetime | the time the interview is booked for **now**; a reschedule moves it (the history entry's `InterviewAt` keeps what was first booked) |
+| Status | varchar(20) | `Scheduled` \| `Cancelled`, default `Scheduled`. A string like `Offer.Status`; the non-null default backfilled existing rows (migration `AddInterviewLifecycle`). No `Completed` value: completion stays candidate-driven |
+| Notes | varchar(4000)? | recruiter's note for the interviewers, editable on reschedule. Reads fall back to the creating `StatusHistory.Comment`, so pre-#173 interviews need no backfill |
+| CalendarSequence | int | iCalendar `SEQUENCE` for this booking's UID; incremented on every reschedule/cancel because clients ignore a re-issued invite whose SEQUENCE has not grown |
+| UpdatedAt | datetime? | set by a reschedule or cancel |
+| UpdatedByUserId | int? FK → User | who last moved or cancelled it; SetNull |
 | CreatedByUserId | int? FK → User | who scheduled it; SetNull |
 | CreatedAt | datetime | UTC |
+
+`CancelledAt` / `CancelledByUserId` / `CancellationReason` are deliberately **not** columns: they are
+the latest `Cancelled` event's fields, and duplicating them guarantees drift.
+
+### InterviewEvent (`InterviewEvents`)
+Append-only narrative of a booking's life (migration `AddInterviewLifecycle`, issue #173). Separate
+from `StatusHistory`, which records the **candidate's** status and must not be re-asserted when only
+the interview's date changes.
+
+| Field | Type | Notes |
+|---|---|---|
+| Id | int PK | |
+| InterviewId | int FK → Interview | cascade delete; index on `(InterviewId, CreatedAt)` |
+| EventType | varchar(20) | `Scheduled` \| `Rescheduled` \| `Cancelled` |
+| PreviousScheduledAt | datetime? | null on the opening `Scheduled` event |
+| NewScheduledAt | datetime? | null on a `Cancelled` event |
+| Reason | varchar(1000)? | required by the API on cancel, optional on a move |
+| ActorUserId | int? FK → User | SetNull |
+| ActorName | varchar(200) | denormalized exactly as `StatusHistory.ChangedBy` is, so the trace survives a user delete |
+| CreatedAt | datetime | UTC |
+
+A `Scheduled` event is written at creation time too, otherwise a reschedule has no origin to point
+back to on the timeline.
 
 ### InterviewInterviewer (`InterviewInterviewers`)
 Join assigning users as interviewers. Composite PK `(InterviewId, UserId)`; cascade from Interview, restrict on User. Assignment grants that user read access to the interview + candidate snapshot and the right to submit one evaluation.

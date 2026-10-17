@@ -1,5 +1,9 @@
 # Backlog
 <!-- Out-of-scope findings, newest first. Delete a line when it is resolved. -->
+- [2026-10-16] CalendarInvite - .ics cancels are best effort; PUBLISH invites carry no ATTENDEE so clients may not remove the event. Needs PUBLISH -> REQUEST (found: RG-173)
+- [2026-10-16] CandidateService - rejecting/discontinuing a candidate leaves their scheduled interviews live; should auto-cancel (found: RG-173)
+- [2026-10-16] InterviewService.RescheduleAsync - the dropped-submitted-interviewer 400 is unreachable while the submitted-eval 409 stands; kept as defence in depth (found: RG-173)
+- [2026-10-16] client/e2e - POST /api/candidates needs a real upload session, so specs cannot fabricate a candidate cheaply (found: RG-173)
 - [2026-10-14] client/index.css - .interview-grid + its >=992px block are dead CSS; Harbor (#35) moved the page to .interview-studio-container (found: RG-68)
 - [2026-10-14] client/e2e - responsive-card-header skips its interview leg; the new E2E_INTERVIEWER_* pair would let it run (found: RG-68)
 - [2026-10-13] client/e2e/test-cvs - Alex_Rivera CV is rejected on upload, "Could not parse 1 file" (found: RG-156)

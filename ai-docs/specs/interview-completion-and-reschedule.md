@@ -12,6 +12,15 @@
 > frontend `cleanComment` strips any legacy "— Interview evaluations —" text from old comments.
 > Because evaluations are submit-locked, live == the point-in-time snapshot in practice.
 
+> **Revision (2026-10-16, issue #173):** the "Re-schedule" in this spec's title means the seeded
+> transition **Interview Completed (8) → Interview Scheduled (3)** (Id 31): booking a **new round
+> after the last one finished**. It is *not* a way to **move** an existing booking, and it never was
+> — reaching it requires moving the candidate to Interview Completed, which is gated on at least one
+> submitted evaluation, so an interview that has not been held can never pass through it. Moving or
+> cancelling a booked interview is a separate feature with its own endpoints, added by
+> [interview-reschedule-and-cancel.md](interview-reschedule-and-cancel.md). Transition 31 is correct
+> for what it does and is unchanged.
+
 ## 1. Summary
 Closes the interview loop around the **Interview Completed** status: the timeline entry links to the
 interviewers' evaluations (Admin+ only) and carries a snapshot summary (average + recommendation per

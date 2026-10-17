@@ -26,6 +26,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<InterviewTypeOption> InterviewTypeOptions => Set<InterviewTypeOption>();
     public DbSet<JobOpeningOption> JobOpeningOptions => Set<JobOpeningOption>();
     public DbSet<InterviewTag> InterviewTags => Set<InterviewTag>();
+    public DbSet<InterviewEvent> InterviewEvents => Set<InterviewEvent>();
     public DbSet<Notification> Notifications => Set<Notification>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
     public DbSet<EmailSetting> EmailSettings => Set<EmailSetting>();
@@ -280,6 +281,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 new StatusTransition { Id = 30, FromStatusOptionId = 13, ToStatusOptionId = 2, SortOrder = 5, IsActive = true },
                 // Interview Completed -> Interview Scheduled (re-schedule another round)
                 new StatusTransition { Id = 31, FromStatusOptionId = 8, ToStatusOptionId = 3, SortOrder = 5, IsActive = true },
+                // Interview Scheduled -> Call for Interview (a cancelled booking returns here to be re-booked)
+                new StatusTransition { Id = 50, FromStatusOptionId = 3, ToStatusOptionId = 2, SortOrder = 4, IsActive = true },
                 // Recommended -> Offer stages
                 new StatusTransition { Id = 32, FromStatusOptionId = 9, ToStatusOptionId = 15, SortOrder = 2, IsActive = true },
                 new StatusTransition { Id = 33, FromStatusOptionId = 9, ToStatusOptionId = 16, SortOrder = 3, IsActive = true },
@@ -489,6 +492,31 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.HasOne(i => i.CreatedByUser)
              .WithMany()
              .HasForeignKey(i => i.CreatedByUserId)
+             .OnDelete(DeleteBehavior.SetNull);
+            // Non-null default so existing rows backfill to Scheduled without a data migration.
+            e.Property(i => i.Status).HasMaxLength(20).IsRequired().HasDefaultValue(InterviewStatuses.Scheduled);
+            e.Property(i => i.CalendarSequence).HasDefaultValue(0);
+            e.Property(i => i.Notes).HasMaxLength(4000);
+            e.HasOne(i => i.UpdatedByUser)
+             .WithMany()
+             .HasForeignKey(i => i.UpdatedByUserId)
+             .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<InterviewEvent>(e =>
+        {
+            e.HasKey(ev => ev.Id);
+            e.Property(ev => ev.EventType).HasMaxLength(20).IsRequired();
+            e.Property(ev => ev.Reason).HasMaxLength(1000);
+            e.Property(ev => ev.ActorName).HasMaxLength(200).IsRequired();
+            e.HasIndex(ev => new { ev.InterviewId, ev.CreatedAt });
+            e.HasOne(ev => ev.Interview)
+             .WithMany(i => i.Events)
+             .HasForeignKey(ev => ev.InterviewId)
+             .OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(ev => ev.ActorUser)
+             .WithMany()
+             .HasForeignKey(ev => ev.ActorUserId)
              .OnDelete(DeleteBehavior.SetNull);
         });
 

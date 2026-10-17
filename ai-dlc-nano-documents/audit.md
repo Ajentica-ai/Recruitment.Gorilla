@@ -405,3 +405,19 @@
 - 2026-10-15T11:48Z [claude] RG-167 BRANCH @fde0630: fix/RG-167/Dashboard-pipeline-card-alignment off origin/develop (user confirmed)
 - 2026-10-15T11:48Z [claude] RG-167 PHASE PLAN→CONSTRUCT @fde0630: plan approved
 - 2026-10-15T11:51Z [claude] RG-167 DONE @fde0630: .dash-pair flex column at >=1200, last card grows; bottoms equal at 1920/1440/1200; suite 250/250
+- 2026-10-16T09:43Z [claude] RG-173 CREATED @41deafe: issue #173 opened - a scheduled interview cannot be moved or cancelled; the documented 8 -> 3 re-schedule only works after a submitted evaluation (enhancement, AI-initiated, UI)
+- 2026-10-16T10:05Z [claude] RG-173 SIDE-EFFECT @41deafe: INTAKE claim - issue #173 assigned to tahmidsparrow (already was), board status Backlog -> In Development
+- 2026-10-16T10:12Z [claude] RG-173 DECISION @41deafe: deliver the whole issue as one branch/PR; a slice without the calendar/email half leaves interviewers' calendars on the old time (user confirmed)
+- 2026-10-16T10:12Z [claude] RG-173 DECISION @41deafe: issue open questions 1-3 all taken as recommended - no auto-cancel on reject, no Interview.Status=Completed, no concurrency check (user confirmed)
+- 2026-10-16T10:12Z [claude] RG-173 DECISION @41deafe: add a Playwright e2e spec for the reschedule flow on top of the issue's unit/integration tests (user confirmed)
+- 2026-10-16T10:20Z [claude] RG-173 PHASE CLARIFY->PLAN @41deafe: spec written to ai-docs/specs/interview-reschedule-and-cancel.md (Approved), 15 tasks
+- 2026-10-16T10:22Z [claude] RG-173 BRANCH @fe76b20: feature/RG-173/Interview-reschedule-cancel off origin/develop (user confirmed); RG-68 stays on PR #159
+- 2026-10-16T10:22Z [claude] RG-173 PHASE PLAN->CONSTRUCT @fe76b20: plan approved, standard-to-high rigor (migration, new auth gate, draft-deletion path)
+- 2026-10-16T11:05Z [claude] RG-173 DECISION @fe76b20: cancel only steps the candidate back to Call for Interview when they are currently Interview Scheduled; for a Rejected/Discontinued candidate it is calendar cleanup only, since moving them would silently un-reject them (gap in the issue's rules table)
+- 2026-10-16T11:05Z [claude] RG-173 PHASE CONSTRUCT @fe76b20: backend tasks 1-9 done, migration applied, 568/568 existing server tests green
+- 2026-10-16T11:40Z [claude] RG-173 PHASE CONSTRUCT @fe76b20: backend done (tasks 1-10); 613/613 server tests green, 45 new; CalendarAttachment.Method bug caught by its own test and fixed
+- 2026-10-16T12:30Z [claude] RG-173 PHASE CONSTRUCT->WRAP-UP @fe76b20: 15/15 tasks; 613 server tests, 259 client, tsc+lint clean, Playwright reschedule spec green
+- 2026-10-16T12:30Z [claude] RG-173 DONE @fe76b20: move/cancel a scheduled interview shipped end to end; 4 findings to backlog; uncommitted on feature/RG-173/Interview-reschedule-cancel
+- 2026-10-16T12:30Z [claude] RG-173 WRAP-UP @fe76b20: archived RG-53,RG-62,RG-65,RG-71,RG-156,RG-39,RG-54 to stay within the 10-item retention cap
+- 2026-10-17T06:05Z [claude] RG-173 SIDE-EFFECT @15d727c: committed and pushed feature/RG-173/Interview-reschedule-cancel, opened PR #174 against develop (user approved)
+- 2026-10-17T06:05Z [claude] RG-173 SIDE-EFFECT @15d727c: posted summary comment on issue #173, board status In Development -> In review (user approved)
