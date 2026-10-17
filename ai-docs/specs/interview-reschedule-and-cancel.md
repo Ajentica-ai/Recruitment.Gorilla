@@ -1,7 +1,6 @@
 # Spec — Move or Cancel a Scheduled Interview
 
 **Status:** Approved
-**Author:** AI agent
 **Date:** 2026-10-16
 **Issue:** [#173](https://github.com/Ajentica-ai/Recruitment.Gorilla/issues/173)
 
@@ -134,6 +133,8 @@ only write today is `UpsertEvaluationAsync`. Each method owner-scopes the candid
 | An interviewer with a **draft** is dropped | Delete the `InterviewInterviewer` row **and** the draft explicitly. The cascade runs from `Interview`, not from the join row, so the draft would otherwise survive and resurface on re-add. The confirm dialog says so first. |
 | Candidate is Rejected or Discontinued | Block reschedule (409), allow cancel: the invite is live in people's calendars and this is cleanup. |
 | Already cancelled | Cancel again 409. Re-booking goes through Call for Interview -> Interview Scheduled. |
+| Applied job opening has ended | Both writes return 400 under the same end-date lock as candidate status changes. |
+| Unknown or inactive interview type, oversized notes or reason | Return 400 before saving. Notes have a 4000-character limit; reasons have a 1000-character limit. |
 
 A cancelled interview is filtered out of the upcoming lists: `InterviewService.GetMineAsync` and the
 dashboard's upcoming-interviews query both add `Status != "Cancelled"` server-side.
@@ -255,7 +256,8 @@ cancel reason required. Role-closed candidates hide both affordances client-side
 - [ ] `PUT /api/interviews/{id}` and `POST /api/interviews/{id}/cancel`: Interviewer 403, anonymous
       401, out-of-scope Recruiter 404.
 - [ ] `dotnet build`, `dotnet test`, `npx tsc -b`, `npm test`, `npm run lint` and the Playwright
-      reschedule spec all pass.
+      reschedule spec all pass. Its default test is read-only; the write cycle requires an isolated
+      database and `E2E_ISOLATED=1`.
 
 ## 10. Open questions
 1. Should rejecting or discontinuing a candidate auto-cancel their live interviews? The right end

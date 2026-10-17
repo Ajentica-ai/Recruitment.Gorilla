@@ -1,10 +1,10 @@
 # AI-DLC Nano State
 - Active work item: none
 - Phase: —
-- Branch: feature/RG-173/Interview-reschedule-cancel
-- Base SHA: 15d727c
-- Next step: none - RG-173 done, PR #174 open against develop
+- Branch: fix/RG-173/Interview-write-hardening
+- Base SHA: 58e13bd
+- Next step: none - RG-173 merged via PR #174; the follow-on hardening is on fix/RG-173/Interview-write-hardening
 - Paused work items:
   - work-items/RG-52 (DONE, fix/RG-52/Recruiter-header-alignment, uncommitted - commit/PR on request)
 - Uncommitted code: no
-- Last updated: 2026-10-17T06:05Z by claude
+- Last updated: 2026-10-17T13:20Z by claude
