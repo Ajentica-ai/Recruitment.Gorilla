@@ -138,7 +138,7 @@ export default function InterviewPage() {
                   nothing is expected of them. */}
               {data.status === 'Cancelled' && <Badge variant="danger">Cancelled</Badge>}
 
-              {isAdminOrAbove && data.status === 'Scheduled' && (
+              {isAdminOrAbove && !data.candidate.roleClosed && data.status === 'Scheduled' && (
                 <>
                   <Button variant="outline" size="sm" onClick={() => setRescheduling(true)}>
                     <CalendarClock size={14} aria-hidden="true" /> Reschedule

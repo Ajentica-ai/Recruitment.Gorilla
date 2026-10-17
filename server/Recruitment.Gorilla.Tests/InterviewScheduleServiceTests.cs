@@ -180,6 +180,80 @@ public class InterviewScheduleServiceTests(MySqlDatabaseFixture fixture) : DbTes
     }
 
     [Fact]
+    public async Task Reschedule_rejects_interview_types_that_are_not_active_options()
+    {
+        var (_, interview, interviewer, actor) = Booked();
+        var inactive = new InterviewTypeOption { Name = "Retired round", IsActive = false };
+        Db.InterviewTypeOptions.Add(inactive);
+        await Db.SaveChangesAsync();
+
+        foreach (var typeId in new[] { inactive.Id, int.MaxValue })
+        {
+            var (_, error, _, conflict) = await Interviews().RescheduleAsync(
+                interview.Id,
+                Move(interviewerIds: [interviewer.Id]) with { InterviewTypeOptionIds = [typeId] },
+                null, actor.Id, actor.Name);
+
+            Assert.False(conflict);
+            Assert.Contains("valid active options", error);
+        }
+
+        Assert.Equal(0, (await Db.Interviews.FindAsync(interview.Id))!.CalendarSequence);
+        Assert.False(await Db.InterviewEvents.AnyAsync(e => e.InterviewId == interview.Id));
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task Closed_role_blocks_interview_writes(bool cancel)
+    {
+        var role = Data.AddRole(endDate: DateTime.UtcNow.AddDays(-1));
+        var interviewer = Data.AddUser(Roles.Interviewer);
+        var actor = Data.AddUser(Roles.Admin);
+        var candidate = Data.AddCandidate(roleId: role.Id, status: Scheduled);
+        var interview = Data.AddInterview(candidate.Id, interviewer.Id);
+
+        var outcome = cancel
+            ? await Interviews().CancelAsync(interview.Id, "No longer needed", null, actor.Id, actor.Name)
+            : await Interviews().RescheduleAsync(
+                interview.Id, Move(interviewerIds: [interviewer.Id]), null, actor.Id, actor.Name);
+
+        Assert.Contains("extend", outcome.Error);
+        Assert.False(outcome.Conflict);
+        Assert.Equal(InterviewStatuses.Scheduled, (await Db.Interviews.FindAsync(interview.Id))!.Status);
+        Assert.Equal(Scheduled, (await Db.Candidates.FindAsync(candidate.Id))!.CurrentStatus);
+        Assert.False(await Db.InterviewEvents.AnyAsync(e => e.InterviewId == interview.Id));
+    }
+
+    [Fact]
+    public async Task Reschedule_rejects_notes_and_reason_longer_than_their_columns()
+    {
+        var (_, interview, interviewer, actor) = Booked();
+        var request = Move(interviewerIds: [interviewer.Id]);
+
+        var notes = await Interviews().RescheduleAsync(
+            interview.Id, request with { Notes = new string('n', 4001) }, null, actor.Id, actor.Name);
+        var reason = await Interviews().RescheduleAsync(
+            interview.Id, request with { Reason = new string('r', 1001) }, null, actor.Id, actor.Name);
+
+        Assert.Contains("4000", notes.Error);
+        Assert.Contains("1000", reason.Error);
+        Assert.Equal(0, (await Db.Interviews.FindAsync(interview.Id))!.CalendarSequence);
+    }
+
+    [Fact]
+    public async Task Cancel_rejects_a_reason_longer_than_its_column()
+    {
+        var (_, interview, _, actor) = Booked();
+
+        var outcome = await Interviews().CancelAsync(
+            interview.Id, new string('r', 1001), null, actor.Id, actor.Name);
+
+        Assert.Contains("1000", outcome.Error);
+        Assert.Equal(InterviewStatuses.Scheduled, (await Db.Interviews.FindAsync(interview.Id))!.Status);
+    }
+
+    [Fact]
     public async Task A_candidate_past_Interview_Scheduled_cannot_have_the_booking_moved()
     {
         // Covers Rejected and Discontinued too: there is no live booking to move.

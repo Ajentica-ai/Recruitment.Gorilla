@@ -421,6 +421,10 @@
 - 2026-10-16T12:30Z [claude] RG-173 WRAP-UP @fe76b20: archived RG-53,RG-62,RG-65,RG-71,RG-156,RG-39,RG-54 to stay within the 10-item retention cap
 - 2026-10-17T06:05Z [claude] RG-173 SIDE-EFFECT @15d727c: committed and pushed feature/RG-173/Interview-reschedule-cancel, opened PR #174 against develop (user approved)
 - 2026-10-17T06:05Z [claude] RG-173 SIDE-EFFECT @15d727c: posted summary comment on issue #173, board status In Development -> In review (user approved)
+- 2026-10-17T13:20Z [claude] RG-173 REVISED @16daaf8: follow-on hardening (server role lock, type + length validation, read-only default e2e) verified green: 618 server, 259 client tests
+- 2026-10-17T13:20Z [claude] RG-173 SIDE-EFFECT @16daaf8: PR #174 was squash-merged as 58e13bd before the push; a stale push recreated the deleted feature branch, left in place (never delete a branch)
+- 2026-10-17T13:20Z [claude] RG-173 BRANCH @58e13bd: fix/RG-173/Interview-write-hardening created off origin/develop for the hardening (user confirmed)
+- 2026-10-17T13:25Z [claude] RG-173 SIDE-EFFECT @358e123: pushed fix/RG-173/Interview-write-hardening, opened PR #175 against develop referencing #173 (user approved, no new issue)
 - 2026-10-17T13:45Z [claude] RG-169 CREATED @1f56532: issue #169, a Recruiter cannot upload CVs; bug, scoped role-options returns an empty job-opening list and the page dead-ends silently
 - 2026-10-17T13:45Z [claude] RG-169 SIDE-EFFECT @1f56532: INTAKE claim - issue #169 assigned to tahmidsparrow (already was), board status -> In Development
 - 2026-10-18T05:30Z [claude] RG-169 DECISION @1f56532: rule is final - a Recruiter without a job-opening assignment cannot upload a CV, an Admin can; authorization model unchanged, fix is the silent dead end only (user confirmed)

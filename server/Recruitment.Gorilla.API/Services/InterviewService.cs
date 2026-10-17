@@ -393,6 +393,9 @@ public class InterviewService(
         var candidate = await candidateService.GetByIdAsync(interview.CandidateId, ownerScope);
         if (candidate is null) return (null, null, true, false);
 
+        var roleLockError = await candidateService.GetRoleLockErrorAsync(interview.CandidateId);
+        if (roleLockError is not null) return (null, roleLockError, false, false);
+
         if (interview.Status == InterviewStatuses.Cancelled)
             return (null, "This interview has been cancelled. Book a new one from Call for Interview.", false, true);
 
@@ -416,6 +419,23 @@ public class InterviewService(
             .CountAsync(u => u.IsActive && newInterviewerIds.Contains(u.Id));
         if (activeCount != newInterviewerIds.Count)
             return (null, "One of the selected interviewers is not an active user.", false, false);
+
+        var notes = string.IsNullOrWhiteSpace(dto.Notes) ? null : dto.Notes.Trim();
+        if (notes?.Length > 4000)
+            return (null, "Interview notes cannot exceed 4000 characters.", false, false);
+
+        var reason = string.IsNullOrWhiteSpace(dto.Reason) ? null : dto.Reason.Trim();
+        if (reason?.Length > 1000)
+            return (null, "The reason cannot exceed 1000 characters.", false, false);
+
+        var newTagIds = (dto.InterviewTypeOptionIds ?? []).Distinct().ToList();
+        if (newTagIds.Count > 0)
+        {
+            var validTagCount = await db.InterviewTypeOptions
+                .CountAsync(t => t.IsActive && newTagIds.Contains(t.Id));
+            if (validTagCount != newTagIds.Count)
+                return (null, "One or more selected interview types are not valid active options.", false, false);
+        }
 
         var oldInterviewerIds = interview.Interviewers.Select(ii => ii.UserId).ToList();
         var removedIds = oldInterviewerIds.Except(newInterviewerIds).ToList();
@@ -443,20 +463,18 @@ public class InterviewService(
         foreach (var added in addedIds)
             interview.Interviewers.Add(new InterviewInterviewer { UserId = added });
 
-        var newTagIds = (dto.InterviewTypeOptionIds ?? []).Distinct().ToList();
         interview.Tags.Clear();
         foreach (var tagId in newTagIds)
             interview.Tags.Add(new InterviewTag { InterviewTypeOptionId = tagId });
 
         interview.ScheduledAt = scheduledAt;
         interview.DurationMinutes = dto.DurationMinutes <= 0 ? 60 : dto.DurationMinutes;
-        interview.Notes = string.IsNullOrWhiteSpace(dto.Notes) ? null : dto.Notes.Trim();
+        interview.Notes = notes;
         interview.UpdatedAt = DateTime.UtcNow;
         interview.UpdatedByUserId = actorUserId;
         // Calendar clients ignore a re-issued invite for a known UID unless SEQUENCE has grown.
         interview.CalendarSequence += 1;
 
-        var reason = string.IsNullOrWhiteSpace(dto.Reason) ? null : dto.Reason.Trim();
         db.InterviewEvents.Add(new InterviewEvent
         {
             InterviewId = interview.Id,
@@ -496,6 +514,9 @@ public class InterviewService(
         var candidate = await candidateService.GetByIdAsync(interview.CandidateId, ownerScope);
         if (candidate is null) return (null, null, true, false);
 
+        var roleLockError = await candidateService.GetRoleLockErrorAsync(interview.CandidateId);
+        if (roleLockError is not null) return (null, roleLockError, false, false);
+
         if (interview.Status == InterviewStatuses.Cancelled)
             return (null, "This interview has already been cancelled.", false, true);
 
@@ -506,6 +527,8 @@ public class InterviewService(
         var trimmedReason = reason?.Trim();
         if (string.IsNullOrWhiteSpace(trimmedReason))
             return (null, "A reason is required to cancel an interview.", false, false);
+        if (trimmedReason.Length > 1000)
+            return (null, "The reason cannot exceed 1000 characters.", false, false);
 
         var scheduledAt = interview.ScheduledAt;
         var recipientIds = interview.Interviewers.Select(ii => ii.UserId).ToList();
