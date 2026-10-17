@@ -1,20 +1,8 @@
-import { test, expect, type APIRequestContext } from '@playwright/test';
+import { randomUUID } from 'node:crypto';
+import { test, expect, type APIRequestContext, type Page } from '@playwright/test';
 import { ADMIN, apiAuth, requireData, signIn } from './helpers';
+import { seedCandidate } from './seed';
 
-/**
- * Issue #173: a booked interview can be moved from the candidate timeline, and the timeline then
- * shows the new date rather than the one first booked.
- *
- * Drives a booking that already exists in the dev database and puts it back afterwards, rather
- * than creating a candidate: `POST /api/candidates` is the import path and refuses a CV file it
- * has no upload session for, and the suite already leaves too much behind (see backlog). The
- * cancel path's behaviour is covered by the server tests and the modal's unit tests; what is
- * asserted here is the half only a browser can prove, that the actions are reachable from the
- * timeline and that the rendered date follows the move.
- */
-
-// The SuperAdmin fixture is the identity `.env.e2e.example` guarantees; fall back to the
-// generic admin/recruiter vars when a machine is set up the older way.
 const admin = {
   email: process.env.SUPERADMIN_EMAIL ?? ADMIN.email ?? process.env.E2E_EMAIL,
   password: process.env.SUPERADMIN_PASSWORD ?? ADMIN.password ?? process.env.E2E_PASSWORD,
@@ -23,136 +11,141 @@ const admin = {
 const ymd = (d: Date) =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
-/** A candidate sitting at Interview Scheduled whose booking is still live. */
-async function liveBooking(
-  request: APIRequestContext,
-  auth: Record<string, string>,
-): Promise<{ candidateId: number; interviewId: number; schedule: any } | null> {
-  const res = await request.get(
-    `/api/candidates?page=1&pageSize=50&status=${encodeURIComponent('Interview Scheduled')}`,
-    { headers: auth },
-  );
-  if (!res.ok()) return null;
-  const body = await res.json();
-  const items = body.items ?? body;
-  if (!Array.isArray(items)) return null;
+async function scheduleFor(request: APIRequestContext, auth: Record<string, string>, id: number) {
+  const response = await request.get(`/api/interviews/${id}/schedule`, { headers: auth });
+  expect(response.ok()).toBeTruthy();
+  return response.json();
+}
 
-  for (const c of items) {
-    const detail = await request.get(`/api/candidates/${c.id}`, { headers: auth });
+async function openHistory(page: Page) {
+  const button = page.getByRole('button', { name: /^Status history/ });
+  await expect(button).toBeVisible({ timeout: 15_000 });
+  await button.click();
+  await expect(page.getByRole('dialog')).toBeVisible();
+}
+
+/** Read-only browser coverage that is safe against the normal dev database. */
+test('schedule controls are reachable and cancel requires a reason', async ({ page, request }) => {
+  const auth = await apiAuth(request, admin);
+  const list = await request.get('/api/candidates?page=1&pageSize=50&status=Interview%20Scheduled', {
+    headers: auth,
+  });
+  expect(list.ok()).toBeTruthy();
+  const items = (await list.json()).items ?? [];
+  let booking: { candidateId: number; interviewId: number; scheduledAt: string } | undefined;
+
+  for (const candidate of items) {
+    const detail = await request.get(`/api/candidates/${candidate.id}`, { headers: auth });
     if (!detail.ok()) continue;
-    const entry = (await detail.json()).statusHistory?.find(
-      (h: any) =>
+    const candidateDetail = await detail.json();
+    if (candidateDetail.roleClosed) continue;
+    const entry = candidateDetail.statusHistory?.find(
+      (h: { status: string; interviewId?: number; interviewStatus?: string }) =>
         h.status === 'Interview Scheduled' && h.interviewId && h.interviewStatus === 'Scheduled',
     );
     if (!entry) continue;
-
-    const sched = await request.get(`/api/interviews/${entry.interviewId}/schedule`, {
-      headers: auth,
-    });
-    if (!sched.ok()) continue;
-    const schedule = await sched.json();
-    // A submitted evaluation means the interview happened; moving it is refused by design.
+    const schedule = await scheduleFor(request, auth, entry.interviewId);
     if (schedule.hasSubmittedEvaluation) continue;
-    // Only a booking still in the future can be put back afterwards: the API refuses a target
-    // time in the past, so restoring one whose original slot has already gone by would fail
-    // silently and leave the dev database drifted.
-    if (new Date(schedule.scheduledAt).getTime() <= Date.now()) continue;
-
-    return { candidateId: c.id, interviewId: entry.interviewId, schedule };
+    booking = { candidateId: candidate.id, interviewId: entry.interviewId, scheduledAt: schedule.scheduledAt };
+    break;
   }
-  return null;
-}
 
-test.describe('Interview reschedule (#173)', () => {
-  test('moving a booking from the timeline updates the date shown there', async ({
-    page,
-    request,
-  }) => {
-    const auth = await apiAuth(request, admin);
-    const booking = await liveBooking(request, auth);
-    requireData(
-      booking !== null,
-      'a candidate at Interview Scheduled whose interview has no submitted evaluation',
-    );
-    const { candidateId, interviewId, schedule } = booking!;
+  requireData(booking !== undefined, 'a live scheduled interview without a submitted evaluation');
+  await signIn(page, admin);
+  await page.goto(`/candidates/${booking!.candidateId}`);
+  await openHistory(page);
 
-    const movedTo = new Date();
-    movedTo.setDate(movedTo.getDate() + 9);
-    const newDay = ymd(movedTo);
+  await page.getByRole('button', { name: /^reschedule$/i }).first().click();
+  const edit = page.getByRole('dialog');
+  await expect(edit.getByLabel('Interview duration')).toBeVisible();
+  await edit.getByRole('button', { name: /^cancel$/i }).click();
 
-    try {
-      await signIn(page, admin);
-      await page.goto(`/candidates/${candidateId}`);
+  await page.getByRole('button', { name: /cancel interview/i }).first().click();
+  const confirm = page.getByRole('dialog');
+  await confirm.getByRole('button', { name: /^cancel interview$/i }).click();
+  await expect(confirm.getByText(/reason is required/i)).toBeVisible();
+  await confirm.getByRole('button', { name: /^cancel$/i }).click();
 
-      // The timeline lives behind the history drawer on the candidate page. Wait for the button
-      // rather than clicking whatever is there: the page renders before the candidate query lands.
-      const openHistory = async () => {
-        const button = page.getByRole('button', { name: /^Status history/ });
-        await expect(button).toBeVisible({ timeout: 15_000 });
-        await button.click();
-        await expect(page.getByRole('dialog')).toBeVisible({ timeout: 15_000 });
-      };
-      await openHistory();
+  const after = await scheduleFor(request, auth, booking!.interviewId);
+  expect(after.status).toBe('Scheduled');
+  expect(after.scheduledAt).toBe(booking!.scheduledAt);
+});
 
-      const reschedule = page.getByRole('button', { name: /^reschedule$/i }).first();
-      await expect(reschedule).toBeVisible({ timeout: 15_000 });
-      await reschedule.click();
+/** Runs only against a dedicated throwaway database with outbound providers disabled. */
+test('isolated cycle: upload, book, move, cancel, and rebook', async ({ page, request }) => {
+  test.skip(process.env.E2E_ISOLATED !== '1', 'Requires the isolated E2E stack.');
+  const base = new URL(process.env.PLAYWRIGHT_TEST_BASE_URL ?? 'http://localhost:5173');
+  expect(['localhost', '127.0.0.1'].includes(base.hostname)).toBeTruthy();
+  expect(base.port).not.toBe('5173');
 
-      // The form opens prefilled on what is booked today, so a small change is a small edit.
-      const dialog = page.getByRole('dialog');
-      const duration = dialog.getByLabel('Interview duration');
-      await expect(duration).toBeVisible();
-      await expect(duration).toHaveValue(String(schedule.durationMinutes));
-
-      await dialog.locator('input[type="date"]').first().fill(newDay);
-      await dialog.getByRole('button', { name: /save new time/i }).click();
-
-      // The API is the authority on what was stored. Compared in local time, because the picker
-      // takes a local date/time and the API stores UTC: a booking at 00:00 local east of
-      // Greenwich is the previous day in UTC, which is correct, not a bug.
-      await expect
-        .poll(
-          async () => {
-            const res = await request.get(`/api/interviews/${interviewId}/schedule`, {
-              headers: auth,
-            });
-            return res.ok() ? ymd(new Date((await res.json()).scheduledAt)) : null;
-          },
-          { timeout: 15_000 },
-        )
-        .toBe(newDay);
-
-      await page.reload();
-      await openHistory();
-
-      // The line that would have shown the stale date before #173.
-      await expect(page.getByText(/Rescheduled from/i).first()).toBeVisible({ timeout: 15_000 });
-
-      // And the cancel affordance sits beside it, refusing to proceed without a reason.
-      await page.getByRole('button', { name: /cancel interview/i }).first().click();
-      const confirm = page.getByRole('dialog');
-      await expect(confirm.getByText(/Call for Interview/)).toBeVisible();
-      await confirm.getByRole('button', { name: /^cancel interview$/i }).click();
-      await expect(confirm.getByText(/reason is required/i)).toBeVisible();
-      await confirm.getByRole('button', { name: /^cancel$/i }).click();
-    } finally {
-      // Put the booking back where it was, so the dev database is as this spec found it.
-      const restored = await request.put(`/api/interviews/${interviewId}`, {
-        headers: auth,
-        data: {
-          scheduledAt: schedule.scheduledAt,
-          durationMinutes: schedule.durationMinutes,
-          notes: schedule.notes,
-          interviewerUserIds: schedule.interviewerUserIds,
-          interviewTypeOptionIds: schedule.interviewTypeOptionIds,
-          reason: 'Restored by the E2E suite',
-        },
-      });
-      // Asserted, not fire-and-forget: a restore that quietly 400s leaves someone's booking moved.
-      expect(
-        restored.ok(),
-        `could not restore interview ${interviewId} to ${schedule.scheduledAt}`,
-      ).toBeTruthy();
-    }
+  const auth = await apiAuth(request, admin);
+  const role = await request.post('/api/config/roles', {
+    headers: auth,
+    data: {
+      name: `E2E Interview ${randomUUID()}`,
+      sortOrder: 500,
+      isActive: true,
+      endDate: new Date(Date.now() + 30 * 86400_000).toISOString(),
+    },
   });
+  expect(role.ok(), await role.text()).toBeTruthy();
+
+  const candidateId = await seedCandidate(request, auth, 'Interview Cycle Probe');
+  const users = await request.get('/api/interviews/assignable-users', { headers: auth });
+  expect(users.ok()).toBeTruthy();
+  const interviewer = (await users.json()).find((u: { email: string }) => u.email === admin.email);
+  expect(interviewer).toBeDefined();
+
+  const changeStatus = async (data: Record<string, unknown>) => {
+    const response = await request.post(`/api/candidates/${candidateId}/status`, { headers: auth, data });
+    expect(response.ok(), `${response.status()}: ${await response.text()}`).toBeTruthy();
+    return response.json();
+  };
+
+  await changeStatus({ status: 'Call for Interview', comment: 'Ready to meet' });
+  const originalAt = new Date(Date.now() + 7 * 86400_000);
+  const booked = await changeStatus({
+    status: 'Interview Scheduled',
+    interviewAt: originalAt.toISOString(),
+    interviewerUserIds: [interviewer.id],
+    interviewDurationMinutes: 60,
+  });
+  const interviewId = booked.interviewId as number;
+  expect(interviewId).toBeGreaterThan(0);
+
+  await signIn(page, admin);
+  await page.goto(`/candidates/${candidateId}`);
+  await openHistory(page);
+  await page.getByRole('button', { name: /^reschedule$/i }).first().click();
+  const edit = page.getByRole('dialog');
+  await expect(edit.getByLabel('Interview duration')).toHaveValue('60');
+  const moved = new Date(Date.now() + 9 * 86400_000);
+  await edit.locator('input[type="date"]').fill(ymd(moved));
+  await edit.getByRole('button', { name: /save new time/i }).click();
+
+  await expect.poll(async () => ymd(new Date((await scheduleFor(request, auth, interviewId)).scheduledAt)))
+    .toBe(ymd(moved));
+  await page.reload();
+  await openHistory(page);
+  await expect(page.getByText(/Rescheduled from/i).first()).toBeVisible();
+
+  await page.getByRole('button', { name: /cancel interview/i }).first().click();
+  const confirm = page.getByRole('dialog');
+  await confirm.getByRole('button', { name: /^cancel interview$/i }).click();
+  await expect(confirm.getByText(/reason is required/i)).toBeVisible();
+  await confirm.getByLabel('Reason').fill('Candidate requested a new booking');
+  await confirm.getByRole('button', { name: /^cancel interview$/i }).click();
+
+  await expect.poll(async () => (await scheduleFor(request, auth, interviewId)).status)
+    .toBe('Cancelled');
+  const detail = await request.get(`/api/candidates/${candidateId}`, { headers: auth });
+  expect((await detail.json()).currentStatus).toBe('Call for Interview');
+
+  const rebooked = await changeStatus({
+    status: 'Interview Scheduled',
+    interviewAt: new Date(Date.now() + 11 * 86400_000).toISOString(),
+    interviewerUserIds: [interviewer.id],
+  });
+  expect(rebooked.interviewId).not.toBe(interviewId);
+  expect((await scheduleFor(request, auth, rebooked.interviewId)).status).toBe('Scheduled');
 });
