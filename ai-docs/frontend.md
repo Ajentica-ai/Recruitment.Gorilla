@@ -508,3 +508,7 @@ npx tsc -b           # typecheck (run after edits)
 npm run build        # tsc -b && vite build
 ```
 The `.docx`/PDF flows and auth need the backend running; see [dev-setup.md](dev-setup.md).
+
+The Admin+ interview page hides reschedule and cancel controls when the candidate's applied job
+opening has closed. The candidate detail page uses the same `roleClosed` rule, and the API applies
+the lock to both writes.

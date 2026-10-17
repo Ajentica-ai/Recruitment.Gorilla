@@ -3,6 +3,8 @@ import { defineConfig } from 'vitest/config'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 
+const apiProxyTarget = process.env.VITE_API_PROXY_TARGET ?? 'http://localhost:5134'
+
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react(), tailwindcss()],
@@ -27,11 +29,11 @@ export default defineConfig({
       // Browser calls same-origin /api; Vite forwards to the backend on this
       // host only, so the backend (port 5134) is never exposed to the network.
       '/api': {
-        target: 'http://localhost:5134',
+        target: apiProxyTarget,
         changeOrigin: true,
       },
       '/hubs': {
-        target: 'http://localhost:5134',
+        target: apiProxyTarget,
         changeOrigin: true,
         ws: true,
       },
