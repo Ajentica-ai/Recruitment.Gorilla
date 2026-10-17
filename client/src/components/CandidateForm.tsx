@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import {
@@ -10,6 +10,7 @@ import {
 } from '../services/api';
 import { SearchableSelect, SearchableMultiSelect } from './SearchableSelect';
 import NoJobOpeningNotice from './common/NoJobOpeningNotice';
+import { offerableJobOpenings } from '../utils/jobOpenings';
 import { useToast } from './ToastStack';
 import type { CVDraft, DuplicateCandidate } from '../types';
 import { Label } from '@/components/ui/label';
@@ -64,10 +65,20 @@ export default function CandidateForm({ draft, onSaved, onCancel }: Props) {
     queryFn: getInitialStatusOptions,
   });
 
-  const { data: roleOptions = [], isSuccess: rolesLoaded } = useQuery({
+  const {
+    data: allRoleOptions = [],
+    isSuccess: rolesLoaded,
+    isError: rolesFailed,
+    refetch: refetchRoles,
+  } = useQuery({
     queryKey: ['role-options', 'active'],
     queryFn: getActiveRoleOptions,
   });
+  // Filed against an *open* opening: offering an expired one only produces a rejection on save,
+  // and the same filter the uploaders use keeps the four surfaces saying the same thing.
+  // Memoised: this array is in an effect's dependency list below, and a fresh reference on
+  // every render would re-run it, set state and loop. useQuery's own data is stable.
+  const roleOptions = useMemo(() => offerableJobOpenings(allRoleOptions), [allRoleOptions]);
 
   const { data: skillOptions = [] } = useQuery({
     queryKey: ['skill-options', 'active'],
@@ -269,7 +280,14 @@ export default function CandidateForm({ draft, onSaved, onCancel }: Props) {
           )}
           {/* The role is required and the server enforces the same scoping, so with nothing to
               choose the save can only fail. Say why here rather than at submit time. */}
-          {rolesLoaded && roleOptions.length === 0 && <NoJobOpeningNotice compact />}
+          {(rolesFailed || (rolesLoaded && roleOptions.length === 0)) && (
+            <NoJobOpeningNotice
+              compact
+              reason={allRoleOptions.length > 0 ? 'expired' : 'unassigned'}
+              failed={rolesFailed}
+              onRetry={() => void refetchRoles()}
+            />
+          )}
         </div>
         <div className="col-span-12 md:col-span-6">
           <Label>Source</Label>

@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { describe, it, expect, vi } from 'vitest';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { AuthContext } from '../../auth/AuthContext';
 import NoJobOpeningNotice from './NoJobOpeningNotice';
 
@@ -39,5 +39,37 @@ describe('NoJobOpeningNotice', () => {
 
     // Announced, because it explains why the neighbouring control cannot be used.
     expect(screen.getByRole('status')).toHaveTextContent(/not assigned to a job opening/i);
+  });
+
+  it('distinguishes an expired assignment from no assignment', () => {
+    // GetAssignedRolesAsync filters on IsActive only, so a recruiter assigned solely to an
+    // opening past its end date still has one. The remedy is extending the date.
+    render(withAuth(false, <NoJobOpeningNotice reason="expired" />));
+
+    expect(screen.getByText(/Your job openings have ended/i)).toBeInTheDocument();
+    expect(screen.getByText(/extend the end date/i)).toBeInTheDocument();
+    expect(screen.queryByText(/not assigned to a job opening/i)).not.toBeInTheDocument();
+  });
+
+  it('reports a failed load as a failure, not as having none', () => {
+    render(withAuth(false, <NoJobOpeningNotice failed />));
+
+    expect(screen.getByText(/could not be loaded/i)).toBeInTheDocument();
+    expect(screen.queryByText(/not assigned to a job opening/i)).not.toBeInTheDocument();
+  });
+
+  it('offers a retry when the load failed', async () => {
+    const onRetry = vi.fn();
+    render(withAuth(false, <NoJobOpeningNotice failed onRetry={onRetry} />));
+
+    fireEvent.click(screen.getByRole('button', { name: /try again/i }));
+    expect(onRetry).toHaveBeenCalled();
+  });
+
+  it('keeps the admin wording whatever the reason', () => {
+    // An admin is never blocked by assignment, so the expired case reads the same for them.
+    render(withAuth(true, <NoJobOpeningNotice reason="expired" />));
+
+    expect(screen.getByText(/There are no open job openings/i)).toBeInTheDocument();
   });
 });

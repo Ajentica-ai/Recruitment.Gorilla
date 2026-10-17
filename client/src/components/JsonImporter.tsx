@@ -51,15 +51,22 @@ export default function JsonImporter({ onDraftsParsed }: Props) {
   const [busy, setBusy] = useState(false);
   const [finished, setFinished] = useState(false);
 
-  const { data: allRoles = [], isSuccess: rolesLoaded } = useQuery({
+  const {
+    data: allRoles = [],
+    isSuccess: rolesLoaded,
+    isError: rolesFailed,
+    refetch: refetchRoles,
+  } = useQuery({
     queryKey: ['active-role-options'],
     queryFn: getActiveRoleOptions,
   });
   // A job opening must be selected to import; only ones still open are offerable.
-  const roles = offerableJobOpenings(allRoles);
+  const roles = useMemo(() => offerableJobOpenings(allRoles), [allRoles]);
   // Same dead end as the uploader: with nothing to file against, importing cannot succeed.
   // Only once the query has settled, so the notice cannot flash while the list loads.
   const hasNoOpenings = rolesLoaded && roles.length === 0;
+  const reason = allRoles.length > 0 ? 'expired' : 'unassigned';
+  const showNotice = rolesFailed || hasNoOpenings;
 
   useEffect(() => {
     let current = true;
@@ -224,7 +231,14 @@ export default function JsonImporter({ onDraftsParsed }: Props) {
         </div>
       </div>
 
-      {hasNoOpenings && <NoJobOpeningNotice compact />}
+      {showNotice && (
+        <NoJobOpeningNotice
+          compact
+          reason={reason}
+          failed={rolesFailed}
+          onRetry={() => void refetchRoles()}
+        />
+      )}
 
       <div {...getRootProps()} className={dropzoneClass}>
         <input {...getInputProps()} />
@@ -334,7 +348,7 @@ export default function JsonImporter({ onDraftsParsed }: Props) {
 
       {manifest && manifest.rows.length > 0 && !finished && (
         <div className="flex flex-wrap items-center justify-end gap-3">
-          {!hasNoOpenings && selectedRoleId == null && (
+          {!showNotice && selectedRoleId == null && (
             <span className="text-[length:var(--text-sm)] text-muted-foreground">
               Choose a default job opening to import.
             </span>

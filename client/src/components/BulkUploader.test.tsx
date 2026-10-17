@@ -80,12 +80,24 @@ describe('BulkUploader', () => {
     expect(screen.queryByText(/You are not assigned to a job opening/i)).not.toBeInTheDocument();
   });
 
-  it('treats an opening whose deadline has passed as no opening at all', async () => {
-    // Offering it would only produce a server rejection on upload.
+  it('says the opening has ended, not that none is assigned, when the deadline passed', async () => {
+    // The recruiter IS assigned; the server returns the opening because it filters on IsActive
+    // only. Telling them to ask for an assignment would send them after the wrong remedy.
     vi.mocked(getActiveRoleOptions).mockResolvedValueOnce([closedRole]);
     renderWithProviders(<BulkUploader onDraftsParsed={vi.fn()} />);
 
-    expect(await screen.findByText(/You are not assigned to a job opening/i)).toBeInTheDocument();
+    expect(await screen.findByText(/Your job openings have ended/i)).toBeInTheDocument();
+    expect(screen.getByText(/extend the end date/i)).toBeInTheDocument();
+    expect(screen.queryByText(/You are not assigned to a job opening/i)).not.toBeInTheDocument();
+  });
+
+  it('says so when the openings could not be loaded at all', async () => {
+    // A failed request used to leave exactly the dead end this notice exists to remove.
+    vi.mocked(getActiveRoleOptions).mockRejectedValueOnce(new Error('boom'));
+    renderWithProviders(<BulkUploader onDraftsParsed={vi.fn()} />);
+
+    expect(await screen.findByText(/Job openings could not be loaded/i)).toBeInTheDocument();
+    expect(screen.queryByText(/Choose a job opening first/i)).not.toBeInTheDocument();
   });
 
   it('reports a 409 response as a skipped duplicate, not a parse failure', async () => {
