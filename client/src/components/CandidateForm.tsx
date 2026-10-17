@@ -9,6 +9,7 @@ import {
   getActiveSourceOptions,
 } from '../services/api';
 import { SearchableSelect, SearchableMultiSelect } from './SearchableSelect';
+import NoJobOpeningNotice from './common/NoJobOpeningNotice';
 import { useToast } from './ToastStack';
 import type { CVDraft, DuplicateCandidate } from '../types';
 import { Label } from '@/components/ui/label';
@@ -63,7 +64,7 @@ export default function CandidateForm({ draft, onSaved, onCancel }: Props) {
     queryFn: getInitialStatusOptions,
   });
 
-  const { data: roleOptions = [] } = useQuery({
+  const { data: roleOptions = [], isSuccess: rolesLoaded } = useQuery({
     queryKey: ['role-options', 'active'],
     queryFn: getActiveRoleOptions,
   });
@@ -266,6 +267,9 @@ export default function CandidateForm({ draft, onSaved, onCancel }: Props) {
           {fieldErrors.roleApplied && (
             <div className="invalid-feedback block">{fieldErrors.roleApplied}</div>
           )}
+          {/* The role is required and the server enforces the same scoping, so with nothing to
+              choose the save can only fail. Say why here rather than at submit time. */}
+          {rolesLoaded && roleOptions.length === 0 && <NoJobOpeningNotice compact />}
         </div>
         <div className="col-span-12 md:col-span-6">
           <Label>Source</Label>

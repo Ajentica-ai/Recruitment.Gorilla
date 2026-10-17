@@ -4,7 +4,8 @@ import { useQuery } from '@tanstack/react-query';
 import { CheckCircle2, Copy, FileText, UploadCloud, XCircle } from 'lucide-react';
 import { getActiveRoleOptions, uploadCV } from '../services/api';
 import { getCVUploadHubConnection, startCVUploadHub, type CVUploadProgressEvent } from '../services/signalr';
-import { jobStatus } from '../utils/jobStatus';
+import { offerableJobOpenings } from '../utils/jobOpenings';
+import NoJobOpeningNotice from './common/NoJobOpeningNotice';
 import type { CVDraft } from '../types';
 import { Alert } from '@/components/ui/alert';
 import { Spinner } from '@/components/ui/spinner';
@@ -39,12 +40,16 @@ export default function BulkUploader({ onDraftsParsed }: Props) {
   const [fileProgresses, setFileProgresses] = useState<FileProgressState[]>([]);
   const currentBatchId = useRef<string | null>(null);
 
-  const { data: allRoles = [] } = useQuery({
+  const { data: allRoles = [], isSuccess: rolesLoaded } = useQuery({
     queryKey: ['active-role-options'],
     queryFn: getActiveRoleOptions,
   });
   // A job opening must be selected to upload; only ones still open are offerable.
-  const roles = allRoles.filter((r) => jobStatus(r) === 'open' || jobStatus(r) === 'closing-soon');
+  const roles = offerableJobOpenings(allRoles);
+  // With none to choose, the dropzone can never be satisfied, so say why instead of sitting inert.
+  // Only once the query has settled: an empty list while it is still in flight is not
+  // evidence of anything, and announcing it would flash the notice on every page load.
+  const hasNoOpenings = rolesLoaded && roles.length === 0;
 
   useEffect(() => {
     let active = true;
@@ -165,7 +170,7 @@ export default function BulkUploader({ onDraftsParsed }: Props) {
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
     accept: ACCEPTED,
-    disabled: busy || selectedRoleId == null,
+    disabled: busy || selectedRoleId == null || hasNoOpenings,
   });
 
   const className = [
@@ -218,6 +223,9 @@ export default function BulkUploader({ onDraftsParsed }: Props) {
         </div>
       </div>
 
+      {hasNoOpenings ? (
+        <NoJobOpeningNotice />
+      ) : (
       <div {...getRootProps()} className={className}>
         <input {...getInputProps()} />
         {busy ? (
@@ -256,6 +264,7 @@ export default function BulkUploader({ onDraftsParsed }: Props) {
           </>
         )}
       </div>
+      )}
 
       {busy && fileProgresses.length > 0 && (
         <div className="card p-4 shadow-xs border border-border">

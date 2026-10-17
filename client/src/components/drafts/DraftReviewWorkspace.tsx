@@ -30,6 +30,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '../ToastStack';
 import { initials } from '../../utils/initials';
 import EmptyState from '../common/EmptyState';
+import NoJobOpeningNotice from '../common/NoJobOpeningNotice';
 import ConfirmModal from '../common/ConfirmModal';
 import LoadingPanel from '../common/Loading';
 import { SearchInput } from '@/components/ui/search-input';
@@ -168,7 +169,7 @@ export default function DraftReviewWorkspace({ initialBatchId, onCandidateCreate
     queryFn: getDraftBatches,
   });
 
-  const { data: roles = [] } = useQuery({
+  const { data: roles = [], isSuccess: rolesLoaded } = useQuery({
     queryKey: ['role-options', 'active'],
     queryFn: getActiveRoleOptions,
   });
@@ -1037,6 +1038,13 @@ export default function DraftReviewWorkspace({ initialBatchId, onCandidateCreate
                         />
                       )}
                     </Field>
+                    {/* Approving a draft files the candidate against an opening, so with none to
+                        choose the approve can only fail. Say why beside the field. */}
+                    {rolesLoaded && roles.length === 0 && (
+                      <div className="col-span-12">
+                        <NoJobOpeningNotice compact />
+                      </div>
+                    )}
 
                     {/* Relevant Experience */}
                     <Field className="col-span-12 md:col-span-6" label="Relevant Experience" required>

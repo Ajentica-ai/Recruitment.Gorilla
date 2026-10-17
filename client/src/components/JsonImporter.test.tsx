@@ -116,4 +116,14 @@ describe('JsonImporter', () => {
     await drop(container, [manifest([]), new File(['{}'], 'other.json', { type: 'application/json' })]);
     expect(await screen.findByText('Add one JSON file at a time.')).toBeInTheDocument();
   });
+
+  it('explains why Import can never be enabled when no opening is available (#169)', async () => {
+    // The importer parses first and chooses an opening after, so the dropzone stays usable.
+    // The explanation has to be there on arrival, not only once a file has been parsed.
+    vi.mocked(getActiveRoleOptions).mockResolvedValue([]);
+    renderWithProviders(<JsonImporter onDraftsParsed={vi.fn()} />);
+
+    expect(await screen.findByText(/You are not assigned to a job opening/i)).toBeInTheDocument();
+    expect(screen.queryByText(/Choose a default job opening to import/i)).not.toBeInTheDocument();
+  });
 });

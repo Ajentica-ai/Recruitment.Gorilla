@@ -5,7 +5,8 @@ import { AlertTriangle, CheckCircle2, Copy, Download, FileJson, UploadCloud, XCi
 import { downloadImportTemplate, getActiveRoleOptions, importJsonCandidate } from '../services/api';
 import type { CVDraft } from '../types';
 import { parseImportManifest, type ImportManifest } from '../utils/importManifest';
-import { jobStatus } from '../utils/jobStatus';
+import { offerableJobOpenings } from '../utils/jobOpenings';
+import NoJobOpeningNotice from './common/NoJobOpeningNotice';
 import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -50,12 +51,15 @@ export default function JsonImporter({ onDraftsParsed }: Props) {
   const [busy, setBusy] = useState(false);
   const [finished, setFinished] = useState(false);
 
-  const { data: allRoles = [] } = useQuery({
+  const { data: allRoles = [], isSuccess: rolesLoaded } = useQuery({
     queryKey: ['active-role-options'],
     queryFn: getActiveRoleOptions,
   });
   // A job opening must be selected to import; only ones still open are offerable.
-  const roles = allRoles.filter((r) => jobStatus(r) === 'open' || jobStatus(r) === 'closing-soon');
+  const roles = offerableJobOpenings(allRoles);
+  // Same dead end as the uploader: with nothing to file against, importing cannot succeed.
+  // Only once the query has settled, so the notice cannot flash while the list loads.
+  const hasNoOpenings = rolesLoaded && roles.length === 0;
 
   useEffect(() => {
     let current = true;
@@ -220,6 +224,8 @@ export default function JsonImporter({ onDraftsParsed }: Props) {
         </div>
       </div>
 
+      {hasNoOpenings && <NoJobOpeningNotice compact />}
+
       <div {...getRootProps()} className={dropzoneClass}>
         <input {...getInputProps()} />
         {busy ? (
@@ -328,7 +334,7 @@ export default function JsonImporter({ onDraftsParsed }: Props) {
 
       {manifest && manifest.rows.length > 0 && !finished && (
         <div className="flex flex-wrap items-center justify-end gap-3">
-          {selectedRoleId == null && (
+          {!hasNoOpenings && selectedRoleId == null && (
             <span className="text-[length:var(--text-sm)] text-muted-foreground">
               Choose a default job opening to import.
             </span>

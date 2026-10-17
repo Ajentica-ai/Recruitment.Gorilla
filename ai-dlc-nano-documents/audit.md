@@ -421,3 +421,14 @@
 - 2026-10-16T12:30Z [claude] RG-173 WRAP-UP @fe76b20: archived RG-53,RG-62,RG-65,RG-71,RG-156,RG-39,RG-54 to stay within the 10-item retention cap
 - 2026-10-17T06:05Z [claude] RG-173 SIDE-EFFECT @15d727c: committed and pushed feature/RG-173/Interview-reschedule-cancel, opened PR #174 against develop (user approved)
 - 2026-10-17T06:05Z [claude] RG-173 SIDE-EFFECT @15d727c: posted summary comment on issue #173, board status In Development -> In review (user approved)
+- 2026-10-17T13:45Z [claude] RG-169 CREATED @1f56532: issue #169, a Recruiter cannot upload CVs; bug, scoped role-options returns an empty job-opening list and the page dead-ends silently
+- 2026-10-17T13:45Z [claude] RG-169 SIDE-EFFECT @1f56532: INTAKE claim - issue #169 assigned to tahmidsparrow (already was), board status -> In Development
+- 2026-10-18T05:30Z [claude] RG-169 DECISION @1f56532: rule is final - a Recruiter without a job-opening assignment cannot upload a CV, an Admin can; authorization model unchanged, fix is the silent dead end only (user confirmed)
+- 2026-10-18T05:30Z [claude] RG-169 DECISION @1f56532: fix all four surfaces sharing the dead end (upload, JSON import, candidate form, draft review) (user confirmed)
+- 2026-10-18T05:40Z [claude] RG-169 PHASE CLARIFY->PLAN @58e13bd: 8 tasks, standard rigor, client-only; notice copy split by role so an Admin is not told the opposite of the rule (user approved)
+- 2026-10-18T05:40Z [claude] RG-169 BRANCH @58e13bd: fix/RG-169/Recruiter-upload-no-opening created off origin/develop (user confirmed)
+- 2026-10-18T05:40Z [claude] RG-169 PHASE PLAN->CONSTRUCT @58e13bd: plan approved with both message variants
+- 2026-10-18T06:05Z [claude] RG-169 REVISED @58e13bd: notice reads a new useOptionalAuth, not useAuth; the four hosts have no AuthProvider in tests and the provider does a network refresh on mount
+- 2026-10-18T07:10Z [claude] RG-169 PHASE CONSTRUCT->WRAP-UP @58e13bd: 8/8 tasks; 270 client tests (10 new), 613 server, tsc+lint clean, verified in-browser with the role list stubbed empty
+- 2026-10-18T07:10Z [claude] RG-169 DONE @58e13bd: the four surfaces now explain the empty job-opening list instead of dead-ending; 3 findings to backlog; uncommitted
+- 2026-10-18T07:10Z [claude] RG-169 WRAP-UP @58e13bd: archived RG-55 for the 10-item retention cap; frontend.md anchors re-stamped in codebase-map
