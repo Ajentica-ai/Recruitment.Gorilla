@@ -440,3 +440,4 @@
 - 2026-10-18T09:50Z [claude] RG-169 REVISED @b644212: 4 review findings fixed (expired-assignment wording, expired openings still offered, busy panel replaced, failed load silent) plus a render-loop regression from the unmemoised filter
 - 2026-10-18T10:30Z [claude] RG-169 SIDE-EFFECT @1f2632f: merged origin/develop (cc25a65) into the branch to clear PR #176 conflicts in audit.md and state.md; both sides' lines kept
 - 2026-10-18T10:30Z [claude] RG-169 REVISED @1f2632f: merged tree verified green - 618 server (incl. develop's 5 RG-173 hardening tests), 275 client, tsc+lint clean
+- 2026-10-18T14:20Z [claude] RG-169 SIDE-EFFECT @47b91a9: full e2e cycle run twice (38 pass, 0 product errors); opened issues #177 #178 #179 for e2e suite reliability and data cleanup (user approved)
