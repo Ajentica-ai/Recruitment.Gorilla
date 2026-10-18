@@ -1,5 +1,7 @@
 # Backlog
 <!-- Out-of-scope findings, newest first. Delete a line when it is resolved. -->
+- [2026-10-18] client/CandidateForm + DraftReviewWorkspace - unlike the uploaders they do not filter out expired openings, so one can be offered and then rejected on save (found: RG-169)
+- [2026-10-18] client - two query keys for one endpoint: ['active-role-options'] in the uploaders vs ['role-options','active'] elsewhere, so they cache separately (found: RG-169)
 - [2026-10-16] CalendarInvite - .ics cancels are best effort; PUBLISH invites carry no ATTENDEE so clients may not remove the event. Needs PUBLISH -> REQUEST (found: RG-173)
 - [2026-10-16] CandidateService - rejecting/discontinuing a candidate leaves their scheduled interviews live; should auto-cancel (found: RG-173)
 - [2026-10-16] InterviewService.RescheduleAsync - the dropped-submitted-interviewer 400 is unreachable while the submitted-eval 409 stands; kept as defence in depth (found: RG-173)

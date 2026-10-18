@@ -1,10 +1,11 @@
 # AI-DLC Nano State
 - Active work item: none
 - Phase: —
-- Branch: fix/RG-173/Interview-write-hardening
-- Base SHA: 58e13bd
-- Next step: none - RG-173 merged via PR #174; the follow-on hardening is on fix/RG-173/Interview-write-hardening
+- Branch: fix/RG-169/Recruiter-upload-no-opening
+- Base SHA: cc25a65
+- Next step: none - RG-169 is on PR #176; develop merged in to clear the audit/state conflicts
 - Paused work items:
+  - work-items/RG-173 (DONE, merged via PR #174 and PR #175)
   - work-items/RG-52 (DONE, fix/RG-52/Recruiter-header-alignment, uncommitted - commit/PR on request)
 - Uncommitted code: no
-- Last updated: 2026-10-17T13:20Z by claude
+- Last updated: 2026-10-18T10:05Z by claude

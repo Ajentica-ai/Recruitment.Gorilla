@@ -155,4 +155,20 @@ describe('CandidateForm', () => {
     // The override is still offered regardless of visibility.
     expect(screen.getByRole('button', { name: /Save anyway/i })).toBeInTheDocument();
   });
+
+  it('explains why the role field is empty when no opening is available (#169)', async () => {
+    // Role applied for is required and the server applies the same scoping, so with nothing to
+    // choose the save can only fail. The default mock already returns no openings.
+    renderWithProviders(<CandidateForm draft={draft} onSaved={() => {}} onCancel={() => {}} />);
+
+    expect(await screen.findByText(/You are not assigned to a job opening/i)).toBeInTheDocument();
+  });
+
+  it('shows no such notice once an opening is available', async () => {
+    vi.mocked(getActiveRoleOptions).mockResolvedValue([role()]);
+    renderWithProviders(<CandidateForm draft={draft} onSaved={() => {}} onCancel={() => {}} />);
+
+    await screen.findByText(/Role applied for/i);
+    expect(screen.queryByText(/You are not assigned to a job opening/i)).not.toBeInTheDocument();
+  });
 });
