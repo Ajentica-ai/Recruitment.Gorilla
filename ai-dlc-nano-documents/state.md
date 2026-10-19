@@ -1,11 +1,9 @@
 # AI-DLC Nano State
 - Active work item: none
 - Phase: —
-- Branch: fix/RG-169/Recruiter-upload-no-opening
-- Base SHA: cc25a65
-- Next step: none - RG-169 is on PR #176; develop merged in to clear the audit/state conflicts
-- Paused work items:
-  - work-items/RG-173 (DONE, merged via PR #174 and PR #175)
-  - work-items/RG-52 (DONE, fix/RG-52/Recruiter-header-alignment, uncommitted - commit/PR on request)
-- Uncommitted code: no
-- Last updated: 2026-10-18T10:05Z by claude
+- Branch: fix/RG-168/Remove-floating-upload-button
+- Base SHA: 52d5380
+- Next step: none - RG-168 done, uncommitted until the user asks
+- Paused work items: none
+- Uncommitted code: yes
+- Last updated: 2026-10-19T09:01Z by claude
