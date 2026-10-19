@@ -447,3 +447,10 @@
 - 2026-10-19T08:57Z [claude] RG-168 PHASE PLAN→CONSTRUCT @52d5380: plan approved
 - 2026-10-19T09:01Z [claude] RG-168 DONE @52d5380: FAB, CSS and padding class removed; hero buttons unchanged; e2e 11/11; suite 274 + known date-picker flake
 - 2026-10-19T09:34Z [claude] RG-168 REVISED @52d5380: hero Candidates/Upload CVs buttons shown inline on phones instead of hidden (user asked)
+- 2026-10-19T10:11Z [claude] RG-177 CREATED @52d5380: issue #177, e2e eval spacing assertion fails on sub-pixel jitter
+- 2026-10-19T10:11Z [claude] RG-177 SIDE-EFFECT @52d5380: already assigned to rayhan-ajentica; board status NOT moved (gh token lacks read:project)
+- 2026-10-19T10:11Z [claude] RG-177 DECISION @52d5380: compare vertical centres within 2px (user approved)
+- 2026-10-19T10:11Z [claude] RG-177 BRANCH @52d5380: fix/RG-177/Eval-spacing-test-jitter off origin/develop (user confirmed)
+- 2026-10-19T10:11Z [claude] RG-177 PHASE PLAN→CONSTRUCT @52d5380: plan approved
+- 2026-10-19T10:22Z [claude] RG-177 REVISED @52d5380: centre check alone still failed 2/80 (page shift between two boundingBox calls); measure both rects in one evaluate: 0 failures in 160
+- 2026-10-19T10:22Z [claude] RG-177 DONE @52d5380: spacing spec 158/160 pass (1 style-wait, 1 skip); full e2e x2 green for this spec

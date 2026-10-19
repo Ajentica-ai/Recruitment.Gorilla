@@ -27,3 +27,4 @@
 - [2026-10-14] client/RowActions - Users row menu has 3 items, taller than a row, so any placement overlaps neighbouring rows (found: RG-66)
 - [2026-10-15] auth - deactivated user's access token works until expiry (~15m); revoke refresh tokens + check IsActive on deactivate (found: RG-37)
 - [2026-10-15] AuthController - failed-login log/audit text uses raw unvalidated email (CR/LF, length); trim and sanitise (found: RG-37)
+- [2026-10-19] client/e2e - dev-server timing: styled-wait, interview page and candidate .profile-card waits time out now and then (found: RG-177)
