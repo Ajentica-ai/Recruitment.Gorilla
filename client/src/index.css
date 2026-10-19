@@ -4601,17 +4601,6 @@ a.hero-chip--accent:hover {
   }
 }
 
-/* Leave room under the last card for the phone's floating action. */
-.dash-page--fab {
-  padding-bottom: calc(var(--space-10) + var(--space-4));
-}
-
-@media (min-width: 768px) {
-  .dash-page--fab {
-    padding-bottom: 0;
-  }
-}
-
 /* A horizontal strip that snaps one item at a time on a phone. It bleeds to
    the page edge so the next item peeks in, which is what tells you it scrolls.
    Keyboard users can still scroll it: callers give it tabindex and a label. */
@@ -4685,32 +4674,6 @@ a.hero-chip--accent:hover {
   animation: anim-spin 0.8s linear infinite;
 }
 
-/* The phone's primary action, in thumb reach. Desktop keeps the hero buttons. */
-.quick-fab {
-  position: fixed;
-  right: var(--space-4);
-  bottom: calc(var(--space-4) + env(safe-area-inset-bottom));
-  z-index: var(--z-sticky);
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
-  min-height: 52px;
-  padding: 0 var(--space-5) 0 var(--space-4);
-  border-radius: var(--radius-pill);
-  background: var(--primary-dark);
-  color: var(--on-accent);
-  font-size: var(--text-lg);
-  font-weight: var(--weight-bold);
-  box-shadow: var(--shadow-accent);
-  text-decoration: none;
-}
-
-.quick-fab:hover {
-  background: var(--primary-hover);
-  color: var(--on-accent);
-  text-decoration: none;
-}
-
 @media (min-width: 768px) {
   .hero-chip-row--scroll {
     flex-wrap: wrap;
@@ -4722,10 +4685,6 @@ a.hero-chip--accent:hover {
   .hero-chip-row--scroll > .hero-chip,
   .dash-refresh {
     min-height: var(--control-h-sm);
-  }
-
-  .quick-fab {
-    display: none;
   }
 }
 

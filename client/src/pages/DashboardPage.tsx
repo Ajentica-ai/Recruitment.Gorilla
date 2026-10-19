@@ -19,7 +19,6 @@ import ActiveJobOpeningsCard from '../components/dashboard/ActiveJobOpeningsCard
 import PipelineInsightsCard from '../components/dashboard/PipelineInsightsCard';
 import OfferMetricsCard from '../components/dashboard/OfferMetricsCard';
 import ActivityFeed from '../components/dashboard/ActivityFeed';
-import QuickActionFab from '../components/dashboard/QuickActionFab';
 import EmptyState from '../components/common/EmptyState';
 import Page from '../components/common/Page';
 import SectionCard from '../components/common/SectionCard';
@@ -117,7 +116,7 @@ export default function DashboardPage() {
   const spark = trend30.slice(-14).map((p) => p.count);
 
   return (
-    <Page className={canWriteCandidates ? 'dash-page--fab' : undefined}>
+    <Page>
       <DashboardHero updatedAt={kpisQuery.dataUpdatedAt} refreshing={refreshing} onRefresh={refresh} />
 
       <div className="dash-row">
@@ -206,8 +205,6 @@ export default function DashboardPage() {
               viewAllHref={isAdminOrAbove ? '/audit' : '/candidates'}
             />
           </div>
-
-          <QuickActionFab />
         </>
       )}
     </Page>

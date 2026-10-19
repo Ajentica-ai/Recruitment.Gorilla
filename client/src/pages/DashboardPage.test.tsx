@@ -92,7 +92,9 @@ describe('DashboardPage', () => {
     expect(await screen.findByRole('combobox', { name: 'Role' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Recent activity' })).toBeInTheDocument();
     expect(screen.getAllByRole('link', { name: 'View all' }).map((l) => l.getAttribute('href'))).toContain('/candidates');
-    expect(screen.getAllByRole('link', { name: 'Upload CVs' }).length).toBeGreaterThan(0);
+    // The hero's inline shortcut only: the floating phone button was removed because it covered the cards (#168).
+    expect(screen.getAllByRole('link', { name: 'Upload CVs' })).toHaveLength(1);
+    expect(screen.getAllByRole('link', { name: 'Candidates' })).toHaveLength(1);
   });
 
   it('Admin: no role filter, activity "View all" goes to the audit log', async () => {

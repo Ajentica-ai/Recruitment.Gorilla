@@ -39,10 +39,16 @@ test.describe('dashboard is responsive', () => {
         );
         expect(overflow, 'horizontal page overflow in px').toBeLessThanOrEqual(0);
 
-        // The floating Upload CVs button is the phone's primary action only.
-        const fab = page.locator('.quick-fab');
-        if (width < 768) await expect(fab).toBeVisible();
-        else await expect(fab).toBeHidden();
+        // No floating Upload CVs button at any width: it covered the cards on a phone (#168).
+        // The hero's own shortcut shows from 768px up; on a phone Upload CVs is in the menu.
+        const floatingUpload = await page
+          .locator('a[href="/upload"]')
+          .evaluateAll((els) => els.filter((e) => getComputedStyle(e).position === 'fixed').length);
+        expect(floatingUpload, 'fixed-position links to /upload').toBe(0);
+
+        // The hero's Candidates and Upload CVs shortcuts are on the page at every width, inline.
+        await expect(page.locator('.dashboard-hero-kicker').getByRole('link', { name: 'Upload CVs' })).toBeVisible();
+        await expect(page.locator('.dashboard-hero-kicker').getByRole('link', { name: 'Candidates' })).toBeVisible();
 
         // On a phone the KPI tiles are one sideways strip: it scrolls, the page doesn't.
         // Pointer off the tiles first: a hovered tile lifts 2px. Rows are bucketed to 10px.
