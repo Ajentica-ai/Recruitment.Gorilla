@@ -1,9 +1,9 @@
 # AI-DLC Nano State
 - Active work item: none
 - Phase: —
-- Branch: fix/RG-168/Remove-floating-upload-button
-- Base SHA: 52d5380
-- Next step: none - RG-168 done, uncommitted until the user asks
+- Branch: fix/RG-177/Eval-spacing-test-jitter
+- Base SHA: b49779d
+- Next step: none - RG-177 done, PR #181 open against develop
 - Paused work items: none
-- Uncommitted code: yes
-- Last updated: 2026-10-19T09:01Z by claude
+- Uncommitted code: no
+- Last updated: 2026-10-19T10:52Z by claude
