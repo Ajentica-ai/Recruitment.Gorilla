@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { ADMIN, apiAuth, freshTestCvs, requireData, shotPath } from './helpers';
+import { cleanUpCreatedData } from './cleanup';
 
 // Admin, not E2E_EMAIL's Recruiter: approving a draft requires assigning an
 // applied role, and a Recruiter only sees roles they are assigned to. With none,
@@ -8,6 +9,8 @@ const email = ADMIN.email ?? process.env.E2E_EMAIL;
 const password = ADMIN.password ?? process.env.E2E_PASSWORD;
 
 test.describe('Bulk Upload 10 CVs & Staging Review Workspace Test', () => {
+  cleanUpCreatedData(); // remove the drafts and candidates this spec creates (#179)
+
   test.setTimeout(60000);
 
   test('uploads 10 sample CVs → persists to MySQL → reviews in Staging Workspace', async ({ page, request }) => {
