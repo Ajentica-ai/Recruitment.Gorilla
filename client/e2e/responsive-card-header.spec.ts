@@ -51,10 +51,13 @@ test.describe('responsive card header (issue #72)', () => {
     await page.getByRole('button', { name: 'Sign in' }).click();
     await page.waitForLoadState('networkidle');
 
+    // Wait for the first card rather than asking once: the dashboard renders after the queries settle,
+    // and an immediate check read "no cards" on a perfectly good database and skipped (#178).
     const dashboardHasCards = await page
       .locator('[data-slot="card-header"]')
       .first()
-      .isVisible()
+      .waitFor({ state: 'visible', timeout: 15_000 })
+      .then(() => true)
       .catch(() => false);
     requireData(dashboardHasCards, 'dashboard cards (upload some CVs first)');
 
@@ -76,7 +79,8 @@ test.describe('responsive card header (issue #72)', () => {
     const paths = canEvaluate ? ['/', `/interviews/${interviewId}`] : ['/'];
     for (const path of paths) {
       await page.goto(path);
-      await expect(page.locator('[data-slot="card-header"]').first()).toBeVisible();
+      // 15s, not the default 5s: a cold dev server can take longer than that to render the page.
+      await expect(page.locator('[data-slot="card-header"]').first()).toBeVisible({ timeout: 15_000 });
 
       for (const width of [320, 360, 390, 405]) {
         await page.setViewportSize({ width, height: 1000 });
@@ -94,22 +98,28 @@ test.describe('responsive card header (issue #72)', () => {
   test('the interview chip icon keeps its size and rides the first line', async ({ page }) => {
     test.skip(!interviewId, 'Set E2E_INTERVIEW_ID to an interview the user can open.');
 
-    await page.setViewportSize({ width: 390, height: 900 });
+    // Sign in wide: below 768px the nav collapses behind a hamburger, so the shell's nav links are not
+    // there to wait for. Narrow the viewport once signed in.
+    await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto('/');
     await page.locator('input[type="email"]').fill(email!);
     await page.locator('input[type="password"]').fill(password!);
     await page.getByRole('button', { name: 'Sign in' }).click();
     // Wait for the app shell before navigating, or the goto races the redirect.
     await expect(page.getByRole('link', { name: 'Candidates' }).first()).toBeVisible();
+    await page.setViewportSize({ width: 390, height: 900 });
 
     await page.goto(`/interviews/${interviewId}`);
     const chip = page.locator('.interview-chip').first();
     // The chip only exists when the account can actually open this interview.
     // A role-scoped user who cannot is missing access, not a sized-wrong icon.
-    requireData(
-      await chip.isVisible().catch(() => false),
-      `an interview this account can open (E2E_INTERVIEW_ID=${interviewId})`,
-    );
+    // Wait for it: checking straight after goto read "not there" before React had rendered, so the
+    // test skipped on every run with a wrong reason and never asserted anything (#178).
+    const chipShown = await chip
+      .waitFor({ state: 'visible', timeout: 15_000 })
+      .then(() => true)
+      .catch(() => false);
+    requireData(chipShown, `an interview this account can open (E2E_INTERVIEW_ID=${interviewId})`);
 
     for (const width of [320, 390]) {
       await page.setViewportSize({ width, height: 1000 });

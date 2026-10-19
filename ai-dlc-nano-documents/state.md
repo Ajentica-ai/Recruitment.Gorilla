@@ -1,9 +1,9 @@
 # AI-DLC Nano State
 - Active work item: none
 - Phase: —
-- Branch: fix/RG-177/Eval-spacing-test-jitter
-- Base SHA: b49779d
-- Next step: none - RG-177 done, PR #181 open against develop
+- Branch: fix/RG-178/Card-header-spec-race
+- Base SHA: 0f798b0
+- Next step: none - RG-178 done, uncommitted until the user asks
 - Paused work items: none
-- Uncommitted code: no
-- Last updated: 2026-10-19T10:52Z by claude
+- Uncommitted code: yes
+- Last updated: 2026-10-19T11:43Z by claude
