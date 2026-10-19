@@ -207,6 +207,29 @@ Created when a candidate moves to **Interview Scheduled** (see `CandidateService
 `CancelledAt` / `CancelledByUserId` / `CancellationReason` are deliberately **not** columns: they are
 the latest `Cancelled` event's fields, and duplicating them guarantees drift.
 
+### EvaluationAccessGrant (`EvaluationAccessGrants`)
+A grant that lets one named user read a candidate's **submitted** interview evaluations they could not otherwise
+see (epic #182; migration `AddEvaluationAccessGrants`, issue #183). **Nothing reads a grant yet**: the grantee read
+path is #184, so creating one changes no one's access until then.
+
+| Field | Type | Notes |
+|---|---|---|
+| Id | int PK | |
+| CandidateId | int FK → Candidate | cascade delete; index |
+| InterviewId | int? FK → Interview | cascade delete; **null = all rounds of the candidate, future ones included** |
+| GranteeUserId | int FK → User | cascade delete; index on `(GranteeUserId, RevokedAt)` |
+| GrantedByUserId | int? FK → User | SetNull |
+| Source | varchar(30) | `Manual` \| `PanelAutoShare` (the latter is created by #187) |
+| CreatedForInterviewId | int? FK → Interview | SetNull; set only by the panel auto-share so a panel change can revoke what it created |
+| Note | varchar(500)? | optional reason shown to the grantee |
+| ExpiresAt | datetime? | optional, UTC |
+| RevokedAt / RevokedByUserId | datetime? / int? FK → User | soft revoke (SetNull on the user), the row stays for audit |
+| CreatedAt | datetime | UTC |
+
+A grant is **active** when `RevokedAt is null && (ExpiresAt is null || ExpiresAt > now)` (`EvaluationAccessGrant.IsActive`).
+Granting the same active `(CandidateId, InterviewId, GranteeUserId)` again refreshes its note and expiry instead of
+inserting a duplicate; an expired or revoked row is history and a new one is inserted.
+
 ### InterviewEvent (`InterviewEvents`)
 Append-only narrative of a booking's life (migration `AddInterviewLifecycle`, issue #173). Separate
 from `StatusHistory`, which records the **candidate's** status and must not be re-asserted when only

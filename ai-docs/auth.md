@@ -24,6 +24,7 @@ Four roles in a strict hierarchy **SuperAdmin → Admin → Recruiter → Interv
 | Candidate **evaluation report** (`/candidates/:id/evaluations`) | ✅ | ✅ | **own OR assigned-role** | – |
 | Create / edit / submit / extend an **offer**, record the candidate's decision | ✅ (all) | ✅ (all) | **own OR assigned-role** | – |
 | **Approve / reject** an offer (`.../offers/{id}/review`) | ✅ | ✅ | – | – |
+| **Share** a candidate's submitted evaluations with a named user (`/api/candidates/{id}/evaluation-shares`, #183): list / grant / revoke | ✅ (any candidate) | ✅ (any candidate) | **own OR assigned-role** (out of scope = 404) | – (403) |
 | See **peers'** evaluations on an interview | all | all | – | **after submitting own (same interview, submitted only)** |
 
 - **Recruiter scoping** (`CandidateService.ApplyAccess`): a non-admin caller may access a candidate when they **own** it (`OwnerUserId`) **OR** are an assigned **recruiter of that candidate's role** (`RoleAppliedOption.Recruiters`, a many-to-many). This is creator-agnostic — an Admin-created candidate under a recruiter's role is visible to that recruiter, and a role can name **multiple** recruiters (all get access). Admin+ pass `null` (no filter). Applies to list / detail / CV stream / edit / change status.

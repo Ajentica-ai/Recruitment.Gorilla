@@ -676,6 +676,67 @@ namespace Recruitment.Gorilla.API.Migrations
                     b.ToTable("EmailSettings");
                 });
 
+            modelBuilder.Entity("Recruitment.Gorilla.API.Models.EvaluationAccessGrant", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("CandidateId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<int?>("CreatedForInterviewId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("ExpiresAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<int?>("GrantedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("GranteeUserId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("InterviewId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(500)
+                        .HasColumnType("varchar(500)");
+
+                    b.Property<DateTime?>("RevokedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<int?>("RevokedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Source")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("varchar(30)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CandidateId");
+
+                    b.HasIndex("CreatedForInterviewId");
+
+                    b.HasIndex("GrantedByUserId");
+
+                    b.HasIndex("InterviewId");
+
+                    b.HasIndex("RevokedByUserId");
+
+                    b.HasIndex("GranteeUserId", "RevokedAt");
+
+                    b.ToTable("EvaluationAccessGrants");
+                });
+
             modelBuilder.Entity("Recruitment.Gorilla.API.Models.EvaluationRubric", b =>
                 {
                     b.Property<int>("Id")
@@ -2789,6 +2850,53 @@ namespace Recruitment.Gorilla.API.Migrations
                     b.Navigation("Candidate");
 
                     b.Navigation("SkillOption");
+                });
+
+            modelBuilder.Entity("Recruitment.Gorilla.API.Models.EvaluationAccessGrant", b =>
+                {
+                    b.HasOne("Recruitment.Gorilla.API.Models.Candidate", "Candidate")
+                        .WithMany()
+                        .HasForeignKey("CandidateId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Recruitment.Gorilla.API.Models.Interview", "CreatedForInterview")
+                        .WithMany()
+                        .HasForeignKey("CreatedForInterviewId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("Recruitment.Gorilla.API.Models.User", "GrantedByUser")
+                        .WithMany()
+                        .HasForeignKey("GrantedByUserId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("Recruitment.Gorilla.API.Models.User", "GranteeUser")
+                        .WithMany()
+                        .HasForeignKey("GranteeUserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Recruitment.Gorilla.API.Models.Interview", "Interview")
+                        .WithMany()
+                        .HasForeignKey("InterviewId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
+                    b.HasOne("Recruitment.Gorilla.API.Models.User", "RevokedByUser")
+                        .WithMany()
+                        .HasForeignKey("RevokedByUserId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Candidate");
+
+                    b.Navigation("CreatedForInterview");
+
+                    b.Navigation("GrantedByUser");
+
+                    b.Navigation("GranteeUser");
+
+                    b.Navigation("Interview");
+
+                    b.Navigation("RevokedByUser");
                 });
 
             modelBuilder.Entity("Recruitment.Gorilla.API.Models.Interview", b =>

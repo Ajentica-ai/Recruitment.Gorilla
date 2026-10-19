@@ -159,6 +159,25 @@ public static class EmailTemplates
     private static string Utc(DateTime value) => value.ToUniversalTime()
         .ToString("dd MMM yyyy, HH:mm", CultureInfo.InvariantCulture);
 
+    /// <summary>
+    /// Tells someone a candidate's submitted interview evaluations were shared with them (#182). No link:
+    /// the page they open arrives in a later phase. Names and the note are typed by people, so they are
+    /// HTML-encoded.
+    /// </summary>
+    public static (string Subject, string Html) EvaluationShared(
+        string granteeName, string sharedByName, string candidateName, string? note)
+    {
+        static string encode(string s) => System.Net.WebUtility.HtmlEncode(s) ?? string.Empty;
+        const string subject = "Interview evaluations were shared with you";
+        var noteHtml = string.IsNullOrWhiteSpace(note) ? "" : $"<p>Note: {encode(note)}</p>";
+        var body = $"""
+            <p>Hi {encode(granteeName)},</p>
+            <p>{encode(sharedByName)} shared the submitted interview evaluations for {encode(candidateName)} with you.</p>
+            {noteHtml}
+            """;
+        return (subject, Wrap(subject, body));
+    }
+
     public static (string Subject, string Html) PasswordChanged(string userName)
     {
         const string subject = "Your password was changed";

@@ -468,3 +468,9 @@
 - 2026-10-19T14:00Z [claude] RG-179 SIDE-EFFECT @024c6e0: my baseline e2e run wrote to the user's REAL DB (their API held 5134); removed drafts 52-64 and candidates 14-15 via API with user's go-ahead; counts restored
 - 2026-10-19T14:00Z [claude] RG-179 REVISED @024c6e0: snapshot-diff cleanup broke under parallel workers; now tracks each test's own ids (network responses)
 - 2026-10-19T14:00Z [claude] RG-179 DONE @024c6e0: cleanup helper + seed/recruiter-scope fixes; 3 full suites leave counts flat on an isolated DB; real DB untouched
+- 2026-10-19T14:36Z [claude] RG-183 CREATED @024c6e0: issue #183 phase 1 of epic #182, evaluation share grants API
+- 2026-10-19T14:36Z [claude] RG-183 SIDE-EFFECT @024c6e0: assigned #183 to rayhan-ajentica; board status NOT moved (gh token lacks read:project)
+- 2026-10-19T14:36Z [claude] RG-183 DECISION @024c6e0: start with phase 1 only, own PR; PRs say Part of #182 (user confirmed)
+- 2026-10-19T14:36Z [claude] RG-183 BRANCH @024c6e0: feature/RG-183/Evaluation-share-grants-api off origin/develop (user confirmed)
+- 2026-10-19T14:36Z [claude] RG-183 PHASE PLAN→CONSTRUCT @024c6e0: plan approved
+- 2026-10-19T15:05Z [claude] RG-183 PHASE CONSTRUCT→WRAP-UP @024c6e0: 645 tests green, isolated API check ok, security review done
