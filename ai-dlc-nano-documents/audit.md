@@ -454,3 +454,9 @@
 - 2026-10-19T10:11Z [claude] RG-177 PHASE PLAN→CONSTRUCT @52d5380: plan approved
 - 2026-10-19T10:22Z [claude] RG-177 REVISED @52d5380: centre check alone still failed 2/80 (page shift between two boundingBox calls); measure both rects in one evaluate: 0 failures in 160
 - 2026-10-19T10:22Z [claude] RG-177 DONE @52d5380: spacing spec 158/160 pass (1 style-wait, 1 skip); full e2e x2 green for this spec
+- 2026-10-19T11:35Z [claude] RG-178 CREATED @0f798b0: issue #178, e2e chip test silently skips (races render)
+- 2026-10-19T11:35Z [claude] RG-178 SIDE-EFFECT @0f798b0: already assigned to rayhan-ajentica; board status NOT moved (gh token lacks read:project)
+- 2026-10-19T11:35Z [claude] RG-178 DECISION @0f798b0: wait for chip, sign in wide first, same wait on sibling test (user approved)
+- 2026-10-19T11:35Z [claude] RG-178 BRANCH @0f798b0: fix/RG-178/Card-header-spec-race off origin/develop (user confirmed)
+- 2026-10-19T11:35Z [claude] RG-178 PHASE PLAN→CONSTRUCT @0f798b0: plan approved
+- 2026-10-19T11:43Z [claude] RG-178 DONE @0f798b0: chip waits for render, wide sign-in, sibling waits; old spec skipped 3/3, fixed 120+ runs ran; mutation caught; full e2e 36 pass
