@@ -440,3 +440,10 @@
 - 2026-10-18T09:50Z [claude] RG-169 REVISED @b644212: 4 review findings fixed (expired-assignment wording, expired openings still offered, busy panel replaced, failed load silent) plus a render-loop regression from the unmemoised filter
 - 2026-10-18T10:30Z [claude] RG-169 SIDE-EFFECT @1f2632f: merged origin/develop (cc25a65) into the branch to clear PR #176 conflicts in audit.md and state.md; both sides' lines kept
 - 2026-10-18T10:30Z [claude] RG-169 REVISED @1f2632f: merged tree verified green - 618 server (incl. develop's 5 RG-173 hardening tests), 275 client, tsc+lint clean
+- 2026-10-19T08:57Z [claude] RG-168 CREATED @52d5380: issue #168, floating Upload CVs button overlaps dashboard on phones
+- 2026-10-19T08:57Z [claude] RG-168 SIDE-EFFECT @52d5380: already assigned to rayhan-ajentica; board status NOT moved (gh token lacks read:project)
+- 2026-10-19T08:57Z [claude] RG-168 DECISION @52d5380: remove the FAB; keep hero Candidates/Upload CVs buttons as they are (user confirmed)
+- 2026-10-19T08:57Z [claude] RG-168 BRANCH @52d5380: fix/RG-168/Remove-floating-upload-button off origin/develop (user confirmed)
+- 2026-10-19T08:57Z [claude] RG-168 PHASE PLAN→CONSTRUCT @52d5380: plan approved
+- 2026-10-19T09:01Z [claude] RG-168 DONE @52d5380: FAB, CSS and padding class removed; hero buttons unchanged; e2e 11/11; suite 274 + known date-picker flake
+- 2026-10-19T09:34Z [claude] RG-168 REVISED @52d5380: hero Candidates/Upload CVs buttons shown inline on phones instead of hidden (user asked)
