@@ -119,7 +119,9 @@ public class InterviewService(
 
         return new InterviewDetailDto(
             interview.Id, interview.ScheduledAt, candidate, interviewers,
-            isAssigned, myEval is null ? null : ToDto(myEval), allEvals,
+            // Nobody evaluates a cancelled interview, so the page offers no form for it (#189).
+            isAssigned && interview.Status != InterviewStatuses.Cancelled,
+            myEval is null ? null : ToDto(myEval), allEvals,
             interview.Notes ?? interview.StatusHistory?.Comment, tags, interview.DurationMinutes,
             interview.Status);
     }
@@ -140,7 +142,8 @@ public class InterviewService(
         if (candidate is null) return null;
 
         var interviews = await db.Interviews
-            .Where(i => i.CandidateId == candidateId)
+            // A cancelled interview never happened, so anything already submitted on it does not count (#189).
+            .Where(i => i.CandidateId == candidateId && i.Status != InterviewStatuses.Cancelled)
             .Where(i => onlyInterviewIds == null || onlyInterviewIds.Contains(i.Id))
             .Include(i => i.Evaluations).ThenInclude(e => e.InterviewerUser)
             .Include(i => i.Evaluations).ThenInclude(e => e.Items)
@@ -217,6 +220,11 @@ public class InterviewService(
 
         if (interview is null || !interview.Interviewers.Any(ii => ii.UserId == userId))
             return (null, null, true, false);
+
+        // A cancelled interview never happened: nothing may be saved or submitted on it (#189). Checked
+        // before anything is read or written, so a refused save leaves no row and sends no notification.
+        if (interview.Status == InterviewStatuses.Cancelled)
+            return (null, "This interview was cancelled.", false, true);
 
         // Resolve rubric criteria for this candidate / interview
         HashSet<string> validKeys;
