@@ -105,8 +105,13 @@ public record CandidateEvaluationReportDto(
     string FullName,
     string? RoleApplied,
     EvaluationReportSummaryDto Summary,
-    List<ReportEvaluationDto> Evaluations       // one per submitted evaluation, newest interview first
+    List<ReportEvaluationDto> Evaluations,      // one per submitted evaluation, newest interview first
+    // The criteria the ratings were given on (#190): the candidate's rubric, then any rated key it does not
+    // know under "Other criteria". Empty when no rubric exists, so the client falls back to the built-in ones.
+    List<ReportCriterionDto>? Criteria = null
 );
+
+public record ReportCriterionDto(string Key, string Label, string Section);
 
 public record ReportEvaluationDto(
     int InterviewId,
