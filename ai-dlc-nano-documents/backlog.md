@@ -1,5 +1,6 @@
 # Backlog
 <!-- Out-of-scope findings, newest first. Delete a line when it is resolved. -->
+- [2026-10-21] backend/CandidateService.UpdateAsync - overwrites the legacy AppliedRole with null on every edit; harmless now, drop the field (found: RG-188)
 - [2026-10-21] client/DashboardPage - an Interviewer-only user sees org-wide KPI tiles (Total, Rejected, ...) (found: RG-186)
 - [2026-10-21] client/e2e/shared-with-me - consumes one Uploaded candidate per run and books a real interview (found: RG-186)
 - [2026-10-20] client/SearchableMultiSelect - popover stays open after a pick and covers the rest of the form (found: RG-185)
