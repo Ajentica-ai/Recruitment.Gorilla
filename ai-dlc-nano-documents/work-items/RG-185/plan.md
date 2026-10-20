@@ -1,4 +1,4 @@
-<!-- phase: WRAP-UP | branch: feature/RG-185/Share-evaluations-ui | tasks: 9/9
+<!-- phase: DONE | branch: feature/RG-185/Share-evaluations-ui | tasks: 9/9
      base: 065657a | updated: 2026-10-20
      next: user yes to push + PR (Closes #185, Part of #182)
 # Plan: RG-185 share and revoke UI (standard rigor; the one new endpoint is read-only but auth-gated, so tested like the others)
