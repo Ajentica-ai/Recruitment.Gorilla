@@ -116,6 +116,24 @@ public class OfferService(
         return await GetOfferByIdAsync(offer.Id, accessUserId);
     }
 
+    /// <summary>
+    /// Saves a change to an existing offer. <see cref="Offer.Status"/> is a concurrency token, so if another request
+    /// changed the offer's status after this one read it, nothing is written and the caller is told to reload,
+    /// instead of terms landing on an offer that was approved or sent in the meantime (#192).
+    /// </summary>
+    private async Task SaveOfferAsync(int offerId)
+    {
+        try
+        {
+            await db.SaveChangesAsync();
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            throw new OfferStateException(
+                $"Offer #{offerId} was changed by someone else while you were working on it. Reload it and try again.");
+        }
+    }
+
     public async Task<OfferDto?> UpdateOfferAsync(int offerId, UpdateOfferDto dto, int? accessUserId, int userId, string userName)
     {
         var offer = await db.Offers
@@ -131,6 +149,12 @@ public class OfferService(
             if (!isOwner && !isAssignedRecruiter) return null;
         }
 
+        // The terms an Admin approved are the terms that get sent, so they can only change while the offer is
+        // a Draft (#192). A rejected or revised offer is edited as a Draft and approved again.
+        if (offer.Status != "Draft")
+            throw new OfferStateException(
+                $"Offer #{offerId} is '{offer.Status}', so its terms can no longer be changed. Only a draft can be edited; start a new version instead.");
+
         if (!string.IsNullOrWhiteSpace(dto.JobTitle))
             offer.JobTitle = dto.JobTitle.Trim();
 
@@ -145,7 +169,7 @@ public class OfferService(
         offer.Notes = string.IsNullOrWhiteSpace(dto.Notes) ? null : dto.Notes.Trim();
         offer.UpdatedAt = DateTime.UtcNow;
 
-        await db.SaveChangesAsync();
+        await SaveOfferAsync(offerId);
 
         await audit.RecordAsync("Offer.Updated", "Offer", offer.Id,
             $"Updated offer terms for Candidate #{offer.CandidateId}");
@@ -168,6 +192,11 @@ public class OfferService(
             var isAssignedRecruiter = offer.Candidate.RoleAppliedOption?.Recruiters.Any(rr => rr.UserId == uid) ?? false;
             if (!isOwner && !isAssignedRecruiter) return null;
         }
+
+        // Submitting an Approved, Extended or Accepted offer would pull it back into review (#192).
+        if (offer.Status != "Draft")
+            throw new OfferStateException(
+                $"Offer #{offerId} is '{offer.Status}', so it cannot be submitted for approval. Only a draft can be submitted.");
 
         offer.Status = "PendingApproval";
         offer.UpdatedAt = DateTime.UtcNow;
@@ -204,7 +233,7 @@ public class OfferService(
             }
         }
 
-        await db.SaveChangesAsync();
+        await SaveOfferAsync(offerId);
 
         await audit.RecordAsync("Offer.SubmittedForApproval", "Offer", offer.Id,
             $"Submitted offer for approval for Candidate #{offer.CandidateId}");
@@ -235,7 +264,7 @@ public class OfferService(
         // Only an offer awaiting approval can be reviewed. Otherwise approving a Draft skips the submit
         // step entirely, and rejecting an Extended or Accepted offer knocks it back to Draft.
         if (offer.Status != "PendingApproval")
-            throw new InvalidOperationException(
+            throw new OfferStateException(
                 $"Offer #{offerId} is '{offer.Status}', not awaiting approval, so it cannot be reviewed.");
 
         var isDecisionApproved = string.Equals(dto.Decision, "Approved", StringComparison.OrdinalIgnoreCase);
@@ -272,7 +301,7 @@ public class OfferService(
         }
 
         offer.UpdatedAt = DateTime.UtcNow;
-        await db.SaveChangesAsync();
+        await SaveOfferAsync(offerId);
 
         await audit.RecordAsync("Offer.Reviewed", "Offer", offer.Id,
             $"{approverName} reviewed offer with decision '{approval.Status}' for Candidate #{offer.CandidateId}");
@@ -284,6 +313,7 @@ public class OfferService(
     {
         var offer = await db.Offers
             .Include(o => o.Candidate).ThenInclude(c => c.RoleAppliedOption).ThenInclude(r => r!.Recruiters)
+            .Include(o => o.Approvals)
             .FirstOrDefaultAsync(o => o.Id == offerId);
 
         if (offer is null) return null;
@@ -297,14 +327,25 @@ public class OfferService(
 
         if (offer.Status is "Extended" or "Accepted" or "Declined")
         {
-            throw new InvalidOperationException($"Offer #{offerId} cannot be extended because its status is already '{offer.Status}'. Create a new offer version first.");
+            throw new OfferStateException($"Offer #{offerId} cannot be extended because its status is already '{offer.Status}'. Create a new offer version first.");
         }
+
+        // Approval is optional, so a Draft may be extended directly, but an offer that is waiting for an Admin
+        // cannot be sent before they decide, and a Draft an Admin rejected has to be resubmitted and approved
+        // first. A Draft with a Rejected approval on record can only be one that was rejected: nothing else
+        // returns an offer to Draft (#192).
+        if (offer.Status == "PendingApproval")
+            throw new OfferStateException(
+                $"Offer #{offerId} is awaiting approval, so it cannot be extended until an Admin approves it.");
+        if (offer.Status == "Draft" && offer.Approvals.Any(a => a.Status == "Rejected"))
+            throw new OfferStateException(
+                $"Offer #{offerId} was rejected. Edit it and request approval again before extending it.");
 
         offer.Status = "Extended";
         offer.ExtendedAt = DateTime.UtcNow;
         offer.UpdatedAt = DateTime.UtcNow;
 
-        await db.SaveChangesAsync();
+        await SaveOfferAsync(offerId);
 
         // Advance candidate status to "Offer Extended"
         if (offer.Candidate.CurrentStatus != "Offer Extended")
@@ -339,7 +380,7 @@ public class OfferService(
 
         if (offer.Status != "Extended")
         {
-            throw new InvalidOperationException($"Cannot record decision on offer #{offerId} with status '{offer.Status}'. The offer must be in 'Extended' status.");
+            throw new OfferStateException($"Cannot record decision on offer #{offerId} with status '{offer.Status}'. The offer must be in 'Extended' status.");
         }
 
         var isAccepted = string.Equals(dto.Decision, "Accepted", StringComparison.OrdinalIgnoreCase);
@@ -349,7 +390,7 @@ public class OfferService(
         offer.DeclineReason = isAccepted ? null : dto.Reason;
         offer.UpdatedAt = DateTime.UtcNow;
 
-        await db.SaveChangesAsync();
+        await SaveOfferAsync(offerId);
 
         var newCandidateStatus = isAccepted ? "Offer Accepted" : "Offer Declined";
         var comment = isAccepted ? "Candidate accepted offer" : $"Candidate declined offer: {dto.Reason}";

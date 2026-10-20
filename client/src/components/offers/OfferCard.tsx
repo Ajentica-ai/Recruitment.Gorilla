@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { CheckCircle2, DollarSign, Download, Edit3, FileText, Plus, Send, XCircle } from 'lucide-react';
 import { useToast } from '../ToastStack';
+import { serverErrorMessage } from '@/lib/evaluationShares';
 import { useAuth } from '../../auth/AuthContext';
 import {
   downloadOfferPdf,
@@ -39,13 +40,22 @@ export default function OfferCard({ candidate }: OfferCardProps) {
 
   const latestOffer = offers.length > 0 ? offers[0] : null;
 
+  // A Draft with a Rejected approval on record is one an Admin sent back: it cannot be extended until it is
+  // edited and approved again (#192). The server enforces it; the card just does not offer what it refuses.
+  const rejection =
+    latestOffer?.status === 'Draft'
+      ? [...(latestOffer.approvals ?? [])]
+          .filter((a) => a.status === 'Rejected')
+          .sort((a, b) => (b.reviewedAt ?? '').localeCompare(a.reviewedAt ?? ''))[0]
+      : undefined;
+
   const submitApprovalMutation = useMutation({
     mutationFn: (offerId: number) => submitOfferForApproval(candidate.id, offerId),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['candidate-offers', candidate.id] });
       addToast('Offer submitted for approval', 'info');
     },
-    onError: () => addToast('Failed to submit offer for approval', 'danger'),
+    onError: (err) => addToast(serverErrorMessage(err, 'Failed to submit offer for approval'), 'danger'),
   });
 
   const reviewMutation = useMutation({
@@ -55,7 +65,7 @@ export default function OfferCard({ candidate }: OfferCardProps) {
       void queryClient.invalidateQueries({ queryKey: ['candidate-offers', candidate.id] });
       addToast(`Offer ${vars.decision.toLowerCase()}`, vars.decision === 'Approved' ? 'success' : 'info');
     },
-    onError: () => addToast('Failed to record approval decision', 'danger'),
+    onError: (err) => addToast(serverErrorMessage(err, 'Failed to record approval decision'), 'danger'),
   });
 
   const extendMutation = useMutation({
@@ -67,7 +77,7 @@ export default function OfferCard({ candidate }: OfferCardProps) {
       void queryClient.invalidateQueries({ queryKey: ['dashboard-kpis'] });
       addToast('Offer marked as Extended to candidate!', 'success');
     },
-    onError: () => addToast('Failed to extend offer', 'danger'),
+    onError: (err) => addToast(serverErrorMessage(err, 'Failed to extend offer'), 'danger'),
   });
 
   const handleDownloadPdf = async (offer: Offer) => {
@@ -240,6 +250,13 @@ export default function OfferCard({ candidate }: OfferCardProps) {
                 </div>
               )}
 
+              {rejection && (
+                <div className="alert-info-soft text-[length:var(--text-sm)] mb-4" role="status" aria-label="Offer rejected">
+                  An Admin rejected this offer{rejection.comment ? `: ${rejection.comment}` : ''}. Edit the terms and
+                  request approval again before extending it.
+                </div>
+              )}
+
               {/* Action Toolbar */}
               <div className="offer-toolbar">
                 <Button
@@ -275,6 +292,7 @@ export default function OfferCard({ candidate }: OfferCardProps) {
                     >
                       <Send size={14} /> Request Approval
                     </Button>
+                    {!rejection && (
                     <Button
  
                       size="sm"
@@ -284,6 +302,7 @@ export default function OfferCard({ candidate }: OfferCardProps) {
                     >
                       <CheckCircle2 size={14} /> Extend Offer
                     </Button>
+                    )}
                   </>
                 )}
 
