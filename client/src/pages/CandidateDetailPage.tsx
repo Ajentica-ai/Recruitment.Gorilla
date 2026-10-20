@@ -29,6 +29,7 @@ import SectionCard from '../components/common/SectionCard';
 import LoadingPanel from '../components/common/Loading';
 import RowActions, { RowAction, RowActionSeparator } from '../components/common/RowActions';
 import EvaluationReportDrawer from '../components/EvaluationReportDrawer';
+import ShareEvaluationsControl from '../components/ShareEvaluationsControl';
 import OfferCard from '../components/offers/OfferCard';
 import { useAuth } from '../auth/AuthContext';
 import type { CandidateDetail, UpdateCandidatePayload } from '../types';
@@ -216,6 +217,12 @@ export default function CandidateDetailPage() {
             <ClipboardList size={15} strokeWidth={1.75} aria-hidden="true" />
             Evaluation report
           </Button>
+
+          <ShareEvaluationsControl
+            candidateId={candidateId}
+            candidateName={data.fullName}
+            className="contents"
+          />
 
           {canWrite && !editing && (
             <Button className="btn-action-advance" onClick={() => setAddingStatus(true)}>

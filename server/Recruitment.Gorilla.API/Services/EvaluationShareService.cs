@@ -40,6 +40,46 @@ public class EvaluationShareService(AppDbContext db, NotificationService notific
     }
 
     /// <summary>
+    /// What the share drawer offers for a candidate: its non-cancelled interviews (date, type tags,
+    /// panel) and every active user, flagged when they already read everything (the same rule that
+    /// makes <see cref="CreateAsync"/> skip them). Null when the candidate does not exist; the caller
+    /// has already applied the candidate scope.
+    /// </summary>
+    public async Task<ShareOptionsDto?> GetOptionsAsync(int candidateId)
+    {
+        var candidate = await db.Candidates
+            .Include(c => c.RoleAppliedOption).ThenInclude(r => r!.Recruiters)
+            .FirstOrDefaultAsync(c => c.Id == candidateId);
+        if (candidate is null) return null;
+
+        var interviews = await db.Interviews
+            .AsNoTracking()
+            .Where(i => i.CandidateId == candidateId && i.Status != InterviewStatuses.Cancelled)
+            .Include(i => i.Tags).ThenInclude(t => t.InterviewTypeOption)
+            .Include(i => i.Interviewers).ThenInclude(ii => ii.User)
+            .OrderBy(i => i.ScheduledAt)
+            .ToListAsync();
+
+        var users = await db.Users
+            .AsNoTracking()
+            .Include(u => u.Roles)
+            .Where(u => u.IsActive)
+            .OrderBy(u => u.Name)
+            .ToListAsync();
+
+        return new ShareOptionsDto(
+            interviews.Select(i => new ShareOptionInterviewDto(
+                i.Id, i.ScheduledAt, i.Status,
+                i.Tags.Select(t => t.InterviewTypeOption.Name).OrderBy(n => n).ToList(),
+                i.Interviewers.Select(ii => ii.User.Name).OrderBy(n => n).ToList())).ToList(),
+            users.Select(u =>
+            {
+                var reason = FullAccessReason(u, candidate);
+                return new ShareOptionUserDto(u.Id, u.Name, u.Email, reason is not null, reason);
+            }).ToList());
+    }
+
+    /// <summary>
     /// Creates (or refreshes) grants. All validation runs first and a failure writes nothing, so a
     /// request is all-or-nothing. A person who can already read every evaluation of this candidate (an
     /// Admin, or a Recruiter who owns the candidate or is assigned to its job opening) is skipped and

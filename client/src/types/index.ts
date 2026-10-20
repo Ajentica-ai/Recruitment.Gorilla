@@ -1057,3 +1057,67 @@ export interface RecruitingAnalyticsSummary {
 }
 
 
+
+// ----- Sharing evaluations with a named user (#182) -----
+
+export interface EvaluationShare {
+  id: number;
+  candidateId: number;
+  /** Null = every round of the candidate, future ones included. */
+  interviewId: number | null;
+  interviewScheduledAt: string | null;
+  granteeUserId: number;
+  granteeName: string;
+  granteeEmail: string;
+  /** `Manual`, or `PanelAutoShare` for a share made by booking the next round. */
+  source: string;
+  note: string | null;
+  expiresAt: string | null;
+  isActive: boolean;
+  grantedByUserId: number | null;
+  grantedByName: string | null;
+  createdAt: string;
+  revokedAt: string | null;
+  revokedByUserId: number | null;
+  revokedByName: string | null;
+}
+
+export interface CreateEvaluationSharesPayload {
+  granteeUserIds: number[];
+  /** Empty or omitted = all rounds. */
+  interviewIds?: number[];
+  expiresAt?: string | null;
+  note?: string | null;
+}
+
+export interface SkippedGrantee {
+  userId: number;
+  name: string;
+  reason: string;
+}
+
+export interface CreateEvaluationSharesResult {
+  shares: EvaluationShare[];
+  skipped: SkippedGrantee[];
+}
+
+export interface ShareOptionInterview {
+  interviewId: number;
+  scheduledAt: string;
+  status: string;
+  tags: string[];
+  panel: string[];
+}
+
+export interface ShareOptionUser {
+  userId: number;
+  name: string;
+  email: string;
+  alreadyHasAccess: boolean;
+  reason: string | null;
+}
+
+export interface ShareOptions {
+  interviews: ShareOptionInterview[];
+  users: ShareOptionUser[];
+}

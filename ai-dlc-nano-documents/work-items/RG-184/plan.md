@@ -1,4 +1,4 @@
-<!-- phase: WRAP-UP | branch: feature/RG-184/Shared-evaluations-read-api | tasks: 8/8
+<!-- phase: DONE | branch: feature/RG-184/Shared-evaluations-read-api | tasks: 8/8
      base: ac3ec05 | updated: 2026-10-20
      next: user decides the 2 review questions, then commit, push, PR
 # Plan: RG-184 grantee read endpoints + one access predicate (HIGH blast radius: permissions)

@@ -11,6 +11,7 @@ audit trail and import candidates from JSON.*
 | See and manage **all** candidates | no ownership or assignment limits |
 | **Approve or reject offers** | on offers a recruiter sent for approval |
 | See evaluation cards in the **Status history** | recruiters see them in the Evaluation report |
+| **Share evaluations** on any candidate | share submitted evaluations with a named person and revoke it; see section 2.10 |
 | **Delete** a candidate | permanent: removes the profile, history and CV files |
 | **Configuration** | rubrics, skills, sources, interview types, job openings |
 | **Audit** | the who-changed-what-when log |

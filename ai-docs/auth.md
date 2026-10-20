@@ -24,7 +24,7 @@ Four roles in a strict hierarchy **SuperAdmin → Admin → Recruiter → Interv
 | Candidate **evaluation report** (`/candidates/:id/evaluations`) | ✅ | ✅ | **own OR assigned-role** | – |
 | Create / edit / submit / extend an **offer**, record the candidate's decision | ✅ (all) | ✅ (all) | **own OR assigned-role** | – |
 | **Approve / reject** an offer (`.../offers/{id}/review`) | ✅ | ✅ | – | – |
-| **Share** a candidate's submitted evaluations with a named user (`/api/candidates/{id}/evaluation-shares`, #183): list / grant / revoke | ✅ (any candidate) | ✅ (any candidate) | **own OR assigned-role** (out of scope = 404) | – (403) |
+| **Share** a candidate's submitted evaluations with a named user (`/api/candidates/{id}/evaluation-shares`, #183): list / grant / revoke / drawer options (#185) | ✅ (any candidate) | ✅ (any candidate) | **own OR assigned-role** (out of scope = 404) | – (403) |
 | **View shared evaluations** (`/api/shared-evaluations`: `mine`, `candidates/{id}`, `.../profile`, `.../cv/{fileId}`, #184): only what an **active grant** covers | grant only | grant only | grant only (candidate scope ignored) | grant only |
 | See **peers'** evaluations on an interview | all | all | – | **after submitting own (same interview, submitted only)** |
 

@@ -145,4 +145,36 @@ public class EvaluationSharesApiTests(ApiFixture fx)
         var listed = await Json(await fx.SendAsync(HttpMethod.Get, Url(candidateA), token));
         Assert.True(listed[0].GetProperty("isActive").GetBoolean());
     }
+
+    // ---- options for the share drawer (#185) ----
+
+    private static string OptionsUrl(int candidateId) => Url(candidateId) + "/options";
+
+    [Fact]
+    public async Task Options_is_gated_like_the_other_share_endpoints()
+    {
+        var candidateId = await fx.NewCandidateAsync(fx.AdminId); // outside the Recruiter's scope
+
+        Assert.Equal(HttpStatusCode.Unauthorized, (await fx.SendAsync(HttpMethod.Get, OptionsUrl(candidateId), token: null)).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await fx.SendAsync(HttpMethod.Get, OptionsUrl(candidateId), await InterviewerToken())).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await fx.SendAsync(HttpMethod.Get, OptionsUrl(candidateId), await RecruiterToken())).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await fx.SendAsync(HttpMethod.Get, OptionsUrl(int.MaxValue), await AdminToken())).StatusCode);
+    }
+
+    [Fact]
+    public async Task A_recruiter_gets_options_for_their_candidate_with_interviews_and_flagged_users()
+    {
+        var candidateId = await fx.NewCandidateAsync(fx.RecruiterId);
+        var interviewId = await fx.NewInterviewAsync(candidateId, fx.InterviewerId);
+
+        var resp = await fx.SendAsync(HttpMethod.Get, OptionsUrl(candidateId), await RecruiterToken());
+
+        Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
+        var body = await Json(resp);
+        Assert.Contains(body.GetProperty("interviews").EnumerateArray(), i => i.GetProperty("interviewId").GetInt32() == interviewId);
+        var admin = body.GetProperty("users").EnumerateArray().Single(u => u.GetProperty("userId").GetInt32() == fx.AdminId);
+        Assert.True(admin.GetProperty("alreadyHasAccess").GetBoolean());
+        var interviewer = body.GetProperty("users").EnumerateArray().Single(u => u.GetProperty("userId").GetInt32() == fx.InterviewerId);
+        Assert.False(interviewer.GetProperty("alreadyHasAccess").GetBoolean());
+    }
 }

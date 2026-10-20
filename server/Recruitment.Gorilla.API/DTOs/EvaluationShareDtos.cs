@@ -39,3 +39,12 @@ public record CreateEvaluationSharesResultDto(
     List<EvaluationShareDto> Shares,
     List<SkippedGranteeDto> Skipped
 );
+
+/// <summary>A non-cancelled interview a grantor can name in a share (#185).</summary>
+public record ShareOptionInterviewDto(
+    int InterviewId, DateTime ScheduledAt, string Status, List<string> Tags, List<string> Panel);
+
+/// <summary>An active user a grantor can pick; <see cref="AlreadyHasAccess"/> users are shown disabled with the reason.</summary>
+public record ShareOptionUserDto(int UserId, string Name, string Email, bool AlreadyHasAccess, string? Reason);
+
+public record ShareOptionsDto(List<ShareOptionInterviewDto> Interviews, List<ShareOptionUserDto> Users);

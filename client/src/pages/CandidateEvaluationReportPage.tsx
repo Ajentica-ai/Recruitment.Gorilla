@@ -8,6 +8,7 @@ import EmptyState from '@/components/common/EmptyState';
 import Page from '@/components/common/Page';
 import PageHeader from '@/components/common/PageHeader';
 import LoadingPanel from '@/components/common/Loading';
+import ShareEvaluationsControl from '@/components/ShareEvaluationsControl';
 import { Button } from '@/components/ui/button';
 import { getCandidateEvaluationReport } from '@/services/api';
 
@@ -69,10 +70,17 @@ export default function CandidateEvaluationReportPage() {
         title="Evaluation report"
         description={`${data.fullName}${data.roleApplied ? ` · ${data.roleApplied}` : ''}`}
         actions={
-          <Button variant="outline" className="print:hidden" onClick={() => window.print()}>
-            <Printer size={14} strokeWidth={1.75} aria-hidden="true" />
-            Print
-          </Button>
+          <>
+            <ShareEvaluationsControl
+              candidateId={candidateId}
+              candidateName={data.fullName}
+              showSummary
+            />
+            <Button variant="outline" className="print:hidden" onClick={() => window.print()}>
+              <Printer size={14} strokeWidth={1.75} aria-hidden="true" />
+              Print
+            </Button>
+          </>
         }
       />
 
