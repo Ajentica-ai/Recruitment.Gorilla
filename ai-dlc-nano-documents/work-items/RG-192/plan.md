@@ -1,6 +1,6 @@
 <!-- phase: WRAP-UP | branch: fix/RG-192/Offer-state-machine | tasks: 7/7
      base: e9d40c4 | updated: 2026-10-25
-     next: user decides the new-version bypass, then push + PR (Closes #192)
+     next: user yes to push + PR (Closes #192)
 # Plan: RG-192 the offer approval binds the offer (bug, HIGH blast radius: compensation + approval workflow)
 ## Tasks
 - [x] Repro first (backend): update on Approved/Extended/Accepted/Declined/PendingApproval succeeds today; extend on PendingApproval and on a rejected Draft succeeds; submit on Approved/Extended/Accepted/Declined/PendingApproval succeeds; extend/decision refusals surface as 500 over HTTP

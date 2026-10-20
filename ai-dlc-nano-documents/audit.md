@@ -565,3 +565,4 @@
 - 2026-10-25T09:40Z [claude] RG-192 BRANCH @e9d40c4: fix/RG-192/Offer-state-machine off origin/develop (user confirmed)
 - 2026-10-25T09:40Z [claude] RG-192 PHASE PLAN→CONSTRUCT @e9d40c4: plan approved (user: go with recommendation)
 - 2026-10-25T12:00Z [claude] RG-192 PHASE CONSTRUCT→WRAP-UP @e9d40c4: 731 dotnet, 313 vitest, tsc+lint ok, isolated API+UI check ok, security review fixes applied; new-version bypass pending user
+- 2026-10-25T13:00Z [claude] RG-192 DECISION @ff0c95c: rejection rule is candidate-level so a New Version cannot bypass it (user confirmed)

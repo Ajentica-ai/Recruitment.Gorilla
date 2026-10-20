@@ -17,5 +17,5 @@
 - Offer letter PDF, metrics, the candidate status pipeline.
 ## Follow-ups
 - Security review (no High): fixed here: Offer.Status concurrency token + SaveOfferAsync (races refused), dedicated OfferStateException (only state refusals become 409), out-of-scope 404 pinned by tests, latest rejection shown. Backlog: stale-page approval of edited terms, shared error helper.
-- OPEN PRODUCT DECISION: a rejection is per offer row, so after an Admin rejects offer A a Recruiter can create a New Version and extend it directly (approval is optional). Options: candidate-level rule (any rejection for the candidate makes approval mandatory for later offers) or accept it. Not decided yet.
+- DECIDED (user: go with recommendation): the rejection rule is candidate-level. Once an Admin rejects any offer for a candidate, a Draft (the rejected one or a New Version) must be submitted and approved before it can be extended. Derived from approvals, no schema change.
 - Seen: Update/Submit/Extend/Decision services act first and the controller compares updated.CandidateId afterwards (write then 404), the same flaw already fixed for Review. Not in scope here.
