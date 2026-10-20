@@ -25,6 +25,9 @@ services:
       start_period: 40s
     volumes:
       - db-data:/var/lib/mysql
+    # Published for developer DB access; the host firewall restricts who can connect.
+    ports:
+      - "3308:3306"
 
   api:
     build:
