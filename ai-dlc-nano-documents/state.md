@@ -1,9 +1,9 @@
 # AI-DLC Nano State
-- Active work item: work-items/RG-186
+- Active work item: work-items/RG-190
 - Phase: WRAP-UP
-- Branch: feature/RG-186/Shared-with-me-view
-- Base SHA: 01c680e
-- Next step: user yes to push and open PR for #186; then plan #187.
+- Branch: fix/RG-190/Custom-rubric-ratings-in-report
+- Base SHA: e9d40c4
+- Next step: user yes to push and open PR for #190.
 - Paused work items: none
 - Uncommitted code: no (committed locally)
-- Last updated: 2026-10-21T09:00Z by claude
+- Last updated: 2026-10-23T09:40Z by claude
