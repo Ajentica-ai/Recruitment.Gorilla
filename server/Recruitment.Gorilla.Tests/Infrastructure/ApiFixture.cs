@@ -289,6 +289,40 @@ public sealed class ApiFixture : IAsyncLifetime
         return interview.Id;
     }
 
+    /// <summary>Inserts an interview on <paramref name="candidateId"/> with the given panel (committed) and returns its id.</summary>
+    public async Task<int> NewInterviewAsync(int candidateId, params int[] interviewerUserIds)
+    {
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var interview = new Interview
+        {
+            CandidateId = candidateId,
+            ScheduledAt = DateTime.UtcNow.AddDays(1),
+            Interviewers = interviewerUserIds.Distinct()
+                .Select(uid => new InterviewInterviewer { UserId = uid }).ToList(),
+        };
+        db.Interviews.Add(interview);
+        await db.SaveChangesAsync();
+        return interview.Id;
+    }
+
+    /// <summary>Inserts one interviewer's evaluation (submitted or a draft) on an interview (committed).</summary>
+    public async Task AddEvaluationAsync(int interviewId, int userId, bool submitted, int overallRating = 4)
+    {
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        db.InterviewEvaluations.Add(new InterviewEvaluation
+        {
+            InterviewId = interviewId,
+            InterviewerUserId = userId,
+            OverallRating = overallRating,
+            Recommendation = "Recommended",
+            IsSubmitted = submitted,
+            SubmittedAt = submitted ? DateTime.UtcNow : null,
+        });
+        await db.SaveChangesAsync();
+    }
+
     /// <summary>Inserts an offer in the given status (committed) and returns its id.</summary>
     public async Task<int> NewOfferAsync(int candidateId, string status = "Draft")
     {

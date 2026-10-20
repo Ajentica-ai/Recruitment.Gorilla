@@ -49,9 +49,25 @@ public class EvaluationShareServiceTests(MySqlDatabaseFixture fixture) : DbTestB
         var grantee = Data.AddUser(Roles.Interviewer);
         await Create(candidate, grantor, [grantee.Id], expiresAt: DateTime.UtcNow.AddDays(2));
 
-        await Create(candidate, grantor, [grantee.Id]);
+        await Create(candidate, grantor, [grantee.Id], expiresAt: DateTime.UtcNow.AddDays(9));
 
         Assert.Equal(1, Db.AuditLogs.Count(a => a.Action == "EvaluationShare.Updated" && a.EntityId == candidate.Id));
+    }
+
+    [Fact]
+    public async Task Regrant_without_an_expiry_or_note_keeps_the_existing_ones()
+    {
+        var (grantor, candidate) = Setup();
+        var grantee = Data.AddUser(Roles.Interviewer);
+        var expiry = DateTime.UtcNow.AddDays(2);
+        await Create(candidate, grantor, [grantee.Id], expiresAt: expiry, note: "keep me");
+
+        await Create(candidate, grantor, [grantee.Id]);
+
+        var grant = Assert.Single(Db.EvaluationAccessGrants.AsNoTracking().Where(g => g.CandidateId == candidate.Id));
+        Assert.Equal("keep me", grant.Note);
+        Assert.Equal(expiry, grant.ExpiresAt!.Value, TimeSpan.FromSeconds(1));
+        Assert.Equal(0, Db.AuditLogs.Count(a => a.Action == "EvaluationShare.Updated" && a.EntityId == candidate.Id));
     }
 
     // ---- create: what gets stored ----

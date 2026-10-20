@@ -18,6 +18,8 @@ public class InterviewService(
     private const string InterviewScheduledStatus = "Interview Scheduled";
     private const string CallForInterviewStatus = "Call for Interview";
 
+    private readonly EvaluationAccess evaluationAccess = new(db);
+
     /// <summary>True if the user is an assigned interviewer on any interview of this candidate.</summary>
     public Task<bool> IsAssignedInterviewerForCandidateAsync(int candidateId, int userId) =>
         db.Interviews.AnyAsync(i =>
@@ -127,9 +129,11 @@ public class InterviewService(
     /// candidate's interviews, plus aggregates (average overall, per-criterion averages,
     /// recommendation tally). Access is candidate-scoped via <paramref name="ownerScope"/>
     /// (recruiters only see their accessible candidates); returns null when not accessible.
+    /// <paramref name="onlyInterviewIds"/> narrows the report (and so its aggregates) to those
+    /// interviews; the grantee endpoints pass what the access predicate allows (#184).
     /// </summary>
     public async Task<CandidateEvaluationReportDto?> GetCandidateEvaluationReportAsync(
-        int candidateId, int? ownerScope)
+        int candidateId, int? ownerScope, IReadOnlyCollection<int>? onlyInterviewIds = null)
     {
         // Reuse the candidate access predicate (owned OR assigned-role; Admin+ = null scope).
         var candidate = await candidateService.GetByIdAsync(candidateId, ownerScope);
@@ -137,6 +141,7 @@ public class InterviewService(
 
         var interviews = await db.Interviews
             .Where(i => i.CandidateId == candidateId)
+            .Where(i => onlyInterviewIds == null || onlyInterviewIds.Contains(i.Id))
             .Include(i => i.Evaluations).ThenInclude(e => e.InterviewerUser)
             .Include(i => i.Evaluations).ThenInclude(e => e.Items)
             .Include(i => i.Tags).ThenInclude(t => t.InterviewTypeOption)
@@ -321,7 +326,7 @@ public class InterviewService(
         // The Candidate include is guaranteed by the required FK; the pattern keeps the compiler's
         // nullable analysis happy, matching how the rubric lookup above treats the navigation.
         if (dto.Submit && interview.Candidate is { } candidate)
-            await NotifyEvaluationSubmittedAsync(candidate, userId, name);
+            await NotifyEvaluationSubmittedAsync(candidate, interview.Id, userId, name);
 
         return (ToDto(eval, name), null, false, false);
     }
@@ -332,8 +337,11 @@ public class InterviewService(
     /// <c>CandidateService.ApplyAccess</c> on purpose - the notification links to the candidate's
     /// evaluation report, which is owner-scoped for recruiters, so a wider fan-out would hand the
     /// rest of them a dead link. The submitter is skipped: an Admin may also be the interviewer.
+    /// Grantees whose grant covers this interview and who pass the access predicate hear too (#184),
+    /// linking to the shared report.
     /// </summary>
-    private async Task NotifyEvaluationSubmittedAsync(Candidate candidate, int submitterUserId, string submitterName)
+    private async Task NotifyEvaluationSubmittedAsync(
+        Candidate candidate, int interviewId, int submitterUserId, string submitterName)
     {
         var assignedRecruiterIds = candidate.RoleAppliedOptionId is int roleOptionId
             ? await db.RoleAppliedOptions
@@ -356,6 +364,16 @@ public class InterviewService(
                 "Evaluation submitted",
                 $"{submitterName} submitted an interview evaluation for {candidate.FullName}.",
                 $"/candidates/{candidate.Id}/evaluations",
+                category: NotificationCategories.EvaluationSubmitted);
+
+        // Someone who is both a grantee and already in the list above is told once, by the link they can open.
+        var granteeIds = await evaluationAccess.GranteeIdsForInterviewAsync(interviewId, submitterUserId);
+        foreach (var granteeId in granteeIds.Except(recipientIds))
+            await notificationService.NotifyAsync(
+                granteeId,
+                "Evaluation submitted",
+                $"{submitterName} submitted an interview evaluation for {candidate.FullName}.",
+                $"/shared/{candidate.Id}",
                 category: NotificationCategories.EvaluationSubmitted);
     }
 
