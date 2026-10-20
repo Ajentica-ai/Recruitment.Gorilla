@@ -27,6 +27,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<JobOpeningOption> JobOpeningOptions => Set<JobOpeningOption>();
     public DbSet<InterviewTag> InterviewTags => Set<InterviewTag>();
     public DbSet<InterviewEvent> InterviewEvents => Set<InterviewEvent>();
+    public DbSet<EvaluationAccessGrant> EvaluationAccessGrants => Set<EvaluationAccessGrant>();
     public DbSet<Notification> Notifications => Set<Notification>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
     public DbSet<EmailSetting> EmailSettings => Set<EmailSetting>();
@@ -517,6 +518,39 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.HasOne(ev => ev.ActorUser)
              .WithMany()
              .HasForeignKey(ev => ev.ActorUserId)
+             .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<EvaluationAccessGrant>(e =>
+        {
+            e.HasKey(g => g.Id);
+            e.Property(g => g.Source).HasMaxLength(30).IsRequired();
+            e.Property(g => g.Note).HasMaxLength(500);
+            e.HasIndex(g => new { g.GranteeUserId, g.RevokedAt });
+            e.HasIndex(g => g.CandidateId);
+            e.HasOne(g => g.Candidate)
+             .WithMany()
+             .HasForeignKey(g => g.CandidateId)
+             .OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(g => g.Interview)
+             .WithMany()
+             .HasForeignKey(g => g.InterviewId)
+             .OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(g => g.GranteeUser)
+             .WithMany()
+             .HasForeignKey(g => g.GranteeUserId)
+             .OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(g => g.GrantedByUser)
+             .WithMany()
+             .HasForeignKey(g => g.GrantedByUserId)
+             .OnDelete(DeleteBehavior.SetNull);
+            e.HasOne(g => g.CreatedForInterview)
+             .WithMany()
+             .HasForeignKey(g => g.CreatedForInterviewId)
+             .OnDelete(DeleteBehavior.SetNull);
+            e.HasOne(g => g.RevokedByUser)
+             .WithMany()
+             .HasForeignKey(g => g.RevokedByUserId)
              .OnDelete(DeleteBehavior.SetNull);
         });
 

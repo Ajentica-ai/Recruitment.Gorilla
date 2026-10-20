@@ -12,6 +12,7 @@ public static class NotificationCategories
     public const string RecruiterAssigned = "RecruiterAssigned";
     public const string InterviewRescheduled = "InterviewRescheduled";
     public const string InterviewCancelled = "InterviewCancelled";
+    public const string EvaluationShared = "EvaluationShared";
 
     /// <summary>Every known category with its admin-facing label, in display order.</summary>
     public static readonly IReadOnlyList<(string Key, string Label)> All =
@@ -21,6 +22,7 @@ public static class NotificationCategories
         (RecruiterAssigned, "Assigned to job opening"),
         (InterviewRescheduled, "Interview rescheduled"),
         (InterviewCancelled, "Interview cancelled"),
+        (EvaluationShared, "Evaluations shared with you"),
     ];
 
     public static bool IsValid(string category) => All.Any(c => c.Key == category);

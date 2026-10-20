@@ -1,5 +1,7 @@
 # Backlog
 <!-- Out-of-scope findings, newest first. Delete a line when it is resolved. -->
+- [2026-10-19] backend/evaluation-shares: concurrent identical grants can duplicate (needs generated-column unique index); handle in #184 (found: RG-183)
+- [2026-10-19] backend/evaluation-shares: #184 read path must skip inactive grantees and keep grantor scope check separate from grants (found: RG-183)
 - [2026-10-18] client/CandidateForm + DraftReviewWorkspace - unlike the uploaders they do not filter out expired openings, so one can be offered and then rejected on save (found: RG-169)
 - [2026-10-18] client - two query keys for one endpoint: ['active-role-options'] in the uploaders vs ['role-options','active'] elsewhere, so they cache separately (found: RG-169)
 - [2026-10-16] CalendarInvite - .ics cancels are best effort; PUBLISH invites carry no ATTENDEE so clients may not remove the event. Needs PUBLISH -> REQUEST (found: RG-173)

@@ -49,6 +49,7 @@ builder.Services.AddScoped<DashboardService>();
 builder.Services.AddScoped<InterviewService>();
 builder.Services.AddScoped<NotificationService>();
 builder.Services.AddScoped<OfferService>();
+builder.Services.AddScoped<EvaluationShareService>();
 builder.Services.AddScoped<EvaluationRubricService>();
 builder.Services.AddScoped<AnalyticsService>();
 builder.Services.AddScoped<CandidateDraftService>();
