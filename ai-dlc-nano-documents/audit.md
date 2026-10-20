@@ -460,3 +460,11 @@
 - 2026-10-19T11:35Z [claude] RG-178 BRANCH @0f798b0: fix/RG-178/Card-header-spec-race off origin/develop (user confirmed)
 - 2026-10-19T11:35Z [claude] RG-178 PHASE PLAN→CONSTRUCT @0f798b0: plan approved
 - 2026-10-19T11:43Z [claude] RG-178 DONE @0f798b0: chip waits for render, wide sign-in, sibling waits; old spec skipped 3/3, fixed 120+ runs ran; mutation caught; full e2e 36 pass
+- 2026-10-19T12:54Z [claude] RG-179 CREATED @024c6e0: issue #179, e2e suite grows the dev database every run
+- 2026-10-19T12:54Z [claude] RG-179 SIDE-EFFECT @024c6e0: already assigned to rayhan-ajentica; board status NOT moved (gh token lacks read:project)
+- 2026-10-19T12:54Z [claude] RG-179 DECISION @024c6e0: per-spec cleanup via shared helper, afterEach; not an isolated DB (user approved)
+- 2026-10-19T12:54Z [claude] RG-179 BRANCH @024c6e0: fix/RG-179/E2E-cleanup-fixtures off origin/develop (user confirmed)
+- 2026-10-19T12:54Z [claude] RG-179 PHASE PLAN→CONSTRUCT @024c6e0: plan approved
+- 2026-10-19T14:00Z [claude] RG-179 SIDE-EFFECT @024c6e0: my baseline e2e run wrote to the user's REAL DB (their API held 5134); removed drafts 52-64 and candidates 14-15 via API with user's go-ahead; counts restored
+- 2026-10-19T14:00Z [claude] RG-179 REVISED @024c6e0: snapshot-diff cleanup broke under parallel workers; now tracks each test's own ids (network responses)
+- 2026-10-19T14:00Z [claude] RG-179 DONE @024c6e0: cleanup helper + seed/recruiter-scope fixes; 3 full suites leave counts flat on an isolated DB; real DB untouched
