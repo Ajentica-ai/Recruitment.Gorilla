@@ -32,3 +32,7 @@ client/*.tmp.mjs
 
 # Playwright MCP output (logs, snapshots)
 .playwright-mcp/
+
+# ai-dlc-nano workflow (local only)
+ai-dlc-nano-documents/
+.claude/skills/ai-dlc-nano/
