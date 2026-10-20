@@ -505,3 +505,33 @@
 - 2026-10-21T09:40Z [claude] RG-186 BRANCH @01c680e: feature/RG-186/Shared-with-me-view off origin/develop (user confirmed)
 - 2026-10-21T09:40Z [claude] RG-186 PHASE PLAN→CONSTRUCT @01c680e: plan approved (user: go with recommendation)
 - 2026-10-21T14:00Z [claude] RG-186 PHASE CONSTRUCT→WRAP-UP @01c680e: 675 dotnet, 307 vitest, tsc+lint ok, 3 E2E ok on isolated stack
+- 2026-10-21T14:30Z [claude] RG-186 SIDE-EFFECT @75360ce: pushed branch, opened PR #213 into develop (user confirmed)
+- 2026-10-21T14:30Z [claude] RG-186 DONE @75360ce: PR #213 open, awaiting review
+- 2026-10-22T09:00Z [claude] RG-187 CREATED @e9d40c4: issue #187 intake, phase 5 of #182 (PR #213 merged)
+- 2026-10-22T09:00Z [claude] RG-187 SIDE-EFFECT @e9d40c4: assigned #187 to @me; board status not moved (gh token lacks read:project)
+- 2026-10-22T09:00Z [claude] RG-187 PHASE INTAKE→CLARIFY @e9d40c4
+- 2026-10-22T09:20Z [claude] RG-187 DECISION @e9d40c4: options field, skip covered, no expiry, notification wording, test scope (user confirmed)
+- 2026-10-22T09:20Z [claude] RG-187 PHASE CLARIFY→PLAN @e9d40c4: plan drafted, awaiting approval
+- 2026-10-22T09:40Z [claude] RG-187 BRANCH @e9d40c4: feature/RG-187/Share-earlier-rounds-on-booking off origin/develop (user confirmed)
+- 2026-10-22T09:40Z [claude] RG-187 PHASE PLAN→CONSTRUCT @e9d40c4: plan approved (user: go with recommendation)
+- 2026-10-22T14:00Z [claude] RG-187 PHASE CONSTRUCT→WRAP-UP @e9d40c4: 689 dotnet, 319 vitest, tsc+lint ok, isolated flow + migration down/up ok, security review fixes applied
+- 2026-10-22T14:30Z [claude] RG-187 SIDE-EFFECT @8f0ee60: pushed branch, opened PR #214 into develop (user confirmed)
+- 2026-10-22T14:30Z [claude] RG-187 DONE @8f0ee60: PR #214 open, awaiting review
+- 2026-10-21T09:00Z [claude] RG-188 CREATED @e9d40c4: issue #188 intake (bug); PR #214 for RG-187 still open
+- 2026-10-21T09:00Z [claude] RG-188 SIDE-EFFECT @e9d40c4: assigned #188 to @me; board status not moved (gh token lacks read:project)
+- 2026-10-21T09:00Z [claude] RG-188 PHASE INTAKE→CLARIFY @e9d40c4
+- 2026-10-21T09:20Z [claude] RG-188 DECISION @e9d40c4: legacy fallback only when link null; one shared rule; UpdateAsync untouched (user confirmed)
+- 2026-10-21T09:20Z [claude] RG-188 PHASE CLARIFY→PLAN @e9d40c4: plan drafted, awaiting approval
+- 2026-10-21T09:40Z [claude] RG-188 BRANCH @e9d40c4: fix/RG-188/Rubric-lookup-by-job-opening off origin/develop (user confirmed)
+- 2026-10-21T09:40Z [claude] RG-188 PHASE PLAN→CONSTRUCT @e9d40c4: plan approved (user: go with recommendation)
+- 2026-10-21T11:00Z [claude] RG-188 PHASE CONSTRUCT→WRAP-UP @e9d40c4: 684 dotnet tests green; HTTP integration test replaces a separate isolated-stack run
+- 2026-10-21T12:00Z [claude] RG-188 SIDE-EFFECT @0b66e8a: pushed branch, opened PR #215 into develop (user confirmed)
+- 2026-10-21T12:00Z [claude] RG-188 DONE @0b66e8a: PR #215 open, awaiting review
+- 2026-10-22T09:00Z [claude] RG-189 CREATED @e9d40c4: issue #189 intake (bug); PRs #214 and #215 still open
+- 2026-10-22T09:00Z [claude] RG-189 SIDE-EFFECT @e9d40c4: assigned #189 to @me; board status not moved (gh token lacks read:project)
+- 2026-10-22T09:00Z [claude] RG-189 PHASE INTAKE→CLARIFY @e9d40c4
+- 2026-10-22T09:20Z [claude] RG-189 DECISION @e9d40c4: fix per issue; keep drafts on cancel; no reason on the panel (user confirmed)
+- 2026-10-22T09:20Z [claude] RG-189 PHASE CLARIFY→PLAN @e9d40c4: plan drafted, awaiting approval
+- 2026-10-22T09:40Z [claude] RG-189 BRANCH @e9d40c4: fix/RG-189/Cancelled-interview-evaluation off origin/develop (user confirmed)
+- 2026-10-22T09:40Z [claude] RG-189 PHASE PLAN→CONSTRUCT @e9d40c4: plan approved (user: go with recommendation)
+- 2026-10-22T11:00Z [claude] RG-189 PHASE CONSTRUCT→WRAP-UP @e9d40c4: 683 dotnet, 310 vitest, tsc+lint ok, isolated flow + screenshot ok

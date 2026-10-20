@@ -1,9 +1,9 @@
 # AI-DLC Nano State
-- Active work item: work-items/RG-186
+- Active work item: work-items/RG-189
 - Phase: WRAP-UP
-- Branch: feature/RG-186/Shared-with-me-view
-- Base SHA: 01c680e
-- Next step: user yes to push and open PR for #186; then plan #187.
+- Branch: fix/RG-189/Cancelled-interview-evaluation
+- Base SHA: e9d40c4
+- Next step: user yes to push and open PR for #189.
 - Paused work items: none
 - Uncommitted code: no (committed locally)
-- Last updated: 2026-10-21T09:00Z by claude
+- Last updated: 2026-10-22T09:40Z by claude
