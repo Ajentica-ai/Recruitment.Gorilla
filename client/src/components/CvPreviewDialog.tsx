@@ -20,6 +20,8 @@ interface CvPreviewDialogProps {
   candidateId: number;
   preview: CvPreview;
   onClose: () => void;
+  /** Download through the grant-checked shared endpoint (a grantee has no candidate access). */
+  shared?: boolean;
 }
 
 /* The CV viewer, shared by the Candidate Detail page and the profile drawer.
@@ -27,7 +29,7 @@ interface CvPreviewDialogProps {
    A CV is a full page of dense text, and the point of previewing it in the
    app rather than downloading it is to read it, so the viewer takes almost
    the whole window. The caller owns the blob URL and revokes it on close. */
-export default function CvPreviewDialog({ candidateId, preview, onClose }: CvPreviewDialogProps) {
+export default function CvPreviewDialog({ candidateId, preview, onClose, shared = false }: CvPreviewDialogProps) {
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:h-[92dvh] sm:max-h-[92dvh] sm:max-w-[min(76rem,95vw)]">
@@ -40,7 +42,7 @@ export default function CvPreviewDialog({ candidateId, preview, onClose }: CvPre
             size="sm"
             variant="outline"
             className="mr-6 shrink-0"
-            onClick={() => void downloadCvFile(candidateId, preview.fileId)}
+            onClick={() => void downloadCvFile(candidateId, preview.fileId, shared)}
           >
             <Download size={14} strokeWidth={1.75} aria-hidden="true" />
             Download
@@ -61,7 +63,7 @@ export default function CvPreviewDialog({ candidateId, preview, onClose }: CvPre
               <p>In-app preview isn't available for this file type.</p>
               <Button
                 size="sm"
-                onClick={() => void downloadCvFile(candidateId, preview.fileId)}
+                onClick={() => void downloadCvFile(candidateId, preview.fileId, shared)}
               >
                 <Download size={14} strokeWidth={1.75} aria-hidden="true" />
                 Download file

@@ -1121,3 +1121,26 @@ export interface ShareOptions {
   interviews: ShareOptionInterview[];
   users: ShareOptionUser[];
 }
+
+// ----- Shared with me (#182, #186) -----
+
+export interface SharedInterview {
+  interviewId: number;
+  scheduledAt: string;
+}
+
+/** A candidate shared with the caller, merged across their active grants (`GET api/shared-evaluations/mine`). */
+export interface SharedEvaluationSummary {
+  candidateId: number;
+  candidateName: string;
+  roleApplied: string | null;
+  /** True when any active grant covers every round, future ones included. */
+  allRounds: boolean;
+  interviews: SharedInterview[];
+  grantedByName: string | null;
+  note: string | null;
+  /** Null when any active grant never expires. */
+  expiresAt: string | null;
+  /** What the caller can read now; can be lower than what was shared. */
+  visibleEvaluationCount: number;
+}

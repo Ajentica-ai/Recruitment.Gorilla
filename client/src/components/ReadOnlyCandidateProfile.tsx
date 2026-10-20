@@ -145,6 +145,8 @@ interface Props {
   className?: string;
   canEdit?: boolean;
   onSave?: (updates: UpdateCandidatePayload) => Promise<void>;
+  /** CV files come from the grant-checked shared endpoint (the shared evaluations view, #186). */
+  sharedCv?: boolean;
 }
 
 type EditableSection = 'none' | 'position' | 'contact' | 'links' | 'skills' | 'summary';
@@ -159,6 +161,7 @@ export default function ReadOnlyCandidateProfile({
   className = '',
   canEdit = false,
   onSave,
+  sharedCv = false,
 }: Props) {
   const [preview, setPreview] = useState<CvPreview | null>(null);
   const [loadingPreviewId, setLoadingPreviewId] = useState<number | null>(null);
@@ -361,7 +364,7 @@ export default function ReadOnlyCandidateProfile({
     setLoadingPreviewId(fileId);
     try {
       revokePreviewUrl();
-      const { url, contentType } = await previewCvFile(candidate.id, fileId);
+      const { url, contentType } = await previewCvFile(candidate.id, fileId, sharedCv);
       previewUrlRef.current = url;
       setPreview({ url, contentType, fileName, fileId });
     } catch {
@@ -1051,7 +1054,7 @@ export default function ReadOnlyCandidateProfile({
                     >
                       {loadingPreviewId === f.id ? 'Loading…' : 'Preview'}
                     </Button>
-                    <Button size="sm" onClick={() => void downloadCvFile(candidate.id, f.id)}>
+                    <Button size="sm" onClick={() => void downloadCvFile(candidate.id, f.id, sharedCv)}>
                       <DownloadIcon />
                       Download
                     </Button>
@@ -1063,7 +1066,7 @@ export default function ReadOnlyCandidateProfile({
         )}
 
         {showCvFiles && preview && (
-          <CvPreviewDialog candidateId={candidate.id} preview={preview} onClose={closePreview} />
+          <CvPreviewDialog candidateId={candidate.id} preview={preview} onClose={closePreview} shared={sharedCv} />
         )}
       </CardContent>
     </Card>

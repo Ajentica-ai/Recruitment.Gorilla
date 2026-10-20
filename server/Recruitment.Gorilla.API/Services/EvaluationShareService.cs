@@ -204,7 +204,7 @@ public class EvaluationShareService(AppDbContext db, NotificationService notific
         }
 
         foreach (var user in newlyNotified)
-            await NotifyGranteeAsync(user, grantorName, candidate.FullName, note);
+            await NotifyGranteeAsync(user, grantorName, candidate.Id, candidate.FullName, note);
 
         var dtos = await ListAsync(candidateId);
         var touchedIds = touched.Select(g => g.Id).ToHashSet();
@@ -248,7 +248,7 @@ public class EvaluationShareService(AppDbContext db, NotificationService notific
         return null;
     }
 
-    private Task NotifyGranteeAsync(User grantee, string grantorName, string candidateName, string? note)
+    private Task NotifyGranteeAsync(User grantee, string grantorName, int candidateId, string candidateName, string? note)
     {
         // The notification message column holds 500 characters and a note can be 500 on its own, so the
         // in-app text is cut to fit; the full note stays on the grant and in the email.
@@ -257,9 +257,8 @@ public class EvaluationShareService(AppDbContext db, NotificationService notific
             + (note is null ? "" : $" Note: {note}"),
             MaxNotificationMessageLength);
         var (subject, html) = EmailTemplates.EvaluationShared(grantee.Name, grantorName, candidateName, note);
-        // No link: the page the grantee would open arrives in a later phase (#186).
         return notifications.NotifyAsync(
-            grantee.Id, "Interview evaluations shared with you", message, linkUrl: null,
+            grantee.Id, "Interview evaluations shared with you", message, linkUrl: EvaluationAccess.SharedReportLink(candidateId),
             emailSubject: subject, emailHtmlBody: html, category: NotificationCategories.EvaluationShared);
     }
 

@@ -133,9 +133,9 @@ public class EvaluationShareServiceTests(MySqlDatabaseFixture fixture) : DbTestB
 
         await Create(candidate, grantor, [grantee.Id], [round1.Id, round2.Id]);
 
-        // One notification per person, not per interview, and no link until the grantee view exists.
+        // One notification per person, not per interview, linking to the grantee's shared report.
         var notification = Assert.Single(Db.Notifications.Where(n => n.UserId == grantee.Id));
-        Assert.Null(notification.LinkUrl);
+        Assert.Equal($"/shared/candidates/{candidate.Id}/evaluations", notification.LinkUrl);
         Assert.Equal(2, Db.AuditLogs.Count(a => a.Action == "EvaluationShare.Granted" && a.EntityId == candidate.Id));
     }
 

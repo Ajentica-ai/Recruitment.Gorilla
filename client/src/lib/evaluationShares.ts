@@ -1,4 +1,4 @@
-import type { EvaluationShare } from '@/types';
+import type { EvaluationShare, SharedEvaluationSummary } from '@/types';
 
 export type ShareStatus = 'active' | 'expired' | 'revoked';
 
@@ -40,7 +40,14 @@ export function expiryLabel(share: EvaluationShare): string {
   return share.expiresAt ? dateOnly(share.expiresAt) : 'No expiry';
 }
 
-export { dateTime as formatShareDateTime };
+export { dateTime as formatShareDateTime, dateOnly as formatShareDate };
+
+/** "Shared with you by Rita Recruiter, until Nov 3, 2026" (the "until" part only when it can end). */
+export function shareBannerText(share: SharedEvaluationSummary): string {
+  const by = share.grantedByName ? ` by ${share.grantedByName}` : '';
+  const until = share.expiresAt ? `, until ${dateOnly(share.expiresAt)}` : '';
+  return `Shared with you${by}${until}`;
+}
 
 /** The expiry the date input holds (`YYYY-MM-DD`) as the end of that day, local time, as an ISO string. */
 export function endOfDayIso(date: string): string {

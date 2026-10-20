@@ -4,6 +4,7 @@ import LoadingPanel from './components/common/Loading';
 import RequireRole from './components/RequireRole';
 import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
+import SharedEvaluationsPage from './pages/SharedEvaluationsPage';
 import AnalyticsPage from './pages/AnalyticsPage';
 import JobsPage from './pages/JobsPage';
 import UploadPage from './pages/UploadPage';
@@ -102,6 +103,8 @@ export default function App() {
               }
             />
             <Route path="/interviews/:id" element={<InterviewPage />} />
+            {/* Any signed-in role: access comes from an active grant the server checks, not a role. */}
+            <Route path="/shared/candidates/:id/evaluations" element={<SharedEvaluationsPage />} />
             <Route
               path="/configuration"
               element={

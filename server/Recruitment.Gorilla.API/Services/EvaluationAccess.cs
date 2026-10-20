@@ -18,6 +18,9 @@ namespace Recruitment.Gorilla.API.Services;
 /// </summary>
 public class EvaluationAccess(AppDbContext db)
 {
+    /// <summary>The client route a grantee opens to read what was shared with them (#186).</summary>
+    public static string SharedReportLink(int candidateId) => $"/shared/candidates/{candidateId}/evaluations";
+
     /// <summary>Active grants for this user and candidate: not revoked, not expired, grantee still active.</summary>
     private IQueryable<Models.EvaluationAccessGrant> ActiveGrants(int userId, int candidateId, DateTime now) =>
         db.EvaluationAccessGrants.Where(g =>

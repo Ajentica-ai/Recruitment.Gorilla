@@ -373,7 +373,7 @@ public class InterviewService(
                 granteeId,
                 "Evaluation submitted",
                 $"{submitterName} submitted an interview evaluation for {candidate.FullName}.",
-                $"/shared/{candidate.Id}",
+                EvaluationAccess.SharedReportLink(candidate.Id),
                 category: NotificationCategories.EvaluationSubmitted);
     }
 

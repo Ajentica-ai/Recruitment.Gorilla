@@ -12,6 +12,7 @@ import {
 } from '../services/api';
 import DashboardHero from '../components/dashboard/DashboardHero';
 import UpNextCard from '../components/dashboard/UpNextCard';
+import SharedWithMeCard from '../components/dashboard/SharedWithMeCard';
 import KpiStrip from '../components/dashboard/KpiStrip';
 import PipelineCard from '../components/dashboard/PipelineCard';
 import TrendChart from '../components/dashboard/TrendChart';
@@ -135,6 +136,8 @@ export default function DashboardPage() {
           <KpiStrip kpis={kpis} spark={spark} canDrill={canWriteCandidates} />
         )}
       </div>
+
+      <SharedWithMeCard />
 
       <div className="dash-row">
         <PipelineCard data={statusBreakdown} canDrill={canWriteCandidates} />
