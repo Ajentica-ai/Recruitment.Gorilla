@@ -197,6 +197,7 @@ Created when a candidate moves to **Interview Scheduled** (see `CandidateService
 | StatusHistoryId | int? FK → StatusHistory | the "Interview Scheduled" entry; SetNull |
 | ScheduledAt | datetime | the time the interview is booked for **now**; a reschedule moves it (the history entry's `InterviewAt` keeps what was first booked) |
 | Status | varchar(20) | `Scheduled` \| `Cancelled`, default `Scheduled`. A string like `Offer.Status`; the non-null default backfilled existing rows (migration `AddInterviewLifecycle`). No `Completed` value: completion stays candidate-driven |
+| ShareEarlierRoundsWithPanel | bool | default false (migration `AddInterviewShareEarlierRounds`, #187). The recruiter ticked "Share earlier rounds' evaluations with this panel": while set, each panelist holds `PanelAutoShare` grants on the earlier rounds (see `EvaluationAccessGrant`). A reschedule can change it; existing bookings read as false |
 | Notes | varchar(4000)? | recruiter's note for the interviewers, editable on reschedule. Reads fall back to the creating `StatusHistory.Comment`, so pre-#173 interviews need no backfill |
 | CalendarSequence | int | iCalendar `SEQUENCE` for this booking's UID; incremented on every reschedule/cancel because clients ignore a re-issued invite whose SEQUENCE has not grown |
 | UpdatedAt | datetime? | set by a reschedule or cancel |
@@ -209,8 +210,8 @@ the latest `Cancelled` event's fields, and duplicating them guarantees drift.
 
 ### EvaluationAccessGrant (`EvaluationAccessGrants`)
 A grant that lets one named user read a candidate's **submitted** interview evaluations they could not otherwise
-see (epic #182; migration `AddEvaluationAccessGrants`, issue #183). **Nothing reads a grant yet**: the grantee read
-path is #184, so creating one changes no one's access until then.
+see (epic #182; migration `AddEvaluationAccessGrants`, issue #183). Grantees read through `api/shared-evaluations`
+(#184), decided only by `EvaluationAccess`.
 
 | Field | Type | Notes |
 |---|---|---|
@@ -219,8 +220,8 @@ path is #184, so creating one changes no one's access until then.
 | InterviewId | int? FK → Interview | cascade delete; **null = all rounds of the candidate, future ones included** |
 | GranteeUserId | int FK → User | cascade delete; index on `(GranteeUserId, RevokedAt)` |
 | GrantedByUserId | int? FK → User | SetNull |
-| Source | varchar(30) | `Manual` \| `PanelAutoShare` (the latter is created by #187) |
-| CreatedForInterviewId | int? FK → Interview | SetNull; set only by the panel auto-share so a panel change can revoke what it created |
+| Source | varchar(30) | `Manual` \| `PanelAutoShare` (created by `PanelAutoShareService` when a booking has `ShareEarlierRoundsWithPanel`, #187) |
+| CreatedForInterviewId | int? FK → Interview | SetNull; set only by the panel auto-share (the new booking), so a panel change, the toggle or a cancel can revoke exactly what it created and nothing manual |
 | Note | varchar(500)? | optional reason shown to the grantee |
 | ExpiresAt | datetime? | optional, UTC |
 | RevokedAt / RevokedByUserId | datetime? / int? FK → User | soft revoke (SetNull on the user), the row stays for audit |
