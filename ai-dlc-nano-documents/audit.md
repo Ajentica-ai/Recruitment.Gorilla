@@ -515,3 +515,53 @@
 - 2026-10-22T09:40Z [claude] RG-187 BRANCH @e9d40c4: feature/RG-187/Share-earlier-rounds-on-booking off origin/develop (user confirmed)
 - 2026-10-22T09:40Z [claude] RG-187 PHASE PLAN→CONSTRUCT @e9d40c4: plan approved (user: go with recommendation)
 - 2026-10-22T14:00Z [claude] RG-187 PHASE CONSTRUCT→WRAP-UP @e9d40c4: 689 dotnet, 319 vitest, tsc+lint ok, isolated flow + migration down/up ok, security review fixes applied
+- 2026-10-22T14:30Z [claude] RG-187 SIDE-EFFECT @8f0ee60: pushed branch, opened PR #214 into develop (user confirmed)
+- 2026-10-22T14:30Z [claude] RG-187 DONE @8f0ee60: PR #214 open, awaiting review
+- 2026-10-21T09:00Z [claude] RG-188 CREATED @e9d40c4: issue #188 intake (bug); PR #214 for RG-187 still open
+- 2026-10-21T09:00Z [claude] RG-188 SIDE-EFFECT @e9d40c4: assigned #188 to @me; board status not moved (gh token lacks read:project)
+- 2026-10-21T09:00Z [claude] RG-188 PHASE INTAKE→CLARIFY @e9d40c4
+- 2026-10-21T09:20Z [claude] RG-188 DECISION @e9d40c4: legacy fallback only when link null; one shared rule; UpdateAsync untouched (user confirmed)
+- 2026-10-21T09:20Z [claude] RG-188 PHASE CLARIFY→PLAN @e9d40c4: plan drafted, awaiting approval
+- 2026-10-21T09:40Z [claude] RG-188 BRANCH @e9d40c4: fix/RG-188/Rubric-lookup-by-job-opening off origin/develop (user confirmed)
+- 2026-10-21T09:40Z [claude] RG-188 PHASE PLAN→CONSTRUCT @e9d40c4: plan approved (user: go with recommendation)
+- 2026-10-21T11:00Z [claude] RG-188 PHASE CONSTRUCT→WRAP-UP @e9d40c4: 684 dotnet tests green; HTTP integration test replaces a separate isolated-stack run
+- 2026-10-21T12:00Z [claude] RG-188 SIDE-EFFECT @0b66e8a: pushed branch, opened PR #215 into develop (user confirmed)
+- 2026-10-21T12:00Z [claude] RG-188 DONE @0b66e8a: PR #215 open, awaiting review
+- 2026-10-22T09:00Z [claude] RG-189 CREATED @e9d40c4: issue #189 intake (bug); PRs #214 and #215 still open
+- 2026-10-22T09:00Z [claude] RG-189 SIDE-EFFECT @e9d40c4: assigned #189 to @me; board status not moved (gh token lacks read:project)
+- 2026-10-22T09:00Z [claude] RG-189 PHASE INTAKE→CLARIFY @e9d40c4
+- 2026-10-22T09:20Z [claude] RG-189 DECISION @e9d40c4: fix per issue; keep drafts on cancel; no reason on the panel (user confirmed)
+- 2026-10-22T09:20Z [claude] RG-189 PHASE CLARIFY→PLAN @e9d40c4: plan drafted, awaiting approval
+- 2026-10-22T09:40Z [claude] RG-189 BRANCH @e9d40c4: fix/RG-189/Cancelled-interview-evaluation off origin/develop (user confirmed)
+- 2026-10-22T09:40Z [claude] RG-189 PHASE PLAN→CONSTRUCT @e9d40c4: plan approved (user: go with recommendation)
+- 2026-10-22T11:00Z [claude] RG-189 PHASE CONSTRUCT→WRAP-UP @e9d40c4: 683 dotnet, 310 vitest, tsc+lint ok, isolated flow + screenshot ok
+- 2026-10-22T11:30Z [claude] RG-189 SIDE-EFFECT @7c27645: pushed branch, opened PR #216 into develop (user confirmed)
+- 2026-10-22T11:30Z [claude] RG-189 DONE @7c27645: PR #216 open, awaiting review
+- 2026-10-23T09:00Z [claude] RG-190 CREATED @e9d40c4: issue #190 intake (bug); PRs #214, #215, #216 still open
+- 2026-10-23T09:00Z [claude] RG-190 SIDE-EFFECT @e9d40c4: assigned #190 to @me (already assigned to you); board status not moved (gh token lacks read:project)
+- 2026-10-23T09:00Z [claude] RG-190 PHASE INTAKE→CLARIFY @e9d40c4
+- 2026-10-23T09:20Z [claude] RG-190 DECISION @e9d40c4: criteria on the report DTO + Other criteria safety net + averages over all keys (user confirmed)
+- 2026-10-23T09:20Z [claude] RG-190 PHASE CLARIFY→PLAN @e9d40c4: plan drafted, awaiting approval
+- 2026-10-23T09:40Z [claude] RG-190 BRANCH @e9d40c4: fix/RG-190/Custom-rubric-ratings-in-report off origin/develop (user confirmed)
+- 2026-10-23T09:40Z [claude] RG-190 PHASE PLAN→CONSTRUCT @e9d40c4: plan approved (user: go with recommendation)
+- 2026-10-23T11:00Z [claude] RG-190 PHASE CONSTRUCT→WRAP-UP @e9d40c4: 679 dotnet, 314 vitest, tsc+lint ok, isolated stack + screenshot ok
+- 2026-10-23T11:30Z [claude] RG-190 SIDE-EFFECT @ff0c910: pushed branch, opened PR #217 into develop (user confirmed)
+- 2026-10-23T11:30Z [claude] RG-190 DONE @ff0c910: PR #217 open, awaiting review
+- 2026-10-24T09:00Z [claude] RG-191 CREATED @e9d40c4: issue #191 intake (bug); PRs #214-#217 still open
+- 2026-10-24T09:00Z [claude] RG-191 SIDE-EFFECT @e9d40c4: assigned #191 to @me (already yours); board status not moved (gh token lacks read:project)
+- 2026-10-24T09:00Z [claude] RG-191 PHASE INTAKE→CLARIFY @e9d40c4
+- 2026-10-24T09:20Z [claude] RG-191 DECISION @e9d40c4: client payload/loading/error fixes + default-rubric guard; resolver left to PR #215 (user confirmed)
+- 2026-10-24T09:20Z [claude] RG-191 PHASE CLARIFY→PLAN @e9d40c4: plan drafted, awaiting approval
+- 2026-10-24T09:40Z [claude] RG-191 BRANCH @e9d40c4: fix/RG-191/Unsavable-evaluation-draft off origin/develop (user confirmed)
+- 2026-10-24T09:40Z [claude] RG-191 PHASE PLAN→CONSTRUCT @e9d40c4: plan approved (user: go with recommendation)
+- 2026-10-24T11:00Z [claude] RG-191 PHASE CONSTRUCT→WRAP-UP @e9d40c4: 680 dotnet, 315 vitest (date-picker flaky passes alone), tsc+lint ok, isolated stack stale-key scenario ok
+- 2026-10-24T11:30Z [claude] RG-191 SIDE-EFFECT @b1e7433: pushed branch, opened PR #218 into develop (user confirmed)
+- 2026-10-24T11:30Z [claude] RG-191 DONE @b1e7433: PR #218 open, awaiting review
+- 2026-10-25T09:00Z [claude] RG-192 CREATED @e9d40c4: issue #192 intake (bug); PRs #214-#218 still open
+- 2026-10-25T09:00Z [claude] RG-192 SIDE-EFFECT @e9d40c4: assigned #192 to @me (already yours); board status not moved (gh token lacks read:project)
+- 2026-10-25T09:00Z [claude] RG-192 PHASE INTAKE→CLARIFY @e9d40c4
+- 2026-10-25T09:20Z [claude] RG-192 DECISION @e9d40c4: approval optional except rejected drafts, derived flag, 409 everywhere, UI hides extend on rejected (user confirmed)
+- 2026-10-25T09:20Z [claude] RG-192 PHASE CLARIFY→PLAN @e9d40c4: plan drafted, awaiting approval
+- 2026-10-25T09:40Z [claude] RG-192 BRANCH @e9d40c4: fix/RG-192/Offer-state-machine off origin/develop (user confirmed)
+- 2026-10-25T09:40Z [claude] RG-192 PHASE PLAN→CONSTRUCT @e9d40c4: plan approved (user: go with recommendation)
+- 2026-10-25T12:00Z [claude] RG-192 PHASE CONSTRUCT→WRAP-UP @e9d40c4: 731 dotnet, 313 vitest, tsc+lint ok, isolated API+UI check ok, security review fixes applied; new-version bypass pending user
