@@ -219,7 +219,7 @@ public class EvaluationAccessTests(MySqlDatabaseFixture fixture) : DbTestBase(fi
 
         var n = Assert.Single(await Db.Notifications
             .Where(n => n.UserId == grantee.Id && n.Title == "Evaluation submitted").ToListAsync());
-        Assert.Equal($"/shared/{candidate.Id}", n.LinkUrl);
+        Assert.Equal($"/shared/candidates/{candidate.Id}/evaluations", n.LinkUrl);
     }
 
     [Fact]

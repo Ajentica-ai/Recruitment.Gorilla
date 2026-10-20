@@ -3,7 +3,7 @@ import { Link, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { isAxiosError } from 'axios';
 import { CalendarClock, CalendarX, FileText, StickyNote } from 'lucide-react';
-import { getInterview, getInterviewEvaluationRubric } from '../services/api';
+import { getInterview, getInterviewEvaluationRubric, getSharedWithMe } from '../services/api';
 import ReadOnlyCandidateProfile from '../components/ReadOnlyCandidateProfile';
 import EvaluationForm, { EvaluationReadOnly } from '../components/EvaluationForm';
 import { skillColorClass } from '../utils/skillColors';
@@ -59,6 +59,13 @@ export default function InterviewPage() {
   const [rescheduling, setRescheduling] = useState(false);
   const [cancelling, setCancelling] = useState(false);
   const { isAdminOrAbove } = useAuth();
+  // Earlier rounds of this candidate that were shared with the caller. The server decides what is
+  // visible (never this interview before the caller has submitted), so this only offers the link.
+  const { data: sharedWithMe } = useQuery({
+    queryKey: ['shared-evaluations', 'mine'],
+    queryFn: getSharedWithMe,
+    retry: false,
+  });
 
   if (isLoading) {
     return <LoadingPanel label="Loading interview…" />;
@@ -94,6 +101,9 @@ export default function InterviewPage() {
   });
   const relative = relativeLabel(data.scheduledAt);
   const role = data.candidate.roleApplied ?? data.candidate.appliedRole;
+  const earlierRounds = sharedWithMe?.find(
+    (s) => s.candidateId === data.candidate.id && s.visibleEvaluationCount > 0
+  );
   const otherEvaluations = (data.allEvaluations ?? []).filter(
     (e) => e.interviewerUserId !== data.myEvaluation?.interviewerUserId
   );
@@ -189,6 +199,17 @@ export default function InterviewPage() {
             {briefing}
             <div className="alert-info-soft">
               You are viewing this interview but are not an assigned interviewer.
+            </div>
+          </div>
+        )}
+
+        {earlierRounds && (
+          <div className="mt-6">
+            <div className="alert-info-soft">
+              Earlier rounds for {data.candidate.fullName} were shared with you.{' '}
+              <Link to={`/shared/candidates/${data.candidate.id}/evaluations`} className="font-medium underline">
+                Read the shared evaluations
+              </Link>
             </div>
           </div>
         )}

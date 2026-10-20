@@ -83,3 +83,24 @@ At the bottom, the **Overall evaluation** asks for:
 
 After you submit, you can also see the evaluations other panel members have submitted for the
 same interview. You cannot see theirs before you submit your own.
+
+## 1.6 Evaluations shared with you
+
+A recruiter can share a candidate's submitted evaluations with you, for example before your round.
+You then get a notification, "Interview evaluations shared with you".
+
+- **Open it from the notification,** or from the **Shared with me** card on your Dashboard (it only
+  appears when something is shared with you).
+- The page opens with a banner saying who shared it, when it ends if it ends, and any note they
+  left. Below it you see the **submitted** evaluations (never drafts) with the same summary and
+  ratings as the Evaluation report, then the candidate's profile and CV, read-only.
+- If you are on the panel of an interview and have not submitted your own evaluation yet, that
+  interview's evaluations stay hidden until you do. Other rounds shared with you are still shown.
+- On an interview page you are assigned to, **Read the shared evaluations** appears when earlier
+  rounds of the same candidate were shared with you.
+- When access ends or is withdrawn, the page says **This share has expired or was revoked**. Ask
+  the person who shared it if you still need it.
+
+Sharing gives you only this read-only view. It does not open the candidate list or the candidate
+page.
+

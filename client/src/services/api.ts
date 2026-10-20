@@ -11,6 +11,7 @@ import type {
   CreateEvaluationSharesResult,
   EvaluationShare,
   ShareOptions,
+  SharedEvaluationSummary,
   CandidateSourceOption,
   ChangePasswordPayload,
   EmailSettings,
@@ -185,11 +186,24 @@ export const resetUserPassword = async (id: number, payload: ResetPasswordPayloa
 };
 
 /**
+ * Where a CV is fetched from. A grantee has no candidate-scoped access, so a shared view uses the
+ * grant-checked endpoint instead (#186); everyone else keeps the candidate one.
+ */
+const cvPath = (candidateId: number, fileId: number, shared: boolean) =>
+  shared
+    ? `/shared-evaluations/candidates/${candidateId}/cv/${fileId}`
+    : `/candidates/${candidateId}/cv/${fileId}`;
+
+/**
  * Downloads a candidate's stored CV file with the auth token attached, then
  * triggers a browser save/open. (A plain <a href> can't send the bearer token.)
  */
-export const downloadCvFile = async (candidateId: number, fileId: number): Promise<void> => {
-  const res = await api.get(`/candidates/${candidateId}/cv/${fileId}`, { responseType: 'blob' });
+export const downloadCvFile = async (
+  candidateId: number,
+  fileId: number,
+  shared = false
+): Promise<void> => {
+  const res = await api.get(cvPath(candidateId, fileId, shared), { responseType: 'blob' });
   saveBlob(res.data as Blob, res.headers['content-disposition'] as string | undefined, 'cv');
 };
 
@@ -656,9 +670,10 @@ export const getActiveInterviewTypes = async (): Promise<InterviewTypeOption[]> 
  */
 export const previewCvFile = async (
   candidateId: number,
-  fileId: number
+  fileId: number,
+  shared = false
 ): Promise<{ url: string; contentType: string }> => {
-  const res = await api.get(`/candidates/${candidateId}/cv/${fileId}`, { responseType: 'blob' });
+  const res = await api.get(cvPath(candidateId, fileId, shared), { responseType: 'blob' });
   const blob = res.data as Blob;
   const contentType = (res.headers['content-type'] as string | undefined) ?? blob.type ?? '';
   return { url: URL.createObjectURL(blob), contentType };
@@ -890,4 +905,21 @@ export const createEvaluationShares = async (
 
 export const revokeEvaluationShare = async (candidateId: number, shareId: number): Promise<void> => {
   await api.delete(`/candidates/${candidateId}/evaluation-shares/${shareId}`);
+};
+
+// ----- Shared with me (#186) -----
+export const getSharedWithMe = async (): Promise<SharedEvaluationSummary[]> => {
+  const { data } = await api.get<SharedEvaluationSummary[]>('/shared-evaluations/mine');
+  return data;
+};
+
+export const getSharedReport = async (candidateId: number): Promise<CandidateEvaluationReport> => {
+  const { data } = await api.get<CandidateEvaluationReport>(`/shared-evaluations/candidates/${candidateId}`);
+  return data;
+};
+
+/** The read-only candidate snapshot (no status history) behind a grant. */
+export const getSharedProfile = async (candidateId: number): Promise<CandidateDetail> => {
+  const { data } = await api.get<CandidateDetail>(`/shared-evaluations/candidates/${candidateId}/profile`);
+  return data;
 };
