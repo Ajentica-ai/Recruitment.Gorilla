@@ -1,5 +1,7 @@
 # Backlog
 <!-- Out-of-scope findings, newest first. Delete a line when it is resolved. -->
+- [2026-10-20] client/SearchableMultiSelect - popover stays open after a pick and covers the rest of the form (found: RG-185)
+- [2026-10-20] client/e2e/share-evaluations - each run leaves a revoked grant (soft revoke, no delete); throwaway DB only (found: RG-185)
 - [2026-10-20] backend/shared-evaluations: N+1 queries in GET mine and the submit fan-out; batch the predicate (found: RG-184)
 - [2026-10-20] backend/shared-evaluations: grants outlive the grantor losing recruiter access or being deactivated (found: RG-184)
 - [2026-10-20] backend/shared-evaluations: profile returns the full interviewer snapshot (email, phone, status); consider a slimmer DTO (found: RG-184)
