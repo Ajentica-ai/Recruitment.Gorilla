@@ -7,6 +7,10 @@ import type {
   ImportCandidateResult,
   CandidateDetail,
   CandidateEvaluationReport,
+  CreateEvaluationSharesPayload,
+  CreateEvaluationSharesResult,
+  EvaluationShare,
+  ShareOptions,
   CandidateSourceOption,
   ChangePasswordPayload,
   EmailSettings,
@@ -862,3 +866,28 @@ export const getUserGuide = async (): Promise<UserGuide> => {
   return data;
 };
 
+// ----- Sharing evaluations (#182) -----
+export const getEvaluationShares = async (candidateId: number): Promise<EvaluationShare[]> => {
+  const { data } = await api.get<EvaluationShare[]>(`/candidates/${candidateId}/evaluation-shares`);
+  return data;
+};
+
+export const getEvaluationShareOptions = async (candidateId: number): Promise<ShareOptions> => {
+  const { data } = await api.get<ShareOptions>(`/candidates/${candidateId}/evaluation-shares/options`);
+  return data;
+};
+
+export const createEvaluationShares = async (
+  candidateId: number,
+  payload: CreateEvaluationSharesPayload
+): Promise<CreateEvaluationSharesResult> => {
+  const { data } = await api.post<CreateEvaluationSharesResult>(
+    `/candidates/${candidateId}/evaluation-shares`,
+    payload
+  );
+  return data;
+};
+
+export const revokeEvaluationShare = async (candidateId: number, shareId: number): Promise<void> => {
+  await api.delete(`/candidates/${candidateId}/evaluation-shares/${shareId}`);
+};

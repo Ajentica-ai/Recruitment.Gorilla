@@ -36,6 +36,14 @@ public class EvaluationSharesController(
         return Ok(await shares.ListAsync(candidateId));
     }
 
+    /// <summary>Interviews and people the share drawer can offer for this candidate.</summary>
+    [HttpGet("options")]
+    public async Task<IActionResult> Options(int candidateId)
+    {
+        if (!await CanSeeCandidateAsync(candidateId)) return NotFound();
+        return await shares.GetOptionsAsync(candidateId) is { } options ? Ok(options) : NotFound();
+    }
+
     [HttpPost]
     public async Task<IActionResult> Create(int candidateId, [FromBody] CreateEvaluationSharesDto dto)
     {

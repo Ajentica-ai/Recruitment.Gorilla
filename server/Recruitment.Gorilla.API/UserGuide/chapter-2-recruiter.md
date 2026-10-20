@@ -243,3 +243,33 @@ period (7 days to All time) and a job opening. As a Recruiter you see figures fo
 candidates only. **Print Report** prints the page.
 
 ![Analytics](images/02-analytics.png)
+
+## 2.10 Sharing evaluations
+
+Sometimes someone who is not a recruiter on a candidate needs to read what the interviewers wrote,
+for example the next round's panel. You can share a candidate's **submitted** evaluations with a
+named person. Drafts are never shared, and the person sees only what you share, nothing else about
+how the candidate is handled.
+
+**To share**
+
+1. Open the candidate and select **Share evaluations**, next to **Evaluation report**. The same
+   button is on the Evaluation report itself, with a line saying how many people already have it.
+2. Under **People**, search and pick one or more people. Anyone who can already read everything
+   (Admins, and the candidate's own recruiters) is greyed out as **Already has access**.
+3. Under **What to share**, choose **All rounds** (this includes rounds booked later) or
+   **Specific interviews** and tick the rounds you mean. Each round shows its date, type and panel.
+4. Optionally set an **Expires** date, after which access ends, and a **Note**. The note goes to
+   each person in their notification.
+5. Select **Share**. The people are notified. If someone was skipped, or something was refused,
+   the message says why.
+
+**To review or stop sharing.** The same drawer lists **Currently shared**: who, which rounds, who
+shared it, when it expires and whether it is active. Select **Revoke** and confirm, and the person
+loses access on their next request. Revoked and expired shares are folded away under **Show
+revoked and expired**. Sharing again with someone who already has an active share updates it
+instead of adding a second one, and leaving the expiry or note empty keeps what is there.
+
+Sharing is available to Recruiters for their own candidates and to Admins for any candidate.
+Interviewers cannot share.
+

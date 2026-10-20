@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { isAxiosError } from 'axios';
 import { ExternalLink, Printer } from 'lucide-react';
 
+import ShareEvaluationsControl from './ShareEvaluationsControl';
 import EvaluationReportBody from '@/components/EvaluationReportBody';
 import EmptyState from '@/components/common/EmptyState';
 import LoadingPanel from '@/components/common/Loading';
@@ -64,6 +65,7 @@ export default function EvaluationReportDrawer({
             {candidateName}
             {role ? ` · ${role}` : ''}
           </SheetDescription>
+          <ShareEvaluationsControl candidateId={candidateId} candidateName={candidateName} showSummary />
         </SheetHeader>
 
         <SheetBody>

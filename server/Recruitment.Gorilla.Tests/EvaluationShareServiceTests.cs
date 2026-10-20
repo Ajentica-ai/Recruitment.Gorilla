@@ -380,4 +380,56 @@ public class EvaluationShareServiceTests(MySqlDatabaseFixture fixture) : DbTestB
         Assert.Null(Db.EvaluationAccessGrants.AsNoTracking().Single(g => g.Id == shareId).RevokedAt);
         Assert.Equal(0, Db.AuditLogs.Count(a => a.Action == "EvaluationShare.Revoked"));
     }
+
+    // ---- options for the share drawer (#185) ----
+
+    [Fact]
+    public async Task Options_list_non_cancelled_interviews_with_their_panel()
+    {
+        var (grantor, candidate) = Setup();
+        var panelist = Data.AddUser(Roles.Interviewer, name: "Pat Panel");
+        var live = Data.AddInterview(candidate.Id, panelist.Id);
+        var cancelled = Data.AddInterview(candidate.Id, panelist.Id);
+        cancelled.Status = InterviewStatuses.Cancelled;
+        Db.SaveChanges();
+
+        var options = await EvaluationShares().GetOptionsAsync(candidate.Id);
+
+        var only = Assert.Single(options!.Interviews);
+        Assert.Equal(live.Id, only.InterviewId);
+        Assert.Equal(["Pat Panel"], only.Panel);
+        Assert.DoesNotContain(options.Interviews, i => i.InterviewId == cancelled.Id);
+    }
+
+    [Fact]
+    public async Task Options_flag_people_who_already_read_everything_and_leave_others_selectable()
+    {
+        var (_, candidate) = Setup(); // owned by a Recruiter
+        var owner = Db.Users.Single(u => u.Id == candidate.OwnerUserId);
+        var admin = Data.AddUser(Roles.Admin);
+        var interviewer = Data.AddUser(Roles.Interviewer);
+        var otherRecruiter = Data.AddUser(Roles.Recruiter); // no scope over this candidate
+        var inactive = Data.AddUser(Roles.Interviewer, active: false);
+
+        var options = await EvaluationShares().GetOptionsAsync(candidate.Id);
+
+        UserOptionState(options!, owner.Id, expectAlready: true);
+        UserOptionState(options!, admin.Id, expectAlready: true);
+        UserOptionState(options!, interviewer.Id, expectAlready: false);
+        UserOptionState(options!, otherRecruiter.Id, expectAlready: false);
+        Assert.DoesNotContain(options!.Users, u => u.UserId == inactive.Id);
+    }
+
+    private static void UserOptionState(ShareOptionsDto options, int userId, bool expectAlready)
+    {
+        var user = Assert.Single(options.Users, u => u.UserId == userId);
+        Assert.Equal(expectAlready, user.AlreadyHasAccess);
+        Assert.Equal(expectAlready, user.Reason is not null);
+    }
+
+    [Fact]
+    public async Task Options_for_a_missing_candidate_is_null()
+    {
+        Assert.Null(await EvaluationShares().GetOptionsAsync(int.MaxValue));
+    }
 }
