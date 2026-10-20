@@ -731,9 +731,14 @@ public class CandidateService(AppDbContext db, IWebHostEnvironment env, Notifica
 
         if (interview is not null)
         {
+            // The job opening's name, which is what the UI links a candidate to; the legacy free text is
+            // empty for them, which left the role line of these emails blank (#188).
+            var roleName = (candidate.RoleAppliedOptionId is int roleOptionId
+                ? await db.RoleAppliedOptions.Where(o => o.Id == roleOptionId).Select(o => o.Name).FirstOrDefaultAsync()
+                : null) ?? candidate.AppliedRole;
             var interviewUrl = $"{config["App:ClientBaseUrl"]?.TrimEnd('/')}/interviews/{interview.Id}";
             var invite = new InterviewInviteDetails(
-                interview.Id, candidate.FullName, candidate.AppliedRole,
+                interview.Id, candidate.FullName, roleName,
                 interview.ScheduledAt, interview.DurationMinutes, interviewUrl);
             var calendar = CalendarInvite.Build(invite);
 
@@ -741,7 +746,7 @@ public class CandidateService(AppDbContext db, IWebHostEnvironment env, Notifica
             {
                 var interviewer = await db.Users.FindAsync(uid);
                 var (emailSubject, emailHtml) = EmailTemplates.InterviewAssigned(
-                    interviewer?.Name ?? "there", candidate.FullName, candidate.AppliedRole,
+                    interviewer?.Name ?? "there", candidate.FullName, roleName,
                     interview.ScheduledAt, interviewUrl, invite);
 
                 await notificationService.NotifyAsync(

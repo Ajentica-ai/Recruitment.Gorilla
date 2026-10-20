@@ -178,7 +178,7 @@ log4net (`log4net.config`): console + daily rolling file under `Logs/`. App cate
 | GET/POST | `/api/config/job-opening-options/{kind}` | Admin+ | List (`?includeInactive=true`) / create values for a job-opening field; `kind` is `location`, `department` or `priority` (404 otherwise) |
 | PUT/DELETE | `/api/config/job-opening-options/{kind}/{id}` | Admin+ | Update (a rename cascades to openings using the value) / deactivate-if-in-use-else-delete |
 | PUT/DELETE | `/api/config/interview-types/{id}` | Admin+ | Update / soft-disable-or-delete an interview type option |
-| GET | `/api/evaluation-rubrics` · `/{id}` · `/for-interview/{interviewId}` | required | List / get evaluation rubrics, or resolve rubric for a specific interview |
+| GET | `/api/evaluation-rubrics` · `/{id}` · `/for-interview/{interviewId}` | required | List / get evaluation rubrics, or resolve rubric for a specific interview. The resolution (job opening by `RoleAppliedOptionId`, then default) is `EvaluationRubricService.ResolveAsync`, also used by `InterviewService.UpsertEvaluationAsync` to decide which criterion keys are valid, so the two cannot disagree (#188). Interview emails, invites and notifications name the role from the opening (`RoleAppliedOption.Name`), falling back to the legacy `AppliedRole` |
 | POST/PUT | `/api/evaluation-rubrics` · `/{id}` | **Admin+** | Create or update scorecard rubric with weighted criteria and sections |
 | DELETE | `/api/evaluation-rubrics/{id}` | **Admin+** | Delete rubric (disallowed on system default) |
 | POST | `/api/evaluation-rubrics/{id}/clone` · `/{id}/default` | **Admin+** | Clone a scorecard rubric template or designate it as system default |

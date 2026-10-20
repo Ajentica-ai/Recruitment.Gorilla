@@ -218,37 +218,12 @@ public class InterviewService(
         if (interview is null || !interview.Interviewers.Any(ii => ii.UserId == userId))
             return (null, null, true, false);
 
-        // Resolve rubric criteria for this candidate / interview
-        HashSet<string> validKeys;
-        if (!string.IsNullOrWhiteSpace(interview.Candidate?.AppliedRole))
-        {
-            var roleOption = await db.RoleAppliedOptions
-                .Include(r => r.EvaluationRubric).ThenInclude(er => er!.Criteria)
-                .FirstOrDefaultAsync(r => r.Name == interview.Candidate.AppliedRole);
-
-            if (roleOption?.EvaluationRubric is { IsActive: true } er && er.Criteria.Count > 0)
-            {
-                validKeys = er.Criteria.Select(c => c.Key).ToHashSet();
-            }
-            else
-            {
-                var defaultRubric = await db.EvaluationRubrics
-                    .Include(r => r.Criteria)
-                    .FirstOrDefaultAsync(r => r.IsDefault && r.IsActive);
-                validKeys = defaultRubric?.Criteria.Count > 0
-                    ? defaultRubric.Criteria.Select(c => c.Key).ToHashSet()
-                    : EvaluationCriteria.Keys.ToHashSet();
-            }
-        }
-        else
-        {
-            var defaultRubric = await db.EvaluationRubrics
-                .Include(r => r.Criteria)
-                .FirstOrDefaultAsync(r => r.IsDefault && r.IsActive);
-            validKeys = defaultRubric?.Criteria.Count > 0
-                ? defaultRubric.Criteria.Select(c => c.Key).ToHashSet()
-                : EvaluationCriteria.Keys.ToHashSet();
-        }
+        // The same rubric the interview page shows (#188). With no rubric at all, the built-in catalogue.
+        var rubric = await EvaluationRubricService.ResolveAsync(
+            db, interview.Candidate?.RoleAppliedOptionId, interview.Candidate?.AppliedRole);
+        HashSet<string> validKeys = rubric is { Criteria.Count: > 0 }
+            ? rubric.Criteria.Select(c => c.Key).ToHashSet()
+            : EvaluationCriteria.Keys.ToHashSet();
 
         if (dto.Recommendation is not null && !EvaluationCriteria.Recommendations.Contains(dto.Recommendation))
             return (null, "Invalid recommendation.", false, false);
@@ -511,7 +486,7 @@ public class InterviewService(
             $"Interview for {candidate.FullName} moved",
             $"From {previousScheduledAt:u} to {scheduledAt:u}." + (reason is null ? "" : $" Reason: {reason}"));
 
-        await NotifyRescheduledAsync(interview, candidate.FullName, candidate.AppliedRole,
+        await NotifyRescheduledAsync(interview, candidate.FullName, candidate.RoleApplied ?? candidate.AppliedRole,
             previousScheduledAt, reason, retainedIds, addedIds, removedIds, actorUserId);
 
         var fresh = await LoadForScheduleAsync(id);
@@ -585,7 +560,7 @@ public class InterviewService(
             $"Interview for {candidate.FullName} cancelled",
             $"Was scheduled for {scheduledAt:u}. Reason: {trimmedReason}");
 
-        await NotifyCancelledAsync(interview, candidate.FullName, candidate.AppliedRole,
+        await NotifyCancelledAsync(interview, candidate.FullName, candidate.RoleApplied ?? candidate.AppliedRole,
             scheduledAt, trimmedReason, recipientIds, actorUserId, removedFromPanel: false);
 
         var fresh = await LoadForScheduleAsync(id);
