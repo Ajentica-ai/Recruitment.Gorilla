@@ -313,7 +313,6 @@ public class OfferService(
     {
         var offer = await db.Offers
             .Include(o => o.Candidate).ThenInclude(c => c.RoleAppliedOption).ThenInclude(r => r!.Recruiters)
-            .Include(o => o.Approvals)
             .FirstOrDefaultAsync(o => o.Id == offerId);
 
         if (offer is null) return null;
@@ -331,15 +330,20 @@ public class OfferService(
         }
 
         // Approval is optional, so a Draft may be extended directly, but an offer that is waiting for an Admin
-        // cannot be sent before they decide, and a Draft an Admin rejected has to be resubmitted and approved
-        // first. A Draft with a Rejected approval on record can only be one that was rejected: nothing else
-        // returns an offer to Draft (#192).
+        // cannot be sent before they decide (#192).
         if (offer.Status == "PendingApproval")
             throw new OfferStateException(
                 $"Offer #{offerId} is awaiting approval, so it cannot be extended until an Admin approves it.");
-        if (offer.Status == "Draft" && offer.Approvals.Any(a => a.Status == "Rejected"))
+
+        // Once an Admin has rejected any offer for this candidate, approval is no longer optional for that
+        // candidate: a rejected Draft, and a New Version made to get round the rejection, both have to be
+        // submitted and approved first. It is a rule about the candidate, not the one row, because a new version
+        // is a new row with no approvals of its own. A Draft can only be rejected by an Admin's review, which is
+        // the only thing that writes a Rejected approval, so this never blocks an offer nobody has rejected.
+        if (offer.Status == "Draft"
+            && await db.OfferApprovals.AnyAsync(a => a.Status == "Rejected" && a.Offer.CandidateId == offer.CandidateId))
             throw new OfferStateException(
-                $"Offer #{offerId} was rejected. Edit it and request approval again before extending it.");
+                $"An Admin rejected an offer for this candidate, so offer #{offerId} needs approval before it can be extended. Edit it if needed and request approval.");
 
         offer.Status = "Extended";
         offer.ExtendedAt = DateTime.UtcNow;

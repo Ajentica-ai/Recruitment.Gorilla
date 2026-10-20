@@ -40,11 +40,12 @@ export default function OfferCard({ candidate }: OfferCardProps) {
 
   const latestOffer = offers.length > 0 ? offers[0] : null;
 
-  // A Draft with a Rejected approval on record is one an Admin sent back: it cannot be extended until it is
-  // edited and approved again (#192). The server enforces it; the card just does not offer what it refuses.
+  // Once an Admin has rejected any offer for this candidate, a Draft (the rejected one, or a New Version) has to be
+  // approved before it can be extended (#192). The server enforces it; the card just does not offer what it refuses.
   const rejection =
     latestOffer?.status === 'Draft'
-      ? [...(latestOffer.approvals ?? [])]
+      ? offers
+          .flatMap((o) => o.approvals ?? [])
           .filter((a) => a.status === 'Rejected')
           .sort((a, b) => (b.reviewedAt ?? '').localeCompare(a.reviewedAt ?? ''))[0]
       : undefined;
@@ -252,8 +253,8 @@ export default function OfferCard({ candidate }: OfferCardProps) {
 
               {rejection && (
                 <div className="alert-info-soft text-[length:var(--text-sm)] mb-4" role="status" aria-label="Offer rejected">
-                  An Admin rejected this offer{rejection.comment ? `: ${rejection.comment}` : ''}. Edit the terms and
-                  request approval again before extending it.
+                  An Admin rejected an offer for this candidate{rejection.comment ? `: ${rejection.comment}` : ''}. This offer
+                  needs approval before it can be extended: edit it if needed and request approval.
                 </div>
               )}
 

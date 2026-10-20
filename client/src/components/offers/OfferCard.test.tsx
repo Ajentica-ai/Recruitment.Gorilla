@@ -54,8 +54,18 @@ describe('OfferCard: offers only the actions the offer state allows (#192)', () 
     expect(screen.getByRole('button', { name: /Edit/ })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Extend Offer/ })).not.toBeInTheDocument();
     const note = screen.getByLabelText('Offer rejected');
-    expect(note).toHaveTextContent('An Admin rejected this offer: Salary too high');
-    expect(note).toHaveTextContent('request approval again before extending it');
+    expect(note).toHaveTextContent('An Admin rejected an offer for this candidate: Salary too high');
+    expect(note).toHaveTextContent('needs approval before it can be extended');
+  });
+
+  it('also hides Extend on a new version when an earlier offer for the candidate was rejected', async () => {
+    const earlier = { ...offer('Draft', [approval('Rejected', 'Salary too high')]), id: 6 };
+    vi.mocked(getCandidateOffers).mockResolvedValue([offer('Draft'), earlier]); // newest first
+    renderCard();
+
+    expect(await screen.findByRole('button', { name: /Request Approval/ })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Extend Offer/ })).not.toBeInTheDocument();
+    expect(screen.getByLabelText('Offer rejected')).toHaveTextContent('Salary too high');
   });
 
   it('offers Extend only after approval, and no Edit once the offer is approved', async () => {

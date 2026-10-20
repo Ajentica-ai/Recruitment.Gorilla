@@ -183,6 +183,49 @@ public class OfferStateMachineTests(MySqlDatabaseFixture fixture) : DbTestBase(f
         Assert.Equal("Extended", extended!.Status);
     }
 
+    // ---- a rejection applies to the candidate, not just the one offer row ----
+
+    private Task<OfferDto?> NewVersionAsync(Candidate candidate, User admin) =>
+        Offers().CreateOfferAsync(
+            candidate.Id, new CreateOfferDto("Engineer v2", 100000, "USD", null, null, null, null, null), null, admin.Id, admin.Name);
+
+    [Fact]
+    public async Task A_new_version_of_a_rejected_offer_cannot_be_extended_without_approval()
+    {
+        var (candidate, _, admin) = await RejectedDraftAsync();
+        var newVersion = await NewVersionAsync(candidate, admin);
+
+        var ex = await Assert.ThrowsAsync<OfferStateException>(() =>
+            Offers().ExtendOfferAsync(newVersion!.Id, admin.Id, admin.Name, null));
+
+        Assert.Contains("rejected", ex.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal("Draft", (await Db.Offers.AsNoTracking().SingleAsync(o => o.Id == newVersion.Id)).Status);
+    }
+
+    [Fact]
+    public async Task A_new_version_is_extended_once_it_has_been_submitted_and_approved()
+    {
+        var (candidate, _, admin) = await RejectedDraftAsync();
+        var newVersion = await NewVersionAsync(candidate, admin);
+
+        await Offers().SubmitForApprovalAsync(newVersion!.Id, null, admin.Id, admin.Name, null);
+        await Offers().ReviewApprovalAsync(newVersion.Id, candidate.Id, new ReviewOfferApprovalDto("Approved", null), admin.Id, admin.Name);
+        var extended = await Offers().ExtendOfferAsync(newVersion.Id, admin.Id, admin.Name, null);
+
+        Assert.Equal("Extended", extended!.Status);
+    }
+
+    [Fact]
+    public async Task A_rejection_on_one_candidate_does_not_affect_another_candidates_offers()
+    {
+        await RejectedDraftAsync();
+        var (_, other, admin) = await DraftAsync();
+
+        var extended = await Offers().ExtendOfferAsync(other.Id, admin.Id, admin.Name, null);
+
+        Assert.Equal("Extended", extended!.Status);
+    }
+
     // ---- record decision: Extended only (already enforced, kept as a guard) ----
 
     [Theory]
@@ -325,6 +368,20 @@ public class OfferStateMachineApiTests(ApiFixture fx)
         var (candidateId, offerId, token) = await OfferAsync("Draft", rejectedDraft: true);
 
         var resp = await fx.SendAsync(HttpMethod.Post, Url(candidateId, offerId, "/extend"), token);
+
+        Assert.Equal(HttpStatusCode.Conflict, resp.StatusCode);
+        Assert.Contains("rejected", await resp.Content.ReadAsStringAsync(), StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task Extending_a_new_version_after_a_rejection_is_a_409()
+    {
+        var candidateId = await fx.NewCandidateAsync(fx.AdminId);
+        await fx.NewRejectedDraftOfferAsync(candidateId);
+        var newVersion = await fx.NewOfferAsync(candidateId, "Draft");
+        var token = await fx.LoginAsync(fx.AdminEmail);
+
+        var resp = await fx.SendAsync(HttpMethod.Post, Url(candidateId, newVersion, "/extend"), token);
 
         Assert.Equal(HttpStatusCode.Conflict, resp.StatusCode);
         Assert.Contains("rejected", await resp.Content.ReadAsStringAsync(), StringComparison.OrdinalIgnoreCase);

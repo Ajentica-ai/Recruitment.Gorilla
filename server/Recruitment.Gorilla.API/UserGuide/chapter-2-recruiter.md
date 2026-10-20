@@ -231,8 +231,9 @@ Once a candidate is **Recommended**, the **Offer & Compensation** card lets you 
    ![Offer waiting for approval](images/02-offer-pending.png)
 
    Once an offer is waiting for approval, approved or sent, its terms are locked: you can only
-   edit a **draft**. A **rejected** offer comes back as a draft with the Admin's comment, and it
-   cannot be extended until you edit it, request approval again and an Admin approves it. To change
+   edit a **draft**. A **rejected** offer comes back as a draft with the Admin's comment. After a
+   rejection, approval is no longer optional for that candidate: neither the rejected draft nor a
+   **New Version** can be extended until you request approval and an Admin approves it. To change
    the terms of an offer that is already approved or sent, use **New Version**.
 
 3. **Extend Offer to Candidate** moves the candidate to **Offer Extended**. Send the offer
