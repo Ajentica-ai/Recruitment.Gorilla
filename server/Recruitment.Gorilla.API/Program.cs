@@ -50,6 +50,7 @@ builder.Services.AddScoped<InterviewService>();
 builder.Services.AddScoped<NotificationService>();
 builder.Services.AddScoped<OfferService>();
 builder.Services.AddScoped<EvaluationShareService>();
+builder.Services.AddScoped<EvaluationAccess>();
 builder.Services.AddScoped<EvaluationRubricService>();
 builder.Services.AddScoped<AnalyticsService>();
 builder.Services.AddScoped<CandidateDraftService>();

@@ -120,8 +120,9 @@ public class EvaluationShareService(AppDbContext db, NotificationService notific
                 {
                     // Re-granting the same thing refreshes it instead of stacking a duplicate.
                     refreshed.Add((existing, existing.ExpiresAt, existing.Note));
-                    existing.Note = note;
-                    existing.ExpiresAt = expiresAt;
+                    // Leaving the expiry or note out keeps what is there; it never clears it silently.
+                    if (note is not null) existing.Note = note;
+                    if (expiresAt is not null) existing.ExpiresAt = expiresAt;
                     touched.Add(existing);
                     continue;
                 }

@@ -42,6 +42,7 @@ public abstract class DbTestBase : IDisposable
         new(Db, new CurrentUser(new Microsoft.AspNetCore.Http.HttpContextAccessor()), NullLogger<AuditService>.Instance);
     protected OfferService Offers() => new(Db, Candidates(), Notifications(), Audit(), NullLogger<OfferService>.Instance);
     protected EvaluationRubricService EvaluationRubrics() => new(Db, Audit());
+    protected EvaluationAccess Access() => new(Db);
     protected EvaluationShareService EvaluationShares() => new(Db, Notifications(), Audit());
     protected AnalyticsService Analytics() => new(Db);
     protected DashboardService Dashboard() => new(Db);
