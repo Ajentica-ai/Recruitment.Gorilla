@@ -3,7 +3,7 @@
 - Phase: —
 - Branch: —
 - Base SHA: —
-- Next step: user decides push + PR for RG-194.
+- Next step: user decides push + PR for RG-197.
 - Paused work items: none
 - Uncommitted code: no
 - Last updated: 2026-10-25T09:40Z by claude
