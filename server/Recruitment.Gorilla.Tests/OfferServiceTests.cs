@@ -187,7 +187,7 @@ public class OfferServiceTests(MySqlDatabaseFixture fixture) : DbTestBase(fixtur
     public async Task CreateOffer_allows_the_recruiter_who_owns_the_candidate()
     {
         var recruiter = Data.AddUser(Roles.Recruiter);
-        var candidate = Data.AddCandidate(ownerUserId: recruiter.Id);
+        var candidate = Data.AddCandidate(ownerUserId: recruiter.Id, status: "Offer Preparation");
 
         Assert.NotNull(await Offers().CreateOfferAsync(candidate.Id, Salary(), recruiter.Id, recruiter.Id, recruiter.Name));
     }
@@ -199,7 +199,7 @@ public class OfferServiceTests(MySqlDatabaseFixture fixture) : DbTestBase(fixtur
         var admin = Data.AddUser(Roles.Admin);
         var recruiter = Data.AddUser(Roles.Recruiter);
         var role = Data.AddRole(null, null, recruiter.Id);
-        var candidate = Data.AddCandidate(ownerUserId: admin.Id, roleId: role.Id);
+        var candidate = Data.AddCandidate(ownerUserId: admin.Id, roleId: role.Id, status: "Offer Preparation");
 
         Assert.NotNull(await Offers().CreateOfferAsync(candidate.Id, Salary(), recruiter.Id, recruiter.Id, recruiter.Name));
     }
@@ -211,7 +211,7 @@ public class OfferServiceTests(MySqlDatabaseFixture fixture) : DbTestBase(fixtur
         // Pending row would block the offer from ever reaching Approved.
         var admin = Data.AddUser(Roles.Admin);
         var recruiter = Data.AddUser(Roles.Recruiter);
-        var candidate = Data.AddCandidate(ownerUserId: admin.Id);
+        var candidate = Data.AddCandidate(ownerUserId: admin.Id, status: "Offer Preparation");
         var offer = await Offers().CreateOfferAsync(candidate.Id, Salary(), null, admin.Id, admin.Name);
         Assert.NotNull(offer);
 
@@ -226,7 +226,7 @@ public class OfferServiceTests(MySqlDatabaseFixture fixture) : DbTestBase(fixtur
     public async Task Review_refuses_an_offer_that_is_not_awaiting_approval()
     {
         var admin = Data.AddUser(Roles.Admin);
-        var candidate = Data.AddCandidate(ownerUserId: admin.Id);
+        var candidate = Data.AddCandidate(ownerUserId: admin.Id, status: "Offer Preparation");
         var draft = await Offers().CreateOfferAsync(candidate.Id, Salary(), null, admin.Id, admin.Name);
         Assert.NotNull(draft);
 
@@ -240,8 +240,8 @@ public class OfferServiceTests(MySqlDatabaseFixture fixture) : DbTestBase(fixtur
     public async Task Review_with_a_mismatched_candidate_id_writes_nothing()
     {
         var admin = Data.AddUser(Roles.Admin);
-        var candidate = Data.AddCandidate(ownerUserId: admin.Id);
-        var otherCandidate = Data.AddCandidate(ownerUserId: admin.Id);
+        var candidate = Data.AddCandidate(ownerUserId: admin.Id, status: "Offer Preparation");
+        var otherCandidate = Data.AddCandidate(ownerUserId: admin.Id, status: "Offer Preparation");
         var offer = await Offers().CreateOfferAsync(candidate.Id, Salary(), null, admin.Id, admin.Name);
         Assert.NotNull(offer);
         await Offers().SubmitForApprovalAsync(offer.Id, [admin.Id], admin.Id, admin.Name, null);

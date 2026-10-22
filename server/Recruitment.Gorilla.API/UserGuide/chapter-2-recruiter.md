@@ -233,8 +233,11 @@ Once a candidate is **Recommended**, the **Offer & Compensation** card lets you 
    Once an offer is waiting for approval, approved or sent, its terms are locked: you can only
    edit a **draft**. A **rejected** offer comes back as a draft with the Admin's comment. After a
    rejection, approval is no longer optional for that candidate: neither the rejected draft nor a
-   **New Version** can be extended until you request approval and an Admin approves it. To change
-   the terms of an offer that is already approved or sent, use **New Version**.
+   **New Version** can be extended until you request approval and an Admin approves it. Offers
+   follow the same rules as a status change: they stop once the job opening has ended, and you can
+   only start one for a candidate who is **Recommended**, in **Offer Preparation**, or who has
+   **Offer Declined**. A candidate has one offer at a time, so the next one can start only after
+   the candidate has declined the last.
 
 3. **Extend Offer to Candidate** moves the candidate to **Offer Extended**. Send the offer
    itself outside the app (use **Download PDF**).
@@ -242,8 +245,8 @@ Once a candidate is **Recommended**, the **Offer & Compensation** card lets you 
    **Declined** (with a reason) moves them to **Offer Declined**.
 5. Finally, use **Add status** > **Hired**.
 
-**New Version** starts a revised offer. The app never emails candidates; all candidate
-communication happens outside it.
+**New Version** appears once the candidate has declined an offer and starts a revised one. The app
+never emails candidates; all candidate communication happens outside it.
 
 ## 2.9 Jobs and Analytics
 

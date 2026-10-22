@@ -43,12 +43,13 @@ public class OffersController(
         if (dto.BaseSalary <= 0)
             return BadRequest("Base salary must be greater than zero.");
 
-        var created = await offerService.CreateOfferAsync(
+        var (created, conflict) = await GuardAsync(() => offerService.CreateOfferAsync(
             candidateId,
             dto,
             OwnerScope,
             currentUser.UserId ?? 0,
-            currentUser.Name ?? string.Empty);
+            currentUser.Name ?? string.Empty));
+        if (conflict is not null) return conflict;
 
         if (created is null)
             return NotFound("Candidate not found or access denied.");
@@ -117,6 +118,10 @@ public class OffersController(
                 dto,
                 currentUser.UserId ?? 0,
                 currentUser.Name ?? string.Empty);
+        }
+        catch (OfferRuleException ex)
+        {
+            return BadRequest(ex.Message);
         }
         catch (OfferStateException ex)
         {
@@ -205,6 +210,10 @@ public class OffersController(
         try
         {
             return (await action(), null);
+        }
+        catch (OfferRuleException ex)
+        {
+            return (null, new BadRequestObjectResult(ex.Message));
         }
         catch (OfferStateException ex)
         {

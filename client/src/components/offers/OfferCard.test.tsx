@@ -112,3 +112,37 @@ describe('OfferCard: offers only the actions the offer state allows (#192)', () 
     expect(await screen.findByText('Failed to submit offer for approval')).toBeInTheDocument();
   });
 });
+
+describe('OfferCard: starts an offer only where the server would allow one (#193)', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  const renderFor = (currentStatus: string) =>
+    renderWithProviders(<OfferCard candidate={{ ...candidate, currentStatus } as CandidateDetail} />);
+
+  it.each(['Recommended', 'Offer Preparation'])('offers a first offer to a candidate who is %s', async (status) => {
+    vi.mocked(getCandidateOffers).mockResolvedValue([]);
+    renderFor(status);
+
+    expect(await screen.findByRole('button', { name: /Draft Offer|Create Offer|New Offer/i })).toBeInTheDocument();
+  });
+
+  it.each(['Uploaded', 'Reject', 'Hired', 'Offer Accepted'])('offers no way to start an offer for a candidate who is %s', async (status) => {
+    vi.mocked(getCandidateOffers).mockResolvedValue([]);
+    renderFor(status);
+
+    await screen.findByText(/No employment offer drafted yet/);
+    expect(screen.queryByRole('button', { name: /Draft Offer|Create Offer|New Offer|New Version/i })).not.toBeInTheDocument();
+  });
+
+  it('hides New Version while the latest offer is still live, and shows it once the candidate declined', async () => {
+    vi.mocked(getCandidateOffers).mockResolvedValue([offer('Draft')]);
+    const { unmount } = renderFor('Offer Preparation');
+    await screen.findByRole('button', { name: /Request Approval/ });
+    expect(screen.queryByRole('button', { name: /New Version/ })).not.toBeInTheDocument();
+    unmount();
+
+    vi.mocked(getCandidateOffers).mockResolvedValue([offer('Declined')]);
+    renderFor('Offer Declined');
+    expect(await screen.findByRole('button', { name: /New Version/ })).toBeInTheDocument();
+  });
+});

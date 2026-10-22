@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 using QuestPDF.Fluent;
 using QuestPDF.Helpers;
 using QuestPDF.Infrastructure;
@@ -64,6 +65,62 @@ public class OfferService(
         return MapToDto(offer);
     }
 
+    /// <summary>
+    /// Starts a transaction unless one is already open (a test wraps each case in one), so an offer change and
+    /// the candidate status move that goes with it commit together or not at all (#193).
+    /// </summary>
+    private async Task<IDbContextTransaction?> BeginIfNoneAsync() =>
+        db.Database.CurrentTransaction is null ? await db.Database.BeginTransactionAsync() : null;
+
+    /// <summary>
+    /// Locks the candidate's row and re-reads it, inside the caller's transaction. The status check that follows
+    /// then runs against what is stored now, not what this request loaded a moment ago, and a manual status change
+    /// or another offer action for the same candidate has to wait for this one to finish. Without it a validated
+    /// move could overwrite a status change that committed in between.
+    /// </summary>
+    private async Task LockCandidateAsync(Candidate candidate)
+    {
+        await db.Database.ExecuteSqlInterpolatedAsync($"SELECT Id FROM Candidates WHERE Id = {candidate.Id} FOR UPDATE");
+        await db.Entry(candidate).ReloadAsync();
+    }
+
+    private static readonly List<string> LiveOfferStatuses = ["Draft", "PendingApproval", "Approved", "Extended"];
+
+    /// <summary>Candidate statuses an offer can be raised from (#193). Offer Declined is there so a declined
+    /// candidate can be given a new offer: its status moves back to Offer Preparation.</summary>
+    private static readonly string[] OfferableStatuses = ["Recommended", "Offer Preparation", "Offer Declined"];
+
+    /// <summary>
+    /// Every offer action runs these two checks (#193): the candidate's job opening must still be open, the same
+    /// lock a status change has (checked first), and the candidate must be at a stage an offer belongs to, so an
+    /// offer cannot be raised, edited, sent or answered for someone who was rejected, hired or never reached the
+    /// offer stages. Both are refusals of the request (a 400), made before anything is written. The stage check
+    /// comes after the offer's own state check, so an offer in the wrong state is still the 409 it was in #192.
+    /// </summary>
+    private async Task EnsureJobOpeningOpenAsync(int candidateId)
+    {
+        var lockError = await candidateService.GetRoleLockErrorAsync(candidateId);
+        if (lockError is not null) throw new OfferRuleException(lockError);
+    }
+
+    private static void EnsureCandidateStage(Candidate candidate, params string[] allowedStatuses)
+    {
+        if (!allowedStatuses.Contains(candidate.CurrentStatus))
+            throw new OfferRuleException(
+                $"'{candidate.FullName}' is '{candidate.CurrentStatus}', which is not a stage this offer action applies to.");
+    }
+
+    /// <summary>
+    /// Moves the candidate through the same validator a manual status change uses, so the End Date lock and the
+    /// transition rules apply to the offer actions too. Called BEFORE the offer is saved, so a refused move leaves
+    /// the offer as it was instead of half done.
+    /// </summary>
+    private async Task EnsureStatusMoveAllowedAsync(int candidateId, StatusChangeDto move)
+    {
+        var error = await candidateService.ValidateStatusChangeAsync(candidateId, move);
+        if (error is not null) throw new OfferRuleException(error);
+    }
+
     public async Task<OfferDto?> CreateOfferAsync(
         int candidateId, CreateOfferDto dto, int? accessUserId, int userId, string userName)
     {
@@ -75,6 +132,21 @@ public class OfferService(
             .FirstOrDefaultAsync(c => c.Id == candidateId);
 
         if (candidate is null) return null;
+
+        await using var tx = await BeginIfNoneAsync();
+        await LockCandidateAsync(candidate);
+
+        await EnsureJobOpeningOpenAsync(candidateId);
+        EnsureCandidateStage(candidate, OfferableStatuses);
+
+        // One offer at a time per candidate: a new version is for after the last one was answered (#193).
+        if (await db.Offers.AnyAsync(o => o.CandidateId == candidateId && LiveOfferStatuses.Contains(o.Status)))
+            throw new OfferStateException(
+                $"'{candidate.FullName}' already has an offer in progress. Finish or answer it before starting a new one.");
+
+        var preparation = new StatusChangeDto("Offer Preparation", "Offer drafted by recruiter");
+        var movesToPreparation = candidate.CurrentStatus != "Offer Preparation";
+        if (movesToPreparation) await EnsureStatusMoveAllowedAsync(candidateId, preparation);
 
         var jobTitle = !string.IsNullOrWhiteSpace(dto.JobTitle)
             ? dto.JobTitle.Trim()
@@ -100,15 +172,10 @@ public class OfferService(
         db.Offers.Add(offer);
         await db.SaveChangesAsync();
 
-        // If candidate is in Recommended, advance to Offer Preparation
-        if (candidate.CurrentStatus == "Recommended")
-        {
-            await candidateService.AddStatusAsync(
-                candidateId,
-                new StatusChangeDto("Offer Preparation", "Offer drafted by recruiter"),
-                userName,
-                userId);
-        }
+        if (movesToPreparation)
+            await candidateService.AddStatusAsync(candidateId, preparation, userName, userId);
+
+        if (tx is not null) await tx.CommitAsync();
 
         await audit.RecordAsync("Offer.Created", "Offer", offer.Id,
             $"Created draft offer of {offer.Currency} {offer.BaseSalary:N2} for '{candidate.FullName}' (Candidate #{candidateId})");
@@ -149,11 +216,15 @@ public class OfferService(
             if (!isOwner && !isAssignedRecruiter) return null;
         }
 
+        await EnsureJobOpeningOpenAsync(offer.CandidateId);
+
         // The terms an Admin approved are the terms that get sent, so they can only change while the offer is
         // a Draft (#192). A rejected or revised offer is edited as a Draft and approved again.
         if (offer.Status != "Draft")
             throw new OfferStateException(
                 $"Offer #{offerId} is '{offer.Status}', so its terms can no longer be changed. Only a draft can be edited; start a new version instead.");
+
+        EnsureCandidateStage(offer.Candidate, "Recommended", "Offer Preparation");
 
         if (!string.IsNullOrWhiteSpace(dto.JobTitle))
             offer.JobTitle = dto.JobTitle.Trim();
@@ -193,10 +264,14 @@ public class OfferService(
             if (!isOwner && !isAssignedRecruiter) return null;
         }
 
+        await EnsureJobOpeningOpenAsync(offer.CandidateId);
+
         // Submitting an Approved, Extended or Accepted offer would pull it back into review (#192).
         if (offer.Status != "Draft")
             throw new OfferStateException(
                 $"Offer #{offerId} is '{offer.Status}', so it cannot be submitted for approval. Only a draft can be submitted.");
+
+        EnsureCandidateStage(offer.Candidate, "Recommended", "Offer Preparation");
 
         offer.Status = "PendingApproval";
         offer.UpdatedAt = DateTime.UtcNow;
@@ -261,11 +336,15 @@ public class OfferService(
         // after SaveChangesAsync, so a mismatched URL still committed the review and its audit row.
         if (offer is null || offer.CandidateId != candidateId) return null;
 
+        await EnsureJobOpeningOpenAsync(offer.CandidateId);
+
         // Only an offer awaiting approval can be reviewed. Otherwise approving a Draft skips the submit
         // step entirely, and rejecting an Extended or Accepted offer knocks it back to Draft.
         if (offer.Status != "PendingApproval")
             throw new OfferStateException(
                 $"Offer #{offerId} is '{offer.Status}', not awaiting approval, so it cannot be reviewed.");
+
+        EnsureCandidateStage(offer.Candidate, "Recommended", "Offer Preparation");
 
         var isDecisionApproved = string.Equals(dto.Decision, "Approved", StringComparison.OrdinalIgnoreCase);
 
@@ -324,6 +403,8 @@ public class OfferService(
             if (!isOwner && !isAssignedRecruiter) return null;
         }
 
+        await EnsureJobOpeningOpenAsync(offer.CandidateId);
+
         if (offer.Status is "Extended" or "Accepted" or "Declined")
         {
             throw new OfferStateException($"Offer #{offerId} cannot be extended because its status is already '{offer.Status}'. Create a new offer version first.");
@@ -345,21 +426,31 @@ public class OfferService(
             throw new OfferStateException(
                 $"An Admin rejected an offer for this candidate, so offer #{offerId} needs approval before it can be extended. Edit it if needed and request approval.");
 
+        // The move is checked before the offer is saved (#193), so a candidate who cannot take it is refused with
+        // the offer untouched. A second request for the same offer never gets this far: it loses the status
+        // concurrency token in SaveOfferAsync below, so it writes no second timeline row.
+        await using var tx = await BeginIfNoneAsync();
+        await LockCandidateAsync(offer.Candidate);
+
+        // A request that waited for the lock re-reads the offer: if the one ahead of it already extended it, this is
+        // a conflict with the offer's state (409), not a bad candidate move.
+        await db.Entry(offer).ReloadAsync();
+        if (offer.Status is not ("Draft" or "Approved"))
+            throw new OfferStateException(
+                $"Offer #{offerId} is '{offer.Status}', so it cannot be extended. Reload it and try again.");
+
+        var extended = new StatusChangeDto("Offer Extended", $"Offer of {offer.Currency} {offer.BaseSalary:N2} extended to candidate");
+        await EnsureStatusMoveAllowedAsync(offer.CandidateId, extended);
+
         offer.Status = "Extended";
         offer.ExtendedAt = DateTime.UtcNow;
         offer.UpdatedAt = DateTime.UtcNow;
 
         await SaveOfferAsync(offerId);
 
-        // Advance candidate status to "Offer Extended"
-        if (offer.Candidate.CurrentStatus != "Offer Extended")
-        {
-            await candidateService.AddStatusAsync(
-                offer.CandidateId,
-                new StatusChangeDto("Offer Extended", $"Offer of {offer.Currency} {offer.BaseSalary:N2} extended to candidate"),
-                userName,
-                userId);
-        }
+        await candidateService.AddStatusAsync(offer.CandidateId, extended, userName, userId);
+
+        if (tx is not null) await tx.CommitAsync();
 
         await audit.RecordAsync("Offer.Extended", "Offer", offer.Id,
             $"Extended offer of {offer.Currency} {offer.BaseSalary:N2} to '{offer.Candidate.FullName}'");
@@ -382,12 +473,26 @@ public class OfferService(
             if (!isOwner && !isAssignedRecruiter) return null;
         }
 
+        await EnsureJobOpeningOpenAsync(offer.CandidateId);
+
         if (offer.Status != "Extended")
         {
             throw new OfferStateException($"Cannot record decision on offer #{offerId} with status '{offer.Status}'. The offer must be in 'Extended' status.");
         }
 
         var isAccepted = string.Equals(dto.Decision, "Accepted", StringComparison.OrdinalIgnoreCase);
+
+        await using var tx = await BeginIfNoneAsync();
+        await LockCandidateAsync(offer.Candidate);
+
+        await db.Entry(offer).ReloadAsync();
+        if (offer.Status != "Extended")
+            throw new OfferStateException(
+                $"Offer #{offerId} is '{offer.Status}', so a decision can no longer be recorded on it. Reload it and try again.");
+
+        var newCandidateStatus = isAccepted ? "Offer Accepted" : "Offer Declined";
+        var comment = isAccepted ? "Candidate accepted offer" : $"Candidate declined offer: {dto.Reason}";
+        await EnsureStatusMoveAllowedAsync(offer.CandidateId, new StatusChangeDto(newCandidateStatus, comment));
 
         offer.Status = isAccepted ? "Accepted" : "Declined";
         offer.RespondedAt = DateTime.UtcNow;
@@ -396,14 +501,13 @@ public class OfferService(
 
         await SaveOfferAsync(offerId);
 
-        var newCandidateStatus = isAccepted ? "Offer Accepted" : "Offer Declined";
-        var comment = isAccepted ? "Candidate accepted offer" : $"Candidate declined offer: {dto.Reason}";
-
         await candidateService.AddStatusAsync(
             offer.CandidateId,
             new StatusChangeDto(newCandidateStatus, comment),
             userName,
             userId);
+
+        if (tx is not null) await tx.CommitAsync();
 
         await audit.RecordAsync($"Offer.{offer.Status}", "Offer", offer.Id,
             $"Candidate decision recorded: '{offer.Status}' for '{offer.Candidate.FullName}'");
