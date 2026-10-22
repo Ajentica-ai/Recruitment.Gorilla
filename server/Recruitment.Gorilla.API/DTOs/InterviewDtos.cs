@@ -16,6 +16,31 @@ public record MyInterviewDto(
     string EvaluationState // "None" | "Draft" | "Submitted"
 );
 
+/// <summary>One row of the "My interviews" history (#203).</summary>
+public record MyInterviewHistoryRowDto(
+    int Id,
+    int CandidateId,
+    string CandidateName,
+    string? Role,
+    DateTime ScheduledAt,
+    string Status, // "Scheduled" | "Cancelled"
+    string EvaluationState, // "None" | "Draft" | "Submitted"
+    // The user's own submitted evaluation only; null until they submit.
+    string? Recommendation,
+    int? OverallRating
+);
+
+/// <summary>How many interviews sit on each "My interviews" tab, whatever the search or the open tab.</summary>
+public record MyInterviewCountsDto(int Upcoming, int Awaiting, int Submitted, int Cancelled);
+
+public record MyInterviewHistoryDto(
+    List<MyInterviewHistoryRowDto> Items,
+    int TotalCount,
+    int Page,
+    int PageSize,
+    MyInterviewCountsDto Counts
+);
+
 public record EvaluationItemDto(string CriterionKey, int? Rating, string? Comment);
 
 public record InterviewEvaluationDto(

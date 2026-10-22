@@ -41,6 +41,19 @@ public class InterviewsController(
         return Ok(await interviews.GetMineAsync(userId));
     }
 
+    /// <summary>
+    /// The "My interviews" page (#203): the caller's own assigned interviews, one tab at a time (upcoming, awaiting,
+    /// submitted, cancelled), searchable by candidate name and paged. Any signed-in role; it only ever reads the
+    /// caller's own assignments and evaluation.
+    /// </summary>
+    [HttpGet("mine/history")]
+    public async Task<IActionResult> GetMineHistory(
+        [FromQuery] string? tab, [FromQuery] string? search, [FromQuery] int page = 1, [FromQuery] int pageSize = 20)
+    {
+        if (currentUser.UserId is not int userId) return Unauthorized();
+        return Ok(await interviews.GetMineHistoryAsync(userId, tab, search, page, pageSize));
+    }
+
     [HttpGet("{id:int}")]
     public async Task<IActionResult> GetById(int id)
     {

@@ -633,6 +633,29 @@ export interface AssignableUser {
 
 export type EvaluationState = 'None' | 'Draft' | 'Submitted';
 
+export type MyInterviewTab = 'upcoming' | 'awaiting' | 'submitted' | 'cancelled';
+
+export interface MyInterviewHistoryRow {
+  id: number;
+  candidateId: number;
+  candidateName: string;
+  role: string | null;
+  scheduledAt: string;
+  status: 'Scheduled' | 'Cancelled';
+  evaluationState: EvaluationState;
+  /** The user's own submitted recommendation and rating; null until they submit. */
+  recommendation: string | null;
+  overallRating: number | null;
+}
+
+export interface MyInterviewHistory {
+  items: MyInterviewHistoryRow[];
+  totalCount: number;
+  page: number;
+  pageSize: number;
+  counts: Record<MyInterviewTab, number>;
+}
+
 export interface MyInterview {
   id: number;
   candidateId: number;

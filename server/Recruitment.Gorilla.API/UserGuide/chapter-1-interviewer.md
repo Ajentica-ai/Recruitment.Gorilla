@@ -17,6 +17,11 @@ a calendar invite**. The interview also appears under **Up next** on your Dashbo
 
 ![Interviewer dashboard](images/01-dashboard-interviewer.png)
 
+**My interviews** in the sidebar lists every interview you are assigned to, in tabs: **Upcoming**,
+**Awaiting evaluation**, **Submitted** (with the recommendation and rating you gave) and
+**Cancelled**. Search by candidate name, and select a row to open the interview. It is the place to look
+when you want to find what you wrote about someone last month.
+
 **If an interview moves or is called off,** you get another notification and an email: "Interview
 moved" shows the old time struck through beside the new one and carries a fresh calendar invite,
 and "Interview cancelled" tells you it is off and why. A cancelled interview drops off **Up next**.
