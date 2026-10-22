@@ -1,5 +1,7 @@
 # Backlog
 <!-- Out-of-scope findings, newest first. Delete a line when it is resolved. -->
+- [2026-10-25] backend/EvaluationRubricsController - GetAll/GetById readable by every role; gate to Admin+ if catalogue should be private (found: RG-201)
+- [2026-10-25] backend/InterviewService.CanReadInterviewRubricAsync - missing vs forbidden id differ in query count (timing oracle, low) (found: RG-201)
 - [2026-10-22] backend/InterviewService.RescheduleAsync - no concurrency token, so concurrent reschedules can desync the panel and auto grants (found: RG-187)
 - [2026-10-22] backend/PanelAutoShareService - a panelist covered by an expiring manual grant gets no fallback auto row (found: RG-187)
 - [2026-10-22] backend/PanelAutoShareService - auto grants never expire, so a panel keeps reading after the interview happened (found: RG-187)

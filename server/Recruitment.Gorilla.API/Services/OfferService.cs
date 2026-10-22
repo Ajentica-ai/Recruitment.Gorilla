@@ -499,24 +499,23 @@ public class OfferService(
     {
         var candidatesQuery = ApplyCandidateAccess(db.Candidates.AsQueryable(), accessUserId);
 
-        var totalOffers = await db.Offers
+        // The four offer counts in one query, grouped on a constant, instead of four (#201).
+        var offerCounts = await db.Offers
             .Where(o => candidatesQuery.Any(c => c.Id == o.CandidateId))
-            .CountAsync();
+            .GroupBy(_ => 1)
+            .Select(g => new
+            {
+                Total = g.Count(),
+                Active = g.Count(o => o.Status == "Extended" || o.Status == "PendingApproval" || o.Status == "Approved"),
+                Accepted = g.Count(o => o.Status == "Accepted"),
+                Declined = g.Count(o => o.Status == "Declined"),
+            })
+            .FirstOrDefaultAsync();
 
-        var activeOffers = await db.Offers
-            .Where(o => candidatesQuery.Any(c => c.Id == o.CandidateId))
-            .Where(o => o.Status == "Extended" || o.Status == "PendingApproval" || o.Status == "Approved")
-            .CountAsync();
-
-        var acceptedOffers = await db.Offers
-            .Where(o => candidatesQuery.Any(c => c.Id == o.CandidateId))
-            .Where(o => o.Status == "Accepted")
-            .CountAsync();
-
-        var declinedOffers = await db.Offers
-            .Where(o => candidatesQuery.Any(c => c.Id == o.CandidateId))
-            .Where(o => o.Status == "Declined")
-            .CountAsync();
+        var totalOffers = offerCounts?.Total ?? 0;
+        var activeOffers = offerCounts?.Active ?? 0;
+        var acceptedOffers = offerCounts?.Accepted ?? 0;
+        var declinedOffers = offerCounts?.Declined ?? 0;
 
         var totalHired = await candidatesQuery
             .Where(c => c.CurrentStatus == "Hired")

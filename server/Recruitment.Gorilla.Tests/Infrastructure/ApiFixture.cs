@@ -289,6 +289,26 @@ public sealed class ApiFixture : IAsyncLifetime
         return interview.Id;
     }
 
+    /// <summary>
+    /// True when an audit row for <paramref name="action"/> on this entity has a summary containing <paramref name="text"/>.
+    /// Audit rows are written through a background queue, so this waits a few seconds for one to land.
+    /// </summary>
+    public async Task<bool> AuditSummaryContainsAsync(string action, int entityId, string text)
+    {
+        for (var attempt = 0; attempt < 50; attempt++)
+        {
+            using var scope = _factory.Services.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var summaries = await db.AuditLogs
+                .Where(a => a.Action == action && a.EntityId == entityId)
+                .Select(a => a.Summary)
+                .ToListAsync();
+            if (summaries.Any(sm => sm != null && sm.Contains(text))) return true;
+            await Task.Delay(100);
+        }
+        return false;
+    }
+
     /// <summary>Inserts an interview on <paramref name="candidateId"/> with the given panel (committed) and returns its id.</summary>
     public async Task<int> NewInterviewAsync(int candidateId, params int[] interviewerUserIds)
     {
