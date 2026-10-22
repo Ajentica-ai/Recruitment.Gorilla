@@ -737,6 +737,27 @@ namespace Recruitment.Gorilla.API.Migrations
                     b.ToTable("EvaluationAccessGrants");
                 });
 
+            modelBuilder.Entity("Recruitment.Gorilla.API.Models.EvaluationReminder", b =>
+                {
+                    b.Property<int>("InterviewId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Count")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("LastSentAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.HasKey("InterviewId", "UserId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("EvaluationReminders");
+                });
+
             modelBuilder.Entity("Recruitment.Gorilla.API.Models.EvaluationRubric", b =>
                 {
                     b.Property<int>("Id")
@@ -2900,6 +2921,25 @@ namespace Recruitment.Gorilla.API.Migrations
                     b.Navigation("Interview");
 
                     b.Navigation("RevokedByUser");
+                });
+
+            modelBuilder.Entity("Recruitment.Gorilla.API.Models.EvaluationReminder", b =>
+                {
+                    b.HasOne("Recruitment.Gorilla.API.Models.Interview", "Interview")
+                        .WithMany()
+                        .HasForeignKey("InterviewId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Recruitment.Gorilla.API.Models.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Interview");
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("Recruitment.Gorilla.API.Models.Interview", b =>
