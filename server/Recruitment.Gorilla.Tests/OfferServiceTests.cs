@@ -54,7 +54,7 @@ public class OfferServiceTests(MySqlDatabaseFixture fixture) : DbTestBase(fixtur
         Assert.NotNull(offer);
 
         // Submit for approval
-        var pending = await Offers().SubmitForApprovalAsync(offer.Id, [approver.Id], admin.Id, admin.Name, null);
+        var pending = await Offers().SubmitForApprovalAsync(offer.Id, offer.CandidateId, [approver.Id], admin.Id, admin.Name, null);
         Assert.NotNull(pending);
         Assert.Equal("PendingApproval", pending.Status);
         Assert.Single(pending.Approvals);
@@ -87,7 +87,7 @@ public class OfferServiceTests(MySqlDatabaseFixture fixture) : DbTestBase(fixtur
         Assert.NotNull(offer);
 
         // Extend offer
-        var extended = await Offers().ExtendOfferAsync(offer.Id, admin.Id, admin.Name, null);
+        var extended = await Offers().ExtendOfferAsync(offer.Id, offer.CandidateId, admin.Id, admin.Name, null);
         Assert.NotNull(extended);
         Assert.Equal("Extended", extended.Status);
 
@@ -97,7 +97,7 @@ public class OfferServiceTests(MySqlDatabaseFixture fixture) : DbTestBase(fixtur
 
         // Candidate accepts
         var accepted = await Offers().RecordDecisionAsync(
-            offer.Id,
+            offer.Id, offer.CandidateId,
             new OfferDecisionDto("Accepted", null),
             admin.Id,
             admin.Name,
@@ -149,7 +149,7 @@ public class OfferServiceTests(MySqlDatabaseFixture fixture) : DbTestBase(fixtur
             admin.Name);
         Assert.NotNull(offer);
 
-        var pdfBytes = await Offers().GenerateOfferLetterPdfAsync(offer.Id, null);
+        var pdfBytes = await Offers().GenerateOfferLetterPdfAsync(offer.Id, offer.CandidateId, null);
         Assert.NotNull(pdfBytes);
         Assert.NotEmpty(pdfBytes);
         // PDF header magic bytes "%PDF-"
@@ -215,7 +215,7 @@ public class OfferServiceTests(MySqlDatabaseFixture fixture) : DbTestBase(fixtur
         var offer = await Offers().CreateOfferAsync(candidate.Id, Salary(), null, admin.Id, admin.Name);
         Assert.NotNull(offer);
 
-        var pending = await Offers().SubmitForApprovalAsync(offer.Id, [recruiter.Id, admin.Id], admin.Id, admin.Name, null);
+        var pending = await Offers().SubmitForApprovalAsync(offer.Id, offer.CandidateId, [recruiter.Id, admin.Id], admin.Id, admin.Name, null);
 
         Assert.NotNull(pending);
         Assert.DoesNotContain(pending.Approvals, a => a.ApproverUserId == recruiter.Id);
@@ -244,7 +244,7 @@ public class OfferServiceTests(MySqlDatabaseFixture fixture) : DbTestBase(fixtur
         var otherCandidate = Data.AddCandidate(ownerUserId: admin.Id, status: "Offer Preparation");
         var offer = await Offers().CreateOfferAsync(candidate.Id, Salary(), null, admin.Id, admin.Name);
         Assert.NotNull(offer);
-        await Offers().SubmitForApprovalAsync(offer.Id, [admin.Id], admin.Id, admin.Name, null);
+        await Offers().SubmitForApprovalAsync(offer.Id, offer.CandidateId, [admin.Id], admin.Id, admin.Name, null);
 
         var reviewed = await Offers().ReviewApprovalAsync(
             offer.Id, otherCandidate.Id, new ReviewOfferApprovalDto("Approved", null), admin.Id, admin.Name);

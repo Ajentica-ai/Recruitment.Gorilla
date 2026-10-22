@@ -42,7 +42,7 @@ public class OfferStateMachineTests(MySqlDatabaseFixture fixture) : DbTestBase(f
     private async Task<(Candidate Candidate, OfferDto Offer, User Admin)> RejectedDraftAsync()
     {
         var (candidate, offer, admin) = await DraftAsync();
-        await Offers().SubmitForApprovalAsync(offer.Id, null, admin.Id, admin.Name, null);
+        await Offers().SubmitForApprovalAsync(offer.Id, offer.CandidateId, null, admin.Id, admin.Name, null);
         var rejected = await Offers().ReviewApprovalAsync(
             offer.Id, candidate.Id, new ReviewOfferApprovalDto("Rejected", "too high"), admin.Id, admin.Name);
         Assert.Equal("Draft", rejected!.Status);
@@ -62,7 +62,7 @@ public class OfferStateMachineTests(MySqlDatabaseFixture fixture) : DbTestBase(f
         var (_, offer, admin) = await InStatusAsync(status);
 
         var ex = await Assert.ThrowsAsync<OfferStateException>(() =>
-            Offers().UpdateOfferAsync(offer.Id, NewTerms(), null, admin.Id, admin.Name));
+            Offers().UpdateOfferAsync(offer.Id, offer.CandidateId, NewTerms(), null, admin.Id, admin.Name));
 
         Assert.Contains(status, ex.Message);
         var stored = await Db.Offers.AsNoTracking().SingleAsync(o => o.Id == offer.Id);
@@ -75,7 +75,7 @@ public class OfferStateMachineTests(MySqlDatabaseFixture fixture) : DbTestBase(f
     {
         var (_, offer, admin) = await DraftAsync();
 
-        var updated = await Offers().UpdateOfferAsync(offer.Id, NewTerms(150000), null, admin.Id, admin.Name);
+        var updated = await Offers().UpdateOfferAsync(offer.Id, offer.CandidateId, NewTerms(150000), null, admin.Id, admin.Name);
 
         Assert.Equal(150000, updated!.BaseSalary);
         Assert.Equal("Draft", updated.Status);
@@ -94,7 +94,7 @@ public class OfferStateMachineTests(MySqlDatabaseFixture fixture) : DbTestBase(f
         var (_, offer, admin) = await InStatusAsync(status);
 
         await Assert.ThrowsAsync<OfferStateException>(() =>
-            Offers().SubmitForApprovalAsync(offer.Id, null, admin.Id, admin.Name, null));
+            Offers().SubmitForApprovalAsync(offer.Id, offer.CandidateId, null, admin.Id, admin.Name, null));
 
         Assert.Equal(status, (await Db.Offers.AsNoTracking().SingleAsync(o => o.Id == offer.Id)).Status);
     }
@@ -111,7 +111,7 @@ public class OfferStateMachineTests(MySqlDatabaseFixture fixture) : DbTestBase(f
         var (candidate, offer, admin) = await InStatusAsync(status);
 
         await Assert.ThrowsAsync<OfferStateException>(() =>
-            Offers().ExtendOfferAsync(offer.Id, admin.Id, admin.Name, null));
+            Offers().ExtendOfferAsync(offer.Id, offer.CandidateId, admin.Id, admin.Name, null));
 
         Assert.Equal(status, (await Db.Offers.AsNoTracking().SingleAsync(o => o.Id == offer.Id)).Status);
         Assert.NotEqual("Offer Extended", (await Candidates().GetByIdAsync(candidate.Id))!.CurrentStatus);
@@ -123,7 +123,7 @@ public class OfferStateMachineTests(MySqlDatabaseFixture fixture) : DbTestBase(f
         var (candidate, offer, admin) = await RejectedDraftAsync();
 
         var ex = await Assert.ThrowsAsync<OfferStateException>(() =>
-            Offers().ExtendOfferAsync(offer.Id, admin.Id, admin.Name, null));
+            Offers().ExtendOfferAsync(offer.Id, offer.CandidateId, admin.Id, admin.Name, null));
 
         Assert.Contains("rejected", ex.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Equal("Draft", (await Db.Offers.AsNoTracking().SingleAsync(o => o.Id == offer.Id)).Status);
@@ -135,24 +135,24 @@ public class OfferStateMachineTests(MySqlDatabaseFixture fixture) : DbTestBase(f
     {
         var (_, offer, admin) = await RejectedDraftAsync();
 
-        await Offers().UpdateOfferAsync(offer.Id, NewTerms(90000), null, admin.Id, admin.Name); // allowed: still a Draft
+        await Offers().UpdateOfferAsync(offer.Id, offer.CandidateId, NewTerms(90000), null, admin.Id, admin.Name); // allowed: still a Draft
 
         await Assert.ThrowsAsync<OfferStateException>(() =>
-            Offers().ExtendOfferAsync(offer.Id, admin.Id, admin.Name, null));
+            Offers().ExtendOfferAsync(offer.Id, offer.CandidateId, admin.Id, admin.Name, null));
     }
 
     [Fact]
     public async Task A_rejected_offer_is_extended_only_after_it_is_resubmitted_and_approved()
     {
         var (candidate, offer, admin) = await RejectedDraftAsync();
-        await Offers().UpdateOfferAsync(offer.Id, NewTerms(90000), null, admin.Id, admin.Name);
+        await Offers().UpdateOfferAsync(offer.Id, offer.CandidateId, NewTerms(90000), null, admin.Id, admin.Name);
 
-        await Offers().SubmitForApprovalAsync(offer.Id, null, admin.Id, admin.Name, null);
+        await Offers().SubmitForApprovalAsync(offer.Id, offer.CandidateId, null, admin.Id, admin.Name, null);
         var approved = await Offers().ReviewApprovalAsync(
             offer.Id, candidate.Id, new ReviewOfferApprovalDto("Approved", "ok now"), admin.Id, admin.Name);
         Assert.Equal("Approved", approved!.Status);
 
-        var extended = await Offers().ExtendOfferAsync(offer.Id, admin.Id, admin.Name, null);
+        var extended = await Offers().ExtendOfferAsync(offer.Id, offer.CandidateId, admin.Id, admin.Name, null);
         Assert.Equal("Extended", extended!.Status);
         Assert.Equal(90000, extended.BaseSalary);
     }
@@ -161,14 +161,14 @@ public class OfferStateMachineTests(MySqlDatabaseFixture fixture) : DbTestBase(f
     public async Task An_approved_offer_can_be_extended_and_its_terms_are_then_frozen()
     {
         var (candidate, offer, admin) = await DraftAsync();
-        await Offers().SubmitForApprovalAsync(offer.Id, null, admin.Id, admin.Name, null);
+        await Offers().SubmitForApprovalAsync(offer.Id, offer.CandidateId, null, admin.Id, admin.Name, null);
         await Offers().ReviewApprovalAsync(offer.Id, candidate.Id, new ReviewOfferApprovalDto("Approved", null), admin.Id, admin.Name);
 
         // The edit the issue is about: changing the figures after approval is refused.
         await Assert.ThrowsAsync<OfferStateException>(() =>
-            Offers().UpdateOfferAsync(offer.Id, NewTerms(), null, admin.Id, admin.Name));
+            Offers().UpdateOfferAsync(offer.Id, offer.CandidateId, NewTerms(), null, admin.Id, admin.Name));
 
-        var extended = await Offers().ExtendOfferAsync(offer.Id, admin.Id, admin.Name, null);
+        var extended = await Offers().ExtendOfferAsync(offer.Id, offer.CandidateId, admin.Id, admin.Name, null);
         Assert.Equal("Extended", extended!.Status);
         Assert.Equal(100000, extended.BaseSalary); // exactly what was approved
     }
@@ -178,7 +178,7 @@ public class OfferStateMachineTests(MySqlDatabaseFixture fixture) : DbTestBase(f
     {
         var (_, offer, admin) = await DraftAsync();
 
-        var extended = await Offers().ExtendOfferAsync(offer.Id, admin.Id, admin.Name, null);
+        var extended = await Offers().ExtendOfferAsync(offer.Id, offer.CandidateId, admin.Id, admin.Name, null);
 
         Assert.Equal("Extended", extended!.Status);
     }
@@ -194,10 +194,10 @@ public class OfferStateMachineTests(MySqlDatabaseFixture fixture) : DbTestBase(f
     private async Task<(Candidate Candidate, User Admin)> DeclinedAfterRejectionAsync()
     {
         var (candidate, offer, admin) = await RejectedDraftAsync();
-        await Offers().SubmitForApprovalAsync(offer.Id, null, admin.Id, admin.Name, null);
+        await Offers().SubmitForApprovalAsync(offer.Id, offer.CandidateId, null, admin.Id, admin.Name, null);
         await Offers().ReviewApprovalAsync(offer.Id, candidate.Id, new ReviewOfferApprovalDto("Approved", null), admin.Id, admin.Name);
-        await Offers().ExtendOfferAsync(offer.Id, admin.Id, admin.Name, null);
-        await Offers().RecordDecisionAsync(offer.Id, new OfferDecisionDto("Declined", "too low"), admin.Id, admin.Name, null);
+        await Offers().ExtendOfferAsync(offer.Id, offer.CandidateId, admin.Id, admin.Name, null);
+        await Offers().RecordDecisionAsync(offer.Id, offer.CandidateId, new OfferDecisionDto("Declined", "too low"), admin.Id, admin.Name, null);
         return (candidate, admin);
     }
 
@@ -208,7 +208,7 @@ public class OfferStateMachineTests(MySqlDatabaseFixture fixture) : DbTestBase(f
         var newVersion = await NewVersionAsync(candidate, admin);
 
         var ex = await Assert.ThrowsAsync<OfferStateException>(() =>
-            Offers().ExtendOfferAsync(newVersion!.Id, admin.Id, admin.Name, null));
+            Offers().ExtendOfferAsync(newVersion!.Id, newVersion.CandidateId, admin.Id, admin.Name, null));
 
         Assert.Contains("rejected", ex.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Equal("Draft", (await Db.Offers.AsNoTracking().SingleAsync(o => o.Id == newVersion.Id)).Status);
@@ -220,9 +220,9 @@ public class OfferStateMachineTests(MySqlDatabaseFixture fixture) : DbTestBase(f
         var (candidate, admin) = await DeclinedAfterRejectionAsync();
         var newVersion = await NewVersionAsync(candidate, admin);
 
-        await Offers().SubmitForApprovalAsync(newVersion!.Id, null, admin.Id, admin.Name, null);
+        await Offers().SubmitForApprovalAsync(newVersion!.Id, newVersion.CandidateId, null, admin.Id, admin.Name, null);
         await Offers().ReviewApprovalAsync(newVersion.Id, candidate.Id, new ReviewOfferApprovalDto("Approved", null), admin.Id, admin.Name);
-        var extended = await Offers().ExtendOfferAsync(newVersion.Id, admin.Id, admin.Name, null);
+        var extended = await Offers().ExtendOfferAsync(newVersion.Id, newVersion.CandidateId, admin.Id, admin.Name, null);
 
         Assert.Equal("Extended", extended!.Status);
     }
@@ -233,7 +233,7 @@ public class OfferStateMachineTests(MySqlDatabaseFixture fixture) : DbTestBase(f
         await RejectedDraftAsync();
         var (_, other, admin) = await DraftAsync();
 
-        var extended = await Offers().ExtendOfferAsync(other.Id, admin.Id, admin.Name, null);
+        var extended = await Offers().ExtendOfferAsync(other.Id, other.CandidateId, admin.Id, admin.Name, null);
 
         Assert.Equal("Extended", extended!.Status);
     }
@@ -250,7 +250,7 @@ public class OfferStateMachineTests(MySqlDatabaseFixture fixture) : DbTestBase(f
         var (_, offer, admin) = await InStatusAsync(status);
 
         await Assert.ThrowsAsync<OfferStateException>(() =>
-            Offers().RecordDecisionAsync(offer.Id, new OfferDecisionDto("Accepted", null), admin.Id, admin.Name, null));
+            Offers().RecordDecisionAsync(offer.Id, offer.CandidateId, new OfferDecisionDto("Accepted", null), admin.Id, admin.Name, null));
     }
 
     // ---- a request that raced a status change is refused, never silently applied ----
@@ -276,7 +276,7 @@ public class OfferStateMachineTests(MySqlDatabaseFixture fixture) : DbTestBase(f
         var (offer, admin) = await StaleDraftAsync(actual);
 
         var ex = await Assert.ThrowsAsync<OfferStateException>(() =>
-            Offers().UpdateOfferAsync(offer.Id, NewTerms(250000), null, admin.Id, admin.Name));
+            Offers().UpdateOfferAsync(offer.Id, offer.CandidateId, NewTerms(250000), null, admin.Id, admin.Name));
 
         Assert.Contains("changed by someone else", ex.Message);
         Db.ChangeTracker.Clear();
@@ -291,7 +291,7 @@ public class OfferStateMachineTests(MySqlDatabaseFixture fixture) : DbTestBase(f
         var (offer, admin) = await StaleDraftAsync("PendingApproval");
 
         await Assert.ThrowsAsync<OfferStateException>(() =>
-            Offers().ExtendOfferAsync(offer.Id, admin.Id, admin.Name, null));
+            Offers().ExtendOfferAsync(offer.Id, offer.CandidateId, admin.Id, admin.Name, null));
 
         Db.ChangeTracker.Clear();
         Assert.Equal("PendingApproval", (await Db.Offers.AsNoTracking().SingleAsync(o => o.Id == offer.Id)).Status);

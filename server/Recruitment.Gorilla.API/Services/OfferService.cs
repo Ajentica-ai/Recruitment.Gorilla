@@ -201,13 +201,15 @@ public class OfferService(
         }
     }
 
-    public async Task<OfferDto?> UpdateOfferAsync(int offerId, UpdateOfferDto dto, int? accessUserId, int userId, string userName)
+    public async Task<OfferDto?> UpdateOfferAsync(int offerId, int candidateId, UpdateOfferDto dto, int? accessUserId, int userId, string userName)
     {
         var offer = await db.Offers
             .Include(o => o.Candidate).ThenInclude(c => c.RoleAppliedOption).ThenInclude(r => r!.Recruiters)
             .FirstOrDefaultAsync(o => o.Id == offerId);
 
-        if (offer is null) return null;
+        // The URL names the candidate, so an offer that belongs to another one reads as missing, before anything is
+        // written (#194). It used to be compared after the save, which changed the other candidate's offer and answered 404.
+        if (offer is null || offer.CandidateId != candidateId) return null;
 
         if (accessUserId is int uid)
         {
@@ -248,14 +250,16 @@ public class OfferService(
         return await GetOfferByIdAsync(offer.Id, null);
     }
 
-    public async Task<OfferDto?> SubmitForApprovalAsync(int offerId, List<int>? approverUserIds, int userId, string userName, int? accessUserId)
+    public async Task<OfferDto?> SubmitForApprovalAsync(int offerId, int candidateId, List<int>? approverUserIds, int userId, string userName, int? accessUserId)
     {
         var offer = await db.Offers
             .Include(o => o.Candidate).ThenInclude(c => c.RoleAppliedOption).ThenInclude(r => r!.Recruiters)
             .Include(o => o.Approvals)
             .FirstOrDefaultAsync(o => o.Id == offerId);
 
-        if (offer is null) return null;
+        // The URL names the candidate, so an offer that belongs to another one reads as missing, before anything is
+        // written (#194). It used to be compared after the save, which changed the other candidate's offer and answered 404.
+        if (offer is null || offer.CandidateId != candidateId) return null;
 
         if (accessUserId is int uid)
         {
@@ -388,13 +392,15 @@ public class OfferService(
         return await GetOfferByIdAsync(offer.Id, null);
     }
 
-    public async Task<OfferDto?> ExtendOfferAsync(int offerId, int userId, string userName, int? accessUserId)
+    public async Task<OfferDto?> ExtendOfferAsync(int offerId, int candidateId, int userId, string userName, int? accessUserId)
     {
         var offer = await db.Offers
             .Include(o => o.Candidate).ThenInclude(c => c.RoleAppliedOption).ThenInclude(r => r!.Recruiters)
             .FirstOrDefaultAsync(o => o.Id == offerId);
 
-        if (offer is null) return null;
+        // The URL names the candidate, so an offer that belongs to another one reads as missing, before anything is
+        // written (#194). It used to be compared after the save, which changed the other candidate's offer and answered 404.
+        if (offer is null || offer.CandidateId != candidateId) return null;
 
         if (accessUserId is int uid)
         {
@@ -458,13 +464,15 @@ public class OfferService(
         return await GetOfferByIdAsync(offer.Id, null);
     }
 
-    public async Task<OfferDto?> RecordDecisionAsync(int offerId, OfferDecisionDto dto, int userId, string userName, int? accessUserId)
+    public async Task<OfferDto?> RecordDecisionAsync(int offerId, int candidateId, OfferDecisionDto dto, int userId, string userName, int? accessUserId)
     {
         var offer = await db.Offers
             .Include(o => o.Candidate).ThenInclude(c => c.RoleAppliedOption).ThenInclude(r => r!.Recruiters)
             .FirstOrDefaultAsync(o => o.Id == offerId);
 
-        if (offer is null) return null;
+        // The URL names the candidate, so an offer that belongs to another one reads as missing, before anything is
+        // written (#194). It used to be compared after the save, which changed the other candidate's offer and answered 404.
+        if (offer is null || offer.CandidateId != candidateId) return null;
 
         if (accessUserId is int uid)
         {
@@ -515,13 +523,15 @@ public class OfferService(
         return await GetOfferByIdAsync(offer.Id, null);
     }
 
-    public async Task<byte[]?> GenerateOfferLetterPdfAsync(int offerId, int? accessUserId)
+    public async Task<byte[]?> GenerateOfferLetterPdfAsync(int offerId, int candidateId, int? accessUserId)
     {
         var offer = await db.Offers
             .Include(o => o.Candidate).ThenInclude(c => c.RoleAppliedOption).ThenInclude(r => r!.Recruiters)
             .FirstOrDefaultAsync(o => o.Id == offerId);
 
-        if (offer is null) return null;
+        // The URL names the candidate, so an offer that belongs to another one reads as missing instead of
+        // serving that offer's letter under the wrong candidate (#194).
+        if (offer is null || offer.CandidateId != candidateId) return null;
 
         if (accessUserId is int uid)
         {

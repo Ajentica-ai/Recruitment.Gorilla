@@ -145,7 +145,7 @@ public class OfferRulesTests(MySqlDatabaseFixture fixture) : DbTestBase(fixture)
         var (_, offer, admin) = await EndedOpeningAsync("Draft", "Offer Preparation");
 
         await Assert.ThrowsAsync<OfferRuleException>(() => Offers().UpdateOfferAsync(
-            offer.Id, new UpdateOfferDto("Engineer", 1, "USD", null, null, null, null, null), null, admin.Id, admin.Name));
+            offer.Id, offer.CandidateId, new UpdateOfferDto("Engineer", 1, "USD", null, null, null, null, null), null, admin.Id, admin.Name));
 
         Assert.Equal(90000, Db.Offers.AsNoTracking().Single(o => o.Id == offer.Id).BaseSalary);
     }
@@ -156,7 +156,7 @@ public class OfferRulesTests(MySqlDatabaseFixture fixture) : DbTestBase(fixture)
         var (_, offer, admin) = await EndedOpeningAsync("Draft", "Offer Preparation");
 
         await Assert.ThrowsAsync<OfferRuleException>(() =>
-            Offers().SubmitForApprovalAsync(offer.Id, null, admin.Id, admin.Name, null));
+            Offers().SubmitForApprovalAsync(offer.Id, offer.CandidateId, null, admin.Id, admin.Name, null));
 
         Assert.Equal("Draft", Db.Offers.AsNoTracking().Single(o => o.Id == offer.Id).Status);
     }
@@ -178,7 +178,7 @@ public class OfferRulesTests(MySqlDatabaseFixture fixture) : DbTestBase(fixture)
         var (candidate, offer, admin) = await EndedOpeningAsync("Approved", "Offer Preparation");
 
         var ex = await Assert.ThrowsAsync<OfferRuleException>(() =>
-            Offers().ExtendOfferAsync(offer.Id, admin.Id, admin.Name, null));
+            Offers().ExtendOfferAsync(offer.Id, offer.CandidateId, admin.Id, admin.Name, null));
 
         Assert.Contains("ended", ex.Message);
         Assert.Equal("Approved", Db.Offers.AsNoTracking().Single(o => o.Id == offer.Id).Status);
@@ -192,7 +192,7 @@ public class OfferRulesTests(MySqlDatabaseFixture fixture) : DbTestBase(fixture)
         var (candidate, offer, admin) = await EndedOpeningAsync("Extended", "Offer Extended");
 
         await Assert.ThrowsAsync<OfferRuleException>(() => Offers().RecordDecisionAsync(
-            offer.Id, new OfferDecisionDto("Accepted", null), admin.Id, admin.Name, null));
+            offer.Id, offer.CandidateId, new OfferDecisionDto("Accepted", null), admin.Id, admin.Name, null));
 
         Assert.Equal("Extended", Db.Offers.AsNoTracking().Single(o => o.Id == offer.Id).Status);
         Assert.Equal(0, await TimelineRowsAsync(candidate.Id, "Offer Accepted"));
@@ -217,7 +217,7 @@ public class OfferRulesTests(MySqlDatabaseFixture fixture) : DbTestBase(fixture)
         await Db.SaveChangesAsync();
 
         var ex = await Assert.ThrowsAsync<OfferRuleException>(() =>
-            Offers().ExtendOfferAsync(offer.Id, admin.Id, admin.Name, null));
+            Offers().ExtendOfferAsync(offer.Id, offer.CandidateId, admin.Id, admin.Name, null));
 
         Assert.Contains(candidateStatus, ex.Message);
         Assert.Equal("Approved", Db.Offers.AsNoTracking().Single(o => o.Id == offer.Id).Status);
@@ -239,7 +239,7 @@ public class OfferRulesTests(MySqlDatabaseFixture fixture) : DbTestBase(fixture)
         await Db.SaveChangesAsync();
 
         await Assert.ThrowsAsync<OfferRuleException>(() => Offers().RecordDecisionAsync(
-            offer.Id, new OfferDecisionDto("Accepted", null), admin.Id, admin.Name, null));
+            offer.Id, offer.CandidateId, new OfferDecisionDto("Accepted", null), admin.Id, admin.Name, null));
 
         Assert.Equal("Extended", Db.Offers.AsNoTracking().Single(o => o.Id == offer.Id).Status);
         Assert.Equal("Reject", Db.Candidates.AsNoTracking().Single(c => c.Id == candidate.Id).CurrentStatus);
@@ -259,9 +259,9 @@ public class OfferRulesTests(MySqlDatabaseFixture fixture) : DbTestBase(fixture)
         await Db.SaveChangesAsync();
 
         await Assert.ThrowsAsync<OfferRuleException>(() => Offers().UpdateOfferAsync(
-            offer.Id, new UpdateOfferDto("Engineer", 1, "USD", null, null, null, null, null), null, admin.Id, admin.Name));
+            offer.Id, offer.CandidateId, new UpdateOfferDto("Engineer", 1, "USD", null, null, null, null, null), null, admin.Id, admin.Name));
         await Assert.ThrowsAsync<OfferRuleException>(() =>
-            Offers().SubmitForApprovalAsync(offer.Id, null, admin.Id, admin.Name, null));
+            Offers().SubmitForApprovalAsync(offer.Id, offer.CandidateId, null, admin.Id, admin.Name, null));
     }
 
     [Fact]
@@ -279,7 +279,7 @@ public class OfferRulesTests(MySqlDatabaseFixture fixture) : DbTestBase(fixture)
         await Db.SaveChangesAsync();
         await Db.Database.ExecuteSqlInterpolatedAsync($"UPDATE Candidates SET CurrentStatus = 'Reject' WHERE Id = {candidate.Id}");
 
-        await Assert.ThrowsAsync<OfferRuleException>(() => Offers().ExtendOfferAsync(offer.Id, admin.Id, admin.Name, null));
+        await Assert.ThrowsAsync<OfferRuleException>(() => Offers().ExtendOfferAsync(offer.Id, offer.CandidateId, admin.Id, admin.Name, null));
 
         Assert.Equal("Approved", Db.Offers.AsNoTracking().Single(o => o.Id == offer.Id).Status);
         Assert.Equal(0, await TimelineRowsAsync(candidate.Id, "Offer Extended"));
@@ -292,10 +292,10 @@ public class OfferRulesTests(MySqlDatabaseFixture fixture) : DbTestBase(fixture)
         var candidate = Data.AddCandidate(ownerUserId: admin.Id, status: "Recommended");
 
         var offer = await CreateAsync(candidate, admin);
-        await Offers().SubmitForApprovalAsync(offer!.Id, null, admin.Id, admin.Name, null);
+        await Offers().SubmitForApprovalAsync(offer!.Id, offer.CandidateId, null, admin.Id, admin.Name, null);
         await Offers().ReviewApprovalAsync(offer.Id, candidate.Id, new ReviewOfferApprovalDto("Approved", null), admin.Id, admin.Name);
-        await Offers().ExtendOfferAsync(offer.Id, admin.Id, admin.Name, null);
-        var decided = await Offers().RecordDecisionAsync(offer.Id, new OfferDecisionDto("Accepted", null), admin.Id, admin.Name, null);
+        await Offers().ExtendOfferAsync(offer.Id, offer.CandidateId, admin.Id, admin.Name, null);
+        var decided = await Offers().RecordDecisionAsync(offer.Id, offer.CandidateId, new OfferDecisionDto("Accepted", null), admin.Id, admin.Name, null);
 
         Assert.Equal("Accepted", decided!.Status);
         Assert.Equal("Offer Accepted", Db.Candidates.AsNoTracking().Single(c => c.Id == candidate.Id).CurrentStatus);
@@ -426,5 +426,102 @@ public class OfferRulesApiTests(ApiFixture fx)
             Assert.DoesNotContain("Reject", body);
             Assert.DoesNotContain("in progress", body);
         }
+    }
+}
+
+/// <summary>
+/// The candidate id in the URL is checked before anything is written (#194). Before, update, submit, extend and
+/// decision committed (offer, audit row, candidate status) and only then compared the ids, so a mismatched URL
+/// changed another candidate's offer and still answered 404.
+/// </summary>
+[Collection(ApiCollection.Name)]
+public class OfferUrlCandidateTests(ApiFixture fx)
+{
+    private static string Url(int candidateId, int offerId, string tail = "") =>
+        $"/api/candidates/{candidateId}/offers/{offerId}{tail}";
+
+    /// <summary>An offer for candidate B, reached through candidate A's URL.</summary>
+    private async Task<(int WrongCandidateId, int OfferId, string Token)> MismatchAsync(string offerStatus, string candidateStatus)
+    {
+        var wrong = await fx.NewCandidateAsync(fx.AdminId, status: "Offer Preparation");
+        var owner = await fx.NewCandidateAsync(fx.AdminId, status: candidateStatus);
+        var offerId = await fx.NewOfferAsync(owner, offerStatus);
+        return (wrong, offerId, await fx.LoginAsync(fx.AdminEmail));
+    }
+
+    private async Task AssertRefusedAndUntouchedAsync(
+        HttpResponseMessage resp, int offerId, string offerStatus, string candidateStatus)
+    {
+        Assert.Equal(HttpStatusCode.NotFound, resp.StatusCode);
+        var (status, cStatus, audits) = await fx.OfferSnapshotAsync(offerId);
+        Assert.Equal(offerStatus, status);
+        Assert.Equal(candidateStatus, cStatus);
+        Assert.Equal(0, audits);
+    }
+
+    [Fact]
+    public async Task Updating_through_another_candidates_url_is_a_404_and_writes_nothing()
+    {
+        var (wrong, offerId, token) = await MismatchAsync("Draft", "Offer Preparation");
+        var resp = await fx.SendAsync(HttpMethod.Put, Url(wrong, offerId), token, new { baseSalary = 1 });
+        await AssertRefusedAndUntouchedAsync(resp, offerId, "Draft", "Offer Preparation");
+        Assert.Equal(90000, await fx.OfferSalaryAsync(offerId));
+    }
+
+    [Fact]
+    public async Task Submitting_through_another_candidates_url_is_a_404_and_writes_nothing()
+    {
+        var (wrong, offerId, token) = await MismatchAsync("Draft", "Offer Preparation");
+        var resp = await fx.SendAsync(HttpMethod.Post, Url(wrong, offerId, "/submit-approval"), token, new int[0]);
+        await AssertRefusedAndUntouchedAsync(resp, offerId, "Draft", "Offer Preparation");
+    }
+
+    [Fact]
+    public async Task Extending_through_another_candidates_url_is_a_404_and_the_candidate_is_not_moved()
+    {
+        var (wrong, offerId, token) = await MismatchAsync("Approved", "Offer Preparation");
+        var resp = await fx.SendAsync(HttpMethod.Post, Url(wrong, offerId, "/extend"), token);
+        await AssertRefusedAndUntouchedAsync(resp, offerId, "Approved", "Offer Preparation");
+    }
+
+    [Fact]
+    public async Task Recording_a_decision_through_another_candidates_url_is_a_404_and_writes_nothing()
+    {
+        var (wrong, offerId, token) = await MismatchAsync("Extended", "Offer Extended");
+        var resp = await fx.SendAsync(HttpMethod.Post, Url(wrong, offerId, "/decision"), token, new { decision = "Accepted" });
+        await AssertRefusedAndUntouchedAsync(resp, offerId, "Extended", "Offer Extended");
+    }
+
+    [Fact]
+    public async Task The_offer_letter_pdf_through_another_candidates_url_is_a_404()
+    {
+        var (wrong, offerId, token) = await MismatchAsync("Draft", "Offer Preparation");
+        var resp = await fx.SendAsync(HttpMethod.Get, Url(wrong, offerId, "/pdf"), token);
+        Assert.Equal(HttpStatusCode.NotFound, resp.StatusCode);
+    }
+
+    [Fact]
+    public async Task The_offer_letter_pdf_through_its_own_candidates_url_still_works()
+    {
+        var candidateId = await fx.NewCandidateAsync(fx.AdminId, status: "Offer Preparation");
+        var offerId = await fx.NewOfferAsync(candidateId);
+        var token = await fx.LoginAsync(fx.AdminEmail);
+        var resp = await fx.SendAsync(HttpMethod.Get, Url(candidateId, offerId, "/pdf"), token);
+        Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
+    }
+
+    [Fact]
+    public async Task Extending_twice_is_a_409_the_second_time_with_one_timeline_row()
+    {
+        var candidateId = await fx.NewCandidateAsync(fx.AdminId, status: "Offer Preparation");
+        var offerId = await fx.NewOfferAsync(candidateId, "Approved");
+        var token = await fx.LoginAsync(fx.AdminEmail);
+
+        var first = await fx.SendAsync(HttpMethod.Post, Url(candidateId, offerId, "/extend"), token);
+        var second = await fx.SendAsync(HttpMethod.Post, Url(candidateId, offerId, "/extend"), token);
+
+        Assert.Equal(HttpStatusCode.OK, first.StatusCode);
+        Assert.Equal(HttpStatusCode.Conflict, second.StatusCode);
+        Assert.Equal(1, await fx.CountStatusRowsAsync(candidateId, "Offer Extended"));
     }
 }
