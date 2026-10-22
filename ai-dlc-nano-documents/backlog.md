@@ -1,5 +1,7 @@
 # Backlog
 <!-- Out-of-scope findings, newest first. Delete a line when it is resolved. -->
+- [2026-10-25] backend/InterviewService:600 - cancel moves the candidate with AddStatusAsync, no ValidateStatusChangeAsync or lock-and-reload (found: RG-193)
+- [2026-10-25] backend/CandidatesController status - manual status change does not lock the candidate row like the offer actions now do (found: RG-193)
 - [2026-10-22] backend/InterviewService.RescheduleAsync - no concurrency token, so concurrent reschedules can desync the panel and auto grants (found: RG-187)
 - [2026-10-22] backend/PanelAutoShareService - a panelist covered by an expiring manual grant gets no fallback auto row (found: RG-187)
 - [2026-10-22] backend/PanelAutoShareService - auto grants never expire, so a panel keeps reading after the interview happened (found: RG-187)

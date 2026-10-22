@@ -566,3 +566,12 @@
 - 2026-10-25T09:40Z [claude] RG-192 PHASE PLAN→CONSTRUCT @e9d40c4: plan approved (user: go with recommendation)
 - 2026-10-25T12:00Z [claude] RG-192 PHASE CONSTRUCT→WRAP-UP @e9d40c4: 731 dotnet, 313 vitest, tsc+lint ok, isolated API+UI check ok, security review fixes applied; new-version bypass pending user
 - 2026-10-25T13:00Z [claude] RG-192 DECISION @ff0c95c: rejection rule is candidate-level so a New Version cannot bypass it (user confirmed)
+- 2026-10-22T09:35Z [claude] RG-192 SIDE-EFFECT @7cc896b: pushed fix/RG-192/Offer-state-machine, opened PR #219 into develop (user confirmed)
+- 2026-10-22T09:35Z [claude] RG-192 DONE @7cc896b: offer state machine, candidate-level rejection rule, 409s, concurrency token; PR #219
+- 2026-10-22T09:45Z [claude] RG-193 CREATED @7cc896b: intake of issue #193 (bug); assigned to @me via gh
+- 2026-10-22T09:45Z [claude] RG-193 SIDE-EFFECT @7cc896b: assigned issue #193 to @me; board move to In Development FAILED (gh token lacks read:project scope)
+- 2026-10-22T09:46Z [claude] RG-193 DECISION @7cc896b: CLARIFY assumptions 1-5 accepted (go with recommendation)
+- 2026-10-22T09:46Z [claude] RG-193 PHASE CLARIFY→PLAN @7cc896b: plan.md drafted, awaiting approval
+- 2026-10-22T09:49Z [claude] RG-193 BRANCH @7cc896b: fix/RG-193/Offer-status-rules-and-lock created off fix/RG-192/Offer-state-machine (user confirmed)
+- 2026-10-22T09:49Z [claude] RG-193 PHASE PLAN→CONSTRUCT @7cc896b: plan approved (go with recommendation)
+- 2026-10-22T10:00Z [claude] RG-193 DONE @7cc896b: offer actions use End Date lock, stage rules, 1 live offer, locked atomic status move; 788 backend, 333 client tests
