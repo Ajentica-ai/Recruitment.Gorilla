@@ -575,3 +575,9 @@
 - 2026-10-22T09:49Z [claude] RG-193 BRANCH @7cc896b: fix/RG-193/Offer-status-rules-and-lock created off fix/RG-192/Offer-state-machine (user confirmed)
 - 2026-10-22T09:49Z [claude] RG-193 PHASE PLAN→CONSTRUCT @7cc896b: plan approved (go with recommendation)
 - 2026-10-22T10:00Z [claude] RG-193 DONE @7cc896b: offer actions use End Date lock, stage rules, 1 live offer, locked atomic status move; 788 backend, 333 client tests
+- 2026-10-22T10:23Z [claude] RG-193 SIDE-EFFECT @e0d057e: pushed fix/RG-193/Offer-status-rules-and-lock, opened PR #220 (base fix/RG-192/Offer-state-machine; user confirmed)
+- 2026-10-22T10:24Z [claude] RG-194 CREATED @e0d057e: intake of issue #194 (bug); assigned to @me via gh; board move skipped (gh lacks read:project)
+- 2026-10-22T10:24Z [claude] RG-194 PHASE CLARIFY→PLAN @e0d057e: plan.md drafted, awaiting approval
+- 2026-10-22T10:24Z [claude] RG-194 BRANCH @e0d057e: fix/RG-194/Offer-url-candidate-check created off fix/RG-193/Offer-status-rules-and-lock (user confirmed)
+- 2026-10-22T10:24Z [claude] RG-194 PHASE PLAN→CONSTRUCT @e0d057e: plan approved (go with recommendation)
+- 2026-10-22T10:27Z [claude] RG-194 DONE @e0d057e: URL candidate id checked before any offer write; 795 backend tests; security review no High/Medium
