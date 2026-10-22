@@ -53,6 +53,8 @@ const BUCKET_LABELS: Record<string, string> = {
   recommended: 'Recommended',
   rejected: 'Rejected',
   'new-this-week': 'New this week',
+  hired: 'Hired',
+  offers: 'In offer stages',
 };
 
 const MOBILE_SORTS: { value: string; label: string }[] = [

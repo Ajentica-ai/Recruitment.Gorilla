@@ -107,7 +107,7 @@ public sealed class ApiFixture : IAsyncLifetime
     }
 
     /// <summary>Inserts a candidate (committed — the whole DB is dropped at teardown) and returns its id.</summary>
-    public async Task<int> NewCandidateAsync(int ownerUserId, int? roleId = null, string? email = null)
+    public async Task<int> NewCandidateAsync(int ownerUserId, int? roleId = null, string? email = null, string? batchId = null, string? batchName = null)
     {
         using var scope = _factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -118,6 +118,8 @@ public sealed class ApiFixture : IAsyncLifetime
             RelevantExperience = "3 Years",
             OwnerUserId = ownerUserId,
             RoleAppliedOptionId = roleId,
+            BatchId = batchId,
+            BatchName = batchName,
             CurrentStatus = "Uploaded",
         };
         db.Candidates.Add(candidate);
