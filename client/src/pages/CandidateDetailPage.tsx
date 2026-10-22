@@ -51,7 +51,7 @@ export default function CandidateDetailPage() {
   const candidateId = Number(id);
   const queryClient = useQueryClient();
   const navigate = useNavigate();
-  const { canWriteCandidates, isAdminOrAbove } = useAuth();
+  const { user, canWriteCandidates, isAdminOrAbove } = useAuth();
   const { addToast } = useToast();
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -370,6 +370,7 @@ export default function CandidateDetailPage() {
             <StatusTimeline
               history={data.statusHistory}
               canViewEvaluations={isAdminOrAbove}
+              currentUserId={user?.id}
               canManageInterview={canWrite}
               onReschedule={setReschedulingInterviewId}
               onCancelInterview={setCancellingInterviewId}
