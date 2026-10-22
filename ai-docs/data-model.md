@@ -282,6 +282,7 @@ Scorecard template definitions that can be customized per Job Opening (`RoleAppl
 - Seed data ensures the default 12-criterion standard rubric exists (`Id = 1`, `IsDefault = true`).
 
 ### Offer (`Offers`)
+*Lifecycle (#192): terms editable only in `Draft`; `Draft` -> `PendingApproval` (submit) -> `Approved` or back to `Draft` (rejected, kept visible by a `Rejected` `OfferApproval` row) -> `Extended` (from `Approved`, or from a `Draft` while no offer for the candidate has been rejected) -> `Accepted` / `Declined`. Any other move is refused with a 409; see `auth.md`.*
 Candidate job offer details, structured compensation package, and lifecycle status (`Draft`, `PendingApproval`, `Approved`, `Extended`, `Accepted`, `Declined`, `Withdrawn`).
 
 | Field | Type | Notes |
