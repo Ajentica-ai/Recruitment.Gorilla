@@ -189,3 +189,97 @@ public class CandidateServiceListTests(MySqlDatabaseFixture fixture) : DbTestBas
         Assert.Equal("Batch 2026 Alpha", page.Items.First(i => i.Id == c1.Id).BatchName);
     }
 }
+
+/// <summary>Paging is clamped (#196): page=0 was a negative Skip and a 500, and pageSize had no upper bound.</summary>
+public class CandidateServicePagingTests(MySqlDatabaseFixture fixture) : DbTestBase(fixture)
+{
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    [InlineData(int.MinValue)]
+    public async Task A_page_below_one_is_page_one_not_a_500(int page)
+    {
+        var c = Data.AddCandidate();
+
+        var result = await Candidates().GetAllAsync(new CandidateListQuery(Page: page, PageSize: 500));
+
+        Assert.Equal(1, result.Page);
+        Assert.Contains(c.Id, result.Items.Select(i => i.Id));
+    }
+
+    [Theory]
+    [InlineData(0, 1)]
+    [InlineData(-5, 1)]
+    [InlineData(1, 1)]
+    [InlineData(200, 200)]
+    [InlineData(201, 200)]
+    [InlineData(1_000_000, 200)]
+    [InlineData(int.MaxValue, 200)]
+    public async Task The_page_size_is_kept_between_1_and_200_and_reported_as_applied(int requested, int applied)
+    {
+        Data.AddCandidate();
+        Data.AddCandidate();
+
+        var result = await Candidates().GetAllAsync(new CandidateListQuery(PageSize: requested));
+
+        Assert.Equal(applied, result.PageSize);
+        Assert.True(result.Items.Count <= applied);
+    }
+
+    [Fact]
+    public async Task A_huge_page_does_not_overflow_and_is_simply_empty()
+    {
+        Data.AddCandidate();
+
+        var result = await Candidates().GetAllAsync(new CandidateListQuery(Page: int.MaxValue, PageSize: 200));
+
+        Assert.Empty(result.Items);
+        Assert.True(result.TotalCount >= 1);
+    }
+
+    [Fact]
+    public async Task Normal_paging_is_unchanged()
+    {
+        for (var i = 0; i < 3; i++) Data.AddCandidate();
+
+        var first = await Candidates().GetAllAsync(new CandidateListQuery(Page: 1, PageSize: 2));
+        var second = await Candidates().GetAllAsync(new CandidateListQuery(Page: 2, PageSize: 2));
+
+        Assert.Equal(2, first.Items.Count);
+        Assert.Equal(2, first.PageSize);
+        Assert.Equal(2, second.Page);
+        Assert.DoesNotContain(first.Items.Select(i => i.Id).First(), second.Items.Select(i => i.Id));
+    }
+}
+
+/// <summary>The same over the real HTTP pipeline: a bad page used to be an unhandled 500.</summary>
+[Collection(ApiCollection.Name)]
+public class CandidateListPagingApiTests(ApiFixture fx)
+{
+    private async Task<System.Text.Json.JsonElement> ListAsync(string query)
+    {
+        var token = await fx.LoginAsync(fx.AdminEmail);
+        var resp = await fx.SendAsync(HttpMethod.Get, $"/api/candidates?{query}", token);
+        Assert.Equal(System.Net.HttpStatusCode.OK, resp.StatusCode);
+        return System.Text.Json.JsonDocument.Parse(await resp.Content.ReadAsStringAsync()).RootElement.Clone();
+    }
+
+    [Theory]
+    [InlineData("page=0")]
+    [InlineData("page=-7")]
+    public async Task A_non_positive_page_is_a_200_for_page_one(string query)
+    {
+        var body = await ListAsync(query);
+        Assert.Equal(1, body.GetProperty("page").GetInt32());
+    }
+
+    [Theory]
+    [InlineData("pageSize=0", 1)]
+    [InlineData("pageSize=1000000", 200)]
+    public async Task The_page_size_is_clamped_and_reported(string query, int applied)
+    {
+        var body = await ListAsync(query);
+        Assert.Equal(applied, body.GetProperty("pageSize").GetInt32());
+        Assert.True(body.GetProperty("items").GetArrayLength() <= applied);
+    }
+}
