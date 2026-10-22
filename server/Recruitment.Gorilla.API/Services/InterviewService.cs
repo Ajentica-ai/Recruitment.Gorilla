@@ -35,6 +35,100 @@ public class InterviewService(
             .Select(u => new AssignableUserDto(u.Id, u.Name, u.Email))
             .ToListAsync();
 
+    public const string TabUpcoming = "upcoming";
+    public const string TabAwaiting = "awaiting";
+    public const string TabSubmitted = "submitted";
+    public const string TabCancelled = "cancelled";
+
+    /// <summary>
+    /// The "My interviews" history (#203): the interviews the user is assigned to, one tab at a time, with their own
+    /// evaluation. Upcoming: not cancelled, scheduled at or after <paramref name="now"/>, soonest first. Awaiting: not
+    /// cancelled, already started, and the user has not submitted (a draft counts as not submitted). Submitted: not
+    /// cancelled, with the user's evaluation submitted. Cancelled: cancelled interviews the user was assigned to. The
+    /// last three are most recent first. An unknown tab is Upcoming. The counts describe all four tabs, ignoring the
+    /// search. Only the user's OWN evaluation is read, never a colleague's. <c>GetMineAsync</c> stays the dashboard's
+    /// unpaged list.
+    /// </summary>
+    public async Task<MyInterviewHistoryDto> GetMineHistoryAsync(
+        int userId, string? tab, string? search, int page, int pageSize, DateTime? now = null)
+    {
+        var at = now ?? DateTime.UtcNow;
+        tab = tab?.ToLowerInvariant() switch
+        {
+            TabAwaiting => TabAwaiting,
+            TabSubmitted => TabSubmitted,
+            TabCancelled => TabCancelled,
+            _ => TabUpcoming,
+        };
+        page = Math.Clamp(page, 1, 1_000_000);
+        pageSize = Math.Clamp(pageSize, 1, 100);
+
+        var mine = db.Interviews.AsNoTracking().Where(i => i.Interviewers.Any(ii => ii.UserId == userId));
+
+        IQueryable<Interview> Upcoming(IQueryable<Interview> q) =>
+            q.Where(i => i.Status != InterviewStatuses.Cancelled && i.ScheduledAt >= at);
+        IQueryable<Interview> Awaiting(IQueryable<Interview> q) =>
+            q.Where(i => i.Status != InterviewStatuses.Cancelled && i.ScheduledAt < at &&
+                         !i.Evaluations.Any(e => e.InterviewerUserId == userId && e.IsSubmitted));
+        IQueryable<Interview> Submitted(IQueryable<Interview> q) =>
+            q.Where(i => i.Status != InterviewStatuses.Cancelled &&
+                         i.Evaluations.Any(e => e.InterviewerUserId == userId && e.IsSubmitted));
+        IQueryable<Interview> Cancelled(IQueryable<Interview> q) =>
+            q.Where(i => i.Status == InterviewStatuses.Cancelled);
+
+        var counts = new MyInterviewCountsDto(
+            await Upcoming(mine).CountAsync(),
+            await Awaiting(mine).CountAsync(),
+            await Submitted(mine).CountAsync(),
+            await Cancelled(mine).CountAsync());
+
+        var tabQuery = tab switch
+        {
+            TabAwaiting => Awaiting(mine),
+            TabSubmitted => Submitted(mine),
+            TabCancelled => Cancelled(mine),
+            _ => Upcoming(mine),
+        };
+
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            var term = search.Trim();
+            tabQuery = tabQuery.Where(i => i.Candidate.FullName.Contains(term));
+        }
+
+        var total = await tabQuery.CountAsync();
+
+        var ordered = tab == TabUpcoming
+            ? tabQuery.OrderBy(i => i.ScheduledAt).ThenBy(i => i.Id)
+            : tabQuery.OrderByDescending(i => i.ScheduledAt).ThenByDescending(i => i.Id);
+
+        var rows = await ordered
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .Select(i => new
+            {
+                i.Id,
+                i.CandidateId,
+                i.Candidate.FullName,
+                Role = i.Candidate.RoleAppliedOption != null ? i.Candidate.RoleAppliedOption.Name : i.Candidate.AppliedRole,
+                i.ScheduledAt,
+                i.Status,
+                Eval = i.Evaluations
+                    .Where(e => e.InterviewerUserId == userId)
+                    .Select(e => new { e.IsSubmitted, e.Recommendation, e.OverallRating })
+                    .FirstOrDefault(),
+            })
+            .ToListAsync();
+
+        var items = rows.Select(r => new MyInterviewHistoryRowDto(
+            r.Id, r.CandidateId, r.FullName, r.Role, r.ScheduledAt, r.Status,
+            r.Eval is null ? "None" : r.Eval.IsSubmitted ? "Submitted" : "Draft",
+            r.Eval is { IsSubmitted: true } ? r.Eval.Recommendation : null,
+            r.Eval is { IsSubmitted: true } ? r.Eval.OverallRating : null)).ToList();
+
+        return new MyInterviewHistoryDto(items, total, page, pageSize, counts);
+    }
+
     /// <summary>Interviews the user is assigned to (most recent first) with their eval state.</summary>
     public async Task<List<MyInterviewDto>> GetMineAsync(int userId)
     {
