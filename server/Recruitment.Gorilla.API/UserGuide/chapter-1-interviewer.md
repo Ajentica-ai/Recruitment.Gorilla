@@ -84,6 +84,10 @@ At the bottom, the **Overall evaluation** asks for:
 After you submit, you can also see the evaluations other panel members have submitted for the
 same interview. You cannot see theirs before you submit your own.
 
+If an interview ended more than a day ago and you have not submitted your evaluation, you get a reminder
+notification linking to the interview. It repeats about once a day, up to three times, and stops as soon as you
+submit. A saved draft does not count as submitted.
+
 ## 1.6 Evaluations shared with you
 
 A recruiter can share a candidate's submitted evaluations with you, for example before your round.

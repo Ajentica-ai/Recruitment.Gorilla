@@ -254,6 +254,9 @@ back to on the timeline.
 ### InterviewInterviewer (`InterviewInterviewers`)
 Join assigning users as interviewers. Composite PK `(InterviewId, UserId)`; cascade from Interview, restrict on User. Assignment grants that user read access to the interview + candidate snapshot and the right to submit one evaluation.
 
+### EvaluationReminder (`EvaluationReminders`)
+Which overdue-evaluation reminders an interviewer has had for an interview (#202): `Count` and `LastSentAt`. Composite PK `(InterviewId, UserId)`; cascade from both Interview and User. Written by `EvaluationReminderService` so the reminder interval and maximum survive a restart; nothing else reads it.
+
 ### InterviewTypeOption (`InterviewTypeOptions`) & InterviewTag (`InterviewTags`)
 Admin-managed lookup of interview type tags (Technical, HR, Managerial, 1st Level, 2nd Level, Final Round — seeded), managed on the Configuration page like Skills. `InterviewTypeOption`: `Id`, `Name` (unique, ≤200), `SortOrder`, `IsActive`, `CreatedAt`, `UpdatedAt` (migration `AddInterviewTypeOptions`). `InterviewTag` is the many-to-many join between `Interview` and `InterviewTypeOption` (composite PK `(InterviewId, InterviewTypeOptionId)`; cascade from Interview, restrict on the type option) — mirrors `CandidateSkill`. Tags are set on the schedule form and surfaced (by name) in `StatusHistoryDto.InterviewTags` and `InterviewDetailDto.InterviewTags`.
 
