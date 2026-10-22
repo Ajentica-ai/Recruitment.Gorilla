@@ -133,6 +133,9 @@ public class OfferService(
 
         if (candidate is null) return null;
 
+        OfferInputValidator.Validate(
+            dto.JobTitle, dto.BaseSalary, dto.Currency, dto.Bonus, dto.Equity, dto.StartDate, dto.ExpirationDate, dto.Notes);
+
         await using var tx = await BeginIfNoneAsync();
         await LockCandidateAsync(candidate);
 
@@ -227,6 +230,9 @@ public class OfferService(
                 $"Offer #{offerId} is '{offer.Status}', so its terms can no longer be changed. Only a draft can be edited; start a new version instead.");
 
         EnsureCandidateStage(offer.Candidate, "Recommended", "Offer Preparation");
+
+        OfferInputValidator.Validate(
+            dto.JobTitle, dto.BaseSalary, dto.Currency, dto.Bonus, dto.Equity, dto.StartDate, dto.ExpirationDate, dto.Notes);
 
         if (!string.IsNullOrWhiteSpace(dto.JobTitle))
             offer.JobTitle = dto.JobTitle.Trim();
