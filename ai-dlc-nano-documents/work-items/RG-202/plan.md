@@ -1,6 +1,6 @@
 <!-- phase: DONE | branch: feature/RG-202/Evaluation-reminders | tasks: 7/7
      base: 3062074 | updated: 2026-10-25
-     next: none, committed locally, awaiting push/PR approval
+     next: none, committed locally, awaiting push/PR approval -->
 # Plan: RG-202 overdue evaluation reminders + "all evaluations in" (feature, standard + migration)
 ## Tasks
 - [x] Tests first: reminder due/not due, interval, max K, cancelled, submitted, draft, inactive user, no panel; all-in fires once on the last submit (not earlier, not on re-save), recipients booker + owner/assigned Recruiters
