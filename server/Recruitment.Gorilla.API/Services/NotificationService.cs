@@ -66,9 +66,9 @@ public class NotificationService(AppDbContext db, EmailService emailService, Sla
 
     public async Task MarkAllReadAsync(int userId)
     {
-        var unread = await db.Notifications.Where(n => n.UserId == userId && !n.IsRead).ToListAsync();
-        if (unread.Count == 0) return;
-        foreach (var n in unread) n.IsRead = true;
-        await db.SaveChangesAsync();
+        // One UPDATE instead of loading every unread row and saving them one by one (#201).
+        await db.Notifications
+            .Where(n => n.UserId == userId && !n.IsRead)
+            .ExecuteUpdateAsync(s => s.SetProperty(n => n.IsRead, true));
     }
 }

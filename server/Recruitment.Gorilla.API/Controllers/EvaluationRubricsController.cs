@@ -1,4 +1,3 @@
-using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Recruitment.Gorilla.API.Auth;
@@ -10,10 +9,14 @@ namespace Recruitment.Gorilla.API.Controllers;
 [ApiController]
 [Route("api/evaluation-rubrics")]
 [Authorize]
-public class EvaluationRubricsController(EvaluationRubricService rubricService) : ControllerBase
+public class EvaluationRubricsController(
+    EvaluationRubricService rubricService,
+    InterviewService interviewService,
+    CurrentUser currentUser) : ControllerBase
 {
-    private int CurrentUserId =>
-        int.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var id) ? id : 0;
+    // The id lives in the "sub" claim, which CurrentUser reads. This used to look for NameIdentifier, which is never
+    // set because inbound claim mapping is off, so it was always 0 (#201).
+    private int CurrentUserId => currentUser.UserId ?? 0;
 
     [HttpGet]
     public async Task<IActionResult> GetAll()
@@ -32,6 +35,15 @@ public class EvaluationRubricsController(EvaluationRubricService rubricService) 
     [HttpGet("for-interview/{interviewId:int}")]
     public async Task<IActionResult> GetForInterview(int interviewId)
     {
+        // Scoped like the rest of /api/interviews/*: a caller who may not open the interview gets the same 404 as for
+        // one that does not exist (#201).
+        if (!await interviewService.CanReadInterviewRubricAsync(
+                interviewId,
+                CurrentUserId,
+                currentUser.IsInAnyRole(Roles.SuperAdmin, Roles.Admin),
+                currentUser.IsInRole(Roles.Recruiter)))
+            return NotFound();
+
         var rubric = await rubricService.GetForInterviewAsync(interviewId);
         return rubric is null ? NotFound() : Ok(rubric);
     }
