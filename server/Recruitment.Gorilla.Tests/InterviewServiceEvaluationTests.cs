@@ -245,6 +245,30 @@ public class InterviewServiceEvaluationTests(MySqlDatabaseFixture fixture) : DbT
     }
 
     [Fact]
+    public async Task The_interviewer_count_is_distinct_people_not_evaluations()
+    {
+        // One person on two rounds is one interviewer (#199): the count was one per evaluation, so the report read
+        // "Across 2 interviewers" for a single person.
+        var a = Data.AddUser(Roles.Interviewer);
+        var b = Data.AddUser(Roles.Interviewer);
+        var candidate = Data.AddCandidate();
+        var round1 = Data.AddInterview(candidate.Id, a.Id, b.Id);
+        var round2 = Data.AddInterview(candidate.Id, a.Id);
+        Data.AddSubmittedEvaluation(round1.Id, a.Id, overallRating: 4, recommendation: "Recommended");
+        Data.AddSubmittedEvaluation(round2.Id, a.Id, overallRating: 5, recommendation: "Recommended");
+
+        var onePerson = await Interviews().GetCandidateEvaluationReportAsync(candidate.Id, ownerScope: null);
+        Assert.Equal(1, onePerson!.Summary.InterviewerCount);
+        Assert.Equal(2, onePerson.Evaluations.Count);
+
+        Data.AddSubmittedEvaluation(round1.Id, b.Id, overallRating: 3, recommendation: "Hold");
+
+        var twoPeople = await Interviews().GetCandidateEvaluationReportAsync(candidate.Id, ownerScope: null);
+        Assert.Equal(2, twoPeople!.Summary.InterviewerCount);
+        Assert.Equal(3, twoPeople.Evaluations.Count);
+    }
+
+    [Fact]
     public async Task Report_respects_candidate_access_scope()
     {
         var admin = Data.AddUser(Roles.Admin);
