@@ -505,3 +505,13 @@
 - 2026-10-21T09:40Z [claude] RG-186 BRANCH @01c680e: feature/RG-186/Shared-with-me-view off origin/develop (user confirmed)
 - 2026-10-21T09:40Z [claude] RG-186 PHASE PLAN→CONSTRUCT @01c680e: plan approved (user: go with recommendation)
 - 2026-10-21T14:00Z [claude] RG-186 PHASE CONSTRUCT→WRAP-UP @01c680e: 675 dotnet, 307 vitest, tsc+lint ok, 3 E2E ok on isolated stack
+- 2026-10-21T14:30Z [claude] RG-186 SIDE-EFFECT @75360ce: pushed branch, opened PR #213 into develop (user confirmed)
+- 2026-10-21T14:30Z [claude] RG-186 DONE @75360ce: PR #213 open, awaiting review
+- 2026-10-22T09:00Z [claude] RG-187 CREATED @e9d40c4: issue #187 intake, phase 5 of #182 (PR #213 merged)
+- 2026-10-22T09:00Z [claude] RG-187 SIDE-EFFECT @e9d40c4: assigned #187 to @me; board status not moved (gh token lacks read:project)
+- 2026-10-22T09:00Z [claude] RG-187 PHASE INTAKE→CLARIFY @e9d40c4
+- 2026-10-22T09:20Z [claude] RG-187 DECISION @e9d40c4: options field, skip covered, no expiry, notification wording, test scope (user confirmed)
+- 2026-10-22T09:20Z [claude] RG-187 PHASE CLARIFY→PLAN @e9d40c4: plan drafted, awaiting approval
+- 2026-10-22T09:40Z [claude] RG-187 BRANCH @e9d40c4: feature/RG-187/Share-earlier-rounds-on-booking off origin/develop (user confirmed)
+- 2026-10-22T09:40Z [claude] RG-187 PHASE PLAN→CONSTRUCT @e9d40c4: plan approved (user: go with recommendation)
+- 2026-10-22T14:00Z [claude] RG-187 PHASE CONSTRUCT→WRAP-UP @e9d40c4: 689 dotnet, 319 vitest, tsc+lint ok, isolated flow + migration down/up ok, security review fixes applied

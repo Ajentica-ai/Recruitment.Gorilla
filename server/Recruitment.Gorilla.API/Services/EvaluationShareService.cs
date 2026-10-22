@@ -6,7 +6,7 @@ using Recruitment.Gorilla.API.Models;
 
 namespace Recruitment.Gorilla.API.Services;
 
-public enum RevokeShareResult { Revoked, NotFound }
+public enum RevokeShareResult { Revoked, NotFound, AutoManaged }
 
 /// <summary>
 /// Grants and revokes read access to a candidate's submitted interview evaluations (#182, phase 1).
@@ -67,6 +67,10 @@ public class EvaluationShareService(AppDbContext db, NotificationService notific
             .OrderBy(u => u.Name)
             .ToListAsync();
 
+        var evaluatedRounds = await db.Interviews
+            .CountAsync(i => i.CandidateId == candidateId && i.Status != InterviewStatuses.Cancelled
+                             && i.Evaluations.Any(e => e.IsSubmitted));
+
         return new ShareOptionsDto(
             interviews.Select(i => new ShareOptionInterviewDto(
                 i.Id, i.ScheduledAt, i.Status,
@@ -76,7 +80,8 @@ public class EvaluationShareService(AppDbContext db, NotificationService notific
             {
                 var reason = FullAccessReason(u, candidate);
                 return new ShareOptionUserDto(u.Id, u.Name, u.Email, reason is not null, reason);
-            }).ToList());
+            }).ToList(),
+            evaluatedRounds);
     }
 
     /// <summary>
@@ -154,6 +159,7 @@ public class EvaluationShareService(AppDbContext db, NotificationService notific
             {
                 var existing = await db.EvaluationAccessGrants.FirstOrDefaultAsync(g =>
                     g.CandidateId == candidateId && g.InterviewId == interviewId && g.GranteeUserId == user.Id
+                    && g.Source == EvaluationAccessGrant.ManualSource // never take over a booking's automatic grant
                     && g.RevokedAt == null && (g.ExpiresAt == null || g.ExpiresAt > now));
 
                 if (existing is not null)
@@ -223,6 +229,9 @@ public class EvaluationShareService(AppDbContext db, NotificationService notific
             .FirstOrDefaultAsync(g => g.Id == shareId && g.CandidateId == candidateId);
         if (grant is null) return RevokeShareResult.NotFound;
         if (grant.RevokedAt is not null) return RevokeShareResult.Revoked;
+        // A booking's automatic grant follows its panel, so a hand revoke would just be undone by the next
+        // reschedule. The recruiter changes the panel or turns the booking's setting off instead.
+        if (grant.Source == EvaluationAccessGrant.PanelAutoShareSource) return RevokeShareResult.AutoManaged;
 
         grant.RevokedAt = DateTime.UtcNow;
         grant.RevokedByUserId = actorUserId;
@@ -234,7 +243,7 @@ public class EvaluationShareService(AppDbContext db, NotificationService notific
     }
 
     /// <summary>Why this user already reads every evaluation of the candidate, or null if a grant would add access.</summary>
-    private static string? FullAccessReason(User user, Candidate candidate)
+    public static string? FullAccessReason(User user, Candidate candidate)
     {
         var roles = user.Roles.Select(r => r.Role).ToList();
         if (roles.Contains(Roles.SuperAdmin) || roles.Contains(Roles.Admin))

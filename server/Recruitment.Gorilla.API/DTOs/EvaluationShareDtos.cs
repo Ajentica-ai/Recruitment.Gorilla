@@ -47,4 +47,9 @@ public record ShareOptionInterviewDto(
 /// <summary>An active user a grantor can pick; <see cref="AlreadyHasAccess"/> users are shown disabled with the reason.</summary>
 public record ShareOptionUserDto(int UserId, string Name, string Email, bool AlreadyHasAccess, string? Reason);
 
-public record ShareOptionsDto(List<ShareOptionInterviewDto> Interviews, List<ShareOptionUserDto> Users);
+/// <summary>
+/// <see cref="EarlierRoundsWithEvaluations"/> counts the candidate's non-cancelled interviews with a
+/// submitted evaluation: the booking forms show "share earlier rounds" only when it is above zero (#187).
+/// </summary>
+public record ShareOptionsDto(
+    List<ShareOptionInterviewDto> Interviews, List<ShareOptionUserDto> Users, int EarlierRoundsWithEvaluations = 0);

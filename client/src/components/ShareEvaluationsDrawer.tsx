@@ -185,7 +185,7 @@ export default function ShareEvaluationsDrawer({
                               onCheckedChange={(c) => toggleInterview(i.interviewId, c === true)}
                               className="mt-1"
                             />
-                            <Label htmlFor={id} className="flex flex-col font-normal">
+                            <Label htmlFor={id} className="flex flex-col items-start text-left font-normal">
                               <span className="font-medium">{formatShareDateTime(i.scheduledAt)}</span>
                               <span className="text-[length:var(--text-sm)] text-muted-foreground">
                                 {[i.tags.join(', '), i.panel.length ? `Panel: ${i.panel.join(', ')}` : '']
