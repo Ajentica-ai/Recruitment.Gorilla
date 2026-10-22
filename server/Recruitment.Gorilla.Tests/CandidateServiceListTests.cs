@@ -189,3 +189,95 @@ public class CandidateServiceListTests(MySqlDatabaseFixture fixture) : DbTestBas
         Assert.Equal("Batch 2026 Alpha", page.Items.First(i => i.Id == c1.Id).BatchName);
     }
 }
+
+/// <summary>The hired and offers buckets (#195): accepted by the API but never filtered on, so they returned everyone.</summary>
+public class CandidateServiceBucketTests(MySqlDatabaseFixture fixture) : DbTestBase(fixture)
+{
+    private async Task<List<int>> Ids(string bucket, int? scope = null) =>
+        (await Candidates().GetAllAsync(new CandidateListQuery(Bucket: bucket, PageSize: 500), scope))
+            .Items.Select(i => i.Id).ToList();
+
+    [Fact]
+    public async Task Bucket_hired_returns_only_hired_candidates()
+    {
+        var hired = Data.AddCandidate(status: "Hired");
+        var accepted = Data.AddCandidate(status: "Offer Accepted");
+        var uploaded = Data.AddCandidate(status: "Uploaded");
+
+        var ids = await Ids(CandidateBuckets.Hired);
+
+        Assert.Contains(hired.Id, ids);
+        Assert.DoesNotContain(accepted.Id, ids);
+        Assert.DoesNotContain(uploaded.Id, ids);
+    }
+
+    [Fact]
+    public async Task Bucket_offers_returns_the_offer_stages_only()
+    {
+        var inScope = new[] { "Offer Preparation", "Offer Extended", "Offer Accepted" }
+            .Select(s => Data.AddCandidate(status: s).Id).ToList();
+        var outOfScope = new[] { "Hired", "Offer Declined", "Recommended", "Uploaded", "Reject" }
+            .Select(s => Data.AddCandidate(status: s).Id).ToList();
+
+        var ids = await Ids(CandidateBuckets.Offers);
+
+        Assert.All(inScope, id => Assert.Contains(id, ids));
+        Assert.All(outOfScope, id => Assert.DoesNotContain(id, ids));
+    }
+
+    [Fact]
+    public async Task The_hired_and_offers_buckets_respect_a_recruiters_scope()
+    {
+        var recruiter = Data.AddUser(Roles.Recruiter);
+        var mine = Data.AddCandidate(ownerUserId: recruiter.Id, status: "Hired");
+        var someoneElses = Data.AddCandidate(status: "Hired");
+
+        var ids = await Ids(CandidateBuckets.Hired, recruiter.Id);
+
+        Assert.Contains(mine.Id, ids);
+        Assert.DoesNotContain(someoneElses.Id, ids);
+    }
+}
+
+/// <summary>The batch filter over the real HTTP pipeline (#195): the controller never read the query parameter.</summary>
+[Collection(ApiCollection.Name)]
+public class CandidateListBatchApiTests(ApiFixture fx)
+{
+    private async Task<List<int>> ListIdsAsync(string query)
+    {
+        var token = await fx.LoginAsync(fx.AdminEmail);
+        var resp = await fx.SendAsync(HttpMethod.Get, $"/api/candidates?pageSize=100&{query}", token);
+        resp.EnsureSuccessStatusCode();
+        using var doc = System.Text.Json.JsonDocument.Parse(await resp.Content.ReadAsStringAsync());
+        return doc.RootElement.GetProperty("items").EnumerateArray().Select(e => e.GetProperty("id").GetInt32()).ToList();
+    }
+
+    [Fact]
+    public async Task The_batch_filter_narrows_by_batch_name_and_by_batch_id()
+    {
+        var tag = Guid.NewGuid().ToString("N")[..8];
+        var inBatch = await fx.NewCandidateAsync(fx.AdminId, batchId: $"id-{tag}", batchName: $"Batch {tag}");
+        var otherBatch = await fx.NewCandidateAsync(fx.AdminId, batchId: "id-other", batchName: "Other batch");
+        var noBatch = await fx.NewCandidateAsync(fx.AdminId);
+
+        var byName = await ListIdsAsync($"batch=Batch%20{tag}");
+        var byId = await ListIdsAsync($"batch=id-{tag}");
+
+        Assert.Equal([inBatch], byName);
+        Assert.Equal([inBatch], byId);
+        Assert.DoesNotContain(otherBatch, byName);
+        Assert.DoesNotContain(noBatch, byId);
+    }
+
+    [Fact]
+    public async Task Without_a_batch_every_candidate_is_listed()
+    {
+        var a = await fx.NewCandidateAsync(fx.AdminId, batchId: "id-a", batchName: "A");
+        var b = await fx.NewCandidateAsync(fx.AdminId);
+
+        var ids = await ListIdsAsync("");
+
+        Assert.Contains(a, ids);
+        Assert.Contains(b, ids);
+    }
+}

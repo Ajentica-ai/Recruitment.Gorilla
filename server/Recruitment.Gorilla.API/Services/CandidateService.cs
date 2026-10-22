@@ -79,6 +79,10 @@ public class CandidateService(
             CandidateBuckets.InProcess =>
                 query.Where(c => !CandidateBuckets.PositiveTerminal.Contains(c.CurrentStatus)
                               && !CandidateBuckets.NegativeTerminal.Contains(c.CurrentStatus)),
+            CandidateBuckets.Hired =>
+                query.Where(c => CandidateBuckets.HiredStatuses.Contains(c.CurrentStatus)),
+            CandidateBuckets.Offers =>
+                query.Where(c => CandidateBuckets.OfferStatuses.Contains(c.CurrentStatus)),
             CandidateBuckets.NewThisWeek =>
                 query.Where(c => c.CreatedAt >= DateTime.UtcNow.AddDays(-CandidateBuckets.NewWindowDays)),
             _ => query,
