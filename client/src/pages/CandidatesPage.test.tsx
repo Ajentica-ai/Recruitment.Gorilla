@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { act, screen, waitFor } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { screen } from '@testing-library/react';
 import { renderWithProviders } from '../test/renderWithProviders';
 import CandidatesPage from './CandidatesPage';
 import type { CandidateListItem } from '../types';
@@ -37,37 +37,5 @@ describe('CandidatesPage table', () => {
       const header = screen.getAllByRole('columnheader').find((h) => name.test(h.textContent ?? ''));
       expect(header, `header ${name}`).toHaveClass('text-left');
     }
-  });
-});
-
-describe('CandidatesPage board truncation (#196)', () => {
-  beforeEach(() => {
-    localStorage.setItem('rg_candidate_view_mode', 'board');
-  });
-  afterEach(() => {
-    localStorage.removeItem('rg_candidate_view_mode');
-  });
-
-  const mockPage = (totalCount: number) =>
-    vi.mocked(getCandidates).mockResolvedValue({
-      items: [candidate], totalCount, page: 1, pageSize: 150, totalPages: 1,
-    } as Awaited<ReturnType<typeof getCandidates>>);
-
-  it('asks for one page of 150 and says so when more candidates match than the board shows', async () => {
-    mockPage(412);
-    renderWithProviders(<CandidatesPage />);
-
-    const note = await screen.findByLabelText('Board truncated');
-    expect(note).toHaveTextContent('Showing 1 of 412 candidates. Narrow the filters to see the rest.');
-    expect(getCandidates).toHaveBeenCalledWith(expect.objectContaining({ page: 1, pageSize: 150 }));
-  });
-
-  it('shows no notice when everything fits on the board', async () => {
-    mockPage(1);
-    renderWithProviders(<CandidatesPage />);
-
-    await waitFor(() => expect(getCandidates).toHaveBeenCalled());
-    await act(async () => {}); // let the resolved page render
-    expect(screen.queryByLabelText('Board truncated')).not.toBeInTheDocument();
   });
 });

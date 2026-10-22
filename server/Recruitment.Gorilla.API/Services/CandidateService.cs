@@ -40,14 +40,6 @@ public class CandidateService(
     private Task<bool> IsAssignedToRoleAsync(int roleId, int uid) =>
         db.RoleAppliedOptions.AnyAsync(r => r.Id == roleId && r.Recruiters.Any(rr => rr.UserId == uid));
 
-    /// <summary>The most candidates one list response carries (#196). Without it <c>pageSize=1000000</c> returned
-    /// the caller's whole candidate set, the entire table for an Admin.</summary>
-    public const int MaxPageSize = 200;
-
-    /// <summary>The highest page number honoured. With <see cref="MaxPageSize"/> it keeps <c>(page - 1) * pageSize</c>
-    /// far inside an int, so a huge page is an empty page, not an overflow into a negative Skip.</summary>
-    public const int MaxPage = 1_000_000;
-
     public async Task<PagedResult<CandidateListItemDto>> GetAllAsync(
         CandidateListQuery q, int? ownerUserId = null)
     {
@@ -101,15 +93,10 @@ public class CandidateService(
             _ => desc ? query.OrderByDescending(c => c.CreatedAt) : query.OrderBy(c => c.CreatedAt),
         };
 
-        // Out-of-range paging is clamped, not rejected: page 0 used to be a negative Skip and a 500 (#196). The
-        // response carries the values actually applied, so a caller can see it was clamped.
-        var page = Math.Clamp(q.Page, 1, MaxPage);
-        var pageSize = Math.Clamp(q.PageSize, 1, MaxPageSize);
-
         var total = await query.CountAsync();
         var items = await query
-            .Skip((page - 1) * pageSize)
-            .Take(pageSize)
+            .Skip((q.Page - 1) * q.PageSize)
+            .Take(q.PageSize)
             .Select(c => new CandidateListItemDto(
                 c.Id, c.FullName, c.Email, c.Phone,
                 c.CurrentTitle,
@@ -120,7 +107,7 @@ public class CandidateService(
                 c.BatchName))
             .ToListAsync();
 
-        return new PagedResult<CandidateListItemDto>(items, total, page, pageSize);
+        return new PagedResult<CandidateListItemDto>(items, total, q.Page, q.PageSize);
     }
 
     public async Task<List<string>> GetCandidateBatchesAsync(int? ownerUserId = null)
