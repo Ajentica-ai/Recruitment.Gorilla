@@ -762,8 +762,35 @@ public class InterviewService(
         if (interview.CreatedByUserId is not int bookerId || bookerId == actorUserId) return;
         if (interview.Interviewers.Any(ii => ii.UserId == bookerId)) return;
 
-        await notificationService.NotifyAsync(
-            bookerId, title, message, $"/candidates/{interview.CandidateId}");
+        // The booker is told either way, but the link only when they can still open the candidate (#198). A recruiter
+        // taken off the job opening since would otherwise be sent to a page that answers 404.
+        var link = await CanOpenCandidateAsync(bookerId, interview.CandidateId)
+            ? $"/candidates/{interview.CandidateId}"
+            : null;
+        await notificationService.NotifyAsync(bookerId, title, message, link);
+    }
+
+    /// <summary>
+    /// Whether the user can open the candidate's page: an active Admin or above, or an active Recruiter who owns
+    /// the candidate or is assigned to its job opening. Mirrors <c>CandidateService.ApplyAccess</c> (as the
+    /// evaluation fan-out does), so a link is never sent to someone the page would turn away.
+    /// </summary>
+    private async Task<bool> CanOpenCandidateAsync(int userId, int candidateId)
+    {
+        var candidate = await db.Candidates
+            .Where(c => c.Id == candidateId)
+            .Select(c => new { c.OwnerUserId, c.RoleAppliedOptionId })
+            .FirstOrDefaultAsync();
+        if (candidate is null) return false;
+
+        return await db.Users.AnyAsync(u =>
+            u.Id == userId && u.IsActive &&
+            (u.Roles.Any(r => r.Role == Roles.SuperAdmin || r.Role == Roles.Admin) ||
+             (u.Roles.Any(r => r.Role == Roles.Recruiter) &&
+              (candidate.OwnerUserId == u.Id ||
+               (candidate.RoleAppliedOptionId != null &&
+                db.RoleAppliedOptions.Any(o => o.Id == candidate.RoleAppliedOptionId &&
+                                               o.Recruiters.Any(rr => rr.UserId == u.Id)))))));
     }
 
     private async Task<string> UserNameAsync(int userId) =>
