@@ -46,7 +46,7 @@ public static class EmailTemplates
 
     public static (string Subject, string Html) InterviewAssigned(
         string interviewerName, string candidateName, string? roleName, DateTime scheduledAt, string interviewUrl,
-        InterviewInviteDetails? invite = null)
+        InterviewInviteDetails? invite = null, string? earlierRoundsUrl = null)
     {
         var subject = $"Interview assigned: {candidateName}";
         var roleLine = string.IsNullOrWhiteSpace(roleName) ? "" : $"<p>Role: {roleName}</p>";
@@ -69,6 +69,9 @@ public static class EmailTemplates
             """;
 
         var duration = invite is null ? "" : $"<p>Duration: {invite.DurationMinutes} minutes</p>";
+        var earlierRounds = earlierRoundsUrl is null ? "" : $"""
+            <p>The evaluations from earlier rounds are available to you: <a href="{earlierRoundsUrl}" style="color:#2b579a;">read them here</a>.</p>
+            """;
 
         var body = $"""
             <p>Hi {interviewerName},</p>
@@ -76,6 +79,7 @@ public static class EmailTemplates
             {roleLine}
             <p>Scheduled for: <strong>{when} UTC</strong></p>
             {duration}
+            {earlierRounds}
             {calendarLinks}
             """;
         return (subject, Wrap(subject, body, interviewUrl, "View interview"));

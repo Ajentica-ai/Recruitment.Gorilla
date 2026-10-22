@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { SearchableMultiSelect } from './SearchableSelect';
 import { useToast } from './ToastStack';
+import ShareEarlierRoundsField from './ShareEarlierRoundsField';
 import { Label } from '@/components/ui/label';
 import { DatePicker } from '@/components/ui/date-picker';
 import { Textarea } from '@/components/ui/textarea';
@@ -74,6 +75,7 @@ export default function RescheduleInterviewModal({
   const [interviewTypeIds, setInterviewTypeIds] = useState<number[]>([]);
   const [notes, setNotes] = useState('');
   const [reason, setReason] = useState('');
+  const [shareEarlierRounds, setShareEarlierRounds] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<RescheduleFieldErrors>({});
 
   const { data: schedule, isLoading } = useQuery({
@@ -103,6 +105,7 @@ export default function RescheduleInterviewModal({
     setInterviewTypeIds(schedule.interviewTypeOptionIds);
     setNotes(schedule.notes ?? '');
     setReason('');
+    setShareEarlierRounds(schedule.shareEarlierRoundsWithPanel);
     setFieldErrors({});
   }, [schedule]);
 
@@ -127,6 +130,7 @@ export default function RescheduleInterviewModal({
         interviewerUserIds: interviewerIds,
         interviewTypeOptionIds: interviewTypeIds,
         reason: reason.trim() || null,
+        shareEarlierRoundsWithPanel: shareEarlierRounds,
       }),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['candidates'] });
@@ -269,6 +273,13 @@ export default function RescheduleInterviewModal({
                     </p>
                   )}
                 </div>
+
+                <ShareEarlierRoundsField
+                  candidateId={candidateId}
+                  enabled={show}
+                  checked={shareEarlierRounds}
+                  onChange={setShareEarlierRounds}
+                />
 
                 <div className="col-span-12 md:col-span-12">
                   <Label className="mb-1">Notes for interviewers</Label>

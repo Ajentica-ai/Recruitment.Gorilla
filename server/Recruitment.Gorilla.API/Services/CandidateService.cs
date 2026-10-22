@@ -5,7 +5,9 @@ using Recruitment.Gorilla.API.Models;
 
 namespace Recruitment.Gorilla.API.Services;
 
-public class CandidateService(AppDbContext db, IWebHostEnvironment env, NotificationService notificationService, IConfiguration config)
+public class CandidateService(
+    AppDbContext db, IWebHostEnvironment env, NotificationService notificationService, IConfiguration config,
+    PanelAutoShareService panelAutoShare)
 {
     private const string Uploaded = "Uploaded";
     private const string TechnicalAssessment = "Technical Assessment";
@@ -705,6 +707,7 @@ public class CandidateService(AppDbContext db, IWebHostEnvironment env, Notifica
                 StatusHistory = entry,
                 ScheduledAt = dto.InterviewAt.Value,
                 DurationMinutes = NormalizeDuration(dto.InterviewDurationMinutes),
+                ShareEarlierRoundsWithPanel = dto.ShareEarlierRoundsWithPanel,
                 CreatedByUserId = currentUserId,
                 Interviewers = dto.InterviewerUserIds
                     .Distinct()
@@ -736,6 +739,11 @@ public class CandidateService(AppDbContext db, IWebHostEnvironment env, Notifica
             var roleName = (candidate.RoleAppliedOptionId is int roleOptionId
                 ? await db.RoleAppliedOptions.Where(o => o.Id == roleOptionId).Select(o => o.Name).FirstOrDefaultAsync()
                 : null) ?? candidate.AppliedRole;
+            // Earlier rounds shared with the new panel (#187), now that the booking has an id.
+            var withEarlierRounds = dto.ShareEarlierRoundsWithPanel
+                ? await panelAutoShare.SyncAsync(
+                    interview, dto.InterviewerUserIds!.Distinct().ToList(), true, currentUserId)
+                : [];
             var interviewUrl = $"{config["App:ClientBaseUrl"]?.TrimEnd('/')}/interviews/{interview.Id}";
             var invite = new InterviewInviteDetails(
                 interview.Id, candidate.FullName, roleName,
@@ -745,12 +753,18 @@ public class CandidateService(AppDbContext db, IWebHostEnvironment env, Notifica
             foreach (var uid in dto.InterviewerUserIds!.Distinct())
             {
                 var interviewer = await db.Users.FindAsync(uid);
+                var hasEarlierRounds = withEarlierRounds.Contains(uid);
+                var earlierRoundsUrl = hasEarlierRounds
+                    ? $"{config["App:ClientBaseUrl"]?.TrimEnd('/')}{EvaluationAccess.SharedReportLink(candidate.Id)}"
+                    : null;
                 var (emailSubject, emailHtml) = EmailTemplates.InterviewAssigned(
                     interviewer?.Name ?? "there", candidate.FullName, roleName,
-                    interview.ScheduledAt, interviewUrl, invite);
+                    interview.ScheduledAt, interviewUrl, invite, earlierRoundsUrl);
 
                 await notificationService.NotifyAsync(
-                    uid, "Interview assigned", $"You have been assigned to interview {candidate.FullName}.",
+                    uid, "Interview assigned",
+                    $"You have been assigned to interview {candidate.FullName}."
+                    + (hasEarlierRounds ? " Earlier rounds' evaluations are available to you." : ""),
                     $"/interviews/{interview.Id}", emailSubject, emailHtml, calendar,
                     category: NotificationCategories.InterviewAssigned);
             }

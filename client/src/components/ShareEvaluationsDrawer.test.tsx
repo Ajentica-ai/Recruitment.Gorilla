@@ -19,6 +19,7 @@ vi.mock('../services/api', () => ({
 }));
 
 const options: ShareOptions = {
+  earlierRoundsWithEvaluations: 0,
   interviews: [
     {
       interviewId: 301,
