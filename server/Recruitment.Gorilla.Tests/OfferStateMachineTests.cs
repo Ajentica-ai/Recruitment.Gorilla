@@ -189,10 +189,22 @@ public class OfferStateMachineTests(MySqlDatabaseFixture fixture) : DbTestBase(f
         Offers().CreateOfferAsync(
             candidate.Id, new CreateOfferDto("Engineer v2", 100000, "USD", null, null, null, null, null), null, admin.Id, admin.Name);
 
-    [Fact]
-    public async Task A_new_version_of_a_rejected_offer_cannot_be_extended_without_approval()
+    /// <summary>A rejected offer that was fixed, approved, extended and then declined by the candidate: the point
+    /// where a new version is allowed (#193), with the earlier rejection still on record.</summary>
+    private async Task<(Candidate Candidate, User Admin)> DeclinedAfterRejectionAsync()
     {
-        var (candidate, _, admin) = await RejectedDraftAsync();
+        var (candidate, offer, admin) = await RejectedDraftAsync();
+        await Offers().SubmitForApprovalAsync(offer.Id, null, admin.Id, admin.Name, null);
+        await Offers().ReviewApprovalAsync(offer.Id, candidate.Id, new ReviewOfferApprovalDto("Approved", null), admin.Id, admin.Name);
+        await Offers().ExtendOfferAsync(offer.Id, admin.Id, admin.Name, null);
+        await Offers().RecordDecisionAsync(offer.Id, new OfferDecisionDto("Declined", "too low"), admin.Id, admin.Name, null);
+        return (candidate, admin);
+    }
+
+    [Fact]
+    public async Task A_new_version_after_a_rejection_cannot_be_extended_without_approval()
+    {
+        var (candidate, admin) = await DeclinedAfterRejectionAsync();
         var newVersion = await NewVersionAsync(candidate, admin);
 
         var ex = await Assert.ThrowsAsync<OfferStateException>(() =>
@@ -205,7 +217,7 @@ public class OfferStateMachineTests(MySqlDatabaseFixture fixture) : DbTestBase(f
     [Fact]
     public async Task A_new_version_is_extended_once_it_has_been_submitted_and_approved()
     {
-        var (candidate, _, admin) = await RejectedDraftAsync();
+        var (candidate, admin) = await DeclinedAfterRejectionAsync();
         var newVersion = await NewVersionAsync(candidate, admin);
 
         await Offers().SubmitForApprovalAsync(newVersion!.Id, null, admin.Id, admin.Name, null);
@@ -302,7 +314,7 @@ public class OfferStateMachineApiTests(ApiFixture fx)
 
     private async Task<(int CandidateId, int OfferId, string Token)> OfferAsync(string status, bool rejectedDraft = false)
     {
-        var candidateId = await fx.NewCandidateAsync(fx.AdminId);
+        var candidateId = await fx.NewCandidateAsync(fx.AdminId, status: "Offer Preparation");
         var offerId = rejectedDraft ? await fx.NewRejectedDraftOfferAsync(candidateId) : await fx.NewOfferAsync(candidateId, status);
         return (candidateId, offerId, await fx.LoginAsync(fx.AdminEmail));
     }

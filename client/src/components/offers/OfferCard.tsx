@@ -22,6 +22,9 @@ interface OfferCardProps {
   candidate: CandidateDetail;
 }
 
+// Candidate statuses an offer can start from: Recommended, mid-preparation, or after the candidate declined.
+const OFFERABLE_STATUSES = ['Recommended', 'Offer Preparation', 'Offer Declined'];
+
 export default function OfferCard({ candidate }: OfferCardProps) {
   const { isAdminOrAbove } = useAuth();
   const { addToast } = useToast();
@@ -49,6 +52,11 @@ export default function OfferCard({ candidate }: OfferCardProps) {
           .filter((a) => a.status === 'Rejected')
           .sort((a, b) => (b.reviewedAt ?? '').localeCompare(a.reviewedAt ?? ''))[0]
       : undefined;
+
+  // An offer can start only from a stage that leads to one, and only when the last offer was answered (#193): one
+  // live offer per candidate, and the End Date lock and status rules apply to it. The server refuses the rest.
+  const canStartOffer =
+    OFFERABLE_STATUSES.includes(candidate.currentStatus) && (!latestOffer || latestOffer.status === 'Declined');
 
   const submitApprovalMutation = useMutation({
     mutationFn: (offerId: number) => submitOfferForApproval(candidate.id, offerId),
@@ -141,7 +149,7 @@ export default function OfferCard({ candidate }: OfferCardProps) {
               </Badge>
             )}
           </div>
-          {candidate.currentStatus !== 'Hired' && (
+          {canStartOffer && (
             <div className="flex gap-1">
               {latestOffer ? (
                 <Button
