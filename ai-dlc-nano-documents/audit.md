@@ -515,3 +515,98 @@
 - 2026-10-22T09:40Z [claude] RG-187 BRANCH @e9d40c4: feature/RG-187/Share-earlier-rounds-on-booking off origin/develop (user confirmed)
 - 2026-10-22T09:40Z [claude] RG-187 PHASE PLAN→CONSTRUCT @e9d40c4: plan approved (user: go with recommendation)
 - 2026-10-22T14:00Z [claude] RG-187 PHASE CONSTRUCT→WRAP-UP @e9d40c4: 689 dotnet, 319 vitest, tsc+lint ok, isolated flow + migration down/up ok, security review fixes applied
+- 2026-10-22T14:30Z [claude] RG-187 SIDE-EFFECT @8f0ee60: pushed branch, opened PR #214 into develop (user confirmed)
+- 2026-10-22T14:30Z [claude] RG-187 DONE @8f0ee60: PR #214 open, awaiting review
+- 2026-10-21T09:00Z [claude] RG-188 CREATED @e9d40c4: issue #188 intake (bug); PR #214 for RG-187 still open
+- 2026-10-21T09:00Z [claude] RG-188 SIDE-EFFECT @e9d40c4: assigned #188 to @me; board status not moved (gh token lacks read:project)
+- 2026-10-21T09:00Z [claude] RG-188 PHASE INTAKE→CLARIFY @e9d40c4
+- 2026-10-21T09:20Z [claude] RG-188 DECISION @e9d40c4: legacy fallback only when link null; one shared rule; UpdateAsync untouched (user confirmed)
+- 2026-10-21T09:20Z [claude] RG-188 PHASE CLARIFY→PLAN @e9d40c4: plan drafted, awaiting approval
+- 2026-10-21T09:40Z [claude] RG-188 BRANCH @e9d40c4: fix/RG-188/Rubric-lookup-by-job-opening off origin/develop (user confirmed)
+- 2026-10-21T09:40Z [claude] RG-188 PHASE PLAN→CONSTRUCT @e9d40c4: plan approved (user: go with recommendation)
+- 2026-10-21T11:00Z [claude] RG-188 PHASE CONSTRUCT→WRAP-UP @e9d40c4: 684 dotnet tests green; HTTP integration test replaces a separate isolated-stack run
+- 2026-10-21T12:00Z [claude] RG-188 SIDE-EFFECT @0b66e8a: pushed branch, opened PR #215 into develop (user confirmed)
+- 2026-10-21T12:00Z [claude] RG-188 DONE @0b66e8a: PR #215 open, awaiting review
+- 2026-10-22T09:00Z [claude] RG-189 CREATED @e9d40c4: issue #189 intake (bug); PRs #214 and #215 still open
+- 2026-10-22T09:00Z [claude] RG-189 SIDE-EFFECT @e9d40c4: assigned #189 to @me; board status not moved (gh token lacks read:project)
+- 2026-10-22T09:00Z [claude] RG-189 PHASE INTAKE→CLARIFY @e9d40c4
+- 2026-10-22T09:20Z [claude] RG-189 DECISION @e9d40c4: fix per issue; keep drafts on cancel; no reason on the panel (user confirmed)
+- 2026-10-22T09:20Z [claude] RG-189 PHASE CLARIFY→PLAN @e9d40c4: plan drafted, awaiting approval
+- 2026-10-22T09:40Z [claude] RG-189 BRANCH @e9d40c4: fix/RG-189/Cancelled-interview-evaluation off origin/develop (user confirmed)
+- 2026-10-22T09:40Z [claude] RG-189 PHASE PLAN→CONSTRUCT @e9d40c4: plan approved (user: go with recommendation)
+- 2026-10-22T11:00Z [claude] RG-189 PHASE CONSTRUCT→WRAP-UP @e9d40c4: 683 dotnet, 310 vitest, tsc+lint ok, isolated flow + screenshot ok
+- 2026-10-22T11:30Z [claude] RG-189 SIDE-EFFECT @7c27645: pushed branch, opened PR #216 into develop (user confirmed)
+- 2026-10-22T11:30Z [claude] RG-189 DONE @7c27645: PR #216 open, awaiting review
+- 2026-10-23T09:00Z [claude] RG-190 CREATED @e9d40c4: issue #190 intake (bug); PRs #214, #215, #216 still open
+- 2026-10-23T09:00Z [claude] RG-190 SIDE-EFFECT @e9d40c4: assigned #190 to @me (already assigned to you); board status not moved (gh token lacks read:project)
+- 2026-10-23T09:00Z [claude] RG-190 PHASE INTAKE→CLARIFY @e9d40c4
+- 2026-10-23T09:20Z [claude] RG-190 DECISION @e9d40c4: criteria on the report DTO + Other criteria safety net + averages over all keys (user confirmed)
+- 2026-10-23T09:20Z [claude] RG-190 PHASE CLARIFY→PLAN @e9d40c4: plan drafted, awaiting approval
+- 2026-10-23T09:40Z [claude] RG-190 BRANCH @e9d40c4: fix/RG-190/Custom-rubric-ratings-in-report off origin/develop (user confirmed)
+- 2026-10-23T09:40Z [claude] RG-190 PHASE PLAN→CONSTRUCT @e9d40c4: plan approved (user: go with recommendation)
+- 2026-10-23T11:00Z [claude] RG-190 PHASE CONSTRUCT→WRAP-UP @e9d40c4: 679 dotnet, 314 vitest, tsc+lint ok, isolated stack + screenshot ok
+- 2026-10-23T11:30Z [claude] RG-190 SIDE-EFFECT @ff0c910: pushed branch, opened PR #217 into develop (user confirmed)
+- 2026-10-23T11:30Z [claude] RG-190 DONE @ff0c910: PR #217 open, awaiting review
+- 2026-10-24T09:00Z [claude] RG-191 CREATED @e9d40c4: issue #191 intake (bug); PRs #214-#217 still open
+- 2026-10-24T09:00Z [claude] RG-191 SIDE-EFFECT @e9d40c4: assigned #191 to @me (already yours); board status not moved (gh token lacks read:project)
+- 2026-10-24T09:00Z [claude] RG-191 PHASE INTAKE→CLARIFY @e9d40c4
+- 2026-10-24T09:20Z [claude] RG-191 DECISION @e9d40c4: client payload/loading/error fixes + default-rubric guard; resolver left to PR #215 (user confirmed)
+- 2026-10-24T09:20Z [claude] RG-191 PHASE CLARIFY→PLAN @e9d40c4: plan drafted, awaiting approval
+- 2026-10-24T09:40Z [claude] RG-191 BRANCH @e9d40c4: fix/RG-191/Unsavable-evaluation-draft off origin/develop (user confirmed)
+- 2026-10-24T09:40Z [claude] RG-191 PHASE PLAN→CONSTRUCT @e9d40c4: plan approved (user: go with recommendation)
+- 2026-10-24T11:00Z [claude] RG-191 PHASE CONSTRUCT→WRAP-UP @e9d40c4: 680 dotnet, 315 vitest (date-picker flaky passes alone), tsc+lint ok, isolated stack stale-key scenario ok
+- 2026-10-24T11:30Z [claude] RG-191 SIDE-EFFECT @b1e7433: pushed branch, opened PR #218 into develop (user confirmed)
+- 2026-10-24T11:30Z [claude] RG-191 DONE @b1e7433: PR #218 open, awaiting review
+- 2026-10-25T09:00Z [claude] RG-192 CREATED @e9d40c4: issue #192 intake (bug); PRs #214-#218 still open
+- 2026-10-25T09:00Z [claude] RG-192 SIDE-EFFECT @e9d40c4: assigned #192 to @me (already yours); board status not moved (gh token lacks read:project)
+- 2026-10-25T09:00Z [claude] RG-192 PHASE INTAKE→CLARIFY @e9d40c4
+- 2026-10-25T09:20Z [claude] RG-192 DECISION @e9d40c4: approval optional except rejected drafts, derived flag, 409 everywhere, UI hides extend on rejected (user confirmed)
+- 2026-10-25T09:20Z [claude] RG-192 PHASE CLARIFY→PLAN @e9d40c4: plan drafted, awaiting approval
+- 2026-10-25T09:40Z [claude] RG-192 BRANCH @e9d40c4: fix/RG-192/Offer-state-machine off origin/develop (user confirmed)
+- 2026-10-25T09:40Z [claude] RG-192 PHASE PLAN→CONSTRUCT @e9d40c4: plan approved (user: go with recommendation)
+- 2026-10-25T12:00Z [claude] RG-192 PHASE CONSTRUCT→WRAP-UP @e9d40c4: 731 dotnet, 313 vitest, tsc+lint ok, isolated API+UI check ok, security review fixes applied; new-version bypass pending user
+- 2026-10-25T13:00Z [claude] RG-192 DECISION @ff0c95c: rejection rule is candidate-level so a New Version cannot bypass it (user confirmed)
+- 2026-10-22T09:35Z [claude] RG-192 SIDE-EFFECT @7cc896b: pushed fix/RG-192/Offer-state-machine, opened PR #219 into develop (user confirmed)
+- 2026-10-22T09:35Z [claude] RG-192 DONE @7cc896b: offer state machine, candidate-level rejection rule, 409s, concurrency token; PR #219
+- 2026-10-22T09:45Z [claude] RG-193 CREATED @7cc896b: intake of issue #193 (bug); assigned to @me via gh
+- 2026-10-22T09:45Z [claude] RG-193 SIDE-EFFECT @7cc896b: assigned issue #193 to @me; board move to In Development FAILED (gh token lacks read:project scope)
+- 2026-10-22T09:46Z [claude] RG-193 DECISION @7cc896b: CLARIFY assumptions 1-5 accepted (go with recommendation)
+- 2026-10-22T09:46Z [claude] RG-193 PHASE CLARIFY→PLAN @7cc896b: plan.md drafted, awaiting approval
+- 2026-10-22T09:49Z [claude] RG-193 BRANCH @7cc896b: fix/RG-193/Offer-status-rules-and-lock created off fix/RG-192/Offer-state-machine (user confirmed)
+- 2026-10-22T09:49Z [claude] RG-193 PHASE PLAN→CONSTRUCT @7cc896b: plan approved (go with recommendation)
+- 2026-10-22T10:00Z [claude] RG-193 DONE @7cc896b: offer actions use End Date lock, stage rules, 1 live offer, locked atomic status move; 788 backend, 333 client tests
+- 2026-10-22T10:23Z [claude] RG-193 SIDE-EFFECT @e0d057e: pushed fix/RG-193/Offer-status-rules-and-lock, opened PR #220 (base fix/RG-192/Offer-state-machine; user confirmed)
+- 2026-10-22T10:24Z [claude] RG-194 CREATED @e0d057e: intake of issue #194 (bug); assigned to @me via gh; board move skipped (gh lacks read:project)
+- 2026-10-22T10:24Z [claude] RG-194 PHASE CLARIFY→PLAN @e0d057e: plan.md drafted, awaiting approval
+- 2026-10-22T10:24Z [claude] RG-194 BRANCH @e0d057e: fix/RG-194/Offer-url-candidate-check created off fix/RG-193/Offer-status-rules-and-lock (user confirmed)
+- 2026-10-22T10:24Z [claude] RG-194 PHASE PLAN→CONSTRUCT @e0d057e: plan approved (go with recommendation)
+- 2026-10-22T10:27Z [claude] RG-194 DONE @e0d057e: URL candidate id checked before any offer write; 795 backend tests; security review no High/Medium
+- 2026-10-22T10:29Z [claude] RG-194 SIDE-EFFECT @f4c994b: pushed fix/RG-194/Offer-url-candidate-check, opened PR #221 (base fix/RG-193/Offer-status-rules-and-lock; user confirmed)
+- 2026-10-22T10:30Z [claude] RG-195 CREATED @f4c994b: intake of issue #195 (bug); assigned to @me via gh (already assigned); board move skipped (gh lacks read:project)
+- 2026-10-22T10:32Z [claude] RG-195 DECISION @f4c994b: CLARIFY assumptions 1-5 accepted (go with recommendation)
+- 2026-10-22T10:32Z [claude] RG-195 PHASE CLARIFY→PLAN @f4c994b: plan.md drafted, awaiting approval
+- 2026-10-22T10:33Z [claude] RG-195 BRANCH @3062074: fix/RG-195/Candidate-list-filters created off origin/develop (user confirmed)
+- 2026-10-22T10:33Z [claude] RG-195 PHASE PLAN→CONSTRUCT @3062074: plan approved (go with recommendation)
+- 2026-10-22T10:36Z [claude] RG-195 DONE @3062074: batch param wired, hired/offers buckets implemented; 694 backend, client ok (known flaky date-picker)
+- 2026-10-22T10:37Z [claude] RG-195 SIDE-EFFECT @684173c: pushed fix/RG-195/Candidate-list-filters, opened PR #222 into develop (user confirmed)
+- 2026-10-22T10:37Z [claude] RG-196 CREATED @684173c: intake of issue #196 (bug); already assigned to @me; board move skipped (gh lacks read:project)
+- 2026-10-22T10:37Z [claude] RG-196 PHASE CLARIFY→PLAN @684173c: plan.md drafted (assumptions 1-4 pending), awaiting approval
+- 2026-10-22T10:38Z [claude] RG-196 DECISION @3062074: CLARIFY assumptions 1-4 accepted (go with recommendation)
+- 2026-10-22T10:38Z [claude] RG-196 BRANCH @3062074: fix/RG-196/Candidate-list-paging created off origin/develop (user confirmed)
+- 2026-10-22T10:38Z [claude] RG-196 PHASE PLAN→CONSTRUCT @3062074: plan approved (go with recommendation)
+- 2026-10-22T10:40Z [claude] RG-196 DONE @3062074: list paging clamped (page 1.., pageSize 1..200), board truncation notice; 705 backend, 321 client
+- 2026-10-22T11:03Z [claude] RG-196 SIDE-EFFECT @ed6ea15: pushed fix/RG-196/Candidate-list-paging, opened PR #223 into develop (user confirmed)
+- 2026-10-22T11:04Z [claude] RG-197 CREATED @ed6ea15: intake of issue #197 (bug); already assigned to @me; board move skipped (gh lacks read:project)
+- 2026-10-22T11:05Z [claude] RG-197 DECISION @ed6ea15: CLARIFY assumptions 1-6 accepted (go with recommendation)
+- 2026-10-22T11:05Z [claude] RG-197 PHASE CLARIFY→PLAN @ed6ea15: plan.md drafted, awaiting approval
+- 2026-10-22T11:06Z [claude] RG-197 BRANCH @f4c994b: fix/RG-197/Offer-input-validation created off fix/RG-194/Offer-url-candidate-check (user confirmed)
+- 2026-10-22T11:06Z [claude] RG-197 PHASE PLAN→CONSTRUCT @f4c994b: plan approved (go with recommendation)
+- 2026-10-22T11:11Z [claude] RG-197 DONE @f4c994b: OfferInputValidator (400 not 500), form mirrors limits; 831 backend, 351 client tests
+- 2026-10-22T11:12Z [claude] RG-197 SIDE-EFFECT @6a654d6: pushed fix/RG-197/Offer-input-validation, opened PR #224 (base fix/RG-194/Offer-url-candidate-check; user confirmed)
+- 2026-10-22T11:15Z [claude] RG-198 CREATED @6a654d6: intake of issue #198 (bug, UI); already assigned to @me; board move skipped (gh lacks read:project)
+- 2026-10-22T11:16Z [claude] RG-198 DECISION @6a654d6: CLARIFY assumptions 1-5 accepted (go with recommendation)
+- 2026-10-22T11:16Z [claude] RG-198 PHASE CLARIFY→PLAN @6a654d6: plan.md drafted, awaiting approval
+- 2026-10-22T11:17Z [claude] RG-198 BRANCH @3062074: fix/RG-198/Dead-end-links created off origin/develop (user confirmed)
+- 2026-10-22T11:17Z [claude] RG-198 PHASE PLAN→CONSTRUCT @3062074: plan approved (go with recommendation)
+- 2026-10-22T11:19Z [claude] RG-198 REVISED @3062074: client has no user id; add userId to AuthResultDto and AuthUser for the pill rule
+- 2026-10-22T11:22Z [claude] RG-198 DONE @3062074: pills/booker link/RequireRole toast fixed; userId added to AuthResultDto; 695 backend, 325 client
