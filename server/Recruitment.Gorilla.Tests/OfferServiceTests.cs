@@ -19,8 +19,8 @@ public class OfferServiceTests(MySqlDatabaseFixture fixture) : DbTestBase(fixtur
             Currency: "USD",
             Bonus: 15000,
             Equity: "10,000 RSUs",
-            StartDate: DateTime.UtcNow.AddDays(30),
-            ExpirationDate: DateTime.UtcNow.AddDays(14),
+            StartDate: DateTime.UtcNow.AddDays(14),
+            ExpirationDate: DateTime.UtcNow.AddDays(30),
             Notes: "Remote position with standard healthcare"
         );
 
@@ -141,8 +141,8 @@ public class OfferServiceTests(MySqlDatabaseFixture fixture) : DbTestBase(fixtur
                 "USD",
                 10000,
                 "5,000 Stock Options",
-                DateTime.UtcNow.AddDays(20),
                 DateTime.UtcNow.AddDays(7),
+                DateTime.UtcNow.AddDays(20),
                 "Includes 4 weeks PTO and 401(k) match"),
             null,
             admin.Id,
