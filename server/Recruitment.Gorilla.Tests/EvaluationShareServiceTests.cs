@@ -432,4 +432,23 @@ public class EvaluationShareServiceTests(MySqlDatabaseFixture fixture) : DbTestB
     {
         Assert.Null(await EvaluationShares().GetOptionsAsync(int.MaxValue));
     }
+
+    [Fact]
+    public async Task Options_count_the_earlier_rounds_that_have_a_submitted_evaluation()
+    {
+        var (_, candidate) = Setup();
+        var panelist = Data.AddUser(Roles.Interviewer);
+        var evaluated = Data.AddInterview(candidate.Id, panelist.Id);
+        Data.AddSubmittedEvaluation(evaluated.Id, panelist.Id);
+        var draftOnly = Data.AddInterview(candidate.Id, panelist.Id);
+        Db.InterviewEvaluations.Add(new InterviewEvaluation { InterviewId = draftOnly.Id, InterviewerUserId = panelist.Id, IsSubmitted = false });
+        var cancelledEvaluated = Data.AddInterview(candidate.Id, panelist.Id);
+        Data.AddSubmittedEvaluation(cancelledEvaluated.Id, panelist.Id);
+        cancelledEvaluated.Status = InterviewStatuses.Cancelled;
+        Db.SaveChanges();
+
+        var options = await EvaluationShares().GetOptionsAsync(candidate.Id);
+
+        Assert.Equal(1, options!.EarlierRoundsWithEvaluations);
+    }
 }

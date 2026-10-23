@@ -1,4 +1,4 @@
-<!-- phase: WRAP-UP | branch: feature/RG-186/Shared-with-me-view | tasks: 9/9
+<!-- phase: DONE | branch: feature/RG-186/Shared-with-me-view | tasks: 9/9
      base: 01c680e | updated: 2026-10-21
      next: user yes to push + PR (Closes #186, Part of #182)
 # Plan: RG-186 'Shared with me' view (standard rigor; one small backend edit for notification links)

@@ -66,6 +66,12 @@ public class EvaluationSharesController(
         if (!await CanSeeCandidateAsync(candidateId)) return NotFound();
 
         var outcome = await shares.RevokeAsync(candidateId, shareId, actorId, currentUser.Name);
-        return outcome == RevokeShareResult.NotFound ? NotFound() : NoContent();
+        return outcome switch
+        {
+            RevokeShareResult.NotFound => NotFound(),
+            RevokeShareResult.AutoManaged => Conflict(
+                "This access comes from an interview's panel. Change the panel, or turn off sharing earlier rounds on that interview."),
+            _ => NoContent(),
+        };
     }
 }

@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 using Recruitment.Gorilla.API.Auth;
 using Recruitment.Gorilla.API.Data;
 using Recruitment.Gorilla.API.DTOs;
@@ -13,7 +14,8 @@ namespace Recruitment.Gorilla.API.Services;
 /// </summary>
 public class InterviewService(
     AppDbContext db, CandidateService candidateService, NotificationService notificationService,
-    AuditService audit, IConfiguration config, IEmailSettingsResolver? emailSettings = null)
+    AuditService audit, IConfiguration config, PanelAutoShareService panelAutoShare,
+    IEmailSettingsResolver? emailSettings = null)
 {
     private const string InterviewScheduledStatus = "Interview Scheduled";
     private const string CallForInterviewStatus = "Call for Interview";
@@ -226,37 +228,12 @@ public class InterviewService(
         if (interview.Status == InterviewStatuses.Cancelled)
             return (null, "This interview was cancelled.", false, true);
 
-        // Resolve rubric criteria for this candidate / interview
-        HashSet<string> validKeys;
-        if (!string.IsNullOrWhiteSpace(interview.Candidate?.AppliedRole))
-        {
-            var roleOption = await db.RoleAppliedOptions
-                .Include(r => r.EvaluationRubric).ThenInclude(er => er!.Criteria)
-                .FirstOrDefaultAsync(r => r.Name == interview.Candidate.AppliedRole);
-
-            if (roleOption?.EvaluationRubric is { IsActive: true } er && er.Criteria.Count > 0)
-            {
-                validKeys = er.Criteria.Select(c => c.Key).ToHashSet();
-            }
-            else
-            {
-                var defaultRubric = await db.EvaluationRubrics
-                    .Include(r => r.Criteria)
-                    .FirstOrDefaultAsync(r => r.IsDefault && r.IsActive);
-                validKeys = defaultRubric?.Criteria.Count > 0
-                    ? defaultRubric.Criteria.Select(c => c.Key).ToHashSet()
-                    : EvaluationCriteria.Keys.ToHashSet();
-            }
-        }
-        else
-        {
-            var defaultRubric = await db.EvaluationRubrics
-                .Include(r => r.Criteria)
-                .FirstOrDefaultAsync(r => r.IsDefault && r.IsActive);
-            validKeys = defaultRubric?.Criteria.Count > 0
-                ? defaultRubric.Criteria.Select(c => c.Key).ToHashSet()
-                : EvaluationCriteria.Keys.ToHashSet();
-        }
+        // The same rubric the interview page shows (#188). With no rubric at all, the built-in catalogue.
+        var rubric = await EvaluationRubricService.ResolveAsync(
+            db, interview.Candidate?.RoleAppliedOptionId, interview.Candidate?.AppliedRole);
+        HashSet<string> validKeys = rubric is { Criteria.Count: > 0 }
+            ? rubric.Criteria.Select(c => c.Key).ToHashSet()
+            : EvaluationCriteria.Keys.ToHashSet();
 
         if (dto.Recommendation is not null && !EvaluationCriteria.Recommendations.Contains(dto.Recommendation))
             return (null, "Invalid recommendation.", false, false);
@@ -476,6 +453,10 @@ public class InterviewService(
             return (null, "An interviewer who has already submitted an evaluation cannot be removed.", false, false);
 
         var previousScheduledAt = interview.ScheduledAt;
+        var previousShareEarlier = interview.ShareEarlierRoundsWithPanel;
+
+        // The booking and its earlier-rounds grants change together or not at all (#187).
+        await using var tx = await BeginIfNoneAsync();
 
         // The cascade runs from Interview, not from the join row, so a dropped interviewer's draft
         // would survive and reappear the moment they were re-added. Delete it explicitly.
@@ -500,6 +481,8 @@ public class InterviewService(
         interview.UpdatedByUserId = actorUserId;
         // Calendar clients ignore a re-issued invite for a known UID unless SEQUENCE has grown.
         interview.CalendarSequence += 1;
+        // Null leaves the booking's earlier-rounds setting as it was (#187).
+        if (dto.ShareEarlierRoundsWithPanel is bool shareEarlier) interview.ShareEarlierRoundsWithPanel = shareEarlier;
 
         db.InterviewEvents.Add(new InterviewEvent
         {
@@ -517,10 +500,18 @@ public class InterviewService(
         await audit.RecordAsync(
             "Interview.Rescheduled", "Interview", interview.Id,
             $"Interview for {candidate.FullName} moved",
-            $"From {previousScheduledAt:u} to {scheduledAt:u}." + (reason is null ? "" : $" Reason: {reason}"));
+            $"From {previousScheduledAt:u} to {scheduledAt:u}." + (reason is null ? "" : $" Reason: {reason}")
+            + (previousShareEarlier == interview.ShareEarlierRoundsWithPanel
+                ? ""
+                : $" Share earlier rounds with the panel: {previousShareEarlier} -> {interview.ShareEarlierRoundsWithPanel}."));
 
-        await NotifyRescheduledAsync(interview, candidate.FullName, candidate.AppliedRole,
-            previousScheduledAt, reason, retainedIds, addedIds, removedIds, actorUserId);
+        // Panel changes and the toggle move the earlier-rounds grants with the booking (#187).
+        var withEarlierRounds = await panelAutoShare.SyncAsync(
+            interview, newInterviewerIds, interview.ShareEarlierRoundsWithPanel, actorUserId);
+        if (tx is not null) await tx.CommitAsync();
+
+        await NotifyRescheduledAsync(interview, candidate.FullName, candidate.RoleApplied ?? candidate.AppliedRole,
+            previousScheduledAt, reason, retainedIds, addedIds, removedIds, actorUserId, withEarlierRounds);
 
         var fresh = await LoadForScheduleAsync(id);
         return (ToScheduleDto(fresh!, candidate.FullName), null, false, false);
@@ -559,6 +550,9 @@ public class InterviewService(
         var scheduledAt = interview.ScheduledAt;
         var recipientIds = interview.Interviewers.Select(ii => ii.UserId).ToList();
 
+        // Cancelling and revoking the panel's earlier-rounds grants must not be split by a failure (#187).
+        await using var tx = await BeginIfNoneAsync();
+
         interview.Status = InterviewStatuses.Cancelled;
         interview.UpdatedAt = DateTime.UtcNow;
         interview.UpdatedByUserId = actorUserId;
@@ -577,6 +571,10 @@ public class InterviewService(
 
         await db.SaveChangesAsync();
 
+        // A cancelled booking no longer gives its panel the earlier rounds (#187).
+        await panelAutoShare.SyncAsync(interview, [], false, actorUserId);
+        if (tx is not null) await tx.CommitAsync();
+
         // Only step the candidate back when the cancelled booking is what they are currently on.
         // Cancelling a live invite for a Rejected or Discontinued candidate is calendar cleanup;
         // moving them to Call for Interview would silently un-reject them.
@@ -593,12 +591,19 @@ public class InterviewService(
             $"Interview for {candidate.FullName} cancelled",
             $"Was scheduled for {scheduledAt:u}. Reason: {trimmedReason}");
 
-        await NotifyCancelledAsync(interview, candidate.FullName, candidate.AppliedRole,
+        await NotifyCancelledAsync(interview, candidate.FullName, candidate.RoleApplied ?? candidate.AppliedRole,
             scheduledAt, trimmedReason, recipientIds, actorUserId, removedFromPanel: false);
 
         var fresh = await LoadForScheduleAsync(id);
         return (ToScheduleDto(fresh!, candidate.FullName), null, false, false);
     }
+
+    /// <summary>
+    /// Starts a transaction unless one is already open (a test wraps each case in one), so a booking change
+    /// and its grant sync commit together.
+    /// </summary>
+    private async Task<IDbContextTransaction?> BeginIfNoneAsync() =>
+        db.Database.CurrentTransaction is null ? await db.Database.BeginTransactionAsync() : null;
 
     private Task<Interview?> LoadForScheduleAsync(int id) =>
         db.Interviews
@@ -622,7 +627,8 @@ public class InterviewService(
         i.Interviewers.Select(ii => ii.UserId).OrderBy(x => x).ToList(),
         i.Tags.Select(t => t.InterviewTypeOptionId).OrderBy(x => x).ToList(),
         i.Evaluations.Any(e => e.IsSubmitted),
-        i.Events.OrderBy(e => e.CreatedAt).Select(ToEventDto).ToList());
+        i.Events.OrderBy(e => e.CreatedAt).Select(ToEventDto).ToList(),
+        i.ShareEarlierRoundsWithPanel);
 
     private static InterviewEventDto ToEventDto(InterviewEvent e) => new(
         e.EventType, e.PreviousScheduledAt, e.NewScheduledAt, e.Reason, e.ActorName, e.CreatedAt);
@@ -655,7 +661,8 @@ public class InterviewService(
     /// </summary>
     private async Task NotifyRescheduledAsync(
         Interview interview, string candidateName, string? roleName, DateTime previousScheduledAt,
-        string? reason, List<int> retainedIds, List<int> addedIds, List<int> removedIds, int actorUserId)
+        string? reason, List<int> retainedIds, List<int> addedIds, List<int> removedIds, int actorUserId,
+        List<int> withEarlierRounds)
     {
         var url = InterviewUrl(interview.Id);
         var invite = new InterviewInviteDetails(
@@ -677,10 +684,16 @@ public class InterviewService(
         foreach (var uid in addedIds)
         {
             var name = await UserNameAsync(uid);
+            var hasEarlierRounds = withEarlierRounds.Contains(uid);
+            var earlierRoundsUrl = hasEarlierRounds
+                ? $"{config["App:ClientBaseUrl"]?.TrimEnd('/')}{EvaluationAccess.SharedReportLink(interview.CandidateId)}"
+                : null;
             var (subject, html) = EmailTemplates.InterviewAssigned(
-                name, candidateName, roleName, interview.ScheduledAt, url, invite);
+                name, candidateName, roleName, interview.ScheduledAt, url, invite, earlierRoundsUrl);
             await notificationService.NotifyAsync(
-                uid, "Interview assigned", $"You have been assigned to interview {candidateName}.",
+                uid, "Interview assigned",
+                $"You have been assigned to interview {candidateName}."
+                + (hasEarlierRounds ? " Earlier rounds' evaluations are available to you." : ""),
                 $"/interviews/{interview.Id}", subject, html, calendar,
                 category: NotificationCategories.InterviewAssigned);
         }
