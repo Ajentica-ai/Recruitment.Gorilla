@@ -55,6 +55,9 @@ const BUCKET_LABELS: Record<string, string> = {
   'new-this-week': 'New this week',
 };
 
+/** How many candidates the board loads in one request. The API caps a page at 200, so the board cannot show more. */
+const BOARD_PAGE_SIZE = 150;
+
 const MOBILE_SORTS: { value: string; label: string }[] = [
   { value: 'added:desc', label: 'Newest first' },
   { value: 'added:asc', label: 'Oldest first' },
@@ -142,7 +145,7 @@ export default function CandidatesPage() {
         dir: dir || undefined,
         batch: batch || undefined,
         page: viewMode === 'board' ? 1 : page,
-        pageSize: viewMode === 'board' ? 150 : pageSizeParam,
+        pageSize: viewMode === 'board' ? BOARD_PAGE_SIZE : pageSizeParam,
       }),
     placeholderData: keepPreviousData,
   });
@@ -410,11 +413,19 @@ export default function CandidatesPage() {
           }
         />
       ) : viewMode === 'board' ? (
-        <KanbanBoard
-          candidates={data.items}
-          isLoading={isLoading}
-          canWrite={canWriteCandidates}
-        />
+        <>
+          {/* The board loads one page, so say so when more candidates match than it holds instead of dropping them. */}
+          {data.totalCount > data.items.length && (
+            <p role="note" aria-label="Board truncated" className="mb-3 text-[length:var(--text-sm)] text-muted-foreground">
+              Showing {data.items.length} of {data.totalCount} candidates. Narrow the filters to see the rest.
+            </p>
+          )}
+          <KanbanBoard
+            candidates={data.items}
+            isLoading={isLoading}
+            canWrite={canWriteCandidates}
+          />
+        </>
       ) : (
         <>
           {/* .table-cards reflows each row into a labelled card below md, so no
