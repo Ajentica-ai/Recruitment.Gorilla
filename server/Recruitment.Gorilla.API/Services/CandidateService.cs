@@ -747,6 +747,11 @@ public class CandidateService(
 
         if (interview is not null)
         {
+            // The job opening's name, which is what the UI links a candidate to; the legacy free text is
+            // empty for them, which left the role line of these emails blank (#188).
+            var roleName = (candidate.RoleAppliedOptionId is int roleOptionId
+                ? await db.RoleAppliedOptions.Where(o => o.Id == roleOptionId).Select(o => o.Name).FirstOrDefaultAsync()
+                : null) ?? candidate.AppliedRole;
             // Earlier rounds shared with the new panel (#187), now that the booking has an id.
             var withEarlierRounds = dto.ShareEarlierRoundsWithPanel
                 ? await panelAutoShare.SyncAsync(
@@ -754,7 +759,7 @@ public class CandidateService(
                 : [];
             var interviewUrl = $"{config["App:ClientBaseUrl"]?.TrimEnd('/')}/interviews/{interview.Id}";
             var invite = new InterviewInviteDetails(
-                interview.Id, candidate.FullName, candidate.AppliedRole,
+                interview.Id, candidate.FullName, roleName,
                 interview.ScheduledAt, interview.DurationMinutes, interviewUrl);
             var calendar = CalendarInvite.Build(invite);
 
@@ -766,7 +771,7 @@ public class CandidateService(
                     ? $"{config["App:ClientBaseUrl"]?.TrimEnd('/')}{EvaluationAccess.SharedReportLink(candidate.Id)}"
                     : null;
                 var (emailSubject, emailHtml) = EmailTemplates.InterviewAssigned(
-                    interviewer?.Name ?? "there", candidate.FullName, candidate.AppliedRole,
+                    interviewer?.Name ?? "there", candidate.FullName, roleName,
                     interview.ScheduledAt, interviewUrl, invite, earlierRoundsUrl);
 
                 await notificationService.NotifyAsync(
