@@ -155,7 +155,12 @@ public class EvaluationAccessTests(MySqlDatabaseFixture fixture) : DbTestBase(fi
         Assert.Equal([r2.Id], await Visible(grantee, candidate));
         Assert.False(await Access().CanSeeInterviewAsync(grantee.Id, r1.Id));
 
-        await SubmitAsync(r1.Id, panelist.Id);
+        // Submitting on a cancelled round is refused outright (#189), so nobody is notified either.
+        var items = EvaluationCriteria.Keys.Select(k => new EvaluationItemDto(k, 4, null)).ToList();
+        var (dto, error, _, conflict) = await Interviews().UpsertEvaluationAsync(
+            r1.Id, panelist.Id, new UpsertEvaluationDto(null, "Recommended", null, 4, items, true));
+        Assert.Null(dto);
+        Assert.True(conflict);
         Assert.False(await Db.Notifications.AnyAsync(n => n.UserId == grantee.Id && n.Title == "Evaluation submitted"));
     }
 
