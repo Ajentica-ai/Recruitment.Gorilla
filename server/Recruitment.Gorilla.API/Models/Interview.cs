@@ -47,6 +47,13 @@ public class Interview
     /// </summary>
     public string? Notes { get; set; }
 
+    /// <summary>
+    /// The recruiter ticked "Share earlier rounds' evaluations with this panel" (#187). While set, each
+    /// panelist holds a <c>PanelAutoShare</c> grant on every earlier non-cancelled round, kept in step
+    /// with the panel and revoked on cancel. Off by default: the peer rule's anti-anchoring stays the norm.
+    /// </summary>
+    public bool ShareEarlierRoundsWithPanel { get; set; }
+
     public ICollection<InterviewEvent> Events { get; set; } = [];
 
     public ICollection<InterviewInterviewer> Interviewers { get; set; } = [];

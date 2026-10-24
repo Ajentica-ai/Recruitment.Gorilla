@@ -821,6 +821,9 @@ namespace Recruitment.Gorilla.API.Migrations
                     b.Property<DateTime>("ScheduledAt")
                         .HasColumnType("datetime(6)");
 
+                    b.Property<bool>("ShareEarlierRoundsWithPanel")
+                        .HasColumnType("tinyint(1)");
+
                     b.Property<string>("Status")
                         .IsRequired()
                         .ValueGeneratedOnAdd()

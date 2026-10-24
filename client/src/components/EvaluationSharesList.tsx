@@ -131,7 +131,12 @@ function ShareRow({ share, onRevoke }: { share: EvaluationShare; onRevoke?: () =
       {share.note && (
         <p className="text-[length:var(--text-sm)] text-muted-foreground">Note: {share.note}</p>
       )}
-      {onRevoke && (
+      {onRevoke && share.source === 'PanelAutoShare' && (
+        <p className="text-[length:var(--text-sm)] text-muted-foreground">
+          Follows the interview's panel. Change the panel, or turn off sharing earlier rounds on that interview, to end it.
+        </p>
+      )}
+      {onRevoke && share.source !== 'PanelAutoShare' && (
         <Button
           type="button"
           variant="ghost"

@@ -199,6 +199,17 @@ One caveat on cancellations: the email is the reliable part. Because invites are
 publications rather than meeting requests, Gmail and Outlook do not always remove the event from
 people's calendars on their own, so the panel may still need to delete it by hand.
 
+**Sharing earlier rounds with the next panel.** When the candidate already has an earlier interview
+with a submitted evaluation, the booking form (and the reschedule form) show a tick box,
+**Share earlier rounds' evaluations with this panel**. It is off by default, so the new panel is not
+influenced by earlier verdicts unless you choose. Tick it and everyone on the panel can read the
+earlier rounds' submitted evaluations from their dashboard, the notification or the interview page,
+with no separate share step. It follows the panel: someone you add gets access, someone you remove
+loses it, unticking it removes it for everyone, and cancelling the interview removes it. Anything you
+shared by hand yourself is never changed by this. People who already see everything (Admins and the
+candidate's own recruiters) are not affected. The panel still cannot read the interview they are about
+to evaluate until they submit their own.
+
 **Another round?** From **Interview Completed** you can schedule again. The new interview gets
 its own panel and evaluations, and the history keeps both rounds. This is a *second interview after
 the first one finished*, which is a different thing from moving a booking that has not happened

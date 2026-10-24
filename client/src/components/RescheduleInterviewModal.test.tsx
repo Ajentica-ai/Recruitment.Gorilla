@@ -7,6 +7,7 @@ import {
   getInterviewSchedule,
   getAssignableUsers,
   getActiveInterviewTypes,
+  getEvaluationShareOptions,
   rescheduleInterview,
 } from '../services/api';
 import type { InterviewSchedule } from '../types';
@@ -15,6 +16,7 @@ vi.mock('../services/api', () => ({
   getInterviewSchedule: vi.fn(),
   getAssignableUsers: vi.fn(),
   getActiveInterviewTypes: vi.fn(),
+  getEvaluationShareOptions: vi.fn(),
   rescheduleInterview: vi.fn(),
 }));
 
@@ -37,6 +39,7 @@ const schedule = (over: Partial<InterviewSchedule> = {}): InterviewSchedule => (
   interviewTypeOptionIds: [],
   hasSubmittedEvaluation: false,
   events: [],
+  shareEarlierRoundsWithPanel: false,
   ...over,
 });
 
@@ -59,6 +62,7 @@ describe('RescheduleInterviewModal', () => {
       { id: 11, name: 'Ivy Interviewer', email: 'ivy@test.local' },
     ]);
     vi.mocked(getActiveInterviewTypes).mockResolvedValue([]);
+    vi.mocked(getEvaluationShareOptions).mockResolvedValue({ interviews: [], users: [], earlierRoundsWithEvaluations: 0 });
     vi.mocked(rescheduleInterview).mockResolvedValue(schedule());
   });
 
@@ -84,6 +88,39 @@ describe('RescheduleInterviewModal', () => {
     expect(payload.durationMinutes).toBe(60);
     expect(payload.interviewerUserIds).toEqual([11]);
     expect(new Date(payload.scheduledAt).getTime()).toBeGreaterThan(Date.now());
+  });
+
+  it('offers sharing earlier rounds only when there is something to share, unchecked by default', async () => {
+    const user = userEvent.setup();
+    vi.mocked(getEvaluationShareOptions).mockResolvedValue({ interviews: [], users: [], earlierRoundsWithEvaluations: 0 });
+    const { unmount } = renderModal();
+    await screen.findByLabelText('Interview duration');
+    expect(screen.queryByRole('checkbox', { name: /Share earlier rounds/ })).not.toBeInTheDocument();
+    unmount();
+
+    vi.mocked(getEvaluationShareOptions).mockResolvedValue({ interviews: [], users: [], earlierRoundsWithEvaluations: 1 });
+    renderModal();
+    const box = await screen.findByRole('checkbox', { name: /Share earlier rounds/ });
+    expect(box).not.toBeChecked();
+
+    await user.click(screen.getByRole('button', { name: /save new time/i }));
+    await waitFor(() => expect(rescheduleInterview).toHaveBeenCalled());
+    expect(vi.mocked(rescheduleInterview).mock.calls[0][1].shareEarlierRoundsWithPanel).toBe(false);
+  });
+
+  it('opens on what is booked and sends the choice', async () => {
+    const user = userEvent.setup();
+    vi.mocked(getEvaluationShareOptions).mockResolvedValue({ interviews: [], users: [], earlierRoundsWithEvaluations: 1 });
+    vi.mocked(getInterviewSchedule).mockResolvedValue(schedule({ shareEarlierRoundsWithPanel: true }));
+    renderModal();
+
+    const box = await screen.findByRole('checkbox', { name: /Share earlier rounds/ });
+    await waitFor(() => expect(box).toBeChecked());
+    await user.click(box); // turn it off
+    await user.click(screen.getByRole('button', { name: /save new time/i }));
+
+    await waitFor(() => expect(rescheduleInterview).toHaveBeenCalled());
+    expect(vi.mocked(rescheduleInterview).mock.calls[0][1].shareEarlierRoundsWithPanel).toBe(false);
   });
 
   it('refuses a time in the past without calling the API', async () => {

@@ -5,7 +5,9 @@ using Recruitment.Gorilla.API.Models;
 
 namespace Recruitment.Gorilla.API.Services;
 
-public class CandidateService(AppDbContext db, IWebHostEnvironment env, NotificationService notificationService, IConfiguration config)
+public class CandidateService(
+    AppDbContext db, IWebHostEnvironment env, NotificationService notificationService, IConfiguration config,
+    PanelAutoShareService panelAutoShare)
 {
     private const string Uploaded = "Uploaded";
     private const string TechnicalAssessment = "Technical Assessment";
@@ -37,6 +39,14 @@ public class CandidateService(AppDbContext db, IWebHostEnvironment env, Notifica
     /// <summary>Whether the given user is an assigned recruiter of the given job opening.</summary>
     private Task<bool> IsAssignedToRoleAsync(int roleId, int uid) =>
         db.RoleAppliedOptions.AnyAsync(r => r.Id == roleId && r.Recruiters.Any(rr => rr.UserId == uid));
+
+    /// <summary>The most candidates one list response carries (#196). Without it <c>pageSize=1000000</c> returned
+    /// the caller's whole candidate set, the entire table for an Admin.</summary>
+    public const int MaxPageSize = 200;
+
+    /// <summary>The highest page number honoured. With <see cref="MaxPageSize"/> it keeps <c>(page - 1) * pageSize</c>
+    /// far inside an int, so a huge page is an empty page, not an overflow into a negative Skip.</summary>
+    public const int MaxPage = 1_000_000;
 
     public async Task<PagedResult<CandidateListItemDto>> GetAllAsync(
         CandidateListQuery q, int? ownerUserId = null)
@@ -91,10 +101,15 @@ public class CandidateService(AppDbContext db, IWebHostEnvironment env, Notifica
             _ => desc ? query.OrderByDescending(c => c.CreatedAt) : query.OrderBy(c => c.CreatedAt),
         };
 
+        // Out-of-range paging is clamped, not rejected: page 0 used to be a negative Skip and a 500 (#196). The
+        // response carries the values actually applied, so a caller can see it was clamped.
+        var page = Math.Clamp(q.Page, 1, MaxPage);
+        var pageSize = Math.Clamp(q.PageSize, 1, MaxPageSize);
+
         var total = await query.CountAsync();
         var items = await query
-            .Skip((q.Page - 1) * q.PageSize)
-            .Take(q.PageSize)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
             .Select(c => new CandidateListItemDto(
                 c.Id, c.FullName, c.Email, c.Phone,
                 c.CurrentTitle,
@@ -105,7 +120,7 @@ public class CandidateService(AppDbContext db, IWebHostEnvironment env, Notifica
                 c.BatchName))
             .ToListAsync();
 
-        return new PagedResult<CandidateListItemDto>(items, total, q.Page, q.PageSize);
+        return new PagedResult<CandidateListItemDto>(items, total, page, pageSize);
     }
 
     public async Task<List<string>> GetCandidateBatchesAsync(int? ownerUserId = null)
@@ -705,6 +720,7 @@ public class CandidateService(AppDbContext db, IWebHostEnvironment env, Notifica
                 StatusHistory = entry,
                 ScheduledAt = dto.InterviewAt.Value,
                 DurationMinutes = NormalizeDuration(dto.InterviewDurationMinutes),
+                ShareEarlierRoundsWithPanel = dto.ShareEarlierRoundsWithPanel,
                 CreatedByUserId = currentUserId,
                 Interviewers = dto.InterviewerUserIds
                     .Distinct()
@@ -731,21 +747,37 @@ public class CandidateService(AppDbContext db, IWebHostEnvironment env, Notifica
 
         if (interview is not null)
         {
+            // The job opening's name, which is what the UI links a candidate to; the legacy free text is
+            // empty for them, which left the role line of these emails blank (#188).
+            var roleName = (candidate.RoleAppliedOptionId is int roleOptionId
+                ? await db.RoleAppliedOptions.Where(o => o.Id == roleOptionId).Select(o => o.Name).FirstOrDefaultAsync()
+                : null) ?? candidate.AppliedRole;
+            // Earlier rounds shared with the new panel (#187), now that the booking has an id.
+            var withEarlierRounds = dto.ShareEarlierRoundsWithPanel
+                ? await panelAutoShare.SyncAsync(
+                    interview, dto.InterviewerUserIds!.Distinct().ToList(), true, currentUserId)
+                : [];
             var interviewUrl = $"{config["App:ClientBaseUrl"]?.TrimEnd('/')}/interviews/{interview.Id}";
             var invite = new InterviewInviteDetails(
-                interview.Id, candidate.FullName, candidate.AppliedRole,
+                interview.Id, candidate.FullName, roleName,
                 interview.ScheduledAt, interview.DurationMinutes, interviewUrl);
             var calendar = CalendarInvite.Build(invite);
 
             foreach (var uid in dto.InterviewerUserIds!.Distinct())
             {
                 var interviewer = await db.Users.FindAsync(uid);
+                var hasEarlierRounds = withEarlierRounds.Contains(uid);
+                var earlierRoundsUrl = hasEarlierRounds
+                    ? $"{config["App:ClientBaseUrl"]?.TrimEnd('/')}{EvaluationAccess.SharedReportLink(candidate.Id)}"
+                    : null;
                 var (emailSubject, emailHtml) = EmailTemplates.InterviewAssigned(
-                    interviewer?.Name ?? "there", candidate.FullName, candidate.AppliedRole,
-                    interview.ScheduledAt, interviewUrl, invite);
+                    interviewer?.Name ?? "there", candidate.FullName, roleName,
+                    interview.ScheduledAt, interviewUrl, invite, earlierRoundsUrl);
 
                 await notificationService.NotifyAsync(
-                    uid, "Interview assigned", $"You have been assigned to interview {candidate.FullName}.",
+                    uid, "Interview assigned",
+                    $"You have been assigned to interview {candidate.FullName}."
+                    + (hasEarlierRounds ? " Earlier rounds' evaluations are available to you." : ""),
                     $"/interviews/{interview.Id}", emailSubject, emailHtml, calendar,
                     category: NotificationCategories.InterviewAssigned);
             }
