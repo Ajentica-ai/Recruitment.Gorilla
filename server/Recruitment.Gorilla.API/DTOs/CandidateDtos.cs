@@ -139,7 +139,10 @@ public record StatusChangeDto(
     string? ChangedBy = null,
     // Optional when Status == "Interview Scheduled": how long the interview runs. Drives the end
     // time on the calendar invite. Appended last so existing positional construction is unaffected.
-    int? InterviewDurationMinutes = null
+    int? InterviewDurationMinutes = null,
+    // Optional when Status == "Interview Scheduled" (#187): share the earlier rounds' submitted evaluations
+    // with this panel. Appended last so existing positional construction is unaffected.
+    bool ShareEarlierRoundsWithPanel = false
 );
 
 public record CandidateListItemDto(

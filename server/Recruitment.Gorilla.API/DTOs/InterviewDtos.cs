@@ -73,7 +73,8 @@ public record InterviewScheduleDto(
     List<int> InterviewerUserIds,
     List<int> InterviewTypeOptionIds,
     bool HasSubmittedEvaluation,       // true once any interviewer has submitted: both writes are then blocked
-    List<InterviewEventDto> Events
+    List<InterviewEventDto> Events,
+    bool ShareEarlierRoundsWithPanel = false   // #187: lets the reschedule form open on what is booked
 );
 
 /// <summary>Body of PUT /api/interviews/{id}. Fully replaces the schedulable fields.</summary>
@@ -83,7 +84,8 @@ public record RescheduleInterviewDto(
     string? Notes,
     List<int> InterviewerUserIds,
     List<int>? InterviewTypeOptionIds,
-    string? Reason                     // optional; quoted in the interviewers' email
+    string? Reason,                    // optional; quoted in the interviewers' email
+    bool? ShareEarlierRoundsWithPanel = null   // #187: null leaves the booking's setting as it is
 );
 
 /// <summary>Body of POST /api/interviews/{id}/cancel.</summary>
@@ -105,8 +107,13 @@ public record CandidateEvaluationReportDto(
     string FullName,
     string? RoleApplied,
     EvaluationReportSummaryDto Summary,
-    List<ReportEvaluationDto> Evaluations       // one per submitted evaluation, newest interview first
+    List<ReportEvaluationDto> Evaluations,      // one per submitted evaluation, newest interview first
+    // The criteria the ratings were given on (#190): the candidate's rubric, then any rated key it does not
+    // know under "Other criteria". Empty when no rubric exists, so the client falls back to the built-in ones.
+    List<ReportCriterionDto>? Criteria = null
 );
+
+public record ReportCriterionDto(string Key, string Label, string Section);
 
 public record ReportEvaluationDto(
     int InterviewId,

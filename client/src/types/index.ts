@@ -350,6 +350,8 @@ export interface StatusChangePayload {
   interviewTypeOptionIds?: number[] | null;
   // Optional when status === 'Interview Scheduled': sets the calendar invite's end time.
   interviewDurationMinutes?: number | null;
+  // Optional when status === 'Interview Scheduled' (#187): share earlier rounds' evaluations with the panel.
+  shareEarlierRoundsWithPanel?: boolean;
 }
 
 export interface CandidateListItem {
@@ -705,6 +707,8 @@ export interface InterviewSchedule {
   /** True once any interviewer has submitted: the interview happened, so both writes are refused. */
   hasSubmittedEvaluation: boolean;
   events: InterviewEventEntry[];
+  /** Earlier rounds are shared with this panel (#187). */
+  shareEarlierRoundsWithPanel: boolean;
 }
 
 export interface ReschedulePayload {
@@ -714,6 +718,8 @@ export interface ReschedulePayload {
   interviewerUserIds: number[];
   interviewTypeOptionIds: number[];
   reason: string | null;
+  /** Omit to leave the booking's setting as it is (#187). */
+  shareEarlierRoundsWithPanel?: boolean;
 }
 
 // ----- Candidate evaluation report (Recruiter+) -----
@@ -742,12 +748,22 @@ export interface ReportEvaluation {
   evaluation: InterviewEvaluation;
 }
 
+/** A criterion the report's ratings were given on (#190). */
+export interface ReportCriterion {
+  key: string;
+  label: string;
+  /** The rubric section, or "Other criteria" for a rated key the rubric does not know. */
+  section: string;
+}
+
 export interface CandidateEvaluationReport {
   candidateId: number;
   fullName: string;
   roleApplied: string | null;
   summary: EvaluationReportSummary;
   evaluations: ReportEvaluation[];
+  /** The criteria the ratings were given on. Empty or absent: use the built-in ones. */
+  criteria?: ReportCriterion[];
 }
 
 export interface UpsertEvaluationPayload {
@@ -1120,6 +1136,8 @@ export interface ShareOptionUser {
 export interface ShareOptions {
   interviews: ShareOptionInterview[];
   users: ShareOptionUser[];
+  /** Non-cancelled interviews with a submitted evaluation: the booking forms offer sharing only above zero. */
+  earlierRoundsWithEvaluations: number;
 }
 
 // ----- Shared with me (#182, #186) -----

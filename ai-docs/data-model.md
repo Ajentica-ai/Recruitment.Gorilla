@@ -34,7 +34,7 @@ The core profile. Holds a **denormalized `CurrentStatus`** for fast list queries
 | LinkedInUrl | varchar(500) | nullable |
 | GithubUrl | varchar(500) | nullable; auto-parsed from CV when present |
 | PortfolioUrl | varchar(500) | nullable |
-| AppliedRole | varchar(150) | nullable; legacy free-text role (kept for back-compat; forms now use RoleAppliedOptionId) |
+| AppliedRole | varchar(150) | nullable; legacy free-text role (kept for back-compat; forms now use RoleAppliedOptionId, and the client sends it as null, so it is empty for every UI-created candidate). **Never look a candidate's opening up through it**: the rubric and the role name in interview emails go through `RoleAppliedOptionId`, with this text used only when there is no link (#188) |
 | RoleAppliedOptionId | int? FK → RoleAppliedOption | nullable; configured role the candidate is interviewing for |
 | OwnerUserId | int? FK → User | nullable; set to the creating Recruiter's id for per-role scoping (SetNull on user delete). Legacy/admin-created rows are NULL |
 | IsReferred | bool | default false |
@@ -197,6 +197,7 @@ Created when a candidate moves to **Interview Scheduled** (see `CandidateService
 | StatusHistoryId | int? FK → StatusHistory | the "Interview Scheduled" entry; SetNull |
 | ScheduledAt | datetime | the time the interview is booked for **now**; a reschedule moves it (the history entry's `InterviewAt` keeps what was first booked) |
 | Status | varchar(20) | `Scheduled` \| `Cancelled`, default `Scheduled`. A string like `Offer.Status`; the non-null default backfilled existing rows (migration `AddInterviewLifecycle`). No `Completed` value: completion stays candidate-driven |
+| ShareEarlierRoundsWithPanel | bool | default false (migration `AddInterviewShareEarlierRounds`, #187). The recruiter ticked "Share earlier rounds' evaluations with this panel": while set, each panelist holds `PanelAutoShare` grants on the earlier rounds (see `EvaluationAccessGrant`). A reschedule can change it; existing bookings read as false |
 | Notes | varchar(4000)? | recruiter's note for the interviewers, editable on reschedule. Reads fall back to the creating `StatusHistory.Comment`, so pre-#173 interviews need no backfill |
 | CalendarSequence | int | iCalendar `SEQUENCE` for this booking's UID; incremented on every reschedule/cancel because clients ignore a re-issued invite whose SEQUENCE has not grown |
 | UpdatedAt | datetime? | set by a reschedule or cancel |
@@ -209,8 +210,8 @@ the latest `Cancelled` event's fields, and duplicating them guarantees drift.
 
 ### EvaluationAccessGrant (`EvaluationAccessGrants`)
 A grant that lets one named user read a candidate's **submitted** interview evaluations they could not otherwise
-see (epic #182; migration `AddEvaluationAccessGrants`, issue #183). **Nothing reads a grant yet**: the grantee read
-path is #184, so creating one changes no one's access until then.
+see (epic #182; migration `AddEvaluationAccessGrants`, issue #183). Grantees read through `api/shared-evaluations`
+(#184), decided only by `EvaluationAccess`.
 
 | Field | Type | Notes |
 |---|---|---|
@@ -219,8 +220,8 @@ path is #184, so creating one changes no one's access until then.
 | InterviewId | int? FK → Interview | cascade delete; **null = all rounds of the candidate, future ones included** |
 | GranteeUserId | int FK → User | cascade delete; index on `(GranteeUserId, RevokedAt)` |
 | GrantedByUserId | int? FK → User | SetNull |
-| Source | varchar(30) | `Manual` \| `PanelAutoShare` (the latter is created by #187) |
-| CreatedForInterviewId | int? FK → Interview | SetNull; set only by the panel auto-share so a panel change can revoke what it created |
+| Source | varchar(30) | `Manual` \| `PanelAutoShare` (created by `PanelAutoShareService` when a booking has `ShareEarlierRoundsWithPanel`, #187) |
+| CreatedForInterviewId | int? FK → Interview | SetNull; set only by the panel auto-share (the new booking), so a panel change, the toggle or a cancel can revoke exactly what it created and nothing manual |
 | Note | varchar(500)? | optional reason shown to the grantee |
 | ExpiresAt | datetime? | optional, UTC |
 | RevokedAt / RevokedByUserId | datetime? / int? FK → User | soft revoke (SetNull on the user), the row stays for audit |
@@ -275,7 +276,7 @@ One interviewer's evaluation of one interview. Unique index `(InterviewId, Inter
 Per-criterion score within an evaluation. Unique `(InterviewEvaluationId, CriterionKey)`; cascade from evaluation. `CriterionKey` is validated dynamically against the candidate's assigned role rubric (or the default system rubric); `Rating` 1–5 nullable; `Comment` varchar(1000) nullable. Empty items (no rating + no comment) are not persisted.
 
 ### EvaluationRubric (`EvaluationRubrics`) & RubricCriterion (`RubricCriteria`)
-Scorecard template definitions that can be customized per Job Opening (`RoleAppliedOption.EvaluationRubricId`).
+Scorecard template definitions that can be customized per Job Opening (`RoleAppliedOption.EvaluationRubricId`). Which rubric an interview uses is decided in one place, `EvaluationRubricService.ResolveAsync`: the candidate's opening by `RoleAppliedOptionId` (the legacy `AppliedRole` name only when there is no link), its rubric only if active **and** with criteria, else the default active rubric, else any active one. The rubric endpoint and evaluation validation both use it (#188).
 - `EvaluationRubric`: `Id`, `Name` (unique, ≤200), `Description` (≤1000), `IsDefault`, `IsActive`, `CreatedAt`, `UpdatedAt`.
 - `RubricCriterion`: `Id`, `EvaluationRubricId` (FK, cascade), `SectionName` (≤100), `Key` (unique per rubric, ≤100), `Label` (≤200), `Hint` (≤500), `Weight` (double, default 1.0), `SortOrder`.
 - Seed data ensures the default 12-criterion standard rubric exists (`Id = 1`, `IsDefault = true`).

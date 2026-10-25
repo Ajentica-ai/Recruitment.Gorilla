@@ -16,7 +16,7 @@ import {
   type CriteriaSection,
   type Criterion,
 } from '../utils/evaluationCriteria';
-import type { EvaluationItem, EvaluationRubric, InterviewEvaluation } from '../types';
+import type { EvaluationItem, InterviewEvaluation } from '../types';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -77,8 +77,13 @@ const ChevronIcon = ({ open }: { open: boolean }) => (
   </svg>
 );
 
+/** The part of a rubric the read-only view needs: a full rubric, or the criteria a report carries (#190). */
+export interface RubricLike {
+  criteria: { key: string; label: string; sectionName?: string | null; hint?: string | null }[];
+}
+
 /** Convert rubric criteria to sections */
-const rubricToSections = (rubric?: EvaluationRubric | null): CriteriaSection[] => {
+const rubricToSections = (rubric?: RubricLike | null): CriteriaSection[] => {
   if (!rubric || !rubric.criteria || rubric.criteria.length === 0) {
     return EVALUATION_SECTIONS;
   }
@@ -124,10 +129,29 @@ export function EvaluationReadOnly({
   rubric,
 }: {
   evaluation: InterviewEvaluation;
-  rubric?: EvaluationRubric | null;
+  rubric?: RubricLike | null;
 }) {
   const itemMap = buildItemMap(evaluation.items);
-  const sections = useMemo(() => rubricToSections(rubric), [rubric]);
+  const rubricSections = useMemo(() => rubricToSections(rubric), [rubric]);
+  // A rating must never vanish because the rubric or the opening changed after scoring, or because the
+  // caller had no rubric to hand (#190): any rated key the sections do not know is listed by its key.
+  const sections = useMemo(() => {
+    const known = new Set(rubricSections.flatMap((s) => s.criteria.map((c) => c.key)));
+    const orphans = evaluation.items.filter(
+      (it) => !known.has(it.criterionKey) && (it.rating != null || !!it.comment),
+    );
+    return orphans.length === 0
+      ? rubricSections
+      : [
+          ...rubricSections,
+          {
+            id: 'OTHER',
+            title: 'Other criteria',
+            description: 'Ratings on criteria that are not part of the current rubric.',
+            criteria: orphans.map((it) => ({ key: it.criterionKey, label: it.criterionKey, hint: '' })),
+          },
+        ];
+  }, [rubricSections, evaluation.items]);
 
   return (
     <div>

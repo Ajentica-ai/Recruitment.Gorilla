@@ -65,6 +65,18 @@ describe('EvaluationSharesList', () => {
     expect(within(history).queryByRole('button', { name: /Revoke/ })).not.toBeInTheDocument();
   });
 
+  it('offers no Revoke on a share that follows an interview panel', async () => {
+    vi.mocked(getEvaluationShares).mockResolvedValue([
+      share({ id: 1, source: 'PanelAutoShare', granteeName: 'Pat Panel' }),
+      share({ id: 2, source: 'Manual', granteeName: 'Mia Manual', granteeUserId: 6 }),
+    ]);
+    renderWithProviders(<EvaluationSharesList candidateId={42} />);
+
+    expect(await screen.findByRole('button', { name: 'Revoke Mia Manual' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Revoke Pat Panel' })).not.toBeInTheDocument();
+    expect(screen.getByText(/Follows the interview's panel/)).toBeInTheDocument();
+  });
+
   it('says so when nothing is shared', async () => {
     vi.mocked(getEvaluationShares).mockResolvedValue([]);
     renderWithProviders(<EvaluationSharesList candidateId={42} />);

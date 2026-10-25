@@ -30,46 +30,52 @@ public class EvaluationRubricService(AppDbContext db, AuditService audit)
     }
 
     /// <summary>
-    /// Resolves the evaluation rubric for a specific interview by checking the candidate's
-    /// applied job opening. Falls back to the default rubric if unassigned.
+    /// The rubric an interview is scored against, as a DTO: see <see cref="ResolveAsync"/>. Null when the
+    /// interview does not exist or no rubric exists at all.
     /// </summary>
     public async Task<EvaluationRubricDto?> GetForInterviewAsync(int interviewId)
     {
-        var interview = await db.Interviews
-            .Include(i => i.Candidate)
-            .FirstOrDefaultAsync(i => i.Id == interviewId);
+        var candidate = await db.Interviews
+            .Where(i => i.Id == interviewId)
+            .Select(i => new { i.Candidate.RoleAppliedOptionId, i.Candidate.AppliedRole })
+            .FirstOrDefaultAsync();
+        if (candidate is null) return null;
 
-        if (interview is null) return null;
-
-        EvaluationRubric? rubric = null;
-
-        // Try to match by candidate applied role
-        if (!string.IsNullOrWhiteSpace(interview.Candidate.AppliedRole))
-        {
-            var roleOption = await db.RoleAppliedOptions
-                .Include(r => r.EvaluationRubric)
-                    .ThenInclude(er => er!.Criteria)
-                .Include(r => r.EvaluationRubric)
-                    .ThenInclude(er => er!.RoleAppliedOptions)
-                .FirstOrDefaultAsync(r => r.Name == interview.Candidate.AppliedRole);
-
-            if (roleOption?.EvaluationRubric is { IsActive: true } er)
-            {
-                rubric = er;
-            }
-        }
-
-        // Fallback to default rubric
-        rubric ??= await db.EvaluationRubrics
-            .Include(r => r.Criteria)
-            .Include(r => r.RoleAppliedOptions)
-            .FirstOrDefaultAsync(r => r.IsDefault && r.IsActive)
-            ?? await db.EvaluationRubrics
-                .Include(r => r.Criteria)
-                .Include(r => r.RoleAppliedOptions)
-                .FirstOrDefaultAsync(r => r.IsActive);
-
+        var rubric = await ResolveAsync(db, candidate.RoleAppliedOptionId, candidate.AppliedRole);
         return rubric is null ? null : ToDto(rubric);
+    }
+
+    /// <summary>
+    /// The single rule for which rubric a candidate's interviews use (#188), shared by the rubric endpoint
+    /// and by evaluation validation so they cannot disagree. The candidate's job opening is found by
+    /// <c>RoleAppliedOptionId</c>, which is what the UI sets. The legacy free-text <c>AppliedRole</c> is
+    /// matched by opening name only when there is no link, so candidates from before the link existed keep
+    /// working (and a rename of an opening cannot break a linked candidate). The opening's rubric counts
+    /// only if it is active and has criteria; otherwise the default active rubric, then any active one.
+    /// </summary>
+    public static async Task<EvaluationRubric?> ResolveAsync(AppDbContext db, int? roleAppliedOptionId, string? legacyRoleName)
+    {
+        IQueryable<RoleAppliedOption> openings = db.RoleAppliedOptions
+            .Include(r => r.EvaluationRubric).ThenInclude(er => er!.Criteria)
+            .Include(r => r.EvaluationRubric).ThenInclude(er => er!.RoleAppliedOptions);
+
+        RoleAppliedOption? opening = null;
+        if (roleAppliedOptionId is int roleId)
+            opening = await openings.FirstOrDefaultAsync(r => r.Id == roleId);
+        else if (!string.IsNullOrWhiteSpace(legacyRoleName))
+            opening = await openings.FirstOrDefaultAsync(r => r.Name == legacyRoleName);
+
+        if (opening?.EvaluationRubric is { IsActive: true } own && own.Criteria.Count > 0)
+            return own;
+
+        return await db.EvaluationRubrics
+                   .Include(r => r.Criteria)
+                   .Include(r => r.RoleAppliedOptions)
+                   .FirstOrDefaultAsync(r => r.IsDefault && r.IsActive)
+               ?? await db.EvaluationRubrics
+                   .Include(r => r.Criteria)
+                   .Include(r => r.RoleAppliedOptions)
+                   .FirstOrDefaultAsync(r => r.IsActive);
     }
 
     public async Task<(EvaluationRubricDto? Rubric, string? Error, bool Conflict)> CreateAsync(
