@@ -182,7 +182,30 @@ public class InterviewService(
             .OrderByDescending(x => x.Count).ThenBy(x => x.Recommendation)
             .ToList();
 
-        var criterionAverages = EvaluationCriteria.Keys
+        // Every candidate interview shares one job opening, so one rubric describes the whole report. With no
+        // rubric at all the list stays empty and the client uses the built-in criteria.
+        var rubric = interviews.Count > 0
+            ? await new EvaluationRubricService(db, audit).GetForInterviewAsync(interviews[0].Id)
+            : null;
+        var criteria = (rubric?.Criteria ?? [])
+            .Select(c => new ReportCriterionDto(c.Key, c.Label, string.IsNullOrWhiteSpace(c.SectionName) ? "General" : c.SectionName))
+            .ToList();
+
+        // A rated key the rubric does not know (an older rubric, a renamed criterion) must not vanish.
+        var knownKeys = criteria.Count > 0 ? criteria.Select(c => c.Key).ToHashSet() : EvaluationCriteria.Keys.ToHashSet();
+        var extraKeys = reportEvals
+            .SelectMany(r => r.Evaluation.Items)
+            .Where(it => it.Rating is not null || !string.IsNullOrWhiteSpace(it.Comment))
+            .Select(it => it.CriterionKey)
+            .Where(k => !knownKeys.Contains(k))
+            .Distinct()
+            .OrderBy(k => k, StringComparer.Ordinal)
+            .ToList();
+        if (criteria.Count > 0)
+            criteria.AddRange(extraKeys.Select(k => new ReportCriterionDto(k, k, "Other criteria")));
+
+        var criterionAverages = (criteria.Count > 0 ? criteria.Select(c => c.Key) : EvaluationCriteria.Keys.Concat(extraKeys))
+            .Distinct()
             .Select(key =>
             {
                 var ratings = reportEvals
@@ -203,7 +226,7 @@ public class InterviewService(
 
         return new CandidateEvaluationReportDto(
             candidate.Id, candidate.FullName, candidate.RoleApplied ?? candidate.AppliedRole,
-            summary, reportEvals);
+            summary, reportEvals, criteria);
     }
 
     /// <summary>
