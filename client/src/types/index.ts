@@ -502,6 +502,7 @@ export interface LoginPayload {
 
 export interface LoginResult {
   token: string;
+  userId: number;
   name: string;
   email: string;
   roles: Role[];
@@ -510,6 +511,7 @@ export interface LoginResult {
 }
 
 export interface AuthUser {
+  id: number;
   name: string;
   email: string;
   roles: Role[];

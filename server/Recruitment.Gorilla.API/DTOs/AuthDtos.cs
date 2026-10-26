@@ -8,6 +8,7 @@ public record LoginDto(string Email, string Password);
 /// </summary>
 public record AuthResultDto(
     string Token,
+    int UserId,
     string Name,
     string Email,
     string[] Roles,

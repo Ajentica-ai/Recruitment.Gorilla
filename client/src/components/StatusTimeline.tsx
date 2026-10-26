@@ -12,6 +12,9 @@ interface Props {
   history: StatusHistoryEntry[];
   /** Admin+ only: show a link from an "Interview Completed" entry to its evaluations. */
   canViewEvaluations?: boolean;
+  /** The signed-in user. An interviewer pill is a link only for Admin+ or for the interviewer it names: the
+   *  interview page answers 404 to everyone else, so a link there is a dead end (#198). */
+  currentUserId?: number;
   /** Offer Reschedule / Cancel on a live "Interview Scheduled" entry. Mirrors the page's
    *  canWrite (write role AND the role is still open), so a closed role hides both. */
   canManageInterview?: boolean;
@@ -92,6 +95,7 @@ function EvaluationSummaries({ items }: { items: EvaluationSummary[] }) {
 export default function StatusTimeline({
   history,
   canViewEvaluations = false,
+  currentUserId,
   canManageInterview = false,
   onReschedule,
   onCancelInterview,
@@ -223,7 +227,8 @@ export default function StatusTimeline({
                           {iv.name}
                         </span>
                       );
-                      return entry.interviewId ? (
+                      const canOpen = canViewEvaluations || (currentUserId !== undefined && iv.userId === currentUserId);
+                      return entry.interviewId && canOpen ? (
                         <Link key={iv.userId} to={`/interviews/${entry.interviewId}`} className="no-underline">
                           {pill}
                         </Link>

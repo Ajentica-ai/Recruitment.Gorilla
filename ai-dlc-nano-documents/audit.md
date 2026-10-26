@@ -602,3 +602,11 @@
 - 2026-10-22T11:06Z [claude] RG-197 BRANCH @f4c994b: fix/RG-197/Offer-input-validation created off fix/RG-194/Offer-url-candidate-check (user confirmed)
 - 2026-10-22T11:06Z [claude] RG-197 PHASE PLAN→CONSTRUCT @f4c994b: plan approved (go with recommendation)
 - 2026-10-22T11:11Z [claude] RG-197 DONE @f4c994b: OfferInputValidator (400 not 500), form mirrors limits; 831 backend, 351 client tests
+- 2026-10-22T11:12Z [claude] RG-197 SIDE-EFFECT @6a654d6: pushed fix/RG-197/Offer-input-validation, opened PR #224 (base fix/RG-194/Offer-url-candidate-check; user confirmed)
+- 2026-10-22T11:15Z [claude] RG-198 CREATED @6a654d6: intake of issue #198 (bug, UI); already assigned to @me; board move skipped (gh lacks read:project)
+- 2026-10-22T11:16Z [claude] RG-198 DECISION @6a654d6: CLARIFY assumptions 1-5 accepted (go with recommendation)
+- 2026-10-22T11:16Z [claude] RG-198 PHASE CLARIFY→PLAN @6a654d6: plan.md drafted, awaiting approval
+- 2026-10-22T11:17Z [claude] RG-198 BRANCH @3062074: fix/RG-198/Dead-end-links created off origin/develop (user confirmed)
+- 2026-10-22T11:17Z [claude] RG-198 PHASE PLAN→CONSTRUCT @3062074: plan approved (go with recommendation)
+- 2026-10-22T11:19Z [claude] RG-198 REVISED @3062074: client has no user id; add userId to AuthResultDto and AuthUser for the pill rule
+- 2026-10-22T11:22Z [claude] RG-198 DONE @3062074: pills/booker link/RequireRole toast fixed; userId added to AuthResultDto; 695 backend, 325 client
