@@ -34,7 +34,7 @@ The core profile. Holds a **denormalized `CurrentStatus`** for fast list queries
 | LinkedInUrl | varchar(500) | nullable |
 | GithubUrl | varchar(500) | nullable; auto-parsed from CV when present |
 | PortfolioUrl | varchar(500) | nullable |
-| AppliedRole | varchar(150) | nullable; legacy free-text role (kept for back-compat; forms now use RoleAppliedOptionId) |
+| AppliedRole | varchar(150) | nullable; legacy free-text role (kept for back-compat; forms now use RoleAppliedOptionId, and the client sends it as null, so it is empty for every UI-created candidate). **Never look a candidate's opening up through it**: the rubric and the role name in interview emails go through `RoleAppliedOptionId`, with this text used only when there is no link (#188) |
 | RoleAppliedOptionId | int? FK → RoleAppliedOption | nullable; configured role the candidate is interviewing for |
 | OwnerUserId | int? FK → User | nullable; set to the creating Recruiter's id for per-role scoping (SetNull on user delete). Legacy/admin-created rows are NULL |
 | IsReferred | bool | default false |
@@ -276,7 +276,7 @@ One interviewer's evaluation of one interview. Unique index `(InterviewId, Inter
 Per-criterion score within an evaluation. Unique `(InterviewEvaluationId, CriterionKey)`; cascade from evaluation. `CriterionKey` is validated dynamically against the candidate's assigned role rubric (or the default system rubric); `Rating` 1–5 nullable; `Comment` varchar(1000) nullable. Empty items (no rating + no comment) are not persisted.
 
 ### EvaluationRubric (`EvaluationRubrics`) & RubricCriterion (`RubricCriteria`)
-Scorecard template definitions that can be customized per Job Opening (`RoleAppliedOption.EvaluationRubricId`).
+Scorecard template definitions that can be customized per Job Opening (`RoleAppliedOption.EvaluationRubricId`). Which rubric an interview uses is decided in one place, `EvaluationRubricService.ResolveAsync`: the candidate's opening by `RoleAppliedOptionId` (the legacy `AppliedRole` name only when there is no link), its rubric only if active **and** with criteria, else the default active rubric, else any active one. The rubric endpoint and evaluation validation both use it (#188).
 - `EvaluationRubric`: `Id`, `Name` (unique, ≤200), `Description` (≤1000), `IsDefault`, `IsActive`, `CreatedAt`, `UpdatedAt`.
 - `RubricCriterion`: `Id`, `EvaluationRubricId` (FK, cascade), `SectionName` (≤100), `Key` (unique per rubric, ≤100), `Label` (≤200), `Hint` (≤500), `Weight` (double, default 1.0), `SortOrder`.
 - Seed data ensures the default 12-criterion standard rubric exists (`Id = 1`, `IsDefault = true`).
