@@ -91,6 +91,7 @@ describe('StatusTimeline', () => {
           interviewers: [{ userId: 2, name: 'Sam Interviewer' }],
           interviewTags: ['Technical', '1st Level'],
         })]}
+        canViewEvaluations
       />,
     );
     expect(screen.getByText('Sam Interviewer')).toBeInTheDocument();
@@ -187,6 +188,44 @@ describe('StatusTimeline', () => {
       const button = screen.getByRole('button', { name: /reschedule/i });
       fireEvent.click(button);
       expect(onReschedule).toHaveBeenCalledWith(7);
+    });
+  });
+
+  describe('interviewer pills link only where the page opens (#198)', () => {
+    const booked = () =>
+      entry({
+        status: 'Interview Scheduled',
+        interviewId: 9,
+        interviewers: [{ userId: 2, name: 'Sam Interviewer' }, { userId: 3, name: 'Pat Panelist' }],
+      });
+    const interviewLinks = () => screen.queryAllByRole('link').filter((a) => a.getAttribute('href') === '/interviews/9');
+
+    it('shows plain text to a viewer who is neither Admin+ nor on the interview (the owning Recruiter)', () => {
+      renderWithProviders(<StatusTimeline history={[booked()]} currentUserId={99} />);
+
+      expect(screen.getByText('Sam Interviewer')).toBeInTheDocument();
+      expect(screen.getByText('Pat Panelist')).toBeInTheDocument();
+      expect(interviewLinks()).toHaveLength(0);
+    });
+
+    it('links every pill for Admin+', () => {
+      renderWithProviders(<StatusTimeline history={[booked()]} canViewEvaluations currentUserId={99} />);
+
+      expect(interviewLinks()).toHaveLength(2);
+    });
+
+    it("links only the viewer's own pill when they are an interviewer", () => {
+      renderWithProviders(<StatusTimeline history={[booked()]} currentUserId={3} />);
+
+      const links = interviewLinks();
+      expect(links).toHaveLength(1);
+      expect(links[0]).toHaveTextContent('Pat Panelist');
+    });
+
+    it('shows plain text when the viewer is unknown', () => {
+      renderWithProviders(<StatusTimeline history={[booked()]} />);
+
+      expect(interviewLinks()).toHaveLength(0);
     });
   });
 });

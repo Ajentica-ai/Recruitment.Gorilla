@@ -7,11 +7,10 @@ namespace Recruitment.Gorilla.API.Services;
 
 public class AnalyticsService(AppDbContext db)
 {
-    private static readonly HashSet<string> PositiveTerminal =
-        ["Recommended", "Offer Preparation", "Offer Extended", "Offer Accepted", "Hired"];
+    // The same sets the dashboard tiles and the candidate list use, so the analytics page cannot drift from them (#200).
+    private static readonly HashSet<string> PositiveTerminal = CandidateBuckets.PositiveTerminal;
 
-    private static readonly HashSet<string> NegativeTerminal =
-        ["Reject", "Not Recommended", "Discontinued", "Not Available", "Offer Declined"];
+    private static readonly HashSet<string> NegativeTerminal = CandidateBuckets.NegativeTerminal;
 
     private static readonly HashSet<string> HiredStatuses =
         ["Hired", "Offer Accepted"];
@@ -42,28 +41,14 @@ public class AnalyticsService(AppDbContext db)
             allowedRoleIds = assignedRoles.ToHashSet();
         }
 
-        // Base candidate query
-        var candidateQuery = db.Candidates
-            .AsNoTracking()
-            .Include(c => c.StatusHistories)
-            .Include(c => c.SourceOption)
-            .Include(c => c.OwnerUser)
-            .AsQueryable();
+        // The candidates the caller may see, narrowed by the role filter. A query, not a list: nothing is loaded
+        // until the window and the aggregates below ask for it (#200).
+        var scoped = ScopedCandidates(query, allowedRoleIds, ownerScopeUserId);
 
-        // The role filter narrows the caller's scope; it never widens it.
-        if (allowedRoleIds != null)
-        {
-            candidateQuery = candidateQuery.Where(c =>
-                (c.RoleAppliedOptionId.HasValue && allowedRoleIds.Contains(c.RoleAppliedOptionId.Value)) ||
-                c.OwnerUserId == ownerScopeUserId);
-        }
-
-        if (query.RoleId.HasValue)
-        {
-            candidateQuery = candidateQuery.Where(c => c.RoleAppliedOptionId == query.RoleId.Value);
-        }
-
-        var allCandidates = await candidateQuery.ToListAsync();
+        // Only candidates created in, or with a status change inside, the previous and current period are loaded, each
+        // with its full history (time to hire and the funnel read the whole trail). The two periods touch at
+        // periodStart, so one range covers both. This used to load every candidate and filter in memory.
+        var allCandidates = await WindowCandidates(scoped, prevStart, periodEnd).ToListAsync();
 
         // Candidates active / created in the target period
         var periodCandidates = allCandidates.Where(c =>
@@ -98,7 +83,7 @@ public class AnalyticsService(AppDbContext db)
         var sourcingChannels = CalculateSourcingPerformance(periodCandidates);
 
         // 6. Recruiter Workloads
-        var recruiterWorkloads = await CalculateRecruiterWorkloadsAsync(allCandidates, periodStart, periodEnd);
+        var recruiterWorkloads = await CalculateRecruiterWorkloadsAsync(scoped, allCandidates, periodStart, periodEnd);
 
         var activeCount = periodCandidates.Count(c =>
             !PositiveTerminal.Contains(c.CurrentStatus) && !NegativeTerminal.Contains(c.CurrentStatus));
@@ -117,6 +102,39 @@ public class AnalyticsService(AppDbContext db)
             PeriodEnd: periodEnd
         );
     }
+
+    /// <summary>The candidates in the caller's scope, read-only. The role filter narrows the scope; it never widens it.</summary>
+    public IQueryable<Candidate> ScopedCandidates(
+        AnalyticsFilterQuery query, HashSet<int>? allowedRoleIds, int? ownerScopeUserId)
+    {
+        var candidateQuery = db.Candidates.AsNoTracking().AsQueryable();
+
+        if (allowedRoleIds != null)
+        {
+            candidateQuery = candidateQuery.Where(c =>
+                (c.RoleAppliedOptionId.HasValue && allowedRoleIds.Contains(c.RoleAppliedOptionId.Value)) ||
+                c.OwnerUserId == ownerScopeUserId);
+        }
+
+        if (query.RoleId.HasValue)
+        {
+            candidateQuery = candidateQuery.Where(c => c.RoleAppliedOptionId == query.RoleId.Value);
+        }
+
+        return candidateQuery;
+    }
+
+    /// <summary>
+    /// The scoped candidates created, or changed status, between <paramref name="from"/> and <paramref name="to"/>,
+    /// with their histories and source. A split query keeps the history rows from multiplying the candidate rows.
+    /// </summary>
+    public static IQueryable<Candidate> WindowCandidates(IQueryable<Candidate> scoped, DateTime from, DateTime to) =>
+        scoped
+            .Where(c => (c.CreatedAt >= from && c.CreatedAt <= to) ||
+                        c.StatusHistories.Any(h => h.ChangedAt >= from && h.ChangedAt <= to))
+            .Include(c => c.StatusHistories)
+            .Include(c => c.SourceOption)
+            .AsSplitQuery();
 
     private static (DateTime start, DateTime end) ResolveDateRange(AnalyticsFilterQuery query, DateTime now)
     {
@@ -409,61 +427,69 @@ public class AnalyticsService(AppDbContext db)
     }
 
     private async Task<List<RecruiterWorkloadDto>> CalculateRecruiterWorkloadsAsync(
-        List<Candidate> allCandidates,
+        IQueryable<Candidate> scoped,
+        List<Candidate> windowCandidates,
         DateTime periodStart,
         DateTime periodEnd)
     {
-        var users = await db.Users
+        // Only the people who can own candidates, and only the columns used.
+        var recruiters = await db.Users
             .AsNoTracking()
-            .Include(u => u.Roles)
-            .Where(u => u.IsActive)
+            .Where(u => u.IsActive && u.Roles.Any(r => r.Role == "Recruiter" || r.Role == "Admin" || r.Role == "SuperAdmin"))
+            .Select(u => new { u.Id, u.Name, u.Email })
             .ToListAsync();
 
-        var recruiters = users
-            .Where(u => u.Roles.Any(r => r.Role is "Recruiter" or "Admin" or "SuperAdmin"))
-            .ToList();
+        // Everything a recruiter owns counts toward their totals, not just what moved in the period, so these are
+        // aggregated over the whole scoped set in SQL instead of by loading it.
+        var ownerTotals = (await scoped
+                .Where(c => c.OwnerUserId != null)
+                .GroupBy(c => c.OwnerUserId!.Value)
+                .Select(g => new
+                {
+                    Owner = g.Key,
+                    Total = g.Count(),
+                    Active = g.Count(c => !PositiveTerminal.Contains(c.CurrentStatus) && !NegativeTerminal.Contains(c.CurrentStatus)),
+                })
+                .ToListAsync())
+            .ToDictionary(x => x.Owner);
 
-        // Activity counts only on candidates the caller can see, so the table matches the scoped columns.
-        var candidateIds = allCandidates.Select(c => c.Id).ToHashSet();
-
-        var transitions = allCandidates
+        // Activity counts only on candidates the caller can see, so the table matches the scoped columns. Anything
+        // that changed status in the period is in the loaded window.
+        var transitions = windowCandidates
             .SelectMany(c => c.StatusHistories)
             .Where(h => h.ChangedAt >= periodStart && h.ChangedAt <= periodEnd)
             .ToList();
 
-        var interviews = (await db.InterviewInterviewers
-            .AsNoTracking()
-            .Include(ii => ii.Interview)
-            .Where(ii => ii.Interview.CreatedAt >= periodStart && ii.Interview.CreatedAt <= periodEnd)
-            .ToListAsync())
-            .Where(ii => candidateIds.Contains(ii.Interview.CandidateId))
-            .ToList();
+        var interviewCounts = (await db.InterviewInterviewers
+                .AsNoTracking()
+                .Where(ii => ii.Interview.CreatedAt >= periodStart && ii.Interview.CreatedAt <= periodEnd &&
+                             scoped.Any(c => c.Id == ii.Interview.CandidateId))
+                .GroupBy(ii => ii.UserId)
+                .Select(g => new { UserId = g.Key, Count = g.Count() })
+                .ToListAsync())
+            .ToDictionary(x => x.UserId, x => x.Count);
 
         var result = new List<RecruiterWorkloadDto>();
 
         foreach (var r in recruiters)
         {
-            var assignedCandidates = allCandidates.Where(c => c.OwnerUserId == r.Id).ToList();
-            var active = assignedCandidates.Count(c =>
-                !PositiveTerminal.Contains(c.CurrentStatus) && !NegativeTerminal.Contains(c.CurrentStatus));
+            ownerTotals.TryGetValue(r.Id, out var totals);
 
             var userTransitions = transitions.Count(t =>
                 string.Equals(t.ChangedBy, r.Name, StringComparison.OrdinalIgnoreCase) ||
                 string.Equals(t.ChangedBy, r.Email, StringComparison.OrdinalIgnoreCase));
 
-            var userInterviews = interviews.Count(i => i.UserId == r.Id);
-
-            var hired = assignedCandidates.Count(c =>
-                c.StatusHistories.Any(h => HiredStatuses.Contains(h.Status) && h.ChangedAt >= periodStart && h.ChangedAt <= periodEnd) ||
-                (HiredStatuses.Contains(c.CurrentStatus) && c.CreatedAt >= periodStart && c.CreatedAt <= periodEnd));
+            var hired = windowCandidates.Count(c => c.OwnerUserId == r.Id &&
+                (c.StatusHistories.Any(h => HiredStatuses.Contains(h.Status) && h.ChangedAt >= periodStart && h.ChangedAt <= periodEnd) ||
+                 (HiredStatuses.Contains(c.CurrentStatus) && c.CreatedAt >= periodStart && c.CreatedAt <= periodEnd)));
 
             result.Add(new RecruiterWorkloadDto(
                 RecruiterUserId: r.Id,
                 RecruiterName: r.Name,
-                ActiveCandidates: active,
-                TotalAssigned: assignedCandidates.Count,
+                ActiveCandidates: totals?.Active ?? 0,
+                TotalAssigned: totals?.Total ?? 0,
                 TransitionsLogged: userTransitions,
-                InterviewsParticipated: userInterviews,
+                InterviewsParticipated: interviewCounts.GetValueOrDefault(r.Id),
                 HiresMade: hired
             ));
         }

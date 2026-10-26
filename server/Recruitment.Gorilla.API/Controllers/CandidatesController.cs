@@ -38,6 +38,7 @@ public class CandidatesController(
         [FromQuery] int? roleId,
         [FromQuery] string? skillIds, // CSV of SkillOption ids (axios-friendly)
         [FromQuery] bool referred = false,
+        [FromQuery] string? batch = null,
         [FromQuery] string? bucket = null,
         [FromQuery] string? sort = null,
         [FromQuery] string? dir = null,
@@ -60,6 +61,7 @@ public class CandidatesController(
             RoleId: roleId,
             SkillIds: parsedSkillIds.Count > 0 ? parsedSkillIds : null,
             ReferredOnly: referred,
+            Batch: batch,
             Bucket: CandidateBuckets.IsKnown(bucket) ? bucket : null,
             Sort: sort,
             Dir: dir,

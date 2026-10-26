@@ -28,7 +28,7 @@ async function renderWithRoles(roles: Role[] | null) {
   vi.mocked(refreshSession).mockResolvedValue(
     roles === null
       ? null
-      : { token: 't', name: 'Test', email: 'test@x.io', roles, mustChangePassword: false, expiresAt: '' },
+      : { token: 't', userId: 1, name: 'Test', email: 'test@x.io', roles, mustChangePassword: false, expiresAt: '' },
   );
   render(
     <AuthProvider>

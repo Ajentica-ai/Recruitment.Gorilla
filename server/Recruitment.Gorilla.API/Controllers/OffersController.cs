@@ -43,12 +43,13 @@ public class OffersController(
         if (dto.BaseSalary <= 0)
             return BadRequest("Base salary must be greater than zero.");
 
-        var created = await offerService.CreateOfferAsync(
+        var (created, conflict) = await GuardAsync(() => offerService.CreateOfferAsync(
             candidateId,
             dto,
             OwnerScope,
             currentUser.UserId ?? 0,
-            currentUser.Name ?? string.Empty);
+            currentUser.Name ?? string.Empty));
+        if (conflict is not null) return conflict;
 
         if (created is null)
             return NotFound("Candidate not found or access denied.");
@@ -63,14 +64,16 @@ public class OffersController(
         if (dto.BaseSalary <= 0)
             return BadRequest("Base salary must be greater than zero.");
 
-        var updated = await offerService.UpdateOfferAsync(
+        var (updated, conflict) = await GuardAsync(() => offerService.UpdateOfferAsync(
             offerId,
+            candidateId,
             dto,
             OwnerScope,
             currentUser.UserId ?? 0,
-            currentUser.Name ?? string.Empty);
+            currentUser.Name ?? string.Empty));
+        if (conflict is not null) return conflict;
 
-        if (updated is null || updated.CandidateId != candidateId)
+        if (updated is null)
             return NotFound();
 
         return Ok(updated);
@@ -80,14 +83,16 @@ public class OffersController(
     [HttpPost("candidates/{candidateId}/offers/{offerId}/submit-approval")]
     public async Task<IActionResult> SubmitForApproval(int candidateId, int offerId, [FromBody] List<int>? approverUserIds)
     {
-        var submitted = await offerService.SubmitForApprovalAsync(
+        var (submitted, conflict) = await GuardAsync(() => offerService.SubmitForApprovalAsync(
             offerId,
+            candidateId,
             approverUserIds,
             currentUser.UserId ?? 0,
             currentUser.Name ?? string.Empty,
-            OwnerScope);
+            OwnerScope));
+        if (conflict is not null) return conflict;
 
-        if (submitted is null || submitted.CandidateId != candidateId)
+        if (submitted is null)
             return NotFound();
 
         return Ok(submitted);
@@ -116,7 +121,11 @@ public class OffersController(
                 currentUser.UserId ?? 0,
                 currentUser.Name ?? string.Empty);
         }
-        catch (InvalidOperationException ex)
+        catch (OfferRuleException ex)
+        {
+            return BadRequest(ex.Message);
+        }
+        catch (OfferStateException ex)
         {
             // An offer that is not awaiting approval. A conflict with its current state, not a server
             // fault, so it is a 409 the client can show rather than a 500.
@@ -133,13 +142,15 @@ public class OffersController(
     [HttpPost("candidates/{candidateId}/offers/{offerId}/extend")]
     public async Task<IActionResult> ExtendOffer(int candidateId, int offerId)
     {
-        var extended = await offerService.ExtendOfferAsync(
+        var (extended, conflict) = await GuardAsync(() => offerService.ExtendOfferAsync(
             offerId,
+            candidateId,
             currentUser.UserId ?? 0,
             currentUser.Name ?? string.Empty,
-            OwnerScope);
+            OwnerScope));
+        if (conflict is not null) return conflict;
 
-        if (extended is null || extended.CandidateId != candidateId)
+        if (extended is null)
             return NotFound();
 
         return Ok(extended);
@@ -160,14 +171,16 @@ public class OffersController(
             return BadRequest("A reason is required when an offer is declined.");
         }
 
-        var decided = await offerService.RecordDecisionAsync(
+        var (decided, conflict) = await GuardAsync(() => offerService.RecordDecisionAsync(
             offerId,
+            candidateId,
             dto,
             currentUser.UserId ?? 0,
             currentUser.Name ?? string.Empty,
-            OwnerScope);
+            OwnerScope));
+        if (conflict is not null) return conflict;
 
-        if (decided is null || decided.CandidateId != candidateId)
+        if (decided is null)
             return NotFound();
 
         return Ok(decided);
@@ -177,7 +190,7 @@ public class OffersController(
     [HttpGet("candidates/{candidateId}/offers/{offerId}/pdf")]
     public async Task<IActionResult> DownloadOfferLetterPdf(int candidateId, int offerId)
     {
-        var pdfBytes = await offerService.GenerateOfferLetterPdfAsync(offerId, OwnerScope);
+        var pdfBytes = await offerService.GenerateOfferLetterPdfAsync(offerId, candidateId, OwnerScope);
         if (pdfBytes is null)
             return NotFound();
 
@@ -190,5 +203,25 @@ public class OffersController(
     {
         var metrics = await offerService.GetMetricsAsync(OwnerScope);
         return Ok(metrics);
+    }
+
+    /// <summary>
+    /// An action the offer's current state does not allow is a conflict the client can show (409 with the
+    /// reason), not a server fault. The service refuses before it writes anything (#192).
+    /// </summary>
+    private static async Task<(OfferDto? Result, IActionResult? Conflict)> GuardAsync(Func<Task<OfferDto?>> action)
+    {
+        try
+        {
+            return (await action(), null);
+        }
+        catch (OfferRuleException ex)
+        {
+            return (null, new BadRequestObjectResult(ex.Message));
+        }
+        catch (OfferStateException ex)
+        {
+            return (null, new ConflictObjectResult(ex.Message));
+        }
     }
 }

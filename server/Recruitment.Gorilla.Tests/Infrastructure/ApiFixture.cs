@@ -107,7 +107,7 @@ public sealed class ApiFixture : IAsyncLifetime
     }
 
     /// <summary>Inserts a candidate (committed — the whole DB is dropped at teardown) and returns its id.</summary>
-    public async Task<int> NewCandidateAsync(int ownerUserId, int? roleId = null, string? email = null)
+    public async Task<int> NewCandidateAsync(int ownerUserId, int? roleId = null, string? email = null, string? batchId = null, string? batchName = null, string status = "Uploaded")
     {
         using var scope = _factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -118,7 +118,9 @@ public sealed class ApiFixture : IAsyncLifetime
             RelevantExperience = "3 Years",
             OwnerUserId = ownerUserId,
             RoleAppliedOptionId = roleId,
-            CurrentStatus = "Uploaded",
+            BatchId = batchId,
+            BatchName = batchName,
+            CurrentStatus = status,
         };
         db.Candidates.Add(candidate);
         await db.SaveChangesAsync();
@@ -158,6 +160,29 @@ public sealed class ApiFixture : IAsyncLifetime
             Name = $"Role-{Guid.NewGuid():N}", SortOrder = 1, IsActive = isActive,
             EndDate = endDate ?? DateTime.UtcNow.AddDays(30),
             Recruiters = recruiterUserIds.Distinct().Select(uid => new RoleRecruiter { UserId = uid }).ToList(),
+        };
+        db.RoleAppliedOptions.Add(role);
+        await db.SaveChangesAsync();
+        return role.Id;
+    }
+
+    /// <summary>
+    /// Inserts a job opening whose evaluation rubric has the single criterion <paramref name="criterionKey"/>
+    /// (committed) and returns the opening's id.
+    /// </summary>
+    public async Task<int> NewRoleWithRubricAsync(string criterionKey)
+    {
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var rubric = new EvaluationRubric
+        {
+            Name = $"Rubric-{Guid.NewGuid():N}", IsDefault = false, IsActive = true,
+            Criteria = [new RubricCriterion { SectionName = "Custom", Key = criterionKey, Label = criterionKey, SortOrder = 1 }],
+        };
+        var role = new RoleAppliedOption
+        {
+            Name = $"Role-{Guid.NewGuid():N}", SortOrder = 1, IsActive = true,
+            EndDate = DateTime.UtcNow.AddDays(30), EvaluationRubric = rubric,
         };
         db.RoleAppliedOptions.Add(role);
         await db.SaveChangesAsync();
@@ -341,6 +366,57 @@ public sealed class ApiFixture : IAsyncLifetime
             SubmittedAt = submitted ? DateTime.UtcNow : null,
         });
         await db.SaveChangesAsync();
+    }
+
+    /// <summary>
+    /// Inserts a Draft offer that an Admin has rejected (committed): a Rejected approval is on record, which is
+    /// what a rejection leaves behind on the way back to Draft. Returns its id.
+    /// </summary>
+    public async Task<int> NewRejectedDraftOfferAsync(int candidateId)
+    {
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var offer = new Offer
+        {
+            CandidateId = candidateId,
+            JobTitle = "Engineer",
+            BaseSalary = 90000,
+            Currency = "USD",
+            Status = "Draft",
+            CreatedByUserId = AdminId,
+            Approvals =
+            [
+                new OfferApproval { ApproverUserId = AdminId, Status = "Rejected", Comment = "too high", ReviewedAt = DateTime.UtcNow },
+            ],
+        };
+        db.Offers.Add(offer);
+        await db.SaveChangesAsync();
+        return offer.Id;
+    }
+
+    /// <summary>How many timeline rows the candidate has for <paramref name="status"/> (committed data).</summary>
+    public async Task<int> CountStatusRowsAsync(int candidateId, string status)
+    {
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        return await db.StatusHistories.CountAsync(h => h.CandidateId == candidateId && h.Status == status);
+    }
+
+    public async Task<decimal> OfferSalaryAsync(int offerId)
+    {
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        return await db.Offers.AsNoTracking().Where(o => o.Id == offerId).Select(o => o.BaseSalary).SingleAsync();
+    }
+
+    /// <summary>The offer's stored status, its candidate's stored status and how many audit rows name the offer.</summary>
+    public async Task<(string OfferStatus, string CandidateStatus, int AuditRows)> OfferSnapshotAsync(int offerId)
+    {
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var offer = await db.Offers.AsNoTracking().Include(o => o.Candidate).SingleAsync(o => o.Id == offerId);
+        var audit = await db.AuditLogs.CountAsync(a => a.EntityType == "Offer" && a.EntityId == offerId);
+        return (offer.Status, offer.Candidate.CurrentStatus, audit);
     }
 
     /// <summary>Inserts an offer in the given status (committed) and returns its id.</summary>
