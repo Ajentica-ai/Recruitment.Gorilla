@@ -380,6 +380,23 @@ public sealed class ApiFixture : IAsyncLifetime
         return await db.StatusHistories.CountAsync(h => h.CandidateId == candidateId && h.Status == status);
     }
 
+    public async Task<decimal> OfferSalaryAsync(int offerId)
+    {
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        return await db.Offers.AsNoTracking().Where(o => o.Id == offerId).Select(o => o.BaseSalary).SingleAsync();
+    }
+
+    /// <summary>The offer's stored status, its candidate's stored status and how many audit rows name the offer.</summary>
+    public async Task<(string OfferStatus, string CandidateStatus, int AuditRows)> OfferSnapshotAsync(int offerId)
+    {
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var offer = await db.Offers.AsNoTracking().Include(o => o.Candidate).SingleAsync(o => o.Id == offerId);
+        var audit = await db.AuditLogs.CountAsync(a => a.EntityType == "Offer" && a.EntityId == offerId);
+        return (offer.Status, offer.Candidate.CurrentStatus, audit);
+    }
+
     /// <summary>Inserts an offer in the given status (committed) and returns its id.</summary>
     public async Task<int> NewOfferAsync(int candidateId, string status = "Draft")
     {

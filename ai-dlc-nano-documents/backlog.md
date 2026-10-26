@@ -1,5 +1,6 @@
 # Backlog
 <!-- Out-of-scope findings, newest first. Delete a line when it is resolved. -->
+- [2026-10-25] backend/OfferService.SubmitForApprovalAsync - NotifyAsync saves before the guarded save, so a lost race is a 500 (found: RG-194)
 - [2026-10-25] backend/InterviewService:600 - cancel moves the candidate with AddStatusAsync, no ValidateStatusChangeAsync or lock-and-reload (found: RG-193)
 - [2026-10-25] backend/CandidatesController status - manual status change does not lock the candidate row like the offer actions now do (found: RG-193)
 - [2026-10-24] client/EvaluationRubricsTab - Active/Default checkboxes stay enabled on the default rubric; the server now refuses (found: RG-191)
@@ -10,7 +11,6 @@
 - [2026-10-22] backend/EmailTemplates.InterviewAssigned - candidate/role/interviewer names are not HTML-encoded (pre-existing) (found: RG-187)
 - [2026-10-25] backend/OfferService.ReviewApprovalAsync - an Admin on a stale page can approve terms edited after their view; send a version (found: RG-192)
 - [2026-10-25] client/offers - serverErrorMessage lives in lib/evaluationShares; move it to a shared lib/apiError (found: RG-192)
-- [2026-10-25] backend/OffersController - update/submit/extend/decision act first and compare candidateId after (write then 404) (found: RG-192)
 - [2026-10-21] client/DashboardPage - an Interviewer-only user sees org-wide KPI tiles (Total, Rejected, ...) (found: RG-186)
 - [2026-10-21] client/e2e/shared-with-me - consumes one Uploaded candidate per run and books a real interview (found: RG-186)
 - [2026-10-20] client/SearchableMultiSelect - popover stays open after a pick and covers the rest of the form (found: RG-185)

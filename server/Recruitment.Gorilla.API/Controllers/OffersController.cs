@@ -66,13 +66,14 @@ public class OffersController(
 
         var (updated, conflict) = await GuardAsync(() => offerService.UpdateOfferAsync(
             offerId,
+            candidateId,
             dto,
             OwnerScope,
             currentUser.UserId ?? 0,
             currentUser.Name ?? string.Empty));
         if (conflict is not null) return conflict;
 
-        if (updated is null || updated.CandidateId != candidateId)
+        if (updated is null)
             return NotFound();
 
         return Ok(updated);
@@ -84,13 +85,14 @@ public class OffersController(
     {
         var (submitted, conflict) = await GuardAsync(() => offerService.SubmitForApprovalAsync(
             offerId,
+            candidateId,
             approverUserIds,
             currentUser.UserId ?? 0,
             currentUser.Name ?? string.Empty,
             OwnerScope));
         if (conflict is not null) return conflict;
 
-        if (submitted is null || submitted.CandidateId != candidateId)
+        if (submitted is null)
             return NotFound();
 
         return Ok(submitted);
@@ -142,12 +144,13 @@ public class OffersController(
     {
         var (extended, conflict) = await GuardAsync(() => offerService.ExtendOfferAsync(
             offerId,
+            candidateId,
             currentUser.UserId ?? 0,
             currentUser.Name ?? string.Empty,
             OwnerScope));
         if (conflict is not null) return conflict;
 
-        if (extended is null || extended.CandidateId != candidateId)
+        if (extended is null)
             return NotFound();
 
         return Ok(extended);
@@ -170,13 +173,14 @@ public class OffersController(
 
         var (decided, conflict) = await GuardAsync(() => offerService.RecordDecisionAsync(
             offerId,
+            candidateId,
             dto,
             currentUser.UserId ?? 0,
             currentUser.Name ?? string.Empty,
             OwnerScope));
         if (conflict is not null) return conflict;
 
-        if (decided is null || decided.CandidateId != candidateId)
+        if (decided is null)
             return NotFound();
 
         return Ok(decided);
@@ -186,7 +190,7 @@ public class OffersController(
     [HttpGet("candidates/{candidateId}/offers/{offerId}/pdf")]
     public async Task<IActionResult> DownloadOfferLetterPdf(int candidateId, int offerId)
     {
-        var pdfBytes = await offerService.GenerateOfferLetterPdfAsync(offerId, OwnerScope);
+        var pdfBytes = await offerService.GenerateOfferLetterPdfAsync(offerId, candidateId, OwnerScope);
         if (pdfBytes is null)
             return NotFound();
 
