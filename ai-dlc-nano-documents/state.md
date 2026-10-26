@@ -6,4 +6,4 @@
 - Next step: user decides push + PR for RG-197.
 - Paused work items: none
 - Uncommitted code: no
-- Last updated: 2026-10-25T09:40Z by claude
+- Last updated: 2026-10-22T09:00Z by claude

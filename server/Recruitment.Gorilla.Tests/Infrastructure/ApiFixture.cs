@@ -107,7 +107,7 @@ public sealed class ApiFixture : IAsyncLifetime
     }
 
     /// <summary>Inserts a candidate (committed — the whole DB is dropped at teardown) and returns its id.</summary>
-    public async Task<int> NewCandidateAsync(int ownerUserId, int? roleId = null, string? email = null, string status = "Uploaded")
+    public async Task<int> NewCandidateAsync(int ownerUserId, int? roleId = null, string? email = null, string? batchId = null, string? batchName = null, string status = "Uploaded")
     {
         using var scope = _factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -118,6 +118,8 @@ public sealed class ApiFixture : IAsyncLifetime
             RelevantExperience = "3 Years",
             OwnerUserId = ownerUserId,
             RoleAppliedOptionId = roleId,
+            BatchId = batchId,
+            BatchName = batchName,
             CurrentStatus = status,
         };
         db.Candidates.Add(candidate);
@@ -158,6 +160,29 @@ public sealed class ApiFixture : IAsyncLifetime
             Name = $"Role-{Guid.NewGuid():N}", SortOrder = 1, IsActive = isActive,
             EndDate = endDate ?? DateTime.UtcNow.AddDays(30),
             Recruiters = recruiterUserIds.Distinct().Select(uid => new RoleRecruiter { UserId = uid }).ToList(),
+        };
+        db.RoleAppliedOptions.Add(role);
+        await db.SaveChangesAsync();
+        return role.Id;
+    }
+
+    /// <summary>
+    /// Inserts a job opening whose evaluation rubric has the single criterion <paramref name="criterionKey"/>
+    /// (committed) and returns the opening's id.
+    /// </summary>
+    public async Task<int> NewRoleWithRubricAsync(string criterionKey)
+    {
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var rubric = new EvaluationRubric
+        {
+            Name = $"Rubric-{Guid.NewGuid():N}", IsDefault = false, IsActive = true,
+            Criteria = [new RubricCriterion { SectionName = "Custom", Key = criterionKey, Label = criterionKey, SortOrder = 1 }],
+        };
+        var role = new RoleAppliedOption
+        {
+            Name = $"Role-{Guid.NewGuid():N}", SortOrder = 1, IsActive = true,
+            EndDate = DateTime.UtcNow.AddDays(30), EvaluationRubric = rubric,
         };
         db.RoleAppliedOptions.Add(role);
         await db.SaveChangesAsync();
