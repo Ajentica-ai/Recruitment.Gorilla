@@ -350,8 +350,10 @@ public class InterviewServiceEvaluationTests(MySqlDatabaseFixture fixture) : DbT
 
         await Interviews().UpsertEvaluationAsync(interview.Id, interviewer.Id, Eval(submit: true));
 
-        Assert.Single(NotificationsFor(owningRecruiter.Id));
-        Assert.Single(NotificationsFor(assignedRecruiter.Id));
+        // The only panelist submitting also completes the round (#202), so each of them hears twice: one notice for the
+        // evaluation and one that all evaluations are in. Only the first is what this test is about.
+        Assert.Single(NotificationsFor(owningRecruiter.Id), t => t == "Evaluation submitted");
+        Assert.Single(NotificationsFor(assignedRecruiter.Id), t => t == "Evaluation submitted");
         Assert.Empty(NotificationsFor(strangerRecruiter.Id));
         Assert.Empty(NotificationsFor(inactiveAdmin.Id));
     }

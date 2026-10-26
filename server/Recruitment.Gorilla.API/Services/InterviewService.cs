@@ -361,9 +361,71 @@ public class InterviewService(
         // The Candidate include is guaranteed by the required FK; the pattern keeps the compiler's
         // nullable analysis happy, matching how the rubric lookup above treats the navigation.
         if (dto.Submit && interview.Candidate is { } candidate)
+        {
             await NotifyEvaluationSubmittedAsync(candidate, interview.Id, userId, name);
+            await NotifyAllEvaluationsInAsync(candidate, interview.Id);
+        }
 
         return (ToDto(eval, name), null, false, false);
+    }
+
+    /// <summary>
+    /// When the submit that just landed was the last one outstanding (#202), tells the booker and the recruiters who can
+    /// see this candidate that the round is fully evaluated, so they can move the candidate to Interview Completed.
+    /// A submitted evaluation is locked, so a panelist can only fire this once; a draft never reaches here. Admins are
+    /// not told: they already hear about every evaluation. The recruiter scope mirrors
+    /// <c>CandidateService.ApplyAccess</c>, as <see cref="NotifyEvaluationSubmittedAsync"/> does.
+    /// </summary>
+    private async Task NotifyAllEvaluationsInAsync(Candidate candidate, int interviewId)
+    {
+        var interview = await db.Interviews
+            .AsNoTracking()
+            .Where(i => i.Id == interviewId)
+            .Select(i => new
+            {
+                i.Status,
+                i.CreatedByUserId,
+                // Active panelists only, the same rule the reminder job uses: someone deactivated before they submitted
+                // must not stop the round from ever counting as fully evaluated.
+                Panel = i.Interviewers.Where(ii => ii.User.IsActive).Select(ii => ii.UserId).ToList(),
+                Submitted = i.Evaluations.Where(e => e.IsSubmitted).Select(e => e.InterviewerUserId).ToList(),
+                Tags = i.Tags.Select(t => t.InterviewTypeOption.Name).ToList(),
+            })
+            .AsSplitQuery()
+            .FirstOrDefaultAsync();
+        if (interview is null || interview.Status == InterviewStatuses.Cancelled) return;
+        if (interview.Panel.Count == 0 || interview.Panel.Except(interview.Submitted).Any()) return;
+
+        var assignedRecruiterIds = candidate.RoleAppliedOptionId is int roleOptionId
+            ? await db.RoleAppliedOptions
+                .Where(o => o.Id == roleOptionId)
+                .SelectMany(o => o.Recruiters.Select(r => r.UserId))
+                .ToListAsync()
+            : [];
+
+        var recruiterIds = await db.Users
+            .Where(u => u.IsActive && u.Roles.Any(r => r.Role == Roles.Recruiter) &&
+                        (candidate.OwnerUserId == u.Id || assignedRecruiterIds.Contains(u.Id)))
+            .Select(u => u.Id)
+            .ToListAsync();
+
+        // The booker hears too, but only while they can still open the report this links to: an active Admin or above,
+        // or one of the recruiters above. One taken off the job opening since would get a dead link.
+        var recipients = new HashSet<int>(recruiterIds);
+        if (interview.CreatedByUserId is int bookerId &&
+            await db.Users.AnyAsync(u => u.Id == bookerId && u.IsActive &&
+                (u.Roles.Any(r => r.Role == Roles.SuperAdmin || r.Role == Roles.Admin) || recruiterIds.Contains(u.Id))))
+            recipients.Add(bookerId);
+        recipients.ExceptWith(interview.Panel);
+
+        var round = interview.Tags.Count > 0 ? $" ({string.Join(", ", interview.Tags)})" : "";
+        foreach (var recipientId in recipients)
+            await notificationService.NotifyAsync(
+                recipientId,
+                "All evaluations in",
+                $"All evaluations are in for {candidate.FullName}{round}. The round can now be moved to Interview Completed.",
+                $"/candidates/{candidate.Id}/evaluations",
+                category: NotificationCategories.EvaluationsComplete);
     }
 
     /// <summary>

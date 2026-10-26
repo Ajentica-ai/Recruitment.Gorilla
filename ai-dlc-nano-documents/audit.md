@@ -630,3 +630,10 @@
 - 2026-10-22T16:03Z [claude] RG-201 BRANCH @3062074: feature/RG-201/Backend-cleanups created off origin/develop (user confirmed)
 - 2026-10-22T16:03Z [claude] RG-201 PHASE PLAN→CONSTRUCT @3062074: plan approved (go with recommendation)
 - 2026-10-22T16:14Z [claude] RG-201 DONE @3062074: six cleanups done; rubric-for-interview scoped, ended openings, dup email on update; 713 backend; security review no High/Medium
+- 2026-10-22T16:21Z [claude] RG-201 SIDE-EFFECT @9d415b0: pushed feature/RG-201/Backend-cleanups, opened PR #228 into develop (user confirmed)
+- 2026-10-22T16:23Z [claude] RG-202 CREATED @9d415b0: intake of issue #202 (feature); already assigned to @me; board move skipped (gh lacks read:project)
+- 2026-10-22T16:23Z [claude] RG-202 DECISION @9d415b0: CLARIFY assumptions 1-8 accepted (go with recommendation)
+- 2026-10-22T16:23Z [claude] RG-202 PHASE CLARIFY→PLAN @9d415b0: plan.md drafted, awaiting approval
+- 2026-10-22T16:40Z [claude] RG-202 BRANCH @3062074: feature/RG-202/Evaluation-reminders created off origin/develop (user confirmed)
+- 2026-10-22T16:40Z [claude] RG-202 PHASE PLAN→CONSTRUCT @3062074: plan approved (go with recommendation)
+- 2026-10-22T16:49Z [claude] RG-202 DONE @3062074: overdue reminders (worker+service+EvaluationReminders migration), all-evaluations-in notice; 712 backend; review no High/Medium

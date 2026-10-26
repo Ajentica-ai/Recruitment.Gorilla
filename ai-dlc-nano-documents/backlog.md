@@ -1,5 +1,7 @@
 # Backlog
 <!-- Out-of-scope findings, newest first. Delete a line when it is resolved. -->
+- [2026-10-25] backend/EvaluationReminderService - two API instances could double-send (no row claim/concurrency token) (found: RG-202)
+- [2026-10-25] client/dashboard - optional "N interviews with missing evaluations" badge for recruiters not built (found: RG-202)
 - [2026-10-25] backend/EvaluationRubricsController - GetAll/GetById readable by every role; gate to Admin+ if catalogue should be private (found: RG-201)
 - [2026-10-25] backend/InterviewService.CanReadInterviewRubricAsync - missing vs forbidden id differ in query count (timing oracle, low) (found: RG-201)
 - [2026-10-25] backend/StatusHistory - no ChangedByUserId: analytics workloads match ChangedBy by name/email; needs migration + backfill (found: RG-200)
@@ -46,5 +48,3 @@
 - [2026-09-30] client/e2e - seeded admin@recruitmentgorilla.com is named 'Super Admin' but holds only the Admin role (found: RG-38)
 - [2026-10-13] drafts/discard - DiscardDraftAsync and the Approved-tab Discard button allow discarding an Approved draft (found: RG-55)
 - [2026-10-14] client/AuditLogPage, EmailDeliveryTab - bare <th> has no text-align (browser centres), likely misaligned like Users (found: RG-41)
-- [2026-10-14] client/RowActions - Users row menu has 3 items, taller than a row, so any placement overlaps neighbouring rows (found: RG-66)
-- [2026-10-15] auth - deactivated user's access token works until expiry (~15m); revoke refresh tokens + check IsActive on deactivate (found: RG-37)

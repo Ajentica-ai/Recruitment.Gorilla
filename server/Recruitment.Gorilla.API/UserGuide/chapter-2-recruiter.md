@@ -215,6 +215,10 @@ its own panel and evaluations, and the history keeps both rounds. This is a *sec
 the first one finished*, which is a different thing from moving a booking that has not happened
 yet.
 
+When the last interviewer on a round submits their evaluation, the person who booked the interview and the
+recruiters who can see the candidate get an **All evaluations in** notification linking to the evaluation report.
+That is the cue to move the candidate to **Interview Completed**.
+
 ## 2.8 Offers
 
 Once a candidate is **Recommended**, the **Offer & Compensation** card lets you prepare an offer.
