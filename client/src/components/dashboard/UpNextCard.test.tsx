@@ -51,6 +51,19 @@ describe('UpNextCard', () => {
     expect(await screen.findByText('Nothing scheduled.')).toBeInTheDocument();
   });
 
+  it('opens the oldest interview awaiting evaluation, as its tooltip says (#199)', async () => {
+    vi.mocked(api.getMyInterviews).mockResolvedValue([
+      { id: 301, candidateId: 1, candidateName: 'Newer Pending', role: null, scheduledAt: at(-24 * HOUR), evaluationState: 'None' },
+      { id: 302, candidateId: 2, candidateName: 'Oldest Pending', role: null, scheduledAt: at(-96 * HOUR), evaluationState: 'None' },
+      { id: 303, candidateId: 3, candidateName: 'Middle Pending', role: null, scheduledAt: at(-48 * HOUR), evaluationState: 'Draft' },
+    ]);
+    renderWithProviders(<UpNextCard />);
+
+    const badge = await screen.findByTitle('Open the oldest interview awaiting your evaluation');
+    expect(badge).toHaveTextContent('3 awaiting evaluation');
+    expect(badge.closest('a')).toHaveAttribute('href', '/interviews/302');
+  });
+
   it('has no Mine/Team toggle for a role without a team list', async () => {
     vi.mocked(api.getMyInterviews).mockResolvedValue(mine);
     renderWithProviders(<UpNextCard />);
