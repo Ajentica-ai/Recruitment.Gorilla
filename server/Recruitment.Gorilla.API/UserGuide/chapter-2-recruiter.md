@@ -225,6 +225,10 @@ Once a candidate is **Recommended**, the **Offer & Compensation** card lets you 
 
    ![Drafting an offer](images/02-offer-draft-form.png)
 
+   The form checks the terms before it saves: the salary must be above zero, a bonus cannot be
+   negative, the currency is a 3-letter code, the expiry date cannot be in the past or before the
+   start date, and job title, equity and notes have length limits (200, 200 and 2,000 characters).
+
 2. **Request Approval** sends it to an Admin, who approves or rejects it (a rejected offer goes
    back to draft). Approval is optional: you can also **Extend Offer** straight from a draft.
 

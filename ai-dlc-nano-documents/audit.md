@@ -595,3 +595,10 @@
 - 2026-10-22T10:38Z [claude] RG-196 BRANCH @3062074: fix/RG-196/Candidate-list-paging created off origin/develop (user confirmed)
 - 2026-10-22T10:38Z [claude] RG-196 PHASE PLAN→CONSTRUCT @3062074: plan approved (go with recommendation)
 - 2026-10-22T10:40Z [claude] RG-196 DONE @3062074: list paging clamped (page 1.., pageSize 1..200), board truncation notice; 705 backend, 321 client
+- 2026-10-22T11:03Z [claude] RG-196 SIDE-EFFECT @ed6ea15: pushed fix/RG-196/Candidate-list-paging, opened PR #223 into develop (user confirmed)
+- 2026-10-22T11:04Z [claude] RG-197 CREATED @ed6ea15: intake of issue #197 (bug); already assigned to @me; board move skipped (gh lacks read:project)
+- 2026-10-22T11:05Z [claude] RG-197 DECISION @ed6ea15: CLARIFY assumptions 1-6 accepted (go with recommendation)
+- 2026-10-22T11:05Z [claude] RG-197 PHASE CLARIFY→PLAN @ed6ea15: plan.md drafted, awaiting approval
+- 2026-10-22T11:06Z [claude] RG-197 BRANCH @f4c994b: fix/RG-197/Offer-input-validation created off fix/RG-194/Offer-url-candidate-check (user confirmed)
+- 2026-10-22T11:06Z [claude] RG-197 PHASE PLAN→CONSTRUCT @f4c994b: plan approved (go with recommendation)
+- 2026-10-22T11:11Z [claude] RG-197 DONE @f4c994b: OfferInputValidator (400 not 500), form mirrors limits; 831 backend, 351 client tests
