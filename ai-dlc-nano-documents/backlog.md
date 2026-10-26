@@ -1,5 +1,7 @@
 # Backlog
 <!-- Out-of-scope findings, newest first. Delete a line when it is resolved. -->
+- [2026-10-25] backend/EvaluationRubricsController - GetAll/GetById readable by every role; gate to Admin+ if catalogue should be private (found: RG-201)
+- [2026-10-25] backend/InterviewService.CanReadInterviewRubricAsync - missing vs forbidden id differ in query count (timing oracle, low) (found: RG-201)
 - [2026-10-25] backend/StatusHistory - no ChangedByUserId: analytics workloads match ChangedBy by name/email; needs migration + backfill (found: RG-200)
 - [2026-10-25] backend/OfferService.SubmitForApprovalAsync - NotifyAsync saves before the guarded save, so a lost race is a 500 (found: RG-194)
 - [2026-10-25] backend/InterviewService:600 - cancel moves the candidate with AddStatusAsync, no ValidateStatusChangeAsync or lock-and-reload (found: RG-193)
@@ -46,5 +48,3 @@
 - [2026-10-14] client/AuditLogPage, EmailDeliveryTab - bare <th> has no text-align (browser centres), likely misaligned like Users (found: RG-41)
 - [2026-10-14] client/RowActions - Users row menu has 3 items, taller than a row, so any placement overlaps neighbouring rows (found: RG-66)
 - [2026-10-15] auth - deactivated user's access token works until expiry (~15m); revoke refresh tokens + check IsActive on deactivate (found: RG-37)
-- [2026-10-15] AuthController - failed-login log/audit text uses raw unvalidated email (CR/LF, length); trim and sanitise (found: RG-37)
-- [2026-10-19] client/e2e - dev-server timing: styled-wait, interview page and candidate .profile-card waits time out now and then (found: RG-177)

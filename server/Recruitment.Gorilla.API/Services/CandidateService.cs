@@ -161,6 +161,14 @@ public class CandidateService(
         return MapToDetail(c);
     }
 
+    /// <summary>The candidate's name when the caller can access them, else null. A scope check that also needs
+    /// the name (for an audit line) without loading the whole detail graph.</summary>
+    public async Task<string?> GetFullNameIfAccessibleAsync(int id, int? ownerUserId = null) =>
+        await ApplyAccess(db.Candidates, ownerUserId)
+            .Where(c => c.Id == id)
+            .Select(c => c.FullName)
+            .FirstOrDefaultAsync();
+
     /// <summary>
     /// A candidate's current status, scoped the same way as <see cref="GetByIdAsync"/> but
     /// without the detail query's joins, for callers (like the next-status-options lookup) that
@@ -301,6 +309,21 @@ public class CandidateService(
         return null;
     }
 
+    /// <summary>Shown when a candidate would be put into a job opening that is inactive or past its end date.</summary>
+    public const string JobOpeningNotOpenError = "The selected job opening is not open.";
+
+    /// <summary>Shown when an edit would give a candidate an email another candidate already uses (#201).</summary>
+    public const string DuplicateEmailError = "Another candidate already uses this email address.";
+
+    /// <summary>
+    /// False when the job opening is missing, inactive or past its <c>EndDate</c>. Create and an update that moves a
+    /// candidate into a different opening check it, as upload and import already do through
+    /// <c>CandidateDraftService.ValidateJobOpeningForCallerAsync</c>: a candidate filed straight into an ended opening
+    /// was locked from every edit the moment it was saved (#201).
+    /// </summary>
+    private async Task<bool> IsJobOpeningOpenAsync(int roleId) =>
+        await db.RoleAppliedOptions.AnyAsync(r => r.Id == roleId && r.IsActive && r.EndDate >= DateTime.UtcNow);
+
     public async Task<bool> IsActiveStatusAsync(string status) =>
         await db.StatusOptions.AnyAsync(s => s.IsActive && s.Name == status);
 
@@ -440,6 +463,9 @@ public class CandidateService(
         if (scopeUserId is int scopeUid && dto.RoleAppliedOptionId is int newRoleId &&
             !await IsAssignedToRoleAsync(newRoleId, scopeUid))
             return (null, null, false, "You are not assigned to this job opening.");
+
+        if (dto.RoleAppliedOptionId is int createRoleId && !await IsJobOpeningOpenAsync(createRoleId))
+            return (null, null, false, JobOpeningNotOpenError);
 
         if (!dto.AllowDuplicate)
         {
@@ -609,6 +635,20 @@ public class CandidateService(
             dto.RoleAppliedOptionId is int newRoleId &&
             !await IsAssignedToRoleAsync(newRoleId, ownerUid))
             return (null, "You are not assigned to this job opening.");
+
+        // Only a move INTO a different opening is refused. A candidate already in an ended one keeps it, and the
+        // controller's role lock decides whether they can be edited at all.
+        if (dto.RoleAppliedOptionId is int movedRoleId && movedRoleId != previousRoleId &&
+            !await IsJobOpeningOpenAsync(movedRoleId))
+            return (null, JobOpeningNotOpenError);
+
+        // Create warns about a duplicate email; an edit used to skip the check entirely. Only a CHANGED email is
+        // checked, so saving a candidate whose duplicate already exists is never blocked, and the message names nobody
+        // because the caller may not be allowed to see the other candidate.
+        if (!dto.AllowDuplicate &&
+            !string.Equals(dto.Email, candidate.Email, StringComparison.OrdinalIgnoreCase) &&
+            await db.Candidates.AnyAsync(c => c.Id != id && c.Email == dto.Email))
+            return (null, DuplicateEmailError);
 
         candidate.FullName = dto.FullName;
         candidate.Email = dto.Email;

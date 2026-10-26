@@ -27,6 +27,32 @@ public class InterviewService(
         db.Interviews.AnyAsync(i =>
             i.CandidateId == candidateId && i.Interviewers.Any(ii => ii.UserId == userId));
 
+    /// <summary>
+    /// Whether the user may read the evaluation rubric for this interview (#201): Admin and above; an interviewer
+    /// assigned to it (they need it to fill in their evaluation); a Recruiter who owns the candidate or is assigned to
+    /// its job opening; or someone whose evaluation-share grant covers it. False for a missing interview too, so the
+    /// endpoint cannot be used to find out which interview ids exist.
+    /// </summary>
+    public async Task<bool> CanReadInterviewRubricAsync(int interviewId, int userId, bool isAdminOrAbove, bool isRecruiter)
+    {
+        var interview = await db.Interviews
+            .Where(i => i.Id == interviewId)
+            .Select(i => new
+            {
+                Assigned = i.Interviewers.Any(ii => ii.UserId == userId),
+                CandidateOwnerId = i.Candidate.OwnerUserId,
+                AssignedToOpening = i.Candidate.RoleAppliedOption != null &&
+                    i.Candidate.RoleAppliedOption.Recruiters.Any(rr => rr.UserId == userId),
+            })
+            .FirstOrDefaultAsync();
+        if (interview is null) return false;
+
+        if (isAdminOrAbove || interview.Assigned) return true;
+        if (isRecruiter && (interview.CandidateOwnerId == userId || interview.AssignedToOpening)) return true;
+
+        return await evaluationAccess.CanSeeInterviewAsync(userId, interviewId);
+    }
+
     /// <summary>Active users assignable as interviewers (any role).</summary>
     public async Task<List<AssignableUserDto>> GetAssignableUsersAsync() =>
         await db.Users
