@@ -22,6 +22,13 @@ public static class CandidateBuckets
     public static readonly HashSet<string> NegativeTerminal =
         ["Reject", "Not Recommended", "Discontinued", "Not Available", "Offer Declined"];
 
+    /// <summary>The "hired" bucket: candidates whose current status is Hired (#195).</summary>
+    public static readonly HashSet<string> HiredStatuses = ["Hired"];
+
+    /// <summary>The "offers" bucket: candidates in the offer stages. Offer Declined is not here, it is already
+    /// counted as Rejected, and Hired has its own bucket (#195).</summary>
+    public static readonly HashSet<string> OfferStatuses = ["Offer Preparation", "Offer Extended", "Offer Accepted"];
+
     /// <summary>How far back "new this week" reaches.</summary>
     public const int NewWindowDays = 7;
 

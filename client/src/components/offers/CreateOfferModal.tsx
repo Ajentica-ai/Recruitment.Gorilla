@@ -10,6 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { InputGroup } from '@/components/ui/input-group';
 import { NativeSelect } from '@/components/ui/native-select';
+import { OFFER_LIMITS, validateOfferForm } from '@/lib/offerValidation';
 import {
   Sheet,
   SheetBody,
@@ -100,11 +101,12 @@ export default function CreateOfferModal({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const salaryNum = parseFloat(baseSalary);
-    if (isNaN(salaryNum) || salaryNum <= 0) {
-      setError('Please enter a valid base salary greater than zero.');
+    const problem = validateOfferForm({ jobTitle, baseSalary, currency, bonus, equity, startDate, expirationDate, notes });
+    if (problem) {
+      setError(problem);
       return;
     }
+    const salaryNum = parseFloat(baseSalary);
 
     const payload: CreateOfferPayload = {
       jobTitle: jobTitle.trim() || undefined,
@@ -137,6 +139,7 @@ export default function CreateOfferModal({
               type="text"
               required
               placeholder="e.g. Senior Software Engineer"
+              maxLength={OFFER_LIMITS.jobTitle}
               value={jobTitle}
               onChange={(e) => setJobTitle(e.target.value)}
             />
@@ -193,6 +196,7 @@ export default function CreateOfferModal({
                 <Input
                   type="text"
                   placeholder="e.g. 10,000 RSUs or 0.25%"
+                  maxLength={OFFER_LIMITS.equity}
                   value={equity}
                   onChange={(e) => setEquity(e.target.value)}
                 />
@@ -220,6 +224,7 @@ export default function CreateOfferModal({
             <Textarea
               rows={3}
               placeholder="e.g. Standard benefits package, 4 weeks PTO, hybrid schedule..."
+              maxLength={OFFER_LIMITS.notes}
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
             />
