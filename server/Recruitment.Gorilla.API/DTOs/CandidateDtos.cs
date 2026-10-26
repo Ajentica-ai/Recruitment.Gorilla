@@ -120,7 +120,9 @@ public record UpdateCandidateDto(
     string? HackerRankUrl = null,
     string? GitLabUrl = null,
     List<CandidateEducationDto>? Educations = null,
-    List<CandidateExperienceDto>? Experiences = null
+    List<CandidateExperienceDto>? Experiences = null,
+    // Lets the email change to one another candidate already uses, as create's AllowDuplicate does (#201).
+    bool AllowDuplicate = false
 );
 
 public record StatusChangeDto(

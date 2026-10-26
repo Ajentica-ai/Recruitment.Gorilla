@@ -65,7 +65,8 @@ export default function UpNextCard({ team }: { team?: UpcomingInterview[] }) {
     .filter((g) => g.rows.length > 0);
 
   const pending = awaitingEvaluation(mine);
-  const firstPending = pending[0];
+  // awaitingEvaluation is newest first and the badge promises the oldest, so take the last one (#199).
+  const firstPending = pending[pending.length - 1];
 
   return (
     <SectionCard

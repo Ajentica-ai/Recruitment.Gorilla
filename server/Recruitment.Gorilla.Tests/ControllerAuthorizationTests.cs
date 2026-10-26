@@ -122,7 +122,7 @@ public class ControllerAuthorizationTests(ApiFixture fx)
     [InlineData("Interviewer", HttpStatusCode.Forbidden)]
     public async Task Create_offer(string role, HttpStatusCode expected)
     {
-        var candidateId = await fx.NewCandidateAsync(fx.AdminId);
+        var candidateId = await fx.NewCandidateAsync(fx.AdminId, status: "Recommended");
         var resp = await fx.SendAsync(HttpMethod.Post, $"/api/candidates/{candidateId}/offers",
             await TokenFor(role), new { baseSalary = 90000 });
         Assert.Equal(expected, resp.StatusCode);
@@ -136,7 +136,7 @@ public class ControllerAuthorizationTests(ApiFixture fx)
     public async Task Review_offer(string role, HttpStatusCode expected)
     {
         // A fresh offer per case, since a successful review changes its status.
-        var candidateId = await fx.NewCandidateAsync(fx.AdminId);
+        var candidateId = await fx.NewCandidateAsync(fx.AdminId, status: "Offer Preparation");
         var offerId = await fx.NewOfferAsync(candidateId, "PendingApproval");
         var resp = await fx.SendAsync(HttpMethod.Post, $"/api/candidates/{candidateId}/offers/{offerId}/review",
             await TokenFor(role), new { decision = "Approved" });

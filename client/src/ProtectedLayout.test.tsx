@@ -25,7 +25,7 @@ vi.mock('./components/shell/AppShell', () => ({
 }));
 
 const session = (roles: Role[]) => ({
-  token: 't', name: 'Test', email: 'test@x.io', roles, mustChangePassword: false, expiresAt: '',
+  token: 't', userId: 1, name: 'Test', email: 'test@x.io', roles, mustChangePassword: false, expiresAt: '',
 });
 
 /** Shows the router state the login page would read its return path from. */

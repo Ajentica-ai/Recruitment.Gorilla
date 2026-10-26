@@ -40,6 +40,14 @@ public class CandidateService(
     private Task<bool> IsAssignedToRoleAsync(int roleId, int uid) =>
         db.RoleAppliedOptions.AnyAsync(r => r.Id == roleId && r.Recruiters.Any(rr => rr.UserId == uid));
 
+    /// <summary>The most candidates one list response carries (#196). Without it <c>pageSize=1000000</c> returned
+    /// the caller's whole candidate set, the entire table for an Admin.</summary>
+    public const int MaxPageSize = 200;
+
+    /// <summary>The highest page number honoured. With <see cref="MaxPageSize"/> it keeps <c>(page - 1) * pageSize</c>
+    /// far inside an int, so a huge page is an empty page, not an overflow into a negative Skip.</summary>
+    public const int MaxPage = 1_000_000;
+
     public async Task<PagedResult<CandidateListItemDto>> GetAllAsync(
         CandidateListQuery q, int? ownerUserId = null)
     {
@@ -79,6 +87,10 @@ public class CandidateService(
             CandidateBuckets.InProcess =>
                 query.Where(c => !CandidateBuckets.PositiveTerminal.Contains(c.CurrentStatus)
                               && !CandidateBuckets.NegativeTerminal.Contains(c.CurrentStatus)),
+            CandidateBuckets.Hired =>
+                query.Where(c => CandidateBuckets.HiredStatuses.Contains(c.CurrentStatus)),
+            CandidateBuckets.Offers =>
+                query.Where(c => CandidateBuckets.OfferStatuses.Contains(c.CurrentStatus)),
             CandidateBuckets.NewThisWeek =>
                 query.Where(c => c.CreatedAt >= DateTime.UtcNow.AddDays(-CandidateBuckets.NewWindowDays)),
             _ => query,
@@ -93,10 +105,15 @@ public class CandidateService(
             _ => desc ? query.OrderByDescending(c => c.CreatedAt) : query.OrderBy(c => c.CreatedAt),
         };
 
+        // Out-of-range paging is clamped, not rejected: page 0 used to be a negative Skip and a 500 (#196). The
+        // response carries the values actually applied, so a caller can see it was clamped.
+        var page = Math.Clamp(q.Page, 1, MaxPage);
+        var pageSize = Math.Clamp(q.PageSize, 1, MaxPageSize);
+
         var total = await query.CountAsync();
         var items = await query
-            .Skip((q.Page - 1) * q.PageSize)
-            .Take(q.PageSize)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
             .Select(c => new CandidateListItemDto(
                 c.Id, c.FullName, c.Email, c.Phone,
                 c.CurrentTitle,
@@ -107,7 +124,7 @@ public class CandidateService(
                 c.BatchName))
             .ToListAsync();
 
-        return new PagedResult<CandidateListItemDto>(items, total, q.Page, q.PageSize);
+        return new PagedResult<CandidateListItemDto>(items, total, page, pageSize);
     }
 
     public async Task<List<string>> GetCandidateBatchesAsync(int? ownerUserId = null)
@@ -143,6 +160,14 @@ public class CandidateService(
 
         return MapToDetail(c);
     }
+
+    /// <summary>The candidate's name when the caller can access them, else null. A scope check that also needs
+    /// the name (for an audit line) without loading the whole detail graph.</summary>
+    public async Task<string?> GetFullNameIfAccessibleAsync(int id, int? ownerUserId = null) =>
+        await ApplyAccess(db.Candidates, ownerUserId)
+            .Where(c => c.Id == id)
+            .Select(c => c.FullName)
+            .FirstOrDefaultAsync();
 
     /// <summary>
     /// A candidate's current status, scoped the same way as <see cref="GetByIdAsync"/> but
@@ -284,6 +309,21 @@ public class CandidateService(
         return null;
     }
 
+    /// <summary>Shown when a candidate would be put into a job opening that is inactive or past its end date.</summary>
+    public const string JobOpeningNotOpenError = "The selected job opening is not open.";
+
+    /// <summary>Shown when an edit would give a candidate an email another candidate already uses (#201).</summary>
+    public const string DuplicateEmailError = "Another candidate already uses this email address.";
+
+    /// <summary>
+    /// False when the job opening is missing, inactive or past its <c>EndDate</c>. Create and an update that moves a
+    /// candidate into a different opening check it, as upload and import already do through
+    /// <c>CandidateDraftService.ValidateJobOpeningForCallerAsync</c>: a candidate filed straight into an ended opening
+    /// was locked from every edit the moment it was saved (#201).
+    /// </summary>
+    private async Task<bool> IsJobOpeningOpenAsync(int roleId) =>
+        await db.RoleAppliedOptions.AnyAsync(r => r.Id == roleId && r.IsActive && r.EndDate >= DateTime.UtcNow);
+
     public async Task<bool> IsActiveStatusAsync(string status) =>
         await db.StatusOptions.AnyAsync(s => s.IsActive && s.Name == status);
 
@@ -423,6 +463,9 @@ public class CandidateService(
         if (scopeUserId is int scopeUid && dto.RoleAppliedOptionId is int newRoleId &&
             !await IsAssignedToRoleAsync(newRoleId, scopeUid))
             return (null, null, false, "You are not assigned to this job opening.");
+
+        if (dto.RoleAppliedOptionId is int createRoleId && !await IsJobOpeningOpenAsync(createRoleId))
+            return (null, null, false, JobOpeningNotOpenError);
 
         if (!dto.AllowDuplicate)
         {
@@ -593,6 +636,20 @@ public class CandidateService(
             !await IsAssignedToRoleAsync(newRoleId, ownerUid))
             return (null, "You are not assigned to this job opening.");
 
+        // Only a move INTO a different opening is refused. A candidate already in an ended one keeps it, and the
+        // controller's role lock decides whether they can be edited at all.
+        if (dto.RoleAppliedOptionId is int movedRoleId && movedRoleId != previousRoleId &&
+            !await IsJobOpeningOpenAsync(movedRoleId))
+            return (null, JobOpeningNotOpenError);
+
+        // Create warns about a duplicate email; an edit used to skip the check entirely. Only a CHANGED email is
+        // checked, so saving a candidate whose duplicate already exists is never blocked, and the message names nobody
+        // because the caller may not be allowed to see the other candidate.
+        if (!dto.AllowDuplicate &&
+            !string.Equals(dto.Email, candidate.Email, StringComparison.OrdinalIgnoreCase) &&
+            await db.Candidates.AnyAsync(c => c.Id != id && c.Email == dto.Email))
+            return (null, DuplicateEmailError);
+
         candidate.FullName = dto.FullName;
         candidate.Email = dto.Email;
         candidate.Phone = dto.Phone;
@@ -734,6 +791,11 @@ public class CandidateService(
 
         if (interview is not null)
         {
+            // The job opening's name, which is what the UI links a candidate to; the legacy free text is
+            // empty for them, which left the role line of these emails blank (#188).
+            var roleName = (candidate.RoleAppliedOptionId is int roleOptionId
+                ? await db.RoleAppliedOptions.Where(o => o.Id == roleOptionId).Select(o => o.Name).FirstOrDefaultAsync()
+                : null) ?? candidate.AppliedRole;
             // Earlier rounds shared with the new panel (#187), now that the booking has an id.
             var withEarlierRounds = dto.ShareEarlierRoundsWithPanel
                 ? await panelAutoShare.SyncAsync(
@@ -741,7 +803,7 @@ public class CandidateService(
                 : [];
             var interviewUrl = $"{config["App:ClientBaseUrl"]?.TrimEnd('/')}/interviews/{interview.Id}";
             var invite = new InterviewInviteDetails(
-                interview.Id, candidate.FullName, candidate.AppliedRole,
+                interview.Id, candidate.FullName, roleName,
                 interview.ScheduledAt, interview.DurationMinutes, interviewUrl);
             var calendar = CalendarInvite.Build(invite);
 
@@ -753,7 +815,7 @@ public class CandidateService(
                     ? $"{config["App:ClientBaseUrl"]?.TrimEnd('/')}{EvaluationAccess.SharedReportLink(candidate.Id)}"
                     : null;
                 var (emailSubject, emailHtml) = EmailTemplates.InterviewAssigned(
-                    interviewer?.Name ?? "there", candidate.FullName, candidate.AppliedRole,
+                    interviewer?.Name ?? "there", candidate.FullName, roleName,
                     interview.ScheduledAt, interviewUrl, invite, earlierRoundsUrl);
 
                 await notificationService.NotifyAsync(

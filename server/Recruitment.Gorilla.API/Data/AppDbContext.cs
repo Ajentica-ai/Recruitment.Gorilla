@@ -21,6 +21,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<UserRole> UserRoles => Set<UserRole>();
     public DbSet<Interview> Interviews => Set<Interview>();
     public DbSet<InterviewInterviewer> InterviewInterviewers => Set<InterviewInterviewer>();
+    public DbSet<EvaluationReminder> EvaluationReminders => Set<EvaluationReminder>();
     public DbSet<InterviewEvaluation> InterviewEvaluations => Set<InterviewEvaluation>();
     public DbSet<InterviewEvaluationItem> InterviewEvaluationItems => Set<InterviewEvaluationItem>();
     public DbSet<InterviewTypeOption> InterviewTypeOptions => Set<InterviewTypeOption>();
@@ -567,6 +568,19 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
              .OnDelete(DeleteBehavior.Restrict);
         });
 
+        modelBuilder.Entity<EvaluationReminder>(e =>
+        {
+            e.HasKey(r => new { r.InterviewId, r.UserId });
+            e.HasOne(r => r.Interview)
+             .WithMany()
+             .HasForeignKey(r => r.InterviewId)
+             .OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(r => r.User)
+             .WithMany()
+             .HasForeignKey(r => r.UserId)
+             .OnDelete(DeleteBehavior.Cascade);
+        });
+
         modelBuilder.Entity<InterviewEvaluation>(e =>
         {
             e.HasKey(ev => ev.Id);
@@ -617,7 +631,9 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.Property(o => o.Bonus).HasPrecision(18, 2);
             e.Property(o => o.Equity).HasMaxLength(200);
             e.Property(o => o.Notes).HasMaxLength(2000);
-            e.Property(o => o.Status).HasMaxLength(50).IsRequired();
+            // A concurrency token: an update of the offer (even terms only) is applied only if the status is still
+            // what the request read, so editing or extending cannot race an approval, rejection or extension (#192).
+            e.Property(o => o.Status).HasMaxLength(50).IsRequired().IsConcurrencyToken();
             e.Property(o => o.DeclineReason).HasMaxLength(1000);
             e.HasOne(o => o.Candidate)
              .WithMany(c => c.Offers)

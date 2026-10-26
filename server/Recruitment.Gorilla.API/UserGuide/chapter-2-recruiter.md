@@ -215,6 +215,10 @@ its own panel and evaluations, and the history keeps both rounds. This is a *sec
 the first one finished*, which is a different thing from moving a booking that has not happened
 yet.
 
+When the last interviewer on a round submits their evaluation, the person who booked the interview and the
+recruiters who can see the candidate get an **All evaluations in** notification linking to the evaluation report.
+That is the cue to move the candidate to **Interview Completed**.
+
 ## 2.8 Offers
 
 Once a candidate is **Recommended**, the **Offer & Compensation** card lets you prepare an offer.
@@ -225,10 +229,23 @@ Once a candidate is **Recommended**, the **Offer & Compensation** card lets you 
 
    ![Drafting an offer](images/02-offer-draft-form.png)
 
+   The form checks the terms before it saves: the salary must be above zero, a bonus cannot be
+   negative, the currency is a 3-letter code, the expiry date cannot be in the past or before the
+   start date, and job title, equity and notes have length limits (200, 200 and 2,000 characters).
+
 2. **Request Approval** sends it to an Admin, who approves or rejects it (a rejected offer goes
    back to draft). Approval is optional: you can also **Extend Offer** straight from a draft.
 
    ![Offer waiting for approval](images/02-offer-pending.png)
+
+   Once an offer is waiting for approval, approved or sent, its terms are locked: you can only
+   edit a **draft**. A **rejected** offer comes back as a draft with the Admin's comment. After a
+   rejection, approval is no longer optional for that candidate: neither the rejected draft nor a
+   **New Version** can be extended until you request approval and an Admin approves it. Offers
+   follow the same rules as a status change: they stop once the job opening has ended, and you can
+   only start one for a candidate who is **Recommended**, in **Offer Preparation**, or who has
+   **Offer Declined**. A candidate has one offer at a time, so the next one can start only after
+   the candidate has declined the last.
 
 3. **Extend Offer to Candidate** moves the candidate to **Offer Extended**. Send the offer
    itself outside the app (use **Download PDF**).
@@ -236,8 +253,8 @@ Once a candidate is **Recommended**, the **Offer & Compensation** card lets you 
    **Declined** (with a reason) moves them to **Offer Declined**.
 5. Finally, use **Add status** > **Hired**.
 
-**New Version** starts a revised offer. The app never emails candidates; all candidate
-communication happens outside it.
+**New Version** appears once the candidate has declined an offer and starts a revised one. The app
+never emails candidates; all candidate communication happens outside it.
 
 ## 2.9 Jobs and Analytics
 

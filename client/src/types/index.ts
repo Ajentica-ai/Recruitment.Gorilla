@@ -502,6 +502,7 @@ export interface LoginPayload {
 
 export interface LoginResult {
   token: string;
+  userId: number;
   name: string;
   email: string;
   roles: Role[];
@@ -510,6 +511,7 @@ export interface LoginResult {
 }
 
 export interface AuthUser {
+  id: number;
   name: string;
   email: string;
   roles: Role[];
@@ -771,12 +773,22 @@ export interface ReportEvaluation {
   evaluation: InterviewEvaluation;
 }
 
+/** A criterion the report's ratings were given on (#190). */
+export interface ReportCriterion {
+  key: string;
+  label: string;
+  /** The rubric section, or "Other criteria" for a rated key the rubric does not know. */
+  section: string;
+}
+
 export interface CandidateEvaluationReport {
   candidateId: number;
   fullName: string;
   roleApplied: string | null;
   summary: EvaluationReportSummary;
   evaluations: ReportEvaluation[];
+  /** The criteria the ratings were given on. Empty or absent: use the built-in ones. */
+  criteria?: ReportCriterion[];
 }
 
 export interface UpsertEvaluationPayload {

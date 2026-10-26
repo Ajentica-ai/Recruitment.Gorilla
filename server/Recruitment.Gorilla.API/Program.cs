@@ -101,6 +101,9 @@ builder.Services.AddScoped<SlackSettingsService>();
 builder.Services.AddScoped<SlackService>();
 builder.Services.AddSingleton<ISlackQueue, SlackQueue>();
 builder.Services.AddHostedService<SlackQueueWorker>();
+builder.Services.Configure<EvaluationReminderOptions>(builder.Configuration.GetSection(EvaluationReminderOptions.Section));
+builder.Services.AddScoped<EvaluationReminderService>();
+builder.Services.AddHostedService<EvaluationReminderWorker>();
 builder.Services.AddSingleton<IAuthorizationHandler, PasswordChangedHandler>();
 
 var jwtKey = builder.Configuration["Jwt:Key"]
