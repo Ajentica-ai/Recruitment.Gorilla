@@ -107,7 +107,7 @@ public sealed class ApiFixture : IAsyncLifetime
     }
 
     /// <summary>Inserts a candidate (committed — the whole DB is dropped at teardown) and returns its id.</summary>
-    public async Task<int> NewCandidateAsync(int ownerUserId, int? roleId = null, string? email = null)
+    public async Task<int> NewCandidateAsync(int ownerUserId, int? roleId = null, string? email = null, string status = "Uploaded")
     {
         using var scope = _factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -118,7 +118,7 @@ public sealed class ApiFixture : IAsyncLifetime
             RelevantExperience = "3 Years",
             OwnerUserId = ownerUserId,
             RoleAppliedOptionId = roleId,
-            CurrentStatus = "Uploaded",
+            CurrentStatus = status,
         };
         db.Candidates.Add(candidate);
         await db.SaveChangesAsync();
@@ -370,6 +370,14 @@ public sealed class ApiFixture : IAsyncLifetime
         db.Offers.Add(offer);
         await db.SaveChangesAsync();
         return offer.Id;
+    }
+
+    /// <summary>How many timeline rows the candidate has for <paramref name="status"/> (committed data).</summary>
+    public async Task<int> CountStatusRowsAsync(int candidateId, string status)
+    {
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        return await db.StatusHistories.CountAsync(h => h.CandidateId == candidateId && h.Status == status);
     }
 
     /// <summary>Inserts an offer in the given status (committed) and returns its id.</summary>

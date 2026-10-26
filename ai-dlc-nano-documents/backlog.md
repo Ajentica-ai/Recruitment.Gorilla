@@ -1,5 +1,7 @@
 # Backlog
 <!-- Out-of-scope findings, newest first. Delete a line when it is resolved. -->
+- [2026-10-25] backend/InterviewService:600 - cancel moves the candidate with AddStatusAsync, no ValidateStatusChangeAsync or lock-and-reload (found: RG-193)
+- [2026-10-25] backend/CandidatesController status - manual status change does not lock the candidate row like the offer actions now do (found: RG-193)
 - [2026-10-24] client/EvaluationRubricsTab - Active/Default checkboxes stay enabled on the default rubric; the server now refuses (found: RG-191)
 - [2026-10-21] backend/CandidateService.UpdateAsync - overwrites the legacy AppliedRole with null on every edit; harmless now, drop the field (found: RG-188)
 - [2026-10-22] backend/InterviewService.RescheduleAsync - no concurrency token, so concurrent reschedules can desync the panel and auto grants (found: RG-187)
@@ -46,5 +48,3 @@
 - [2026-10-15] AuthController - failed-login log/audit text uses raw unvalidated email (CR/LF, length); trim and sanitise (found: RG-37)
 - [2026-10-19] client/e2e - dev-server timing: styled-wait, interview page and candidate .profile-card waits time out now and then (found: RG-177)
 - [2026-10-19] client/e2e/kanban-pipeline - hard-codes http://localhost:5173, ignores PLAYWRIGHT_TEST_BASE_URL; also mutates data (found: RG-179)
-- [2026-10-19] client/e2e/drawer-forms - phone test times out waiting for Add status in about 4 of 48 isolated runs (found: RG-179)
-- [2026-10-19] client/e2e - offer-management changes an existing candidate's status and offers and never restores them (found: RG-179)
