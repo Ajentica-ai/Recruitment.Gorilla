@@ -617,7 +617,9 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.Property(o => o.Bonus).HasPrecision(18, 2);
             e.Property(o => o.Equity).HasMaxLength(200);
             e.Property(o => o.Notes).HasMaxLength(2000);
-            e.Property(o => o.Status).HasMaxLength(50).IsRequired();
+            // A concurrency token: an update of the offer (even terms only) is applied only if the status is still
+            // what the request read, so editing or extending cannot race an approval, rejection or extension (#192).
+            e.Property(o => o.Status).HasMaxLength(50).IsRequired().IsConcurrencyToken();
             e.Property(o => o.DeclineReason).HasMaxLength(1000);
             e.HasOne(o => o.Candidate)
              .WithMany(c => c.Offers)

@@ -39,6 +39,7 @@ export const AuthContext = createContext<AuthContextValue | undefined>(undefined
 
 function toUser(res: LoginResult): AuthUser {
   return {
+    id: res.userId,
     name: res.name,
     email: res.email,
     roles: res.roles,
