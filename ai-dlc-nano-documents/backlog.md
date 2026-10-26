@@ -1,5 +1,6 @@
 # Backlog
 <!-- Out-of-scope findings, newest first. Delete a line when it is resolved. -->
+- [2026-10-25] backend/StatusHistory - no ChangedByUserId: analytics workloads match ChangedBy by name/email; needs migration + backfill (found: RG-200)
 - [2026-10-25] backend/OfferService.SubmitForApprovalAsync - NotifyAsync saves before the guarded save, so a lost race is a 500 (found: RG-194)
 - [2026-10-25] backend/InterviewService:600 - cancel moves the candidate with AddStatusAsync, no ValidateStatusChangeAsync or lock-and-reload (found: RG-193)
 - [2026-10-25] backend/CandidatesController status - manual status change does not lock the candidate row like the offer actions now do (found: RG-193)
@@ -47,4 +48,3 @@
 - [2026-10-15] auth - deactivated user's access token works until expiry (~15m); revoke refresh tokens + check IsActive on deactivate (found: RG-37)
 - [2026-10-15] AuthController - failed-login log/audit text uses raw unvalidated email (CR/LF, length); trim and sanitise (found: RG-37)
 - [2026-10-19] client/e2e - dev-server timing: styled-wait, interview page and candidate .profile-card waits time out now and then (found: RG-177)
-- [2026-10-19] client/e2e/kanban-pipeline - hard-codes http://localhost:5173, ignores PLAYWRIGHT_TEST_BASE_URL; also mutates data (found: RG-179)

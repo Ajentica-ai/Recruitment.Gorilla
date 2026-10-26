@@ -616,3 +616,10 @@
 - 2026-10-22T15:16Z [claude] RG-199 BRANCH @3062074: fix/RG-199/Evaluation-labels created off origin/develop (user confirmed)
 - 2026-10-22T15:16Z [claude] RG-199 PHASE PLAN→CONSTRUCT @3062074: plan approved (go with recommendation)
 - 2026-10-22T15:18Z [claude] RG-199 DONE @3062074: distinct interviewer count, UpNextCard opens oldest pending; 690 backend, client ok (known flaky date-picker)
+- 2026-10-22T15:24Z [claude] RG-199 SIDE-EFFECT @b1c0854: pushed fix/RG-199/Evaluation-labels, opened PR #226 into develop (user confirmed)
+- 2026-10-22T15:25Z [claude] RG-200 CREATED @b1c0854: intake of issue #200 (improvement); already assigned to @me; board move skipped (gh lacks read:project)
+- 2026-10-22T15:26Z [claude] RG-200 DECISION @b1c0854: CLARIFY assumptions 1-5 accepted (go with recommendation)
+- 2026-10-22T15:26Z [claude] RG-200 PHASE CLARIFY→PLAN @b1c0854: plan.md drafted, awaiting approval
+- 2026-10-22T15:30Z [claude] RG-200 BRANCH @3062074: feature/RG-200/Analytics-sql-filtering created off origin/develop (user confirmed)
+- 2026-10-22T15:30Z [claude] RG-200 PHASE PLAN→CONSTRUCT @3062074: plan approved (go with recommendation)
+- 2026-10-22T15:36Z [claude] RG-200 DONE @3062074: analytics loads only the period window, SQL aggregates for workloads; golden-pinned figures; 693 backend
