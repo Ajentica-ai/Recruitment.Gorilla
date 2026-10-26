@@ -1,6 +1,10 @@
 import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { isAxiosError } from 'axios';
 import { getInterviewEvaluationRubric, saveEvaluation } from '../services/api';
+import { serverErrorMessage } from '@/lib/evaluationShares';
+import EmptyState from './common/EmptyState';
+import LoadingPanel from './common/Loading';
 import { useToast } from './ToastStack';
 import ConfirmModal from './common/ConfirmModal';
 import SectionCard from './common/SectionCard';
@@ -222,10 +226,15 @@ export default function EvaluationForm({
   const [confirmSubmit, setConfirmSubmit] = useState(false);
   const [showErrors, setShowErrors] = useState(false);
 
-  const { data: rubric } = useQuery({
+  // A 404 means no rubric exists at all, which is also what the server validates against (the built-in
+  // criteria). Any other failure is not "no rubric": it must not fall back to a form the server may refuse.
+  const rubricQuery = useQuery({
     queryKey: ['interview-rubric', interviewId],
     queryFn: () => getInterviewEvaluationRubric(interviewId),
+    retry: false, // a failure shows the error panel straight away, and its Retry button tries again
   });
+  const rubric = rubricQuery.data;
+  const noRubricExists = isAxiosError(rubricQuery.error) && rubricQuery.error.response?.status === 404;
 
   const sections = useMemo(() => rubricToSections(rubric), [rubric]);
 
@@ -251,13 +260,17 @@ export default function EvaluationForm({
       recommendation: recommendation || null,
       recommendationOther: recommendation === 'Other' ? recommendationOther.trim() || null : null,
       overallRating: overallRating ? Number(overallRating) : null,
-      items: Object.entries(items).map(([criterionKey, v]) => ({
-        criterionKey,
-        rating: v.rating,
-        comment: v.comment.trim() || null,
-      })),
+      // Only the keys on screen: a stale key (an older rubric, a changed opening) cannot be seen or cleared
+      // by the user and the server refuses it as unknown, which made every later save fail (#191).
+      items: Object.entries(items)
+        .filter(([criterionKey]) => allCriterionKeys.includes(criterionKey))
+        .map(([criterionKey, v]) => ({
+          criterionKey,
+          rating: v.rating,
+          comment: v.comment.trim() || null,
+        })),
     }),
-    [generalAssessment, recommendation, recommendationOther, overallRating, items]
+    [generalAssessment, recommendation, recommendationOther, overallRating, items, allCriterionKeys]
   );
 
   const mutation = useMutation({
@@ -268,7 +281,7 @@ export default function EvaluationForm({
       addToast(submit ? 'Evaluation submitted.' : 'Draft saved.');
       setConfirmSubmit(false);
     },
-    onError: () => addToast('Could not save the evaluation.', 'danger'),
+    onError: (err) => addToast(serverErrorMessage(err, 'Could not save the evaluation.'), 'danger'),
   });
 
   if (submitted && evaluation) {
@@ -286,6 +299,28 @@ export default function EvaluationForm({
       >
         {briefing}
         <EvaluationReadOnly evaluation={evaluation} rubric={rubric} />
+      </SectionCard>
+    );
+  }
+
+  // Never show the built-in criteria while the real rubric is still loading, or when it could not be
+  // loaded: a quick click would store keys the server then refuses (#191).
+  if (rubricQuery.isLoading) {
+    return (
+      <SectionCard className="eval-form-card" title="Interview evaluation">
+        <LoadingPanel label="Loading the evaluation form…" />
+      </SectionCard>
+    );
+  }
+  if (rubricQuery.isError && !noRubricExists) {
+    return (
+      <SectionCard className="eval-form-card" title="Interview evaluation">
+        <EmptyState
+          variant="error"
+          title="Couldn't load the evaluation form"
+          description="The criteria for this interview could not be loaded, so nothing can be saved yet."
+          action={<Button onClick={() => void rubricQuery.refetch()}>Retry</Button>}
+        />
       </SectionCard>
     );
   }

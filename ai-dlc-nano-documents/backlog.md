@@ -1,5 +1,6 @@
 # Backlog
 <!-- Out-of-scope findings, newest first. Delete a line when it is resolved. -->
+- [2026-10-24] client/EvaluationRubricsTab - Active/Default checkboxes stay enabled on the default rubric; the server now refuses (found: RG-191)
 - [2026-10-21] backend/CandidateService.UpdateAsync - overwrites the legacy AppliedRole with null on every edit; harmless now, drop the field (found: RG-188)
 - [2026-10-22] backend/InterviewService.RescheduleAsync - no concurrency token, so concurrent reschedules can desync the panel and auto grants (found: RG-187)
 - [2026-10-22] backend/PanelAutoShareService - a panelist covered by an expiring manual grant gets no fallback auto row (found: RG-187)

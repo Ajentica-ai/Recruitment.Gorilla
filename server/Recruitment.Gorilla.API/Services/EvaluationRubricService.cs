@@ -153,6 +153,14 @@ public class EvaluationRubricService(AppDbContext db, AuditService audit)
         if (keyErrors is not null)
             return (null, keyErrors, false, false);
 
+        // The default rubric is what every candidate without an opening rubric is scored on, so it has to stay
+        // the default and stay active; otherwise the page and the server stop resolving the same rubric and
+        // every evaluation save fails (#191). Another rubric is made the default first.
+        if (rubric.IsDefault && !dto.IsActive)
+            return (null, "The default evaluation rubric cannot be deactivated. Designate another rubric as default first.", false, false);
+        if (rubric.IsDefault && !dto.IsDefault)
+            return (null, "The default evaluation rubric cannot stop being the default. Designate another rubric as default instead.", false, false);
+
         if (dto.IsDefault && !rubric.IsDefault)
         {
             var otherDefaults = await db.EvaluationRubrics.Where(r => r.Id != id && r.IsDefault).ToListAsync();
