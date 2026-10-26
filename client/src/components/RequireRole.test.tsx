@@ -3,6 +3,7 @@ import { render, screen } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import type { Role } from '../types';
 import RequireRole from './RequireRole';
+import { ToastProvider } from './ToastStack';
 
 let roles: Role[] = [];
 vi.mock('../auth/AuthContext', () => ({
@@ -11,6 +12,7 @@ vi.mock('../auth/AuthContext', () => ({
 
 const renderAt = (path: string) =>
   render(
+    <ToastProvider>
     <MemoryRouter initialEntries={[path]}>
       <Routes>
         <Route path="/" element={<p>Dashboard</p>} />
@@ -23,7 +25,8 @@ const renderAt = (path: string) =>
           }
         />
       </Routes>
-    </MemoryRouter>,
+    </MemoryRouter>
+    </ToastProvider>,
   );
 
 describe('RequireRole', () => {
@@ -38,5 +41,19 @@ describe('RequireRole', () => {
     roles = ['Recruiter'];
     renderAt('/candidates');
     expect(screen.getByText('Candidates list')).toBeInTheDocument();
+  });
+
+  it('tells the user why they were sent to the Dashboard (#198)', async () => {
+    roles = ['Interviewer'];
+    renderAt('/candidates');
+
+    expect(await screen.findByText("You don't have access to that page.")).toBeInTheDocument();
+  });
+
+  it('says nothing to a user who may open the page (#198)', () => {
+    roles = ['Recruiter'];
+    renderAt('/candidates');
+
+    expect(screen.queryByText("You don't have access to that page.")).not.toBeInTheDocument();
   });
 });

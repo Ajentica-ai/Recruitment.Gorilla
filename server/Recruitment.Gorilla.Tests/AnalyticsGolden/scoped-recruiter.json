@@ -1,0 +1,132 @@
+{
+  "TimeToHire": {
+    "AverageDays": 50,
+    "MedianDays": 85,
+    "FastestDays": 15,
+    "LongestDays": 85,
+    "TotalHires": 2,
+    "ChangeVsPreviousPeriodPercent": null
+  },
+  "AveragePipelineDays": 13.5,
+  "OverallFunnelConversionRate": 66.7,
+  "TotalCandidatesInPeriod": 3,
+  "ActiveCandidates": 0,
+  "FunnelStages": [
+    {
+      "StageKey": "Applied",
+      "StageName": "1. Applied / Uploaded",
+      "StepNumber": 1,
+      "TotalEntered": 3,
+      "ConversionFromStartPercent": 100,
+      "ConversionFromPreviousPercent": 100,
+      "DropoffCount": 0
+    },
+    {
+      "StageKey": "Assessment",
+      "StageName": "2. Screening \u0026 Assessment",
+      "StepNumber": 2,
+      "TotalEntered": 3,
+      "ConversionFromStartPercent": 100,
+      "ConversionFromPreviousPercent": 100,
+      "DropoffCount": 0
+    },
+    {
+      "StageKey": "Interview",
+      "StageName": "3. Interview Stages",
+      "StepNumber": 3,
+      "TotalEntered": 2,
+      "ConversionFromStartPercent": 66.7,
+      "ConversionFromPreviousPercent": 66.7,
+      "DropoffCount": 1
+    },
+    {
+      "StageKey": "Offer",
+      "StageName": "4. Offer Extended",
+      "StepNumber": 4,
+      "TotalEntered": 2,
+      "ConversionFromStartPercent": 66.7,
+      "ConversionFromPreviousPercent": 100,
+      "DropoffCount": 0
+    },
+    {
+      "StageKey": "Hired",
+      "StageName": "5. Hired / Accepted",
+      "StepNumber": 5,
+      "TotalEntered": 2,
+      "ConversionFromStartPercent": 66.7,
+      "ConversionFromPreviousPercent": 100,
+      "DropoffCount": 0
+    }
+  ],
+  "StageVelocities": [
+    {
+      "StageName": "Interview Scheduled",
+      "SortOrder": 3,
+      "AverageDays": 42.5,
+      "MedianDays": 81,
+      "CandidatesCount": 2
+    },
+    {
+      "StageName": "Technical Assessment",
+      "SortOrder": 2,
+      "AverageDays": 4.5,
+      "MedianDays": 5,
+      "CandidatesCount": 2
+    },
+    {
+      "StageName": "Offer Extended",
+      "SortOrder": 4,
+      "AverageDays": 4,
+      "MedianDays": 4,
+      "CandidatesCount": 1
+    },
+    {
+      "StageName": "Uploaded",
+      "SortOrder": 1,
+      "AverageDays": 3,
+      "MedianDays": 3,
+      "CandidatesCount": 3
+    }
+  ],
+  "SourcingChannels": [
+    {
+      "SourceId": 1,
+      "SourceName": "Employee referral",
+      "TotalApplicants": 3,
+      "ScreenedCount": 3,
+      "InterviewedCount": 2,
+      "OfferedCount": 2,
+      "HiredCount": 2,
+      "ConversionToHirePercent": 66.7,
+      "ShareOfTotalHiresPercent": 100
+    }
+  ],
+  "PeriodStart": "2026-06-01T00:00:00Z",
+  "PeriodEnd": "2026-06-30T23:59:59Z",
+  "RecruiterWorkloads": [
+    {
+      "RecruiterName": "Ada Admin",
+      "ActiveCandidates": 0,
+      "TotalAssigned": 0,
+      "TransitionsLogged": 0,
+      "InterviewsParticipated": 0,
+      "HiresMade": 0
+    },
+    {
+      "RecruiterName": "Ravi Recruiter",
+      "ActiveCandidates": 0,
+      "TotalAssigned": 0,
+      "TransitionsLogged": 0,
+      "InterviewsParticipated": 0,
+      "HiresMade": 0
+    },
+    {
+      "RecruiterName": "Rita Recruiter",
+      "ActiveCandidates": 0,
+      "TotalAssigned": 5,
+      "TransitionsLogged": 7,
+      "InterviewsParticipated": 2,
+      "HiresMade": 2
+    }
+  ]
+}

@@ -27,6 +27,32 @@ public class InterviewService(
         db.Interviews.AnyAsync(i =>
             i.CandidateId == candidateId && i.Interviewers.Any(ii => ii.UserId == userId));
 
+    /// <summary>
+    /// Whether the user may read the evaluation rubric for this interview (#201): Admin and above; an interviewer
+    /// assigned to it (they need it to fill in their evaluation); a Recruiter who owns the candidate or is assigned to
+    /// its job opening; or someone whose evaluation-share grant covers it. False for a missing interview too, so the
+    /// endpoint cannot be used to find out which interview ids exist.
+    /// </summary>
+    public async Task<bool> CanReadInterviewRubricAsync(int interviewId, int userId, bool isAdminOrAbove, bool isRecruiter)
+    {
+        var interview = await db.Interviews
+            .Where(i => i.Id == interviewId)
+            .Select(i => new
+            {
+                Assigned = i.Interviewers.Any(ii => ii.UserId == userId),
+                CandidateOwnerId = i.Candidate.OwnerUserId,
+                AssignedToOpening = i.Candidate.RoleAppliedOption != null &&
+                    i.Candidate.RoleAppliedOption.Recruiters.Any(rr => rr.UserId == userId),
+            })
+            .FirstOrDefaultAsync();
+        if (interview is null) return false;
+
+        if (isAdminOrAbove || interview.Assigned) return true;
+        if (isRecruiter && (interview.CandidateOwnerId == userId || interview.AssignedToOpening)) return true;
+
+        return await evaluationAccess.CanSeeInterviewAsync(userId, interviewId);
+    }
+
     /// <summary>Active users assignable as interviewers (any role).</summary>
     public async Task<List<AssignableUserDto>> GetAssignableUsersAsync() =>
         await db.Users
@@ -121,7 +147,9 @@ public class InterviewService(
 
         return new InterviewDetailDto(
             interview.Id, interview.ScheduledAt, candidate, interviewers,
-            isAssigned, myEval is null ? null : ToDto(myEval), allEvals,
+            // Nobody evaluates a cancelled interview, so the page offers no form for it (#189).
+            isAssigned && interview.Status != InterviewStatuses.Cancelled,
+            myEval is null ? null : ToDto(myEval), allEvals,
             interview.Notes ?? interview.StatusHistory?.Comment, tags, interview.DurationMinutes,
             interview.Status);
     }
@@ -142,7 +170,8 @@ public class InterviewService(
         if (candidate is null) return null;
 
         var interviews = await db.Interviews
-            .Where(i => i.CandidateId == candidateId)
+            // A cancelled interview never happened, so anything already submitted on it does not count (#189).
+            .Where(i => i.CandidateId == candidateId && i.Status != InterviewStatuses.Cancelled)
             .Where(i => onlyInterviewIds == null || onlyInterviewIds.Contains(i.Id))
             .Include(i => i.Evaluations).ThenInclude(e => e.InterviewerUser)
             .Include(i => i.Evaluations).ThenInclude(e => e.Items)
@@ -179,7 +208,30 @@ public class InterviewService(
             .OrderByDescending(x => x.Count).ThenBy(x => x.Recommendation)
             .ToList();
 
-        var criterionAverages = EvaluationCriteria.Keys
+        // Every candidate interview shares one job opening, so one rubric describes the whole report. With no
+        // rubric at all the list stays empty and the client uses the built-in criteria.
+        var rubric = interviews.Count > 0
+            ? await new EvaluationRubricService(db, audit).GetForInterviewAsync(interviews[0].Id)
+            : null;
+        var criteria = (rubric?.Criteria ?? [])
+            .Select(c => new ReportCriterionDto(c.Key, c.Label, string.IsNullOrWhiteSpace(c.SectionName) ? "General" : c.SectionName))
+            .ToList();
+
+        // A rated key the rubric does not know (an older rubric, a renamed criterion) must not vanish.
+        var knownKeys = criteria.Count > 0 ? criteria.Select(c => c.Key).ToHashSet() : EvaluationCriteria.Keys.ToHashSet();
+        var extraKeys = reportEvals
+            .SelectMany(r => r.Evaluation.Items)
+            .Where(it => it.Rating is not null || !string.IsNullOrWhiteSpace(it.Comment))
+            .Select(it => it.CriterionKey)
+            .Where(k => !knownKeys.Contains(k))
+            .Distinct()
+            .OrderBy(k => k, StringComparer.Ordinal)
+            .ToList();
+        if (criteria.Count > 0)
+            criteria.AddRange(extraKeys.Select(k => new ReportCriterionDto(k, k, "Other criteria")));
+
+        var criterionAverages = (criteria.Count > 0 ? criteria.Select(c => c.Key) : EvaluationCriteria.Keys.Concat(extraKeys))
+            .Distinct()
             .Select(key =>
             {
                 var ratings = reportEvals
@@ -192,15 +244,16 @@ public class InterviewService(
             .Where(c => c.Count > 0)
             .ToList();
 
+        // Distinct people, not evaluations: one interviewer on two rounds is one interviewer (#199).
         var summary = new EvaluationReportSummaryDto(
-            reportEvals.Count,
+            reportEvals.Select(r => r.Evaluation.InterviewerUserId).Distinct().Count(),
             overalls.Count > 0 ? overalls.Average() : null,
             recommendationCounts,
             criterionAverages);
 
         return new CandidateEvaluationReportDto(
             candidate.Id, candidate.FullName, candidate.RoleApplied ?? candidate.AppliedRole,
-            summary, reportEvals);
+            summary, reportEvals, criteria);
     }
 
     /// <summary>
@@ -220,37 +273,17 @@ public class InterviewService(
         if (interview is null || !interview.Interviewers.Any(ii => ii.UserId == userId))
             return (null, null, true, false);
 
-        // Resolve rubric criteria for this candidate / interview
-        HashSet<string> validKeys;
-        if (!string.IsNullOrWhiteSpace(interview.Candidate?.AppliedRole))
-        {
-            var roleOption = await db.RoleAppliedOptions
-                .Include(r => r.EvaluationRubric).ThenInclude(er => er!.Criteria)
-                .FirstOrDefaultAsync(r => r.Name == interview.Candidate.AppliedRole);
+        // A cancelled interview never happened: nothing may be saved or submitted on it (#189). Checked
+        // before anything is read or written, so a refused save leaves no row and sends no notification.
+        if (interview.Status == InterviewStatuses.Cancelled)
+            return (null, "This interview was cancelled.", false, true);
 
-            if (roleOption?.EvaluationRubric is { IsActive: true } er && er.Criteria.Count > 0)
-            {
-                validKeys = er.Criteria.Select(c => c.Key).ToHashSet();
-            }
-            else
-            {
-                var defaultRubric = await db.EvaluationRubrics
-                    .Include(r => r.Criteria)
-                    .FirstOrDefaultAsync(r => r.IsDefault && r.IsActive);
-                validKeys = defaultRubric?.Criteria.Count > 0
-                    ? defaultRubric.Criteria.Select(c => c.Key).ToHashSet()
-                    : EvaluationCriteria.Keys.ToHashSet();
-            }
-        }
-        else
-        {
-            var defaultRubric = await db.EvaluationRubrics
-                .Include(r => r.Criteria)
-                .FirstOrDefaultAsync(r => r.IsDefault && r.IsActive);
-            validKeys = defaultRubric?.Criteria.Count > 0
-                ? defaultRubric.Criteria.Select(c => c.Key).ToHashSet()
-                : EvaluationCriteria.Keys.ToHashSet();
-        }
+        // The same rubric the interview page shows (#188). With no rubric at all, the built-in catalogue.
+        var rubric = await EvaluationRubricService.ResolveAsync(
+            db, interview.Candidate?.RoleAppliedOptionId, interview.Candidate?.AppliedRole);
+        HashSet<string> validKeys = rubric is { Criteria.Count: > 0 }
+            ? rubric.Criteria.Select(c => c.Key).ToHashSet()
+            : EvaluationCriteria.Keys.ToHashSet();
 
         if (dto.Recommendation is not null && !EvaluationCriteria.Recommendations.Contains(dto.Recommendation))
             return (null, "Invalid recommendation.", false, false);
@@ -589,7 +622,7 @@ public class InterviewService(
             interview, newInterviewerIds, interview.ShareEarlierRoundsWithPanel, actorUserId);
         if (tx is not null) await tx.CommitAsync();
 
-        await NotifyRescheduledAsync(interview, candidate.FullName, candidate.AppliedRole,
+        await NotifyRescheduledAsync(interview, candidate.FullName, candidate.RoleApplied ?? candidate.AppliedRole,
             previousScheduledAt, reason, retainedIds, addedIds, removedIds, actorUserId, withEarlierRounds);
 
         var fresh = await LoadForScheduleAsync(id);
@@ -670,7 +703,7 @@ public class InterviewService(
             $"Interview for {candidate.FullName} cancelled",
             $"Was scheduled for {scheduledAt:u}. Reason: {trimmedReason}");
 
-        await NotifyCancelledAsync(interview, candidate.FullName, candidate.AppliedRole,
+        await NotifyCancelledAsync(interview, candidate.FullName, candidate.RoleApplied ?? candidate.AppliedRole,
             scheduledAt, trimmedReason, recipientIds, actorUserId, removedFromPanel: false);
 
         var fresh = await LoadForScheduleAsync(id);
@@ -824,8 +857,35 @@ public class InterviewService(
         if (interview.CreatedByUserId is not int bookerId || bookerId == actorUserId) return;
         if (interview.Interviewers.Any(ii => ii.UserId == bookerId)) return;
 
-        await notificationService.NotifyAsync(
-            bookerId, title, message, $"/candidates/{interview.CandidateId}");
+        // The booker is told either way, but the link only when they can still open the candidate (#198). A recruiter
+        // taken off the job opening since would otherwise be sent to a page that answers 404.
+        var link = await CanOpenCandidateAsync(bookerId, interview.CandidateId)
+            ? $"/candidates/{interview.CandidateId}"
+            : null;
+        await notificationService.NotifyAsync(bookerId, title, message, link);
+    }
+
+    /// <summary>
+    /// Whether the user can open the candidate's page: an active Admin or above, or an active Recruiter who owns
+    /// the candidate or is assigned to its job opening. Mirrors <c>CandidateService.ApplyAccess</c> (as the
+    /// evaluation fan-out does), so a link is never sent to someone the page would turn away.
+    /// </summary>
+    private async Task<bool> CanOpenCandidateAsync(int userId, int candidateId)
+    {
+        var candidate = await db.Candidates
+            .Where(c => c.Id == candidateId)
+            .Select(c => new { c.OwnerUserId, c.RoleAppliedOptionId })
+            .FirstOrDefaultAsync();
+        if (candidate is null) return false;
+
+        return await db.Users.AnyAsync(u =>
+            u.Id == userId && u.IsActive &&
+            (u.Roles.Any(r => r.Role == Roles.SuperAdmin || r.Role == Roles.Admin) ||
+             (u.Roles.Any(r => r.Role == Roles.Recruiter) &&
+              (candidate.OwnerUserId == u.Id ||
+               (candidate.RoleAppliedOptionId != null &&
+                db.RoleAppliedOptions.Any(o => o.Id == candidate.RoleAppliedOptionId &&
+                                               o.Recruiters.Any(rr => rr.UserId == u.Id)))))));
     }
 
     private async Task<string> UserNameAsync(int userId) =>

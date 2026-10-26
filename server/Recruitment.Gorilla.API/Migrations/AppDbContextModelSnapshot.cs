@@ -1376,6 +1376,7 @@ namespace Recruitment.Gorilla.API.Migrations
                         .HasColumnType("datetime(6)");
 
                     b.Property<string>("Status")
+                        .IsConcurrencyToken()
                         .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("varchar(50)");
