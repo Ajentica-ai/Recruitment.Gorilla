@@ -53,6 +53,8 @@ const BUCKET_LABELS: Record<string, string> = {
   recommended: 'Recommended',
   rejected: 'Rejected',
   'new-this-week': 'New this week',
+  hired: 'Hired',
+  offers: 'In offer stages',
 };
 
 /** How many candidates the board loads in one request. The API caps a page at 200, so the board cannot show more. */
