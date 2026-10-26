@@ -100,6 +100,7 @@ export default function InterviewPage() {
     timeZoneName: 'short',
   });
   const relative = relativeLabel(data.scheduledAt);
+  const cancelled = data.status === 'Cancelled';
   const role = data.candidate.roleApplied ?? data.candidate.appliedRole;
   const earlierRounds = sharedWithMe?.find(
     (s) => s.candidateId === data.candidate.id && s.visibleEvaluationCount > 0
@@ -140,8 +141,10 @@ export default function InterviewPage() {
 
           <div className="interview-hero__aside">
             <div className="flex items-center gap-2 flex-wrap">
-              <span className={`interview-chip${relative.soon ? ' interview-chip--soon' : ''}`}>
-                <CalendarIcon /> {scheduled} · {data.durationMinutes} min · {relative.label}
+              {/* A cancelled interview is neither "Today" nor "Completed": it did not happen, and the
+                  Cancelled badge beside it says so (#189). */}
+              <span className={`interview-chip${relative.soon && !cancelled ? ' interview-chip--soon' : ''}`}>
+                <CalendarIcon /> {scheduled} · {data.durationMinutes} min{cancelled ? '' : ` · ${relative.label}`}
               </span>
 
               {/* Read-only for everyone, so an interviewer landing on a stale link can see why
@@ -188,7 +191,13 @@ export default function InterviewPage() {
 
       {/* Main Full-Width Evaluation Studio */}
       <div className="interview-studio-container anim-fade-up" style={{ animationDelay: '60ms' }}>
-        {data.canEvaluate ? (
+        {cancelled ? (
+          <div className="pulse-card">
+            <div className="alert-info-soft" role="status">
+              This interview was cancelled. No evaluation is needed.
+            </div>
+          </div>
+        ) : data.canEvaluate ? (
           <EvaluationForm
             interviewId={interviewId}
             evaluation={data.myEvaluation}
