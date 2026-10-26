@@ -346,6 +346,32 @@ public sealed class ApiFixture : IAsyncLifetime
         await db.SaveChangesAsync();
     }
 
+    /// <summary>
+    /// Inserts a Draft offer that an Admin has rejected (committed): a Rejected approval is on record, which is
+    /// what a rejection leaves behind on the way back to Draft. Returns its id.
+    /// </summary>
+    public async Task<int> NewRejectedDraftOfferAsync(int candidateId)
+    {
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var offer = new Offer
+        {
+            CandidateId = candidateId,
+            JobTitle = "Engineer",
+            BaseSalary = 90000,
+            Currency = "USD",
+            Status = "Draft",
+            CreatedByUserId = AdminId,
+            Approvals =
+            [
+                new OfferApproval { ApproverUserId = AdminId, Status = "Rejected", Comment = "too high", ReviewedAt = DateTime.UtcNow },
+            ],
+        };
+        db.Offers.Add(offer);
+        await db.SaveChangesAsync();
+        return offer.Id;
+    }
+
     /// <summary>Inserts an offer in the given status (committed) and returns its id.</summary>
     public async Task<int> NewOfferAsync(int candidateId, string status = "Draft")
     {

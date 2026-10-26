@@ -1,5 +1,6 @@
 using Recruitment.Gorilla.API.Auth;
 using Recruitment.Gorilla.API.DTOs;
+using Recruitment.Gorilla.API.Services;
 using Recruitment.Gorilla.Tests.Infrastructure;
 
 namespace Recruitment.Gorilla.Tests;
@@ -229,7 +230,7 @@ public class OfferServiceTests(MySqlDatabaseFixture fixture) : DbTestBase(fixtur
         var draft = await Offers().CreateOfferAsync(candidate.Id, Salary(), null, admin.Id, admin.Name);
         Assert.NotNull(draft);
 
-        await Assert.ThrowsAsync<InvalidOperationException>(() => Offers().ReviewApprovalAsync(
+        await Assert.ThrowsAsync<OfferStateException>(() => Offers().ReviewApprovalAsync(
             draft.Id, candidate.Id, new ReviewOfferApprovalDto("Approved", null), admin.Id, admin.Name));
 
         Assert.Equal("Draft", Db.Offers.Single(o => o.Id == draft.Id).Status);
