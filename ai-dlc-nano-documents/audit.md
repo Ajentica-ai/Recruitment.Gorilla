@@ -405,3 +405,242 @@
 - 2026-10-15T11:48Z [claude] RG-167 BRANCH @fde0630: fix/RG-167/Dashboard-pipeline-card-alignment off origin/develop (user confirmed)
 - 2026-10-15T11:48Z [claude] RG-167 PHASE PLAN→CONSTRUCT @fde0630: plan approved
 - 2026-10-15T11:51Z [claude] RG-167 DONE @fde0630: .dash-pair flex column at >=1200, last card grows; bottoms equal at 1920/1440/1200; suite 250/250
+- 2026-10-16T09:43Z [claude] RG-173 CREATED @41deafe: issue #173 opened - a scheduled interview cannot be moved or cancelled; the documented 8 -> 3 re-schedule only works after a submitted evaluation (enhancement, AI-initiated, UI)
+- 2026-10-16T10:05Z [claude] RG-173 SIDE-EFFECT @41deafe: INTAKE claim - issue #173 assigned to tahmidsparrow (already was), board status Backlog -> In Development
+- 2026-10-16T10:12Z [claude] RG-173 DECISION @41deafe: deliver the whole issue as one branch/PR; a slice without the calendar/email half leaves interviewers' calendars on the old time (user confirmed)
+- 2026-10-16T10:12Z [claude] RG-173 DECISION @41deafe: issue open questions 1-3 all taken as recommended - no auto-cancel on reject, no Interview.Status=Completed, no concurrency check (user confirmed)
+- 2026-10-16T10:12Z [claude] RG-173 DECISION @41deafe: add a Playwright e2e spec for the reschedule flow on top of the issue's unit/integration tests (user confirmed)
+- 2026-10-16T10:20Z [claude] RG-173 PHASE CLARIFY->PLAN @41deafe: spec written to ai-docs/specs/interview-reschedule-and-cancel.md (Approved), 15 tasks
+- 2026-10-16T10:22Z [claude] RG-173 BRANCH @fe76b20: feature/RG-173/Interview-reschedule-cancel off origin/develop (user confirmed); RG-68 stays on PR #159
+- 2026-10-16T10:22Z [claude] RG-173 PHASE PLAN->CONSTRUCT @fe76b20: plan approved, standard-to-high rigor (migration, new auth gate, draft-deletion path)
+- 2026-10-16T11:05Z [claude] RG-173 DECISION @fe76b20: cancel only steps the candidate back to Call for Interview when they are currently Interview Scheduled; for a Rejected/Discontinued candidate it is calendar cleanup only, since moving them would silently un-reject them (gap in the issue's rules table)
+- 2026-10-16T11:05Z [claude] RG-173 PHASE CONSTRUCT @fe76b20: backend tasks 1-9 done, migration applied, 568/568 existing server tests green
+- 2026-10-16T11:40Z [claude] RG-173 PHASE CONSTRUCT @fe76b20: backend done (tasks 1-10); 613/613 server tests green, 45 new; CalendarAttachment.Method bug caught by its own test and fixed
+- 2026-10-16T12:30Z [claude] RG-173 PHASE CONSTRUCT->WRAP-UP @fe76b20: 15/15 tasks; 613 server tests, 259 client, tsc+lint clean, Playwright reschedule spec green
+- 2026-10-16T12:30Z [claude] RG-173 DONE @fe76b20: move/cancel a scheduled interview shipped end to end; 4 findings to backlog; uncommitted on feature/RG-173/Interview-reschedule-cancel
+- 2026-10-16T12:30Z [claude] RG-173 WRAP-UP @fe76b20: archived RG-53,RG-62,RG-65,RG-71,RG-156,RG-39,RG-54 to stay within the 10-item retention cap
+- 2026-10-17T06:05Z [claude] RG-173 SIDE-EFFECT @15d727c: committed and pushed feature/RG-173/Interview-reschedule-cancel, opened PR #174 against develop (user approved)
+- 2026-10-17T06:05Z [claude] RG-173 SIDE-EFFECT @15d727c: posted summary comment on issue #173, board status In Development -> In review (user approved)
+- 2026-10-17T13:20Z [claude] RG-173 REVISED @16daaf8: follow-on hardening (server role lock, type + length validation, read-only default e2e) verified green: 618 server, 259 client tests
+- 2026-10-17T13:20Z [claude] RG-173 SIDE-EFFECT @16daaf8: PR #174 was squash-merged as 58e13bd before the push; a stale push recreated the deleted feature branch, left in place (never delete a branch)
+- 2026-10-17T13:20Z [claude] RG-173 BRANCH @58e13bd: fix/RG-173/Interview-write-hardening created off origin/develop for the hardening (user confirmed)
+- 2026-10-17T13:25Z [claude] RG-173 SIDE-EFFECT @358e123: pushed fix/RG-173/Interview-write-hardening, opened PR #175 against develop referencing #173 (user approved, no new issue)
+- 2026-10-17T13:45Z [claude] RG-169 CREATED @1f56532: issue #169, a Recruiter cannot upload CVs; bug, scoped role-options returns an empty job-opening list and the page dead-ends silently
+- 2026-10-17T13:45Z [claude] RG-169 SIDE-EFFECT @1f56532: INTAKE claim - issue #169 assigned to tahmidsparrow (already was), board status -> In Development
+- 2026-10-18T05:30Z [claude] RG-169 DECISION @1f56532: rule is final - a Recruiter without a job-opening assignment cannot upload a CV, an Admin can; authorization model unchanged, fix is the silent dead end only (user confirmed)
+- 2026-10-18T05:30Z [claude] RG-169 DECISION @1f56532: fix all four surfaces sharing the dead end (upload, JSON import, candidate form, draft review) (user confirmed)
+- 2026-10-18T05:40Z [claude] RG-169 PHASE CLARIFY->PLAN @58e13bd: 8 tasks, standard rigor, client-only; notice copy split by role so an Admin is not told the opposite of the rule (user approved)
+- 2026-10-18T05:40Z [claude] RG-169 BRANCH @58e13bd: fix/RG-169/Recruiter-upload-no-opening created off origin/develop (user confirmed)
+- 2026-10-18T05:40Z [claude] RG-169 PHASE PLAN->CONSTRUCT @58e13bd: plan approved with both message variants
+- 2026-10-18T06:05Z [claude] RG-169 REVISED @58e13bd: notice reads a new useOptionalAuth, not useAuth; the four hosts have no AuthProvider in tests and the provider does a network refresh on mount
+- 2026-10-18T07:10Z [claude] RG-169 PHASE CONSTRUCT->WRAP-UP @58e13bd: 8/8 tasks; 270 client tests (10 new), 613 server, tsc+lint clean, verified in-browser with the role list stubbed empty
+- 2026-10-18T07:10Z [claude] RG-169 DONE @58e13bd: the four surfaces now explain the empty job-opening list instead of dead-ending; 3 findings to backlog; uncommitted
+- 2026-10-18T07:10Z [claude] RG-169 WRAP-UP @58e13bd: archived RG-55 for the 10-item retention cap; frontend.md anchors re-stamped in codebase-map
+- 2026-10-18T09:50Z [claude] RG-169 SIDE-EFFECT @673822d: committed and pushed fix/RG-169/Recruiter-upload-no-opening, opened PR #176 against develop (user approved)
+- 2026-10-18T09:50Z [claude] RG-169 REVISED @b644212: 4 review findings fixed (expired-assignment wording, expired openings still offered, busy panel replaced, failed load silent) plus a render-loop regression from the unmemoised filter
+- 2026-10-18T10:30Z [claude] RG-169 SIDE-EFFECT @1f2632f: merged origin/develop (cc25a65) into the branch to clear PR #176 conflicts in audit.md and state.md; both sides' lines kept
+- 2026-10-18T10:30Z [claude] RG-169 REVISED @1f2632f: merged tree verified green - 618 server (incl. develop's 5 RG-173 hardening tests), 275 client, tsc+lint clean
+- 2026-10-19T08:57Z [claude] RG-168 CREATED @52d5380: issue #168, floating Upload CVs button overlaps dashboard on phones
+- 2026-10-19T08:57Z [claude] RG-168 SIDE-EFFECT @52d5380: already assigned to rayhan-ajentica; board status NOT moved (gh token lacks read:project)
+- 2026-10-19T08:57Z [claude] RG-168 DECISION @52d5380: remove the FAB; keep hero Candidates/Upload CVs buttons as they are (user confirmed)
+- 2026-10-19T08:57Z [claude] RG-168 BRANCH @52d5380: fix/RG-168/Remove-floating-upload-button off origin/develop (user confirmed)
+- 2026-10-19T08:57Z [claude] RG-168 PHASE PLAN→CONSTRUCT @52d5380: plan approved
+- 2026-10-19T09:01Z [claude] RG-168 DONE @52d5380: FAB, CSS and padding class removed; hero buttons unchanged; e2e 11/11; suite 274 + known date-picker flake
+- 2026-10-19T09:34Z [claude] RG-168 REVISED @52d5380: hero Candidates/Upload CVs buttons shown inline on phones instead of hidden (user asked)
+- 2026-10-19T10:11Z [claude] RG-177 CREATED @52d5380: issue #177, e2e eval spacing assertion fails on sub-pixel jitter
+- 2026-10-19T10:11Z [claude] RG-177 SIDE-EFFECT @52d5380: already assigned to rayhan-ajentica; board status NOT moved (gh token lacks read:project)
+- 2026-10-19T10:11Z [claude] RG-177 DECISION @52d5380: compare vertical centres within 2px (user approved)
+- 2026-10-19T10:11Z [claude] RG-177 BRANCH @52d5380: fix/RG-177/Eval-spacing-test-jitter off origin/develop (user confirmed)
+- 2026-10-19T10:11Z [claude] RG-177 PHASE PLAN→CONSTRUCT @52d5380: plan approved
+- 2026-10-19T10:22Z [claude] RG-177 REVISED @52d5380: centre check alone still failed 2/80 (page shift between two boundingBox calls); measure both rects in one evaluate: 0 failures in 160
+- 2026-10-19T10:22Z [claude] RG-177 DONE @52d5380: spacing spec 158/160 pass (1 style-wait, 1 skip); full e2e x2 green for this spec
+- 2026-10-19T11:35Z [claude] RG-178 CREATED @0f798b0: issue #178, e2e chip test silently skips (races render)
+- 2026-10-19T11:35Z [claude] RG-178 SIDE-EFFECT @0f798b0: already assigned to rayhan-ajentica; board status NOT moved (gh token lacks read:project)
+- 2026-10-19T11:35Z [claude] RG-178 DECISION @0f798b0: wait for chip, sign in wide first, same wait on sibling test (user approved)
+- 2026-10-19T11:35Z [claude] RG-178 BRANCH @0f798b0: fix/RG-178/Card-header-spec-race off origin/develop (user confirmed)
+- 2026-10-19T11:35Z [claude] RG-178 PHASE PLAN→CONSTRUCT @0f798b0: plan approved
+- 2026-10-19T11:43Z [claude] RG-178 DONE @0f798b0: chip waits for render, wide sign-in, sibling waits; old spec skipped 3/3, fixed 120+ runs ran; mutation caught; full e2e 36 pass
+- 2026-10-19T12:54Z [claude] RG-179 CREATED @024c6e0: issue #179, e2e suite grows the dev database every run
+- 2026-10-19T12:54Z [claude] RG-179 SIDE-EFFECT @024c6e0: already assigned to rayhan-ajentica; board status NOT moved (gh token lacks read:project)
+- 2026-10-19T12:54Z [claude] RG-179 DECISION @024c6e0: per-spec cleanup via shared helper, afterEach; not an isolated DB (user approved)
+- 2026-10-19T12:54Z [claude] RG-179 BRANCH @024c6e0: fix/RG-179/E2E-cleanup-fixtures off origin/develop (user confirmed)
+- 2026-10-19T12:54Z [claude] RG-179 PHASE PLAN→CONSTRUCT @024c6e0: plan approved
+- 2026-10-19T14:00Z [claude] RG-179 SIDE-EFFECT @024c6e0: my baseline e2e run wrote to the user's REAL DB (their API held 5134); removed drafts 52-64 and candidates 14-15 via API with user's go-ahead; counts restored
+- 2026-10-19T14:00Z [claude] RG-179 REVISED @024c6e0: snapshot-diff cleanup broke under parallel workers; now tracks each test's own ids (network responses)
+- 2026-10-19T14:00Z [claude] RG-179 DONE @024c6e0: cleanup helper + seed/recruiter-scope fixes; 3 full suites leave counts flat on an isolated DB; real DB untouched
+- 2026-10-19T14:36Z [claude] RG-183 CREATED @024c6e0: issue #183 phase 1 of epic #182, evaluation share grants API
+- 2026-10-19T14:36Z [claude] RG-183 SIDE-EFFECT @024c6e0: assigned #183 to rayhan-ajentica; board status NOT moved (gh token lacks read:project)
+- 2026-10-19T14:36Z [claude] RG-183 DECISION @024c6e0: start with phase 1 only, own PR; PRs say Part of #182 (user confirmed)
+- 2026-10-19T14:36Z [claude] RG-183 BRANCH @024c6e0: feature/RG-183/Evaluation-share-grants-api off origin/develop (user confirmed)
+- 2026-10-19T14:36Z [claude] RG-183 PHASE PLAN→CONSTRUCT @024c6e0: plan approved
+- 2026-10-19T15:05Z [claude] RG-183 PHASE CONSTRUCT→WRAP-UP @024c6e0: 645 tests green, isolated API check ok, security review done
+- 2026-10-20T08:00Z [claude] RG-183 SIDE-EFFECT @d16f336: pushed branch, opened PR #206 into develop after rebase on origin/develop (user confirmed)
+- 2026-10-20T08:00Z [claude] RG-183 PHASE WRAP-UP→DONE @d16f336: PR #206 open, awaiting review
+- 2026-10-20T09:00Z [claude] RG-184 CREATED @d16f336: issue #184 intake, phase 2 of #182
+- 2026-10-20T09:00Z [claude] RG-184 SIDE-EFFECT @d16f336: assigned #184 to @me; board status not moved (gh token lacks read:project)
+- 2026-10-20T09:00Z [claude] RG-184 PHASE INTAKE→CLARIFY @d16f336
+- 2026-10-20T09:20Z [claude] RG-184 DECISION @d16f336: branch off develop; follow-ups in; link /shared/{id}; no #186 work (user confirmed)
+- 2026-10-20T09:20Z [claude] RG-184 PHASE CLARIFY→PLAN @d16f336: plan drafted, awaiting approval
+- 2026-10-20T09:35Z [claude] RG-184 BRANCH @ac3ec05: feature/RG-184/Shared-evaluations-read-api off origin/develop (user confirmed)
+- 2026-10-20T09:35Z [claude] RG-184 PHASE PLAN→CONSTRUCT @ac3ec05: plan approved (user: proceed)
+- 2026-10-20T11:00Z [claude] RG-184 PHASE CONSTRUCT→WRAP-UP @ac3ec05: 669 tests green, isolated API check ok, security review no High
+- 2026-10-20T11:30Z [claude] RG-184 DECISION @ac3ec05: keep same-interview peer rule; exclude cancelled interviews (user confirmed)
+- 2026-10-20T12:00Z [claude] RG-184 SIDE-EFFECT @4575df5: pushed branch, opened PR #209 into develop (user confirmed)
+- 2026-10-20T12:00Z [claude] RG-184 DONE @4575df5: PR #209 open, awaiting review
+- 2026-10-20T13:00Z [claude] RG-185 CREATED @065657a: issue #185 intake, phase 3 of #182 (PR #209 merged)
+- 2026-10-20T13:00Z [claude] RG-185 SIDE-EFFECT @065657a: assigned #185 to @me; board status not moved (gh token lacks read:project)
+- 2026-10-20T13:00Z [claude] RG-185 PHASE INTAKE→CLARIFY @065657a
+- 2026-10-20T13:20Z [claude] RG-185 DECISION @065657a: add options endpoint; labels, guide placement, gating, E2E scope as recommended (user confirmed)
+- 2026-10-20T13:20Z [claude] RG-185 PHASE CLARIFY→PLAN @065657a: plan drafted, awaiting approval
+- 2026-10-20T13:40Z [claude] RG-185 BRANCH @065657a: feature/RG-185/Share-evaluations-ui off origin/develop (user confirmed)
+- 2026-10-20T13:40Z [claude] RG-185 PHASE PLAN→CONSTRUCT @065657a: plan approved (user: go with recommendation)
+- 2026-10-20T16:00Z [claude] RG-185 PHASE CONSTRUCT→WRAP-UP @065657a: 675 dotnet, 291 vitest, tsc+lint ok, E2E on isolated stack ok
+- 2026-10-20T17:00Z [claude] RG-185 SIDE-EFFECT @98441de: rebased on origin/develop, pushed branch, opened PR #212 into develop (user confirmed)
+- 2026-10-20T17:00Z [claude] RG-185 DONE @98441de: PR #212 open, awaiting review
+- 2026-10-21T09:00Z [claude] RG-186 CREATED @01c680e: issue #186 intake, phase 4 of #182 (PR #212 merged)
+- 2026-10-21T09:00Z [claude] RG-186 SIDE-EFFECT @01c680e: assigned #186 to @me; board status not moved (gh token lacks read:project)
+- 2026-10-21T09:00Z [claude] RG-186 PHASE INTAKE→CLARIFY @01c680e
+- 2026-10-21T09:20Z [claude] RG-186 DECISION @01c680e: notification links to new route, no nav item, admin link on 404, E2E approach, no-expiry banner (user confirmed)
+- 2026-10-21T09:20Z [claude] RG-186 PHASE CLARIFY→PLAN @01c680e: plan drafted, awaiting approval
+- 2026-10-21T09:40Z [claude] RG-186 BRANCH @01c680e: feature/RG-186/Shared-with-me-view off origin/develop (user confirmed)
+- 2026-10-21T09:40Z [claude] RG-186 PHASE PLAN→CONSTRUCT @01c680e: plan approved (user: go with recommendation)
+- 2026-10-21T14:00Z [claude] RG-186 PHASE CONSTRUCT→WRAP-UP @01c680e: 675 dotnet, 307 vitest, tsc+lint ok, 3 E2E ok on isolated stack
+- 2026-10-21T14:30Z [claude] RG-186 SIDE-EFFECT @75360ce: pushed branch, opened PR #213 into develop (user confirmed)
+- 2026-10-21T14:30Z [claude] RG-186 DONE @75360ce: PR #213 open, awaiting review
+- 2026-10-22T09:00Z [claude] RG-187 CREATED @e9d40c4: issue #187 intake, phase 5 of #182 (PR #213 merged)
+- 2026-10-22T09:00Z [claude] RG-187 SIDE-EFFECT @e9d40c4: assigned #187 to @me; board status not moved (gh token lacks read:project)
+- 2026-10-22T09:00Z [claude] RG-187 PHASE INTAKE→CLARIFY @e9d40c4
+- 2026-10-22T09:20Z [claude] RG-187 DECISION @e9d40c4: options field, skip covered, no expiry, notification wording, test scope (user confirmed)
+- 2026-10-22T09:20Z [claude] RG-187 PHASE CLARIFY→PLAN @e9d40c4: plan drafted, awaiting approval
+- 2026-10-22T09:40Z [claude] RG-187 BRANCH @e9d40c4: feature/RG-187/Share-earlier-rounds-on-booking off origin/develop (user confirmed)
+- 2026-10-22T09:40Z [claude] RG-187 PHASE PLAN→CONSTRUCT @e9d40c4: plan approved (user: go with recommendation)
+- 2026-10-22T14:00Z [claude] RG-187 PHASE CONSTRUCT→WRAP-UP @e9d40c4: 689 dotnet, 319 vitest, tsc+lint ok, isolated flow + migration down/up ok, security review fixes applied
+- 2026-10-22T14:30Z [claude] RG-187 SIDE-EFFECT @8f0ee60: pushed branch, opened PR #214 into develop (user confirmed)
+- 2026-10-22T14:30Z [claude] RG-187 DONE @8f0ee60: PR #214 open, awaiting review
+- 2026-10-21T09:00Z [claude] RG-188 CREATED @e9d40c4: issue #188 intake (bug); PR #214 for RG-187 still open
+- 2026-10-21T09:00Z [claude] RG-188 SIDE-EFFECT @e9d40c4: assigned #188 to @me; board status not moved (gh token lacks read:project)
+- 2026-10-21T09:00Z [claude] RG-188 PHASE INTAKE→CLARIFY @e9d40c4
+- 2026-10-21T09:20Z [claude] RG-188 DECISION @e9d40c4: legacy fallback only when link null; one shared rule; UpdateAsync untouched (user confirmed)
+- 2026-10-21T09:20Z [claude] RG-188 PHASE CLARIFY→PLAN @e9d40c4: plan drafted, awaiting approval
+- 2026-10-21T09:40Z [claude] RG-188 BRANCH @e9d40c4: fix/RG-188/Rubric-lookup-by-job-opening off origin/develop (user confirmed)
+- 2026-10-21T09:40Z [claude] RG-188 PHASE PLAN→CONSTRUCT @e9d40c4: plan approved (user: go with recommendation)
+- 2026-10-21T11:00Z [claude] RG-188 PHASE CONSTRUCT→WRAP-UP @e9d40c4: 684 dotnet tests green; HTTP integration test replaces a separate isolated-stack run
+- 2026-10-21T12:00Z [claude] RG-188 SIDE-EFFECT @0b66e8a: pushed branch, opened PR #215 into develop (user confirmed)
+- 2026-10-21T12:00Z [claude] RG-188 DONE @0b66e8a: PR #215 open, awaiting review
+- 2026-10-22T09:00Z [claude] RG-189 CREATED @e9d40c4: issue #189 intake (bug); PRs #214 and #215 still open
+- 2026-10-22T09:00Z [claude] RG-189 SIDE-EFFECT @e9d40c4: assigned #189 to @me; board status not moved (gh token lacks read:project)
+- 2026-10-22T09:00Z [claude] RG-189 PHASE INTAKE→CLARIFY @e9d40c4
+- 2026-10-22T09:20Z [claude] RG-189 DECISION @e9d40c4: fix per issue; keep drafts on cancel; no reason on the panel (user confirmed)
+- 2026-10-22T09:20Z [claude] RG-189 PHASE CLARIFY→PLAN @e9d40c4: plan drafted, awaiting approval
+- 2026-10-22T09:40Z [claude] RG-189 BRANCH @e9d40c4: fix/RG-189/Cancelled-interview-evaluation off origin/develop (user confirmed)
+- 2026-10-22T09:40Z [claude] RG-189 PHASE PLAN→CONSTRUCT @e9d40c4: plan approved (user: go with recommendation)
+- 2026-10-22T11:00Z [claude] RG-189 PHASE CONSTRUCT→WRAP-UP @e9d40c4: 683 dotnet, 310 vitest, tsc+lint ok, isolated flow + screenshot ok
+- 2026-10-22T11:30Z [claude] RG-189 SIDE-EFFECT @7c27645: pushed branch, opened PR #216 into develop (user confirmed)
+- 2026-10-22T11:30Z [claude] RG-189 DONE @7c27645: PR #216 open, awaiting review
+- 2026-10-23T09:00Z [claude] RG-190 CREATED @e9d40c4: issue #190 intake (bug); PRs #214, #215, #216 still open
+- 2026-10-23T09:00Z [claude] RG-190 SIDE-EFFECT @e9d40c4: assigned #190 to @me (already assigned to you); board status not moved (gh token lacks read:project)
+- 2026-10-23T09:00Z [claude] RG-190 PHASE INTAKE→CLARIFY @e9d40c4
+- 2026-10-23T09:20Z [claude] RG-190 DECISION @e9d40c4: criteria on the report DTO + Other criteria safety net + averages over all keys (user confirmed)
+- 2026-10-23T09:20Z [claude] RG-190 PHASE CLARIFY→PLAN @e9d40c4: plan drafted, awaiting approval
+- 2026-10-23T09:40Z [claude] RG-190 BRANCH @e9d40c4: fix/RG-190/Custom-rubric-ratings-in-report off origin/develop (user confirmed)
+- 2026-10-23T09:40Z [claude] RG-190 PHASE PLAN→CONSTRUCT @e9d40c4: plan approved (user: go with recommendation)
+- 2026-10-23T11:00Z [claude] RG-190 PHASE CONSTRUCT→WRAP-UP @e9d40c4: 679 dotnet, 314 vitest, tsc+lint ok, isolated stack + screenshot ok
+- 2026-10-23T11:30Z [claude] RG-190 SIDE-EFFECT @ff0c910: pushed branch, opened PR #217 into develop (user confirmed)
+- 2026-10-23T11:30Z [claude] RG-190 DONE @ff0c910: PR #217 open, awaiting review
+- 2026-10-24T09:00Z [claude] RG-191 CREATED @e9d40c4: issue #191 intake (bug); PRs #214-#217 still open
+- 2026-10-24T09:00Z [claude] RG-191 SIDE-EFFECT @e9d40c4: assigned #191 to @me (already yours); board status not moved (gh token lacks read:project)
+- 2026-10-24T09:00Z [claude] RG-191 PHASE INTAKE→CLARIFY @e9d40c4
+- 2026-10-24T09:20Z [claude] RG-191 DECISION @e9d40c4: client payload/loading/error fixes + default-rubric guard; resolver left to PR #215 (user confirmed)
+- 2026-10-24T09:20Z [claude] RG-191 PHASE CLARIFY→PLAN @e9d40c4: plan drafted, awaiting approval
+- 2026-10-24T09:40Z [claude] RG-191 BRANCH @e9d40c4: fix/RG-191/Unsavable-evaluation-draft off origin/develop (user confirmed)
+- 2026-10-24T09:40Z [claude] RG-191 PHASE PLAN→CONSTRUCT @e9d40c4: plan approved (user: go with recommendation)
+- 2026-10-24T11:00Z [claude] RG-191 PHASE CONSTRUCT→WRAP-UP @e9d40c4: 680 dotnet, 315 vitest (date-picker flaky passes alone), tsc+lint ok, isolated stack stale-key scenario ok
+- 2026-10-24T11:30Z [claude] RG-191 SIDE-EFFECT @b1e7433: pushed branch, opened PR #218 into develop (user confirmed)
+- 2026-10-24T11:30Z [claude] RG-191 DONE @b1e7433: PR #218 open, awaiting review
+- 2026-10-25T09:00Z [claude] RG-192 CREATED @e9d40c4: issue #192 intake (bug); PRs #214-#218 still open
+- 2026-10-25T09:00Z [claude] RG-192 SIDE-EFFECT @e9d40c4: assigned #192 to @me (already yours); board status not moved (gh token lacks read:project)
+- 2026-10-25T09:00Z [claude] RG-192 PHASE INTAKE→CLARIFY @e9d40c4
+- 2026-10-25T09:20Z [claude] RG-192 DECISION @e9d40c4: approval optional except rejected drafts, derived flag, 409 everywhere, UI hides extend on rejected (user confirmed)
+- 2026-10-25T09:20Z [claude] RG-192 PHASE CLARIFY→PLAN @e9d40c4: plan drafted, awaiting approval
+- 2026-10-25T09:40Z [claude] RG-192 BRANCH @e9d40c4: fix/RG-192/Offer-state-machine off origin/develop (user confirmed)
+- 2026-10-25T09:40Z [claude] RG-192 PHASE PLAN→CONSTRUCT @e9d40c4: plan approved (user: go with recommendation)
+- 2026-10-25T12:00Z [claude] RG-192 PHASE CONSTRUCT→WRAP-UP @e9d40c4: 731 dotnet, 313 vitest, tsc+lint ok, isolated API+UI check ok, security review fixes applied; new-version bypass pending user
+- 2026-10-25T13:00Z [claude] RG-192 DECISION @ff0c95c: rejection rule is candidate-level so a New Version cannot bypass it (user confirmed)
+- 2026-10-22T09:35Z [claude] RG-192 SIDE-EFFECT @7cc896b: pushed fix/RG-192/Offer-state-machine, opened PR #219 into develop (user confirmed)
+- 2026-10-22T09:35Z [claude] RG-192 DONE @7cc896b: offer state machine, candidate-level rejection rule, 409s, concurrency token; PR #219
+- 2026-10-22T09:45Z [claude] RG-193 CREATED @7cc896b: intake of issue #193 (bug); assigned to @me via gh
+- 2026-10-22T09:45Z [claude] RG-193 SIDE-EFFECT @7cc896b: assigned issue #193 to @me; board move to In Development FAILED (gh token lacks read:project scope)
+- 2026-10-22T09:46Z [claude] RG-193 DECISION @7cc896b: CLARIFY assumptions 1-5 accepted (go with recommendation)
+- 2026-10-22T09:46Z [claude] RG-193 PHASE CLARIFY→PLAN @7cc896b: plan.md drafted, awaiting approval
+- 2026-10-22T09:49Z [claude] RG-193 BRANCH @7cc896b: fix/RG-193/Offer-status-rules-and-lock created off fix/RG-192/Offer-state-machine (user confirmed)
+- 2026-10-22T09:49Z [claude] RG-193 PHASE PLAN→CONSTRUCT @7cc896b: plan approved (go with recommendation)
+- 2026-10-22T10:00Z [claude] RG-193 DONE @7cc896b: offer actions use End Date lock, stage rules, 1 live offer, locked atomic status move; 788 backend, 333 client tests
+- 2026-10-22T10:23Z [claude] RG-193 SIDE-EFFECT @e0d057e: pushed fix/RG-193/Offer-status-rules-and-lock, opened PR #220 (base fix/RG-192/Offer-state-machine; user confirmed)
+- 2026-10-22T10:24Z [claude] RG-194 CREATED @e0d057e: intake of issue #194 (bug); assigned to @me via gh; board move skipped (gh lacks read:project)
+- 2026-10-22T10:24Z [claude] RG-194 PHASE CLARIFY→PLAN @e0d057e: plan.md drafted, awaiting approval
+- 2026-10-22T10:24Z [claude] RG-194 BRANCH @e0d057e: fix/RG-194/Offer-url-candidate-check created off fix/RG-193/Offer-status-rules-and-lock (user confirmed)
+- 2026-10-22T10:24Z [claude] RG-194 PHASE PLAN→CONSTRUCT @e0d057e: plan approved (go with recommendation)
+- 2026-10-22T10:27Z [claude] RG-194 DONE @e0d057e: URL candidate id checked before any offer write; 795 backend tests; security review no High/Medium
+- 2026-10-22T10:29Z [claude] RG-194 SIDE-EFFECT @f4c994b: pushed fix/RG-194/Offer-url-candidate-check, opened PR #221 (base fix/RG-193/Offer-status-rules-and-lock; user confirmed)
+- 2026-10-22T10:30Z [claude] RG-195 CREATED @f4c994b: intake of issue #195 (bug); assigned to @me via gh (already assigned); board move skipped (gh lacks read:project)
+- 2026-10-22T10:32Z [claude] RG-195 DECISION @f4c994b: CLARIFY assumptions 1-5 accepted (go with recommendation)
+- 2026-10-22T10:32Z [claude] RG-195 PHASE CLARIFY→PLAN @f4c994b: plan.md drafted, awaiting approval
+- 2026-10-22T10:33Z [claude] RG-195 BRANCH @3062074: fix/RG-195/Candidate-list-filters created off origin/develop (user confirmed)
+- 2026-10-22T10:33Z [claude] RG-195 PHASE PLAN→CONSTRUCT @3062074: plan approved (go with recommendation)
+- 2026-10-22T10:36Z [claude] RG-195 DONE @3062074: batch param wired, hired/offers buckets implemented; 694 backend, client ok (known flaky date-picker)
+- 2026-10-22T10:37Z [claude] RG-195 SIDE-EFFECT @684173c: pushed fix/RG-195/Candidate-list-filters, opened PR #222 into develop (user confirmed)
+- 2026-10-22T10:37Z [claude] RG-196 CREATED @684173c: intake of issue #196 (bug); already assigned to @me; board move skipped (gh lacks read:project)
+- 2026-10-22T10:37Z [claude] RG-196 PHASE CLARIFY→PLAN @684173c: plan.md drafted (assumptions 1-4 pending), awaiting approval
+- 2026-10-22T10:38Z [claude] RG-196 DECISION @3062074: CLARIFY assumptions 1-4 accepted (go with recommendation)
+- 2026-10-22T10:38Z [claude] RG-196 BRANCH @3062074: fix/RG-196/Candidate-list-paging created off origin/develop (user confirmed)
+- 2026-10-22T10:38Z [claude] RG-196 PHASE PLAN→CONSTRUCT @3062074: plan approved (go with recommendation)
+- 2026-10-22T10:40Z [claude] RG-196 DONE @3062074: list paging clamped (page 1.., pageSize 1..200), board truncation notice; 705 backend, 321 client
+- 2026-10-22T11:03Z [claude] RG-196 SIDE-EFFECT @ed6ea15: pushed fix/RG-196/Candidate-list-paging, opened PR #223 into develop (user confirmed)
+- 2026-10-22T11:04Z [claude] RG-197 CREATED @ed6ea15: intake of issue #197 (bug); already assigned to @me; board move skipped (gh lacks read:project)
+- 2026-10-22T11:05Z [claude] RG-197 DECISION @ed6ea15: CLARIFY assumptions 1-6 accepted (go with recommendation)
+- 2026-10-22T11:05Z [claude] RG-197 PHASE CLARIFY→PLAN @ed6ea15: plan.md drafted, awaiting approval
+- 2026-10-22T11:06Z [claude] RG-197 BRANCH @f4c994b: fix/RG-197/Offer-input-validation created off fix/RG-194/Offer-url-candidate-check (user confirmed)
+- 2026-10-22T11:06Z [claude] RG-197 PHASE PLAN→CONSTRUCT @f4c994b: plan approved (go with recommendation)
+- 2026-10-22T11:11Z [claude] RG-197 DONE @f4c994b: OfferInputValidator (400 not 500), form mirrors limits; 831 backend, 351 client tests
+- 2026-10-22T11:12Z [claude] RG-197 SIDE-EFFECT @6a654d6: pushed fix/RG-197/Offer-input-validation, opened PR #224 (base fix/RG-194/Offer-url-candidate-check; user confirmed)
+- 2026-10-22T11:15Z [claude] RG-198 CREATED @6a654d6: intake of issue #198 (bug, UI); already assigned to @me; board move skipped (gh lacks read:project)
+- 2026-10-22T11:16Z [claude] RG-198 DECISION @6a654d6: CLARIFY assumptions 1-5 accepted (go with recommendation)
+- 2026-10-22T11:16Z [claude] RG-198 PHASE CLARIFY→PLAN @6a654d6: plan.md drafted, awaiting approval
+- 2026-10-22T11:17Z [claude] RG-198 BRANCH @3062074: fix/RG-198/Dead-end-links created off origin/develop (user confirmed)
+- 2026-10-22T11:17Z [claude] RG-198 PHASE PLAN→CONSTRUCT @3062074: plan approved (go with recommendation)
+- 2026-10-22T11:19Z [claude] RG-198 REVISED @3062074: client has no user id; add userId to AuthResultDto and AuthUser for the pill rule
+- 2026-10-22T11:22Z [claude] RG-198 DONE @3062074: pills/booker link/RequireRole toast fixed; userId added to AuthResultDto; 695 backend, 325 client
+- 2026-10-22T11:31Z [claude] RG-198 SIDE-EFFECT @109fa58: pushed fix/RG-198/Dead-end-links, opened PR #225 into develop (user confirmed)
+- 2026-10-22T15:14Z [claude] RG-199 CREATED @109fa58: intake of issue #199 (bug, UI); already assigned to @me; board move skipped (gh lacks read:project)
+- 2026-10-22T15:14Z [claude] RG-199 PHASE CLARIFY→PLAN @109fa58: fast path, plan.md drafted, awaiting approval
+- 2026-10-22T15:16Z [claude] RG-199 BRANCH @3062074: fix/RG-199/Evaluation-labels created off origin/develop (user confirmed)
+- 2026-10-22T15:16Z [claude] RG-199 PHASE PLAN→CONSTRUCT @3062074: plan approved (go with recommendation)
+- 2026-10-22T15:18Z [claude] RG-199 DONE @3062074: distinct interviewer count, UpNextCard opens oldest pending; 690 backend, client ok (known flaky date-picker)
+- 2026-10-22T15:24Z [claude] RG-199 SIDE-EFFECT @b1c0854: pushed fix/RG-199/Evaluation-labels, opened PR #226 into develop (user confirmed)
+- 2026-10-22T15:25Z [claude] RG-200 CREATED @b1c0854: intake of issue #200 (improvement); already assigned to @me; board move skipped (gh lacks read:project)
+- 2026-10-22T15:26Z [claude] RG-200 DECISION @b1c0854: CLARIFY assumptions 1-5 accepted (go with recommendation)
+- 2026-10-22T15:26Z [claude] RG-200 PHASE CLARIFY→PLAN @b1c0854: plan.md drafted, awaiting approval
+- 2026-10-22T15:30Z [claude] RG-200 BRANCH @3062074: feature/RG-200/Analytics-sql-filtering created off origin/develop (user confirmed)
+- 2026-10-22T15:30Z [claude] RG-200 PHASE PLAN→CONSTRUCT @3062074: plan approved (go with recommendation)
+- 2026-10-22T15:36Z [claude] RG-200 DONE @3062074: analytics loads only the period window, SQL aggregates for workloads; golden-pinned figures; 693 backend
+- 2026-10-22T15:46Z [claude] RG-200 SIDE-EFFECT @ed5160a: pushed feature/RG-200/Analytics-sql-filtering, opened PR #227 into develop (user confirmed)
+- 2026-10-22T15:47Z [claude] RG-201 CREATED @ed5160a: intake of issue #201 (improvement, 6 cleanups); already assigned to @me; board move skipped (gh lacks read:project)
+- 2026-10-22T15:48Z [claude] RG-201 DECISION @ed5160a: CLARIFY assumptions 1-8 accepted (go with recommendation)
+- 2026-10-22T15:48Z [claude] RG-201 PHASE CLARIFY→PLAN @ed5160a: plan.md drafted, awaiting approval
+- 2026-10-22T16:03Z [claude] RG-201 BRANCH @3062074: feature/RG-201/Backend-cleanups created off origin/develop (user confirmed)
+- 2026-10-22T16:03Z [claude] RG-201 PHASE PLAN→CONSTRUCT @3062074: plan approved (go with recommendation)
+- 2026-10-22T16:14Z [claude] RG-201 DONE @3062074: six cleanups done; rubric-for-interview scoped, ended openings, dup email on update; 713 backend; security review no High/Medium
+- 2026-10-22T16:21Z [claude] RG-201 SIDE-EFFECT @9d415b0: pushed feature/RG-201/Backend-cleanups, opened PR #228 into develop (user confirmed)
+- 2026-10-22T16:23Z [claude] RG-202 CREATED @9d415b0: intake of issue #202 (feature); already assigned to @me; board move skipped (gh lacks read:project)
+- 2026-10-22T16:23Z [claude] RG-202 DECISION @9d415b0: CLARIFY assumptions 1-8 accepted (go with recommendation)
+- 2026-10-22T16:23Z [claude] RG-202 PHASE CLARIFY→PLAN @9d415b0: plan.md drafted, awaiting approval
+- 2026-10-22T16:40Z [claude] RG-202 BRANCH @3062074: feature/RG-202/Evaluation-reminders created off origin/develop (user confirmed)
+- 2026-10-22T16:40Z [claude] RG-202 PHASE PLAN→CONSTRUCT @3062074: plan approved (go with recommendation)
+- 2026-10-22T16:49Z [claude] RG-202 DONE @3062074: overdue reminders (worker+service+EvaluationReminders migration), all-evaluations-in notice; 712 backend; review no High/Medium
+- 2026-10-22T16:58Z [claude] RG-202 SIDE-EFFECT @41c6b13: pushed feature/RG-202/Evaluation-reminders, opened PR #229 into develop (user confirmed)
+- 2026-10-22T17:17Z [claude] RG-203 CREATED @41c6b13: intake of issue #203 (feature, UI); already assigned to @me; board move skipped (gh lacks read:project)
+- 2026-10-22T17:18Z [claude] RG-203 DECISION @41c6b13: CLARIFY assumptions 1-6 accepted (go with recommendation)
+- 2026-10-22T17:18Z [claude] RG-203 PHASE CLARIFY→PLAN @41c6b13: plan.md drafted, awaiting approval
+- 2026-10-22T17:21Z [claude] RG-203 BRANCH @3062074: feature/RG-203/My-interviews-page created off origin/develop (user confirmed)
+- 2026-10-22T17:21Z [claude] RG-203 PHASE PLAN→CONSTRUCT @3062074: plan approved (go with recommendation)
+- 2026-10-22T17:27Z [claude] RG-203 DONE @3062074: GET /api/interviews/mine/history + My interviews page; 710 backend, client ok (known flaky date-picker); no browser/security-agent run

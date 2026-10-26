@@ -171,4 +171,27 @@ public class SlackSettingsServiceTests(MySqlDatabaseFixture fixture) : DbTestBas
         Assert.Contains("token replaced True", entry.Summary);
         Assert.Contains(NotificationCategories.EvaluationSubmitted, entry.Summary);
     }
+
+    [Fact]
+    public async Task The_interview_lifecycle_categories_round_trip_through_All()
+    {
+        // New categories need no data migration: SaveAsync upserts a row per NotificationCategories.All
+        // and IsCategoryEnabledAsync defaults a missing row to off, so they appear in the admin UI
+        // automatically and stay Slack-off until a SuperAdmin saves the page.
+        Assert.Contains(NotificationCategories.All, c => c.Key == NotificationCategories.InterviewRescheduled);
+        Assert.Contains(NotificationCategories.All, c => c.Key == NotificationCategories.InterviewCancelled);
+        Assert.True(NotificationCategories.IsValid(NotificationCategories.InterviewRescheduled));
+        Assert.True(NotificationCategories.IsValid(NotificationCategories.InterviewCancelled));
+
+        var p = Protector();
+        var svc = Service(p, Fallback());
+        await svc.SaveAsync(
+            Dto("xoxb-test", enabledCategories: [NotificationCategories.InterviewCancelled]),
+            actorUserId: 1);
+
+        var resolver = Resolver(p, Fallback());
+
+        Assert.True(await resolver.IsCategoryEnabledAsync(NotificationCategories.InterviewCancelled));
+        Assert.False(await resolver.IsCategoryEnabledAsync(NotificationCategories.InterviewRescheduled));
+    }
 }

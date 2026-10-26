@@ -122,7 +122,7 @@ public class ControllerAuthorizationTests(ApiFixture fx)
     [InlineData("Interviewer", HttpStatusCode.Forbidden)]
     public async Task Create_offer(string role, HttpStatusCode expected)
     {
-        var candidateId = await fx.NewCandidateAsync(fx.AdminId);
+        var candidateId = await fx.NewCandidateAsync(fx.AdminId, status: "Recommended");
         var resp = await fx.SendAsync(HttpMethod.Post, $"/api/candidates/{candidateId}/offers",
             await TokenFor(role), new { baseSalary = 90000 });
         Assert.Equal(expected, resp.StatusCode);
@@ -136,7 +136,7 @@ public class ControllerAuthorizationTests(ApiFixture fx)
     public async Task Review_offer(string role, HttpStatusCode expected)
     {
         // A fresh offer per case, since a successful review changes its status.
-        var candidateId = await fx.NewCandidateAsync(fx.AdminId);
+        var candidateId = await fx.NewCandidateAsync(fx.AdminId, status: "Offer Preparation");
         var offerId = await fx.NewOfferAsync(candidateId, "PendingApproval");
         var resp = await fx.SendAsync(HttpMethod.Post, $"/api/candidates/{candidateId}/offers/{offerId}/review",
             await TokenFor(role), new { decision = "Approved" });
@@ -361,6 +361,63 @@ public class ControllerAuthorizationTests(ApiFixture fx)
         await AssertStatus(role, HttpMethod.Get, "/api/interviews/types", HttpStatusCode.OK);
         await AssertStatus(role, HttpMethod.Get, "/api/dashboard/kpis", HttpStatusCode.OK);
         await AssertStatus(role, HttpMethod.Get, "/api/dashboard/applications-summary?days=7", HttpStatusCode.OK);
+    }
+
+    // ---- Interview reschedule / cancel: the controller's first /api/interviews writes (#173) ----
+
+    [Theory]
+    [InlineData("Interviewer", HttpStatusCode.Forbidden)]
+    // No such interview, but the caller is allowed through the role gate to find that out.
+    [InlineData("Recruiter", HttpStatusCode.NotFound)]
+    [InlineData("Admin", HttpStatusCode.NotFound)]
+    [InlineData("SuperAdmin", HttpStatusCode.NotFound)]
+    public async Task Reschedule_is_closed_to_interviewers(string role, HttpStatusCode expected)
+    {
+        var body = new
+        {
+            scheduledAt = DateTime.UtcNow.AddDays(3),
+            durationMinutes = 60,
+            notes = (string?)null,
+            interviewerUserIds = new[] { 1 },
+            interviewTypeOptionIds = Array.Empty<int>(),
+            reason = "moved",
+        };
+        var resp = await fx.SendAsync(HttpMethod.Put, "/api/interviews/999999", await TokenFor(role), body);
+        Assert.Equal(expected, resp.StatusCode);
+    }
+
+    [Theory]
+    [InlineData("Interviewer", HttpStatusCode.Forbidden)]
+    [InlineData("Recruiter", HttpStatusCode.NotFound)]
+    [InlineData("Admin", HttpStatusCode.NotFound)]
+    [InlineData("SuperAdmin", HttpStatusCode.NotFound)]
+    public async Task Cancel_is_closed_to_interviewers(string role, HttpStatusCode expected)
+    {
+        var resp = await fx.SendAsync(
+            HttpMethod.Post, "/api/interviews/999999/cancel", await TokenFor(role), new { reason = "called off" });
+        Assert.Equal(expected, resp.StatusCode);
+    }
+
+    [Theory]
+    [InlineData("Interviewer", HttpStatusCode.Forbidden)]
+    [InlineData("Recruiter", HttpStatusCode.NotFound)]
+    [InlineData("Admin", HttpStatusCode.NotFound)]
+    public Task Interview_schedule_read_is_closed_to_interviewers(string role, HttpStatusCode expected) =>
+        AssertStatus(role, HttpMethod.Get, "/api/interviews/999999/schedule", expected);
+
+    [Fact]
+    public async Task Interview_writes_reject_anonymous()
+    {
+        foreach (var (method, url) in new[]
+        {
+            (HttpMethod.Get, "/api/interviews/1/schedule"),
+            (HttpMethod.Put, "/api/interviews/1"),
+            (HttpMethod.Post, "/api/interviews/1/cancel"),
+        })
+        {
+            var resp = await fx.SendAsync(method, url, token: null);
+            Assert.Equal(HttpStatusCode.Unauthorized, resp.StatusCode);
+        }
     }
 
     // ---- User guide: any authenticated role, content cut to the caller's edition ----

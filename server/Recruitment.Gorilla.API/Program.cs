@@ -49,6 +49,9 @@ builder.Services.AddScoped<DashboardService>();
 builder.Services.AddScoped<InterviewService>();
 builder.Services.AddScoped<NotificationService>();
 builder.Services.AddScoped<OfferService>();
+builder.Services.AddScoped<EvaluationShareService>();
+builder.Services.AddScoped<EvaluationAccess>();
+builder.Services.AddScoped<PanelAutoShareService>();
 builder.Services.AddScoped<EvaluationRubricService>();
 builder.Services.AddScoped<AnalyticsService>();
 builder.Services.AddScoped<CandidateDraftService>();
@@ -98,6 +101,9 @@ builder.Services.AddScoped<SlackSettingsService>();
 builder.Services.AddScoped<SlackService>();
 builder.Services.AddSingleton<ISlackQueue, SlackQueue>();
 builder.Services.AddHostedService<SlackQueueWorker>();
+builder.Services.Configure<EvaluationReminderOptions>(builder.Configuration.GetSection(EvaluationReminderOptions.Section));
+builder.Services.AddScoped<EvaluationReminderService>();
+builder.Services.AddHostedService<EvaluationReminderWorker>();
 builder.Services.AddSingleton<IAuthorizationHandler, PasswordChangedHandler>();
 
 var jwtKey = builder.Configuration["Jwt:Key"]

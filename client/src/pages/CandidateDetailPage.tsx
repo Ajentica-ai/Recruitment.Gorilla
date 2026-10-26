@@ -15,6 +15,8 @@ import StatusTimeline from '../components/StatusTimeline';
 import ReadOnlyCandidateProfile from '../components/ReadOnlyCandidateProfile';
 import CvPreviewDialog, { type CvPreview } from '../components/CvPreviewDialog';
 import AddStatusModal from '../components/AddStatusModal';
+import RescheduleInterviewModal from '../components/RescheduleInterviewModal';
+import CancelInterviewModal from '../components/CancelInterviewModal';
 import CandidatePipelineStepper from '../components/CandidatePipelineStepper';
 import { SearchableSelect, SearchableMultiSelect } from '../components/SearchableSelect';
 import { StatusBadge } from '../components/StatusBadge';
@@ -27,6 +29,7 @@ import SectionCard from '../components/common/SectionCard';
 import LoadingPanel from '../components/common/Loading';
 import RowActions, { RowAction, RowActionSeparator } from '../components/common/RowActions';
 import EvaluationReportDrawer from '../components/EvaluationReportDrawer';
+import ShareEvaluationsControl from '../components/ShareEvaluationsControl';
 import OfferCard from '../components/offers/OfferCard';
 import { useAuth } from '../auth/AuthContext';
 import type { CandidateDetail, UpdateCandidatePayload } from '../types';
@@ -48,12 +51,15 @@ export default function CandidateDetailPage() {
   const candidateId = Number(id);
   const queryClient = useQueryClient();
   const navigate = useNavigate();
-  const { canWriteCandidates, isAdminOrAbove } = useAuth();
+  const { user, canWriteCandidates, isAdminOrAbove } = useAuth();
   const { addToast } = useToast();
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [editing, setEditing] = useState(false);
   const [addingStatus, setAddingStatus] = useState(false);
   const [showHistoryDrawer, setShowHistoryDrawer] = useState(false);
+  // Which booking the reschedule / cancel dialogs are acting on (null = closed).
+  const [reschedulingInterviewId, setReschedulingInterviewId] = useState<number | null>(null);
+  const [cancellingInterviewId, setCancellingInterviewId] = useState<number | null>(null);
   /**
    * Whether closing the status drawer should put the history drawer back.
    *
@@ -212,6 +218,12 @@ export default function CandidateDetailPage() {
             Evaluation report
           </Button>
 
+          <ShareEvaluationsControl
+            candidateId={candidateId}
+            candidateName={data.fullName}
+            className="contents"
+          />
+
           {canWrite && !editing && (
             <Button className="btn-action-advance" onClick={() => setAddingStatus(true)}>
               <Plus size={15} strokeWidth={2.25} aria-hidden="true" />
@@ -355,7 +367,14 @@ export default function CandidateDetailPage() {
           )}
 
           <div className="mt-1">
-            <StatusTimeline history={data.statusHistory} canViewEvaluations={isAdminOrAbove} />
+            <StatusTimeline
+              history={data.statusHistory}
+              canViewEvaluations={isAdminOrAbove}
+              currentUserId={user?.id}
+              canManageInterview={canWrite}
+              onReschedule={setReschedulingInterviewId}
+              onCancelInterview={setCancellingInterviewId}
+            />
           </div>
         </SheetBody>
       </SheetContent>
@@ -370,6 +389,25 @@ export default function CandidateDetailPage() {
             closeStatusDrawer();
             void queryClient.invalidateQueries({ queryKey: ['candidate', candidateId] });
           }}
+        />
+      )}
+
+      {canWrite && reschedulingInterviewId !== null && (
+        <RescheduleInterviewModal
+          interviewId={reschedulingInterviewId}
+          candidateId={candidateId}
+          candidateName={data.fullName}
+          show
+          onHide={() => setReschedulingInterviewId(null)}
+        />
+      )}
+
+      {canWrite && cancellingInterviewId !== null && (
+        <CancelInterviewModal
+          interviewId={cancellingInterviewId}
+          candidateId={candidateId}
+          show
+          onHide={() => setCancellingInterviewId(null)}
         />
       )}
     </Page>

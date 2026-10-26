@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import ShareEarlierRoundsField from './ShareEarlierRoundsField';
 import { SearchableMultiSelect } from './SearchableSelect';
 import { useToast } from './ToastStack';
 import { Label } from '@/components/ui/label';
@@ -23,8 +24,7 @@ import {
   getAssignableUsers,
   getNextStatusOptions,
 } from '../services/api';
-
-const DURATION_OPTIONS = [15, 30, 45, 60, 90, 120];
+import { DURATION_OPTIONS } from '@/lib/interviewOptions';
 
 const Req = () => (
   <span className="text-[var(--danger-text)]" aria-hidden="true">
@@ -67,6 +67,7 @@ export default function AddStatusModal({
   const [durationMinutes, setDurationMinutes] = useState(60);
   const [interviewerIds, setInterviewerIds] = useState<number[]>([]);
   const [interviewTypeIds, setInterviewTypeIds] = useState<number[]>([]);
+  const [shareEarlierRounds, setShareEarlierRounds] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<AddStatusFieldErrors>({});
   const queryClient = useQueryClient();
 
@@ -116,6 +117,7 @@ export default function AddStatusModal({
     setDurationMinutes(60);
     setInterviewerIds([]);
     setInterviewTypeIds([]);
+    setShareEarlierRounds(false);
     setFieldErrors({});
   };
 
@@ -135,6 +137,7 @@ export default function AddStatusModal({
         interviewerUserIds: requiresInterviewers ? interviewerIds : null,
         interviewTypeOptionIds: requiresInterviewers ? interviewTypeIds : null,
         interviewDurationMinutes: requiresInterviewAt ? durationMinutes : null,
+        shareEarlierRoundsWithPanel: requiresInterviewers ? shareEarlierRounds : false,
       }),
     onSuccess: () => {
       resetForm();
@@ -322,6 +325,15 @@ export default function AddStatusModal({
                 )}
                 <p className="text-[length:var(--text-sm)] leading-[var(--leading-normal)] text-muted-foreground">Assigned users are notified and can fill the evaluation form.</p>
               </div>
+            )}
+
+            {requiresInterviewers && (
+              <ShareEarlierRoundsField
+                candidateId={candidateId}
+                enabled={show}
+                checked={shareEarlierRounds}
+                onChange={setShareEarlierRounds}
+              />
             )}
 
             <div className="col-span-12 md:col-span-12">

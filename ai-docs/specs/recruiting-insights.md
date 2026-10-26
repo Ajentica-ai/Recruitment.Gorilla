@@ -76,6 +76,8 @@ New `Services/AnalyticsService.cs`. All five metrics derive from one windowed pu
 `(CandidateId, Status, ChangedAt)` ordered by candidate then time, plus candidate `CreatedAt` and
 `SourceOptionId`.
 
+**Current loading (#200):** `GetSummaryAsync` builds the caller's scope as a query and loads only the candidates created in, or with a status change inside, the previous and current period (one range, since the two touch), each with its full history and source, using a split query. Recruiter totals (`TotalAssigned`, `ActiveCandidates`) are SQL `GroupBy` aggregates over the whole scoped set, so they still count candidates outside the period; interviewer participation is counted per user in SQL. The terminal status sets are `CandidateBuckets`' own. `AnalyticsGoldenTests` pins the figures for a fixed dataset against the output of the earlier load-everything version. Team workloads still match `StatusHistory.ChangedBy` by name or email: there is no `ChangedByUserId` column.
+
 **Compute in memory, not in SQL.** The UTC value converter added in `AppDbContext.ConfigureConventions`
 stops EF translating member access on a `DateTime` column — `.Date`, `.Year`, `DateDiff` all throw
 *"could not be translated"*. This already forced `DashboardService.GetApplicationsTrendAsync` to group

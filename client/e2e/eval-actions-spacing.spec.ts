@@ -77,6 +77,26 @@ async function waitForActionsStyled(page: Page) {
     .toBe('flex');
 }
 
+/**
+ * Both rectangles, read in one browser call. Two separate `boundingBox()` calls are two round trips: if
+ * the page shifts by a pixel or two between them (late layout, a font swap) the pair describes two
+ * different moments and identical, aligned buttons look misaligned (#177).
+ */
+async function measureButtons(page: Page) {
+  const save = page.getByRole('button', { name: /Save draft/i }).first();
+  const submit = page.getByRole('button', { name: /Submit evaluation/i }).first();
+  await expect(save).toBeVisible();
+  await expect(submit).toBeVisible();
+  const [a, b] = await page.evaluate(
+    ([s, u]) => [s, u].map((el) => {
+      const r = (el as HTMLElement).getBoundingClientRect();
+      return { x: r.x, y: r.y, width: r.width, height: r.height };
+    }),
+    [await save.elementHandle(), await submit.elementHandle()] as const,
+  );
+  return { a, b };
+}
+
 test.describe('Evaluation actions row spacing', () => {
   test.skip(
     !email || !password || !interviewId,
@@ -90,17 +110,15 @@ test.describe('Evaluation actions row spacing', () => {
     test.skip(!(await openEvaluation(page)), 'no interview with an evaluation form in this database');
 
     await waitForActionsStyled(page);
-    const save = page.getByRole('button', { name: /Save draft/i }).first();
-    const submit = page.getByRole('button', { name: /Submit evaluation/i }).first();
-    await expect(save).toBeVisible();
-    await expect(submit).toBeVisible();
-
-    const a = (await save.boundingBox())!;
-    const b = (await submit.boundingBox())!;
+    const { a, b } = await measureButtons(page);
     await page.screenshot({ path: shotPath('rg68_eval_actions_desktop.png'), fullPage: true });
 
-    // Side by side at this width, so the gap is the horizontal distance between them.
-    expect(a.y).toBeCloseTo(b.y, 0);
+    // Side by side at this width: they share one row. Compare the vertical centres with a couple of
+    // pixels of slack. Their top edges can differ by a pixel or more under load (sub-pixel layout), so
+    // a half-pixel check on `y` failed on identical buttons (#177).
+    const centreDelta = Math.abs(a.y + a.height / 2 - (b.y + b.height / 2));
+    expect(centreDelta, `vertical centres of the two buttons differ by ${centreDelta}px`).toBeLessThan(2);
+    // The gap is the horizontal distance between them.
     const gap = b.x - (a.x + a.width);
     expect(gap, `horizontal gap between the two buttons (got ${gap}px)`).toBeGreaterThan(4);
   });
@@ -112,10 +130,7 @@ test.describe('Evaluation actions row spacing', () => {
     test.skip(!(await openEvaluation(page)), 'no interview with an evaluation form in this database');
 
     await waitForActionsStyled(page);
-    const save = page.getByRole('button', { name: /Save draft/i }).first();
-    const submit = page.getByRole('button', { name: /Submit evaluation/i }).first();
-    const a = (await save.boundingBox())!;
-    const b = (await submit.boundingBox())!;
+    const { a, b } = await measureButtons(page);
     await page.screenshot({ path: shotPath('rg68_eval_actions_phone.png'), fullPage: true });
 
     // They may sit side by side or stack; either way they must not touch.

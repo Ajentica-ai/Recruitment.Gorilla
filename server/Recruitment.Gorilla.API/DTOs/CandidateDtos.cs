@@ -120,7 +120,9 @@ public record UpdateCandidateDto(
     string? HackerRankUrl = null,
     string? GitLabUrl = null,
     List<CandidateEducationDto>? Educations = null,
-    List<CandidateExperienceDto>? Experiences = null
+    List<CandidateExperienceDto>? Experiences = null,
+    // Lets the email change to one another candidate already uses, as create's AllowDuplicate does (#201).
+    bool AllowDuplicate = false
 );
 
 public record StatusChangeDto(
@@ -139,7 +141,10 @@ public record StatusChangeDto(
     string? ChangedBy = null,
     // Optional when Status == "Interview Scheduled": how long the interview runs. Drives the end
     // time on the calendar invite. Appended last so existing positional construction is unaffected.
-    int? InterviewDurationMinutes = null
+    int? InterviewDurationMinutes = null,
+    // Optional when Status == "Interview Scheduled" (#187): share the earlier rounds' submitted evaluations
+    // with this panel. Appended last so existing positional construction is unaffected.
+    bool ShareEarlierRoundsWithPanel = false
 );
 
 public record CandidateListItemDto(
@@ -241,7 +246,12 @@ public record StatusHistoryDto(
     List<InterviewInterviewerDto> Interviewers,
     List<string> InterviewTags,
     // Live per-interviewer evaluation summary for an "Interview Completed" entry (empty otherwise).
-    List<EvaluationSummaryDto> EvaluationSummaries
+    List<EvaluationSummaryDto> EvaluationSummaries,
+    // Interview lifecycle (issue #173). InterviewAt above stays the honest record of what was
+    // first booked; these three carry where the booking stands now.
+    DateTime? InterviewScheduledAt = null,   // current time, after any reschedule
+    string? InterviewStatus = null,          // Scheduled | Cancelled
+    List<InterviewEventDto>? InterviewEvents = null
 );
 
 public record EvaluationSummaryDto(

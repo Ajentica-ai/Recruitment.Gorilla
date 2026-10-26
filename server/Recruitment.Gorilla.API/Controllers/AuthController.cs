@@ -109,6 +109,7 @@ public class AuthController(
 
     private static AuthResultDto ToResult(TokenPair pair) => new(
         pair.AccessToken,
+        pair.User.Id,
         pair.User.Name,
         pair.User.Email,
         pair.User.Roles.Select(r => r.Role).ToArray(),

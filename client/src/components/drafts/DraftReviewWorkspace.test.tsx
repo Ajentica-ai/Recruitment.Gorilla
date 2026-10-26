@@ -120,6 +120,14 @@ describe('DraftReviewWorkspace relevant experience', () => {
     expect(within(group).getByRole('radio', { name: '3-5 Years' })).not.toBeChecked();
     expect(screen.getByLabelText('Relevant experience, free text')).toHaveValue('');
   });
+
+  it('explains why the role field is empty when no opening is available (#169)', async () => {
+    // Approving a draft files the candidate against an opening, so the same dead end applies.
+    // The module-level mock returns no openings.
+    await openPending('3-5 Years');
+
+    expect(await screen.findByText(/You are not assigned to a job opening/i)).toBeInTheDocument();
+  });
 });
 
 const listItem: CandidateDraftListItem = {

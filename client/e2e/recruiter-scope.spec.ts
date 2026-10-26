@@ -1,7 +1,8 @@
 import { expect, test, type APIRequestContext } from '@playwright/test';
 import { randomUUID } from 'node:crypto';
 import { ADMIN, RECRUITER, apiAuth, requireData, signIn } from './helpers';
-import { seedCandidate, uploadDraft } from './seed';
+import { removeDrafts } from './cleanup';
+import { seedCandidate, uploadDraft, type UploadedDraft } from './seed';
 
 /** Job openings the given caller may use: every active opening for Admin+, only the assigned ones for a Recruiter. */
 async function rolesFor(request: APIRequestContext, auth: Record<string, string>): Promise<{ id: number }[]> {
@@ -59,9 +60,15 @@ test.describe('a Recruiter works only their own CVs and candidates', () => {
     requireData(outsideRole !== undefined, 'a job opening the test Recruiter is not assigned to');
 
     const adminsDraft = await uploadDraft(request, admin, `RG50 Admin Draft ${randomUUID()}`, outsideRole!.id);
-    const ownDraft = await uploadDraft(request, recruiter, `RG50 Own Draft ${randomUUID()}`);
+    let ownDraft!: UploadedDraft;
+    let ownUploaded = false;
 
     try {
+      // Inside the try: this upload can skip the test (no opening the Recruiter may use), and the Admin's
+      // draft above must still be removed when it does (#179).
+      ownDraft = await uploadDraft(request, recruiter, `RG50 Own Draft ${randomUUID()}`);
+      ownUploaded = true;
+
       // Their own upload: listed and readable.
       expect(await draftIds(request, recruiter)).toContain(ownDraft.id);
       expect((await request.get(`/api/candidate-drafts/${ownDraft.id}`, { headers: recruiter })).status()).toBe(200);
@@ -97,8 +104,8 @@ test.describe('a Recruiter works only their own CVs and candidates', () => {
       expect(after.status).toBe('Pending');
       expect(after.fullName).not.toBe('RG50 Overwritten');
     } finally {
-      await request.post(`/api/candidate-drafts/${adminsDraft.id}/discard`, { headers: admin }).catch(() => {});
-      await request.post(`/api/candidate-drafts/${ownDraft.id}/discard`, { headers: recruiter }).catch(() => {});
+      await removeDrafts(request, admin, [adminsDraft.id]);
+      if (ownUploaded) await removeDrafts(request, recruiter, [ownDraft.id]);
     }
   });
 
@@ -128,8 +135,8 @@ test.describe('a Recruiter works only their own CVs and candidates', () => {
       expect(approve.ok(), `approve failed: ${approve.status()} ${await approve.text()}`).toBeTruthy();
       candidateId = (await approve.json()).candidateId as number;
     } finally {
-      await request.post(`/api/candidate-drafts/${draft.id}/discard`, { headers: admin }).catch(() => {});
       if (candidateId) await request.delete(`/api/candidates/${candidateId}`, { headers: admin }).catch(() => {});
+      await removeDrafts(request, admin, [draft.id]);
     }
   });
 

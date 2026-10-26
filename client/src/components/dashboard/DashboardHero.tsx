@@ -54,8 +54,9 @@ function TaskChip({
 /**
  * The dashboard's opening line: date, how fresh the figures are (and a way to
  * refresh them), the greeting, what you owe today as chips, and the intake
- * shortcuts. On a phone the chips are one sideways row and the shortcuts give
- * way to the floating Upload CVs button.
+ * shortcuts. On a phone the chips are one sideways row and the shortcuts sit
+ * inline under the greeting, sharing the row, so they scroll with the page and
+ * never cover a card (a floating Upload CVs button did, #168).
  */
 export default function DashboardHero({
   updatedAt,
@@ -129,14 +130,14 @@ export default function DashboardHero({
         </div>
 
         {canWriteCandidates && (
-          <div className="hidden shrink-0 items-center gap-2 md:flex">
-            <Button asChild size="sm" variant="outline" className="gap-1.5 shadow-xs">
+          <div className="flex shrink-0 items-center gap-2 max-md:[&>*]:flex-1">
+            <Button asChild size="sm" variant="outline" className="gap-1.5 shadow-xs max-md:h-10">
               <Link to="/candidates">
                 <Users size={14} />
                 <span>Candidates</span>
               </Link>
             </Button>
-            <Button asChild size="sm" className="gap-1.5 shadow-xs">
+            <Button asChild size="sm" className="gap-1.5 shadow-xs max-md:h-10">
               <Link to="/upload">
                 <UploadCloud size={14} />
                 <span>Upload CVs</span>

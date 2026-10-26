@@ -676,6 +676,88 @@ namespace Recruitment.Gorilla.API.Migrations
                     b.ToTable("EmailSettings");
                 });
 
+            modelBuilder.Entity("Recruitment.Gorilla.API.Models.EvaluationAccessGrant", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("CandidateId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<int?>("CreatedForInterviewId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("ExpiresAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<int?>("GrantedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("GranteeUserId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("InterviewId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(500)
+                        .HasColumnType("varchar(500)");
+
+                    b.Property<DateTime?>("RevokedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<int?>("RevokedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Source")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("varchar(30)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CandidateId");
+
+                    b.HasIndex("CreatedForInterviewId");
+
+                    b.HasIndex("GrantedByUserId");
+
+                    b.HasIndex("InterviewId");
+
+                    b.HasIndex("RevokedByUserId");
+
+                    b.HasIndex("GranteeUserId", "RevokedAt");
+
+                    b.ToTable("EvaluationAccessGrants");
+                });
+
+            modelBuilder.Entity("Recruitment.Gorilla.API.Models.EvaluationReminder", b =>
+                {
+                    b.Property<int>("InterviewId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Count")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("LastSentAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.HasKey("InterviewId", "UserId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("EvaluationReminders");
+                });
+
             modelBuilder.Entity("Recruitment.Gorilla.API.Models.EvaluationRubric", b =>
                 {
                     b.Property<int>("Id")
@@ -734,6 +816,11 @@ namespace Recruitment.Gorilla.API.Migrations
 
                     MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<int>("CalendarSequence")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(0);
+
                     b.Property<int>("CandidateId")
                         .HasColumnType("int");
 
@@ -748,10 +835,30 @@ namespace Recruitment.Gorilla.API.Migrations
                         .HasColumnType("int")
                         .HasDefaultValue(60);
 
+                    b.Property<string>("Notes")
+                        .HasMaxLength(4000)
+                        .HasColumnType("varchar(4000)");
+
                     b.Property<DateTime>("ScheduledAt")
                         .HasColumnType("datetime(6)");
 
+                    b.Property<bool>("ShareEarlierRoundsWithPanel")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("varchar(20)")
+                        .HasDefaultValue("Scheduled");
+
                     b.Property<int?>("StatusHistoryId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<int?>("UpdatedByUserId")
                         .HasColumnType("int");
 
                     b.HasKey("Id");
@@ -761,6 +868,8 @@ namespace Recruitment.Gorilla.API.Migrations
                     b.HasIndex("CreatedByUserId");
 
                     b.HasIndex("StatusHistoryId");
+
+                    b.HasIndex("UpdatedByUserId");
 
                     b.ToTable("Interviews");
                 });
@@ -844,6 +953,52 @@ namespace Recruitment.Gorilla.API.Migrations
                         .IsUnique();
 
                     b.ToTable("InterviewEvaluationItems");
+                });
+
+            modelBuilder.Entity("Recruitment.Gorilla.API.Models.InterviewEvent", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("ActorName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("varchar(200)");
+
+                    b.Property<int?>("ActorUserId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("EventType")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("varchar(20)");
+
+                    b.Property<int>("InterviewId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("NewScheduledAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<DateTime?>("PreviousScheduledAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("Reason")
+                        .HasMaxLength(1000)
+                        .HasColumnType("varchar(1000)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ActorUserId");
+
+                    b.HasIndex("InterviewId", "CreatedAt");
+
+                    b.ToTable("InterviewEvents");
                 });
 
             modelBuilder.Entity("Recruitment.Gorilla.API.Models.InterviewInterviewer", b =>
@@ -1221,6 +1376,7 @@ namespace Recruitment.Gorilla.API.Migrations
                         .HasColumnType("datetime(6)");
 
                     b.Property<string>("Status")
+                        .IsConcurrencyToken()
                         .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("varchar(50)");
@@ -2394,6 +2550,14 @@ namespace Recruitment.Gorilla.API.Migrations
                         },
                         new
                         {
+                            Id = 50,
+                            FromStatusOptionId = 3,
+                            IsActive = true,
+                            SortOrder = 4,
+                            ToStatusOptionId = 2
+                        },
+                        new
+                        {
                             Id = 32,
                             FromStatusOptionId = 9,
                             IsActive = true,
@@ -2713,6 +2877,72 @@ namespace Recruitment.Gorilla.API.Migrations
                     b.Navigation("SkillOption");
                 });
 
+            modelBuilder.Entity("Recruitment.Gorilla.API.Models.EvaluationAccessGrant", b =>
+                {
+                    b.HasOne("Recruitment.Gorilla.API.Models.Candidate", "Candidate")
+                        .WithMany()
+                        .HasForeignKey("CandidateId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Recruitment.Gorilla.API.Models.Interview", "CreatedForInterview")
+                        .WithMany()
+                        .HasForeignKey("CreatedForInterviewId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("Recruitment.Gorilla.API.Models.User", "GrantedByUser")
+                        .WithMany()
+                        .HasForeignKey("GrantedByUserId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("Recruitment.Gorilla.API.Models.User", "GranteeUser")
+                        .WithMany()
+                        .HasForeignKey("GranteeUserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Recruitment.Gorilla.API.Models.Interview", "Interview")
+                        .WithMany()
+                        .HasForeignKey("InterviewId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
+                    b.HasOne("Recruitment.Gorilla.API.Models.User", "RevokedByUser")
+                        .WithMany()
+                        .HasForeignKey("RevokedByUserId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Candidate");
+
+                    b.Navigation("CreatedForInterview");
+
+                    b.Navigation("GrantedByUser");
+
+                    b.Navigation("GranteeUser");
+
+                    b.Navigation("Interview");
+
+                    b.Navigation("RevokedByUser");
+                });
+
+            modelBuilder.Entity("Recruitment.Gorilla.API.Models.EvaluationReminder", b =>
+                {
+                    b.HasOne("Recruitment.Gorilla.API.Models.Interview", "Interview")
+                        .WithMany()
+                        .HasForeignKey("InterviewId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Recruitment.Gorilla.API.Models.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Interview");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("Recruitment.Gorilla.API.Models.Interview", b =>
                 {
                     b.HasOne("Recruitment.Gorilla.API.Models.Candidate", "Candidate")
@@ -2731,11 +2961,18 @@ namespace Recruitment.Gorilla.API.Migrations
                         .HasForeignKey("StatusHistoryId")
                         .OnDelete(DeleteBehavior.SetNull);
 
+                    b.HasOne("Recruitment.Gorilla.API.Models.User", "UpdatedByUser")
+                        .WithMany()
+                        .HasForeignKey("UpdatedByUserId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.Navigation("Candidate");
 
                     b.Navigation("CreatedByUser");
 
                     b.Navigation("StatusHistory");
+
+                    b.Navigation("UpdatedByUser");
                 });
 
             modelBuilder.Entity("Recruitment.Gorilla.API.Models.InterviewEvaluation", b =>
@@ -2766,6 +3003,24 @@ namespace Recruitment.Gorilla.API.Migrations
                         .IsRequired();
 
                     b.Navigation("InterviewEvaluation");
+                });
+
+            modelBuilder.Entity("Recruitment.Gorilla.API.Models.InterviewEvent", b =>
+                {
+                    b.HasOne("Recruitment.Gorilla.API.Models.User", "ActorUser")
+                        .WithMany()
+                        .HasForeignKey("ActorUserId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("Recruitment.Gorilla.API.Models.Interview", "Interview")
+                        .WithMany("Events")
+                        .HasForeignKey("InterviewId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("ActorUser");
+
+                    b.Navigation("Interview");
                 });
 
             modelBuilder.Entity("Recruitment.Gorilla.API.Models.InterviewInterviewer", b =>
@@ -2975,6 +3230,8 @@ namespace Recruitment.Gorilla.API.Migrations
             modelBuilder.Entity("Recruitment.Gorilla.API.Models.Interview", b =>
                 {
                     b.Navigation("Evaluations");
+
+                    b.Navigation("Events");
 
                     b.Navigation("Interviewers");
 

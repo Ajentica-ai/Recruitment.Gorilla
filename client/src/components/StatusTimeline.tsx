@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
-import { History } from 'lucide-react';
+import { CalendarClock, CalendarX, History } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { StatusBadge, StatusDot } from './StatusBadge';
 import EmptyState from './common/EmptyState';
 import { skillColorClass } from '../utils/skillColors';
@@ -11,6 +12,14 @@ interface Props {
   history: StatusHistoryEntry[];
   /** Admin+ only: show a link from an "Interview Completed" entry to its evaluations. */
   canViewEvaluations?: boolean;
+  /** The signed-in user. An interviewer pill is a link only for Admin+ or for the interviewer it names: the
+   *  interview page answers 404 to everyone else, so a link there is a dead end (#198). */
+  currentUserId?: number;
+  /** Offer Reschedule / Cancel on a live "Interview Scheduled" entry. Mirrors the page's
+   *  canWrite (write role AND the role is still open), so a closed role hides both. */
+  canManageInterview?: boolean;
+  onReschedule?: (interviewId: number) => void;
+  onCancelInterview?: (interviewId: number) => void;
 }
 
 const formatDate = (iso: string) =>
@@ -83,7 +92,14 @@ function EvaluationSummaries({ items }: { items: EvaluationSummary[] }) {
   );
 }
 
-export default function StatusTimeline({ history, canViewEvaluations = false }: Props) {
+export default function StatusTimeline({
+  history,
+  canViewEvaluations = false,
+  currentUserId,
+  canManageInterview = false,
+  onReschedule,
+  onCancelInterview,
+}: Props) {
   if (history.length === 0) {
     return (
       <EmptyState
@@ -141,11 +157,58 @@ export default function StatusTimeline({ history, canViewEvaluations = false }: 
                   </a>
                 </div>
               )}
-              {entry.interviewAt && (
-                <div className="mt-1 text-[length:var(--text-sm)]">
-                  <span className="font-semibold">Interview:</span> {formatDate(entry.interviewAt)}
-                </div>
-              )}
+              {entry.interviewAt && (() => {
+                // interviewAt is what was first booked; interviewScheduledAt is where the booking
+                // stands now. Reading the latter is what stops a moved interview showing the old
+                // date here.
+                const cancelled = entry.interviewStatus === 'Cancelled';
+                const current = entry.interviewScheduledAt ?? entry.interviewAt;
+                const moves = (entry.interviewEvents ?? []).filter((e) => e.eventType === 'Rescheduled');
+                const lastMove = moves.length > 0 ? moves[moves.length - 1] : null;
+                const cancellation = (entry.interviewEvents ?? []).find((e) => e.eventType === 'Cancelled');
+                return (
+                  <>
+                    <div className="mt-1 text-[length:var(--text-sm)]">
+                      <span className="font-semibold">Interview:</span>{' '}
+                      <span className={cancelled ? 'line-through text-muted-foreground' : undefined}>
+                        {formatDate(current)}
+                      </span>
+                      {cancelled && <span className="ml-2 status status--reject">Cancelled</span>}
+                    </div>
+                    {lastMove?.previousScheduledAt && !cancelled && (
+                      <div className="text-[length:var(--text-sm)] text-muted-foreground">
+                        Rescheduled from {formatDate(lastMove.previousScheduledAt)} by {lastMove.actorName}
+                        {lastMove.reason ? ` — ${lastMove.reason}` : ''}
+                      </div>
+                    )}
+                    {cancelled && cancellation?.reason && (
+                      <div className="text-[length:var(--text-sm)] text-muted-foreground">
+                        Reason: {cancellation.reason}
+                      </div>
+                    )}
+                    {canManageInterview && entry.interviewId && entry.interviewStatus === 'Scheduled' && (
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          onClick={() => onReschedule?.(entry.interviewId!)}
+                        >
+                          <CalendarClock size={14} aria-hidden="true" /> Reschedule
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => onCancelInterview?.(entry.interviewId!)}
+                        >
+                          <CalendarX size={14} aria-hidden="true" /> Cancel interview
+                        </Button>
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
               {entry.interviewTags.length > 0 && (
                 <div className="mt-2 flex flex-wrap gap-1">
                   {entry.interviewTags.map((tag) => (
@@ -164,7 +227,8 @@ export default function StatusTimeline({ history, canViewEvaluations = false }: 
                           {iv.name}
                         </span>
                       );
-                      return entry.interviewId ? (
+                      const canOpen = canViewEvaluations || (currentUserId !== undefined && iv.userId === currentUserId);
+                      return entry.interviewId && canOpen ? (
                         <Link key={iv.userId} to={`/interviews/${entry.interviewId}`} className="no-underline">
                           {pill}
                         </Link>

@@ -3,11 +3,14 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { ADMIN, apiAuth, freshTestCvs, requireData, signIn } from './helpers';
+import { cleanUpCreatedData } from './cleanup';
 
 // JSON import is Admin and Super Admin only. SUPERADMIN_* come from e2e/.env.e2e; see .env.e2e.example.
 const SUPER_ADMIN = { email: process.env.SUPERADMIN_EMAIL, password: process.env.SUPERADMIN_PASSWORD };
 
 test.describe('JSON candidate import', () => {
+  cleanUpCreatedData(); // remove the drafts and candidates this spec creates (#179)
+
   test.setTimeout(60000);
 
   test('a Super Admin downloads the template, fills it, and imports two candidates as drafts', async ({ page, request }) => {

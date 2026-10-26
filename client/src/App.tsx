@@ -4,6 +4,7 @@ import LoadingPanel from './components/common/Loading';
 import RequireRole from './components/RequireRole';
 import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
+import SharedEvaluationsPage from './pages/SharedEvaluationsPage';
 import AnalyticsPage from './pages/AnalyticsPage';
 import JobsPage from './pages/JobsPage';
 import UploadPage from './pages/UploadPage';
@@ -16,6 +17,7 @@ import AuditLogPage from './pages/AuditLogPage';
 import ChangePasswordPage from './pages/ChangePasswordPage';
 import UserGuidePage from './pages/UserGuidePage';
 import InterviewPage from './pages/InterviewPage';
+import MyInterviewsPage from './pages/MyInterviewsPage';
 import AppShell from './components/shell/AppShell';
 
 /**
@@ -102,6 +104,10 @@ export default function App() {
               }
             />
             <Route path="/interviews/:id" element={<InterviewPage />} />
+            {/* Every role: it only ever shows the signed-in user's own assignments. */}
+            <Route path="/my-interviews" element={<MyInterviewsPage />} />
+            {/* Any signed-in role: access comes from an active grant the server checks, not a role. */}
+            <Route path="/shared/candidates/:id/evaluations" element={<SharedEvaluationsPage />} />
             <Route
               path="/configuration"
               element={

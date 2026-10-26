@@ -34,14 +34,17 @@ public abstract class DbTestBase : IDisposable
     protected TestData Data { get; }
 
     // Service factories bound to the transactional context.
-    protected CandidateService Candidates() => new(Db, new TestWebHostEnvironment(), Notifications(), TestConfig());
+    protected CandidateService Candidates() => new(Db, new TestWebHostEnvironment(), Notifications(), TestConfig(), PanelAutoShare());
+    protected PanelAutoShareService PanelAutoShare() => new(Db, Audit());
     protected ConfigurationService Config() => new(Db, Notifications());
-    protected InterviewService Interviews() => new(Db, Candidates(), Notifications());
+    protected InterviewService Interviews() => new(Db, Candidates(), Notifications(), Audit(), TestConfig(), PanelAutoShare());
     protected NotificationService Notifications() => new(Db, TestEmail(), TestSlack());
     protected AuditService Audit() =>
         new(Db, new CurrentUser(new Microsoft.AspNetCore.Http.HttpContextAccessor()), NullLogger<AuditService>.Instance);
     protected OfferService Offers() => new(Db, Candidates(), Notifications(), Audit(), NullLogger<OfferService>.Instance);
     protected EvaluationRubricService EvaluationRubrics() => new(Db, Audit());
+    protected EvaluationAccess Access() => new(Db);
+    protected EvaluationShareService EvaluationShares() => new(Db, Notifications(), Audit());
     protected AnalyticsService Analytics() => new(Db);
     protected DashboardService Dashboard() => new(Db);
     protected EmailOutboxProcessor OutboxProcessor(IEmailDispatcher? dispatcher = null, TimeProvider? time = null) =>

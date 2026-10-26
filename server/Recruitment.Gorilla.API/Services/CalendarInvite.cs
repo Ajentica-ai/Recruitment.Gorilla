@@ -13,7 +13,18 @@ public record InterviewInviteDetails(
     string? RoleName,
     DateTime ScheduledAtUtc,
     int DurationMinutes,
-    string InterviewUrl);
+    string InterviewUrl,
+    /// <summary>
+    /// iCalendar SEQUENCE. Clients ignore a re-issued invite for a known UID unless this has
+    /// increased, so a reschedule must pass the interview's stored, incremented value.
+    /// Defaulted, which keeps every existing call site compiling unchanged.
+    /// </summary>
+    int Sequence = 0,
+    /// <summary>
+    /// Used only on the cancel path, where RFC 5545 requires an ORGANIZER and clients drop a
+    /// METHOD:CANCEL without one. Normally the configured outbound From address.
+    /// </summary>
+    string? OrganizerEmail = null);
 
 /// <summary>
 /// Builds a standards-based interview invite: an RFC 5545 .ics attachment plus "add to calendar"
@@ -34,11 +45,21 @@ public static class CalendarInvite
             ? $"Interview: {candidateName}"
             : $"Interview: {candidateName} ({roleName})";
 
-    public static CalendarAttachment Build(InterviewInviteDetails d)
+    /// <summary>Last-resort ORGANIZER when no outbound From address is configured.</summary>
+    private const string FallbackOrganizer = "no-reply@recruitment-gorilla.local";
+
+    /// <param name="cancelled">
+    /// Emits a METHOD:CANCEL / STATUS:CANCELLED payload for the same UID instead of the normal
+    /// invite. Honest caveat: because the original was a PUBLISH with no ATTENDEE, Gmail and
+    /// Outlook will not reliably remove the event. The cancellation email body is the real
+    /// notification; this attachment is best effort.
+    /// </param>
+    public static CalendarAttachment Build(InterviewInviteDetails d, bool cancelled = false)
     {
         var start = d.ScheduledAtUtc.ToUniversalTime();
         var end = start.AddMinutes(d.DurationMinutes <= 0 ? 60 : d.DurationMinutes);
         var description = $"Interview details and evaluation form: {d.InterviewUrl}";
+        var method = cancelled ? "CANCEL" : "PUBLISH";
 
         // METHOD:PUBLISH, not REQUEST. REQUEST asks the recipient to accept or decline, and those
         // RSVP replies are mailed back to the sender — but this app has no inbox to receive or
@@ -51,14 +72,14 @@ public static class CalendarInvite
             "VERSION:2.0",
             $"PRODID:{ProductId}",
             "CALSCALE:GREGORIAN",
-            "METHOD:PUBLISH",
+            $"METHOD:{method}",
             "BEGIN:VEVENT",
             $"UID:{Uid(d.InterviewId)}",
             $"DTSTAMP:{Stamp(DateTime.UtcNow)}",
             $"DTSTART:{Stamp(start)}",
             $"DTEND:{Stamp(end)}",
-            "SEQUENCE:0",
-            "STATUS:CONFIRMED",
+            $"SEQUENCE:{d.Sequence}",
+            cancelled ? "STATUS:CANCELLED" : "STATUS:CONFIRMED",
             $"SUMMARY:{Escape(Summary(d.CandidateName, d.RoleName))}",
             $"DESCRIPTION:{Escape(description)}",
             $"URL:{Escape(d.InterviewUrl)}",
@@ -66,9 +87,17 @@ public static class CalendarInvite
             "END:VCALENDAR",
         };
 
+        if (cancelled)
+        {
+            var organizer = string.IsNullOrWhiteSpace(d.OrganizerEmail) ? FallbackOrganizer : d.OrganizerEmail;
+            lines.Insert(lines.IndexOf("BEGIN:VEVENT") + 1, $"ORGANIZER:mailto:{organizer}");
+        }
+
         // RFC 5545 requires CRLF line endings.
         var content = string.Join("\r\n", lines.Select(Fold)) + "\r\n";
-        return new CalendarAttachment("interview.ics", content, "PUBLISH");
+        // The Method must match the body: EmailDispatcher stamps it into the
+        // "text/calendar; method=" parameter, and a mismatch makes clients ignore the part.
+        return new CalendarAttachment("interview.ics", content, method);
     }
 
     /// <summary>Prefilled Google Calendar event composer — no account linking required.</summary>

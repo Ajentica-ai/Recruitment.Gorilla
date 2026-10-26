@@ -66,4 +66,12 @@ public class AuthLoginTests(ApiFixture fx)
         Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
         Assert.False(string.IsNullOrEmpty(body.GetProperty("token").GetString()));
     }
+
+    [Fact]
+    public async Task The_sign_in_response_carries_the_users_id_so_the_client_can_tell_its_own_pill_from_others()
+    {
+        var (_, body) = await Login(fx.AdminEmail, ApiFixture.Password);
+
+        Assert.Equal(fx.AdminId, body.GetProperty("userId").GetInt32());
+    }
 }

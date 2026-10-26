@@ -21,11 +21,14 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<UserRole> UserRoles => Set<UserRole>();
     public DbSet<Interview> Interviews => Set<Interview>();
     public DbSet<InterviewInterviewer> InterviewInterviewers => Set<InterviewInterviewer>();
+    public DbSet<EvaluationReminder> EvaluationReminders => Set<EvaluationReminder>();
     public DbSet<InterviewEvaluation> InterviewEvaluations => Set<InterviewEvaluation>();
     public DbSet<InterviewEvaluationItem> InterviewEvaluationItems => Set<InterviewEvaluationItem>();
     public DbSet<InterviewTypeOption> InterviewTypeOptions => Set<InterviewTypeOption>();
     public DbSet<JobOpeningOption> JobOpeningOptions => Set<JobOpeningOption>();
     public DbSet<InterviewTag> InterviewTags => Set<InterviewTag>();
+    public DbSet<InterviewEvent> InterviewEvents => Set<InterviewEvent>();
+    public DbSet<EvaluationAccessGrant> EvaluationAccessGrants => Set<EvaluationAccessGrant>();
     public DbSet<Notification> Notifications => Set<Notification>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
     public DbSet<EmailSetting> EmailSettings => Set<EmailSetting>();
@@ -280,6 +283,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 new StatusTransition { Id = 30, FromStatusOptionId = 13, ToStatusOptionId = 2, SortOrder = 5, IsActive = true },
                 // Interview Completed -> Interview Scheduled (re-schedule another round)
                 new StatusTransition { Id = 31, FromStatusOptionId = 8, ToStatusOptionId = 3, SortOrder = 5, IsActive = true },
+                // Interview Scheduled -> Call for Interview (a cancelled booking returns here to be re-booked)
+                new StatusTransition { Id = 50, FromStatusOptionId = 3, ToStatusOptionId = 2, SortOrder = 4, IsActive = true },
                 // Recommended -> Offer stages
                 new StatusTransition { Id = 32, FromStatusOptionId = 9, ToStatusOptionId = 15, SortOrder = 2, IsActive = true },
                 new StatusTransition { Id = 33, FromStatusOptionId = 9, ToStatusOptionId = 16, SortOrder = 3, IsActive = true },
@@ -490,6 +495,64 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
              .WithMany()
              .HasForeignKey(i => i.CreatedByUserId)
              .OnDelete(DeleteBehavior.SetNull);
+            // Non-null default so existing rows backfill to Scheduled without a data migration.
+            e.Property(i => i.Status).HasMaxLength(20).IsRequired().HasDefaultValue(InterviewStatuses.Scheduled);
+            e.Property(i => i.CalendarSequence).HasDefaultValue(0);
+            e.Property(i => i.Notes).HasMaxLength(4000);
+            e.HasOne(i => i.UpdatedByUser)
+             .WithMany()
+             .HasForeignKey(i => i.UpdatedByUserId)
+             .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<InterviewEvent>(e =>
+        {
+            e.HasKey(ev => ev.Id);
+            e.Property(ev => ev.EventType).HasMaxLength(20).IsRequired();
+            e.Property(ev => ev.Reason).HasMaxLength(1000);
+            e.Property(ev => ev.ActorName).HasMaxLength(200).IsRequired();
+            e.HasIndex(ev => new { ev.InterviewId, ev.CreatedAt });
+            e.HasOne(ev => ev.Interview)
+             .WithMany(i => i.Events)
+             .HasForeignKey(ev => ev.InterviewId)
+             .OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(ev => ev.ActorUser)
+             .WithMany()
+             .HasForeignKey(ev => ev.ActorUserId)
+             .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<EvaluationAccessGrant>(e =>
+        {
+            e.HasKey(g => g.Id);
+            e.Property(g => g.Source).HasMaxLength(30).IsRequired();
+            e.Property(g => g.Note).HasMaxLength(500);
+            e.HasIndex(g => new { g.GranteeUserId, g.RevokedAt });
+            e.HasIndex(g => g.CandidateId);
+            e.HasOne(g => g.Candidate)
+             .WithMany()
+             .HasForeignKey(g => g.CandidateId)
+             .OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(g => g.Interview)
+             .WithMany()
+             .HasForeignKey(g => g.InterviewId)
+             .OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(g => g.GranteeUser)
+             .WithMany()
+             .HasForeignKey(g => g.GranteeUserId)
+             .OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(g => g.GrantedByUser)
+             .WithMany()
+             .HasForeignKey(g => g.GrantedByUserId)
+             .OnDelete(DeleteBehavior.SetNull);
+            e.HasOne(g => g.CreatedForInterview)
+             .WithMany()
+             .HasForeignKey(g => g.CreatedForInterviewId)
+             .OnDelete(DeleteBehavior.SetNull);
+            e.HasOne(g => g.RevokedByUser)
+             .WithMany()
+             .HasForeignKey(g => g.RevokedByUserId)
+             .OnDelete(DeleteBehavior.SetNull);
         });
 
         modelBuilder.Entity<InterviewInterviewer>(e =>
@@ -503,6 +566,19 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
              .WithMany()
              .HasForeignKey(ii => ii.UserId)
              .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<EvaluationReminder>(e =>
+        {
+            e.HasKey(r => new { r.InterviewId, r.UserId });
+            e.HasOne(r => r.Interview)
+             .WithMany()
+             .HasForeignKey(r => r.InterviewId)
+             .OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(r => r.User)
+             .WithMany()
+             .HasForeignKey(r => r.UserId)
+             .OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<InterviewEvaluation>(e =>
@@ -555,7 +631,9 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.Property(o => o.Bonus).HasPrecision(18, 2);
             e.Property(o => o.Equity).HasMaxLength(200);
             e.Property(o => o.Notes).HasMaxLength(2000);
-            e.Property(o => o.Status).HasMaxLength(50).IsRequired();
+            // A concurrency token: an update of the offer (even terms only) is applied only if the status is still
+            // what the request read, so editing or extending cannot race an approval, rejection or extension (#192).
+            e.Property(o => o.Status).HasMaxLength(50).IsRequired().IsConcurrencyToken();
             e.Property(o => o.DeclineReason).HasMaxLength(1000);
             e.HasOne(o => o.Candidate)
              .WithMany(c => c.Offers)

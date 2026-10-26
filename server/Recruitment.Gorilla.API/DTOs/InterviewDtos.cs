@@ -1,3 +1,5 @@
+using Recruitment.Gorilla.API.Models;
+
 namespace Recruitment.Gorilla.API.DTOs;
 
 public record AssignableUserDto(int Id, string Name, string Email);
@@ -12,6 +14,31 @@ public record MyInterviewDto(
     string? Role,
     DateTime ScheduledAt,
     string EvaluationState // "None" | "Draft" | "Submitted"
+);
+
+/// <summary>One row of the "My interviews" history (#203).</summary>
+public record MyInterviewHistoryRowDto(
+    int Id,
+    int CandidateId,
+    string CandidateName,
+    string? Role,
+    DateTime ScheduledAt,
+    string Status, // "Scheduled" | "Cancelled"
+    string EvaluationState, // "None" | "Draft" | "Submitted"
+    // The user's own submitted evaluation only; null until they submit.
+    string? Recommendation,
+    int? OverallRating
+);
+
+/// <summary>How many interviews sit on each "My interviews" tab, whatever the search or the open tab.</summary>
+public record MyInterviewCountsDto(int Upcoming, int Awaiting, int Submitted, int Cancelled);
+
+public record MyInterviewHistoryDto(
+    List<MyInterviewHistoryRowDto> Items,
+    int TotalCount,
+    int Page,
+    int PageSize,
+    MyInterviewCountsDto Counts
 );
 
 public record EvaluationItemDto(string CriterionKey, int? Rating, string? Comment);
@@ -39,8 +66,55 @@ public record InterviewDetailDto(
     List<InterviewEvaluationDto>? AllEvaluations, // Admin+ always; a peer only after submitting their own
     string? Notes,                             // recruiter's note = the scheduled entry's comment
     List<string> InterviewTags,                // interview type tags (Technical, HR, …)
-    int DurationMinutes                        // drives the calendar invite's end time
+    int DurationMinutes,                       // drives the calendar invite's end time
+    string Status = InterviewStatuses.Scheduled  // Scheduled | Cancelled (issue #173)
 );
+
+// ----- Reschedule / cancel (issue #173) -----
+
+/// <summary>One entry in a booking's narrative: scheduled, moved, cancelled.</summary>
+public record InterviewEventDto(
+    string EventType,                  // Scheduled | Rescheduled | Cancelled
+    DateTime? PreviousScheduledAt,
+    DateTime? NewScheduledAt,
+    string? Reason,
+    string ActorName,
+    DateTime CreatedAt
+);
+
+/// <summary>
+/// Narrow read model behind GET /api/interviews/{id}/schedule, for prefilling the edit form.
+/// Deliberately separate from <see cref="InterviewDetailDto"/>: that one is gated on being an
+/// assigned interviewer or Admin+, which would 404 the recruiter who owns the candidate.
+/// </summary>
+public record InterviewScheduleDto(
+    int Id,
+    int CandidateId,
+    string CandidateName,
+    string Status,                     // Scheduled | Cancelled
+    DateTime ScheduledAt,
+    int DurationMinutes,
+    string? Notes,
+    List<int> InterviewerUserIds,
+    List<int> InterviewTypeOptionIds,
+    bool HasSubmittedEvaluation,       // true once any interviewer has submitted: both writes are then blocked
+    List<InterviewEventDto> Events,
+    bool ShareEarlierRoundsWithPanel = false   // #187: lets the reschedule form open on what is booked
+);
+
+/// <summary>Body of PUT /api/interviews/{id}. Fully replaces the schedulable fields.</summary>
+public record RescheduleInterviewDto(
+    DateTime ScheduledAt,
+    int DurationMinutes,
+    string? Notes,
+    List<int> InterviewerUserIds,
+    List<int>? InterviewTypeOptionIds,
+    string? Reason,                    // optional; quoted in the interviewers' email
+    bool? ShareEarlierRoundsWithPanel = null   // #187: null leaves the booking's setting as it is
+);
+
+/// <summary>Body of POST /api/interviews/{id}/cancel.</summary>
+public record CancelInterviewDto(string Reason);
 
 public record UpsertEvaluationDto(
     string? GeneralAssessment,
@@ -58,8 +132,13 @@ public record CandidateEvaluationReportDto(
     string FullName,
     string? RoleApplied,
     EvaluationReportSummaryDto Summary,
-    List<ReportEvaluationDto> Evaluations       // one per submitted evaluation, newest interview first
+    List<ReportEvaluationDto> Evaluations,      // one per submitted evaluation, newest interview first
+    // The criteria the ratings were given on (#190): the candidate's rubric, then any rated key it does not
+    // know under "Other criteria". Empty when no rubric exists, so the client falls back to the built-in ones.
+    List<ReportCriterionDto>? Criteria = null
 );
+
+public record ReportCriterionDto(string Key, string Label, string Section);
 
 public record ReportEvaluationDto(
     int InterviewId,

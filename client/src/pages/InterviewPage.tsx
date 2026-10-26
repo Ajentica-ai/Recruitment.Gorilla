@@ -2,8 +2,8 @@ import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { isAxiosError } from 'axios';
-import { FileText, StickyNote } from 'lucide-react';
-import { getInterview, getInterviewEvaluationRubric } from '../services/api';
+import { CalendarClock, CalendarX, FileText, StickyNote } from 'lucide-react';
+import { getInterview, getInterviewEvaluationRubric, getSharedWithMe } from '../services/api';
 import ReadOnlyCandidateProfile from '../components/ReadOnlyCandidateProfile';
 import EvaluationForm, { EvaluationReadOnly } from '../components/EvaluationForm';
 import { skillColorClass } from '../utils/skillColors';
@@ -15,6 +15,9 @@ import { Sheet, SheetBody, SheetContent, SheetHeader, SheetTitle } from '@/compo
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import RescheduleInterviewModal from '../components/RescheduleInterviewModal';
+import CancelInterviewModal from '../components/CancelInterviewModal';
+import { useAuth } from '../auth/AuthContext';
 
 const CalendarIcon = () => (
   <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
@@ -53,6 +56,16 @@ export default function InterviewPage() {
      some renders and not others, which desynchronises React's hook order the
      first time the query resolves. */
   const [showProfileDrawer, setShowProfileDrawer] = useState(false);
+  const [rescheduling, setRescheduling] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
+  const { isAdminOrAbove } = useAuth();
+  // Earlier rounds of this candidate that were shared with the caller. The server decides what is
+  // visible (never this interview before the caller has submitted), so this only offers the link.
+  const { data: sharedWithMe } = useQuery({
+    queryKey: ['shared-evaluations', 'mine'],
+    queryFn: getSharedWithMe,
+    retry: false,
+  });
 
   if (isLoading) {
     return <LoadingPanel label="Loading interview…" />;
@@ -87,7 +100,11 @@ export default function InterviewPage() {
     timeZoneName: 'short',
   });
   const relative = relativeLabel(data.scheduledAt);
+  const cancelled = data.status === 'Cancelled';
   const role = data.candidate.roleApplied ?? data.candidate.appliedRole;
+  const earlierRounds = sharedWithMe?.find(
+    (s) => s.candidateId === data.candidate.id && s.visibleEvaluationCount > 0
+  );
   const otherEvaluations = (data.allEvaluations ?? []).filter(
     (e) => e.interviewerUserId !== data.myEvaluation?.interviewerUserId
   );
@@ -124,9 +141,26 @@ export default function InterviewPage() {
 
           <div className="interview-hero__aside">
             <div className="flex items-center gap-2 flex-wrap">
-              <span className={`interview-chip${relative.soon ? ' interview-chip--soon' : ''}`}>
-                <CalendarIcon /> {scheduled} · {data.durationMinutes} min · {relative.label}
+              {/* A cancelled interview is neither "Today" nor "Completed": it did not happen, and the
+                  Cancelled badge beside it says so (#189). */}
+              <span className={`interview-chip${relative.soon && !cancelled ? ' interview-chip--soon' : ''}`}>
+                <CalendarIcon /> {scheduled} · {data.durationMinutes} min{cancelled ? '' : ` · ${relative.label}`}
               </span>
+
+              {/* Read-only for everyone, so an interviewer landing on a stale link can see why
+                  nothing is expected of them. */}
+              {data.status === 'Cancelled' && <Badge variant="danger">Cancelled</Badge>}
+
+              {isAdminOrAbove && !data.candidate.roleClosed && data.status === 'Scheduled' && (
+                <>
+                  <Button variant="outline" size="sm" onClick={() => setRescheduling(true)}>
+                    <CalendarClock size={14} aria-hidden="true" /> Reschedule
+                  </Button>
+                  <Button variant="ghost" size="sm" onClick={() => setCancelling(true)}>
+                    <CalendarX size={14} aria-hidden="true" /> Cancel
+                  </Button>
+                </>
+              )}
 
               {/* View Full Candidate Profile Button */}
               <Button
@@ -157,7 +191,13 @@ export default function InterviewPage() {
 
       {/* Main Full-Width Evaluation Studio */}
       <div className="interview-studio-container anim-fade-up" style={{ animationDelay: '60ms' }}>
-        {data.canEvaluate ? (
+        {cancelled ? (
+          <div className="pulse-card">
+            <div className="alert-info-soft" role="status">
+              This interview was cancelled. No evaluation is needed.
+            </div>
+          </div>
+        ) : data.canEvaluate ? (
           <EvaluationForm
             interviewId={interviewId}
             evaluation={data.myEvaluation}
@@ -168,6 +208,17 @@ export default function InterviewPage() {
             {briefing}
             <div className="alert-info-soft">
               You are viewing this interview but are not an assigned interviewer.
+            </div>
+          </div>
+        )}
+
+        {earlierRounds && (
+          <div className="mt-6">
+            <div className="alert-info-soft">
+              Earlier rounds for {data.candidate.fullName} were shared with you.{' '}
+              <Link to={`/shared/candidates/${data.candidate.id}/evaluations`} className="font-medium underline">
+                Read the shared evaluations
+              </Link>
             </div>
           </div>
         )}
@@ -212,6 +263,24 @@ export default function InterviewPage() {
         </SheetBody>
       </SheetContent>
 </Sheet>
+      {isAdminOrAbove && rescheduling && (
+        <RescheduleInterviewModal
+          interviewId={interviewId}
+          candidateId={data.candidate.id}
+          candidateName={data.candidate.fullName}
+          show
+          onHide={() => setRescheduling(false)}
+        />
+      )}
+
+      {isAdminOrAbove && cancelling && (
+        <CancelInterviewModal
+          interviewId={interviewId}
+          candidateId={data.candidate.id}
+          show
+          onHide={() => setCancelling(false)}
+        />
+      )}
     </Page>
   );
 }

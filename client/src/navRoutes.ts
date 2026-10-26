@@ -4,6 +4,7 @@ import {
   BookOpen,
   Briefcase,
   CalendarCheck,
+  CalendarClock,
   KeyRound,
   LayoutDashboard,
   ScrollText,
@@ -63,6 +64,13 @@ export const NAV_ROUTES: NavRoute[] = [
     group: 'Overview',
     icon: LayoutDashboard,
     description: 'Pipeline health, upcoming interviews and recent activity at a glance.',
+  },
+  {
+    path: '/my-interviews',
+    label: 'My interviews',
+    group: 'Overview',
+    icon: CalendarClock,
+    description: 'Interviews you are on: upcoming, awaiting your evaluation, submitted and cancelled.',
   },
   {
     path: '/user-guide',

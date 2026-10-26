@@ -350,6 +350,8 @@ export interface StatusChangePayload {
   interviewTypeOptionIds?: number[] | null;
   // Optional when status === 'Interview Scheduled': sets the calendar invite's end time.
   interviewDurationMinutes?: number | null;
+  // Optional when status === 'Interview Scheduled' (#187): share earlier rounds' evaluations with the panel.
+  shareEarlierRoundsWithPanel?: boolean;
 }
 
 export interface CandidateListItem {
@@ -387,6 +389,11 @@ export interface StatusHistoryEntry {
   interviewers: { userId: number; name: string }[];
   interviewTags: string[];
   evaluationSummaries: EvaluationSummary[];
+  /** Where the booking stands now, after any reschedule. `interviewAt` above stays the
+   *  honest record of what was first booked, so the timeline headline reads this one. */
+  interviewScheduledAt: string | null;
+  interviewStatus: InterviewLifecycleStatus | null;
+  interviewEvents: InterviewEventEntry[] | null;
 }
 
 export interface EvaluationSummary {
@@ -495,6 +502,7 @@ export interface LoginPayload {
 
 export interface LoginResult {
   token: string;
+  userId: number;
   name: string;
   email: string;
   roles: Role[];
@@ -503,6 +511,7 @@ export interface LoginResult {
 }
 
 export interface AuthUser {
+  id: number;
   name: string;
   email: string;
   roles: Role[];
@@ -626,6 +635,29 @@ export interface AssignableUser {
 
 export type EvaluationState = 'None' | 'Draft' | 'Submitted';
 
+export type MyInterviewTab = 'upcoming' | 'awaiting' | 'submitted' | 'cancelled';
+
+export interface MyInterviewHistoryRow {
+  id: number;
+  candidateId: number;
+  candidateName: string;
+  role: string | null;
+  scheduledAt: string;
+  status: 'Scheduled' | 'Cancelled';
+  evaluationState: EvaluationState;
+  /** The user's own submitted recommendation and rating; null until they submit. */
+  recommendation: string | null;
+  overallRating: number | null;
+}
+
+export interface MyInterviewHistory {
+  items: MyInterviewHistoryRow[];
+  totalCount: number;
+  page: number;
+  pageSize: number;
+  counts: Record<MyInterviewTab, number>;
+}
+
 export interface MyInterview {
   id: number;
   candidateId: number;
@@ -670,6 +702,49 @@ export interface InterviewDetail {
   notes: string | null;
   interviewTags: string[];
   durationMinutes: number;
+  status: InterviewLifecycleStatus;
+}
+
+// ----- Interview lifecycle: move or cancel a booking (issue #173) -----
+
+export type InterviewLifecycleStatus = 'Scheduled' | 'Cancelled';
+
+export interface InterviewEventEntry {
+  eventType: 'Scheduled' | 'Rescheduled' | 'Cancelled';
+  previousScheduledAt: string | null;
+  newScheduledAt: string | null;
+  reason: string | null;
+  actorName: string;
+  createdAt: string;
+}
+
+/** Prefill for the reschedule form (GET /interviews/{id}/schedule). */
+export interface InterviewSchedule {
+  id: number;
+  candidateId: number;
+  candidateName: string;
+  status: InterviewLifecycleStatus;
+  scheduledAt: string;
+  durationMinutes: number;
+  notes: string | null;
+  interviewerUserIds: number[];
+  interviewTypeOptionIds: number[];
+  /** True once any interviewer has submitted: the interview happened, so both writes are refused. */
+  hasSubmittedEvaluation: boolean;
+  events: InterviewEventEntry[];
+  /** Earlier rounds are shared with this panel (#187). */
+  shareEarlierRoundsWithPanel: boolean;
+}
+
+export interface ReschedulePayload {
+  scheduledAt: string;
+  durationMinutes: number;
+  notes: string | null;
+  interviewerUserIds: number[];
+  interviewTypeOptionIds: number[];
+  reason: string | null;
+  /** Omit to leave the booking's setting as it is (#187). */
+  shareEarlierRoundsWithPanel?: boolean;
 }
 
 // ----- Candidate evaluation report (Recruiter+) -----
@@ -698,12 +773,22 @@ export interface ReportEvaluation {
   evaluation: InterviewEvaluation;
 }
 
+/** A criterion the report's ratings were given on (#190). */
+export interface ReportCriterion {
+  key: string;
+  label: string;
+  /** The rubric section, or "Other criteria" for a rated key the rubric does not know. */
+  section: string;
+}
+
 export interface CandidateEvaluationReport {
   candidateId: number;
   fullName: string;
   roleApplied: string | null;
   summary: EvaluationReportSummary;
   evaluations: ReportEvaluation[];
+  /** The criteria the ratings were given on. Empty or absent: use the built-in ones. */
+  criteria?: ReportCriterion[];
 }
 
 export interface UpsertEvaluationPayload {
@@ -1013,3 +1098,92 @@ export interface RecruitingAnalyticsSummary {
 }
 
 
+
+// ----- Sharing evaluations with a named user (#182) -----
+
+export interface EvaluationShare {
+  id: number;
+  candidateId: number;
+  /** Null = every round of the candidate, future ones included. */
+  interviewId: number | null;
+  interviewScheduledAt: string | null;
+  granteeUserId: number;
+  granteeName: string;
+  granteeEmail: string;
+  /** `Manual`, or `PanelAutoShare` for a share made by booking the next round. */
+  source: string;
+  note: string | null;
+  expiresAt: string | null;
+  isActive: boolean;
+  grantedByUserId: number | null;
+  grantedByName: string | null;
+  createdAt: string;
+  revokedAt: string | null;
+  revokedByUserId: number | null;
+  revokedByName: string | null;
+}
+
+export interface CreateEvaluationSharesPayload {
+  granteeUserIds: number[];
+  /** Empty or omitted = all rounds. */
+  interviewIds?: number[];
+  expiresAt?: string | null;
+  note?: string | null;
+}
+
+export interface SkippedGrantee {
+  userId: number;
+  name: string;
+  reason: string;
+}
+
+export interface CreateEvaluationSharesResult {
+  shares: EvaluationShare[];
+  skipped: SkippedGrantee[];
+}
+
+export interface ShareOptionInterview {
+  interviewId: number;
+  scheduledAt: string;
+  status: string;
+  tags: string[];
+  panel: string[];
+}
+
+export interface ShareOptionUser {
+  userId: number;
+  name: string;
+  email: string;
+  alreadyHasAccess: boolean;
+  reason: string | null;
+}
+
+export interface ShareOptions {
+  interviews: ShareOptionInterview[];
+  users: ShareOptionUser[];
+  /** Non-cancelled interviews with a submitted evaluation: the booking forms offer sharing only above zero. */
+  earlierRoundsWithEvaluations: number;
+}
+
+// ----- Shared with me (#182, #186) -----
+
+export interface SharedInterview {
+  interviewId: number;
+  scheduledAt: string;
+}
+
+/** A candidate shared with the caller, merged across their active grants (`GET api/shared-evaluations/mine`). */
+export interface SharedEvaluationSummary {
+  candidateId: number;
+  candidateName: string;
+  roleApplied: string | null;
+  /** True when any active grant covers every round, future ones included. */
+  allRounds: boolean;
+  interviews: SharedInterview[];
+  grantedByName: string | null;
+  note: string | null;
+  /** Null when any active grant never expires. */
+  expiresAt: string | null;
+  /** What the caller can read now; can be lower than what was shared. */
+  visibleEvaluationCount: number;
+}

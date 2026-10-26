@@ -154,6 +154,22 @@ Runs against the **live dev stack**. Credentials come from `e2e/.env.e2e`, which
 real environment variables still win, so CI can inject them. Specs live in `client/e2e/`; Vitest
 ignores them (it only scans `src/`).
 
+**The suite cleans up the data it creates** (#179). The CV upload, JSON import and education/experience specs drive the UI and
+create drafts and candidates; `e2e/cleanup.ts` (`cleanUpCreatedData()`, called inside each `describe`) records the ids each test
+creates from its own page's network responses and deletes exactly those afterwards: candidates first, then the drafts (discarded,
+then bulk-deleted). It is per test, not a snapshot diff, because Playwright runs spec files in parallel. Seeds made with
+`seedCandidate`/`uploadDraft` remove their draft too. Cleanup needs an Admin login (`E2E_ADMIN_EMAIL`/`E2E_ADMIN_PASSWORD`),
+never fails a test, and warns when it cannot run. A new spec that uploads, imports or approves should call `cleanUpCreatedData()`.
+
+`interview-reschedule.spec.ts` checks the live form and required cancellation reason without writing.
+Its upload, book, move, cancel, and rebook test runs only when `E2E_ISOLATED=1` and the Playwright
+base URL uses a loopback port other than 5173. Run that test against a dedicated throwaway MySQL
+database, a locally bound API, and a Vite proxy pointed at that API; disable outbound email and Slack
+providers in that stack. The test intentionally leaves its fixture in the throwaway database so the
+timeline and notification history remain available for assertions until the database is removed.
+Set `VITE_API_PROXY_TARGET=http://localhost:<isolated-api-port>` when starting Vite for this test;
+its default remains `http://localhost:5134`.
+
 **A spec either passes or skips with a reason** (issue #83). Skips are expected and say what is
 missing, which is why a red run means something real:
 

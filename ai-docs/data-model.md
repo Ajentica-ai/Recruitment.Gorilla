@@ -34,7 +34,7 @@ The core profile. Holds a **denormalized `CurrentStatus`** for fast list queries
 | LinkedInUrl | varchar(500) | nullable |
 | GithubUrl | varchar(500) | nullable; auto-parsed from CV when present |
 | PortfolioUrl | varchar(500) | nullable |
-| AppliedRole | varchar(150) | nullable; legacy free-text role (kept for back-compat; forms now use RoleAppliedOptionId) |
+| AppliedRole | varchar(150) | nullable; legacy free-text role (kept for back-compat; forms now use RoleAppliedOptionId, and the client sends it as null, so it is empty for every UI-created candidate). **Never look a candidate's opening up through it**: the rubric and the role name in interview emails go through `RoleAppliedOptionId`, with this text used only when there is no link (#188) |
 | RoleAppliedOptionId | int? FK → RoleAppliedOption | nullable; configured role the candidate is interviewing for |
 | OwnerUserId | int? FK → User | nullable; set to the creating Recruiter's id for per-role scoping (SetNull on user delete). Legacy/admin-created rows are NULL |
 | IsReferred | bool | default false |
@@ -154,7 +154,12 @@ Lookup table for allowed movement from one status option to another. The UI hide
 | IsActive | bool | inactive transitions are hidden/blocked |
 
 Seed includes `Interview Completed → Interview Scheduled` (Id 31, migration
-`AddInterviewCompletionLinkAndReschedule`) so a second interview round can be scheduled.
+`AddInterviewCompletionLinkAndReschedule`) so a second interview round can be scheduled, and
+`Interview Scheduled → Call for Interview` (Id 50, migration `AddInterviewLifecycle`) so a
+**cancelled** booking returns the candidate somewhere they can be re-booked from. Note the two are
+different things: Id 31 books another round *after* one finished, Id 50 is the cleanup after a
+booking is called off. Moving a booking uses neither (see
+[specs/interview-reschedule-and-cancel.md](specs/interview-reschedule-and-cancel.md)).
 
 ### RoleAppliedOption (`RoleAppliedOptions`), SkillOption (`SkillOptions`) & CandidateSourceOption (`CandidateSourceOptions`)
 Admin-managed lookups (via the Configuration page / `/api/config/*`). Each: `Id`, `Name` (unique, ≤200), `SortOrder`, `IsActive`, `CreatedAt`, `UpdatedAt`. Inactive values are hidden from candidate forms but kept for history. All are seeded with starter values.
@@ -190,12 +195,67 @@ Created when a candidate moves to **Interview Scheduled** (see `CandidateService
 | Id | int PK | |
 | CandidateId | int FK → Candidate | cascade delete |
 | StatusHistoryId | int? FK → StatusHistory | the "Interview Scheduled" entry; SetNull |
-| ScheduledAt | datetime | mirrors the history entry's InterviewAt |
+| ScheduledAt | datetime | the time the interview is booked for **now**; a reschedule moves it (the history entry's `InterviewAt` keeps what was first booked) |
+| Status | varchar(20) | `Scheduled` \| `Cancelled`, default `Scheduled`. A string like `Offer.Status`; the non-null default backfilled existing rows (migration `AddInterviewLifecycle`). No `Completed` value: completion stays candidate-driven |
+| ShareEarlierRoundsWithPanel | bool | default false (migration `AddInterviewShareEarlierRounds`, #187). The recruiter ticked "Share earlier rounds' evaluations with this panel": while set, each panelist holds `PanelAutoShare` grants on the earlier rounds (see `EvaluationAccessGrant`). A reschedule can change it; existing bookings read as false |
+| Notes | varchar(4000)? | recruiter's note for the interviewers, editable on reschedule. Reads fall back to the creating `StatusHistory.Comment`, so pre-#173 interviews need no backfill |
+| CalendarSequence | int | iCalendar `SEQUENCE` for this booking's UID; incremented on every reschedule/cancel because clients ignore a re-issued invite whose SEQUENCE has not grown |
+| UpdatedAt | datetime? | set by a reschedule or cancel |
+| UpdatedByUserId | int? FK → User | who last moved or cancelled it; SetNull |
 | CreatedByUserId | int? FK → User | who scheduled it; SetNull |
 | CreatedAt | datetime | UTC |
 
+`CancelledAt` / `CancelledByUserId` / `CancellationReason` are deliberately **not** columns: they are
+the latest `Cancelled` event's fields, and duplicating them guarantees drift.
+
+### EvaluationAccessGrant (`EvaluationAccessGrants`)
+A grant that lets one named user read a candidate's **submitted** interview evaluations they could not otherwise
+see (epic #182; migration `AddEvaluationAccessGrants`, issue #183). Grantees read through `api/shared-evaluations`
+(#184), decided only by `EvaluationAccess`.
+
+| Field | Type | Notes |
+|---|---|---|
+| Id | int PK | |
+| CandidateId | int FK → Candidate | cascade delete; index |
+| InterviewId | int? FK → Interview | cascade delete; **null = all rounds of the candidate, future ones included** |
+| GranteeUserId | int FK → User | cascade delete; index on `(GranteeUserId, RevokedAt)` |
+| GrantedByUserId | int? FK → User | SetNull |
+| Source | varchar(30) | `Manual` \| `PanelAutoShare` (created by `PanelAutoShareService` when a booking has `ShareEarlierRoundsWithPanel`, #187) |
+| CreatedForInterviewId | int? FK → Interview | SetNull; set only by the panel auto-share (the new booking), so a panel change, the toggle or a cancel can revoke exactly what it created and nothing manual |
+| Note | varchar(500)? | optional reason shown to the grantee |
+| ExpiresAt | datetime? | optional, UTC |
+| RevokedAt / RevokedByUserId | datetime? / int? FK → User | soft revoke (SetNull on the user), the row stays for audit |
+| CreatedAt | datetime | UTC |
+
+A grant is **active** when `RevokedAt is null && (ExpiresAt is null || ExpiresAt > now)` (`EvaluationAccessGrant.IsActive`).
+Granting the same active `(CandidateId, InterviewId, GranteeUserId)` again refreshes its note and expiry instead of
+inserting a duplicate; an expired or revoked row is history and a new one is inserted.
+
+### InterviewEvent (`InterviewEvents`)
+Append-only narrative of a booking's life (migration `AddInterviewLifecycle`, issue #173). Separate
+from `StatusHistory`, which records the **candidate's** status and must not be re-asserted when only
+the interview's date changes.
+
+| Field | Type | Notes |
+|---|---|---|
+| Id | int PK | |
+| InterviewId | int FK → Interview | cascade delete; index on `(InterviewId, CreatedAt)` |
+| EventType | varchar(20) | `Scheduled` \| `Rescheduled` \| `Cancelled` |
+| PreviousScheduledAt | datetime? | null on the opening `Scheduled` event |
+| NewScheduledAt | datetime? | null on a `Cancelled` event |
+| Reason | varchar(1000)? | required by the API on cancel, optional on a move |
+| ActorUserId | int? FK → User | SetNull |
+| ActorName | varchar(200) | denormalized exactly as `StatusHistory.ChangedBy` is, so the trace survives a user delete |
+| CreatedAt | datetime | UTC |
+
+A `Scheduled` event is written at creation time too, otherwise a reschedule has no origin to point
+back to on the timeline.
+
 ### InterviewInterviewer (`InterviewInterviewers`)
 Join assigning users as interviewers. Composite PK `(InterviewId, UserId)`; cascade from Interview, restrict on User. Assignment grants that user read access to the interview + candidate snapshot and the right to submit one evaluation.
+
+### EvaluationReminder (`EvaluationReminders`)
+Which overdue-evaluation reminders an interviewer has had for an interview (#202): `Count` and `LastSentAt`. Composite PK `(InterviewId, UserId)`; cascade from both Interview and User. Written by `EvaluationReminderService` so the reminder interval and maximum survive a restart; nothing else reads it.
 
 ### InterviewTypeOption (`InterviewTypeOptions`) & InterviewTag (`InterviewTags`)
 Admin-managed lookup of interview type tags (Technical, HR, Managerial, 1st Level, 2nd Level, Final Round — seeded), managed on the Configuration page like Skills. `InterviewTypeOption`: `Id`, `Name` (unique, ≤200), `SortOrder`, `IsActive`, `CreatedAt`, `UpdatedAt` (migration `AddInterviewTypeOptions`). `InterviewTag` is the many-to-many join between `Interview` and `InterviewTypeOption` (composite PK `(InterviewId, InterviewTypeOptionId)`; cascade from Interview, restrict on the type option) — mirrors `CandidateSkill`. Tags are set on the schedule form and surfaced (by name) in `StatusHistoryDto.InterviewTags` and `InterviewDetailDto.InterviewTags`.
@@ -219,12 +279,13 @@ One interviewer's evaluation of one interview. Unique index `(InterviewId, Inter
 Per-criterion score within an evaluation. Unique `(InterviewEvaluationId, CriterionKey)`; cascade from evaluation. `CriterionKey` is validated dynamically against the candidate's assigned role rubric (or the default system rubric); `Rating` 1–5 nullable; `Comment` varchar(1000) nullable. Empty items (no rating + no comment) are not persisted.
 
 ### EvaluationRubric (`EvaluationRubrics`) & RubricCriterion (`RubricCriteria`)
-Scorecard template definitions that can be customized per Job Opening (`RoleAppliedOption.EvaluationRubricId`).
+Scorecard template definitions that can be customized per Job Opening (`RoleAppliedOption.EvaluationRubricId`). Which rubric an interview uses is decided in one place, `EvaluationRubricService.ResolveAsync`: the candidate's opening by `RoleAppliedOptionId` (the legacy `AppliedRole` name only when there is no link), its rubric only if active **and** with criteria, else the default active rubric, else any active one. The rubric endpoint and evaluation validation both use it (#188).
 - `EvaluationRubric`: `Id`, `Name` (unique, ≤200), `Description` (≤1000), `IsDefault`, `IsActive`, `CreatedAt`, `UpdatedAt`.
 - `RubricCriterion`: `Id`, `EvaluationRubricId` (FK, cascade), `SectionName` (≤100), `Key` (unique per rubric, ≤100), `Label` (≤200), `Hint` (≤500), `Weight` (double, default 1.0), `SortOrder`.
 - Seed data ensures the default 12-criterion standard rubric exists (`Id = 1`, `IsDefault = true`).
 
 ### Offer (`Offers`)
+*Lifecycle (#192): terms editable only in `Draft`; `Draft` -> `PendingApproval` (submit) -> `Approved` or back to `Draft` (rejected, kept visible by a `Rejected` `OfferApproval` row) -> `Extended` (from `Approved`, or from a `Draft` while no offer for the candidate has been rejected) -> `Accepted` / `Declined`. Any other move is refused with a 409; see `auth.md`. At most one offer per candidate is live (`Draft`, `PendingApproval`, `Approved` or `Extended`); a new one is allowed only after the last was `Declined`/`Accepted` (#193).*
 Candidate job offer details, structured compensation package, and lifecycle status (`Draft`, `PendingApproval`, `Approved`, `Extended`, `Accepted`, `Declined`, `Withdrawn`).
 
 | Field | Type | Notes |

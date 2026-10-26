@@ -32,10 +32,14 @@ interface AuthContextValue {
   loggedOut: boolean;
 }
 
-const AuthContext = createContext<AuthContextValue | undefined>(undefined);
+// Exported so a test can supply auth state directly, without standing up AuthProvider (which
+// refreshes the session over the network on mount).
+// eslint-disable-next-line react-refresh/only-export-components
+export const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 function toUser(res: LoginResult): AuthUser {
   return {
+    id: res.userId,
     name: res.name,
     email: res.email,
     roles: res.roles,
@@ -111,4 +115,16 @@ export function useAuth(): AuthContextValue {
   const ctx = useContext(AuthContext);
   if (!ctx) throw new Error('useAuth must be used within AuthProvider');
   return ctx;
+}
+
+/**
+ * Auth state when there is a provider, `undefined` when there is not.
+ *
+ * For leaf components that only *adjust* themselves by role and must still render without one,
+ * so they can be exercised in isolation. Anything that cannot work without a signed-in user
+ * should keep using `useAuth` and fail loudly instead.
+ */
+// eslint-disable-next-line react-refresh/only-export-components
+export function useOptionalAuth(): AuthContextValue | undefined {
+  return useContext(AuthContext);
 }

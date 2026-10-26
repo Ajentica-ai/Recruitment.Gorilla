@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest';
-import { screen } from '@testing-library/react';
+import { describe, it, expect, vi } from 'vitest';
+import { fireEvent, screen } from '@testing-library/react';
 import { renderWithProviders } from '../test/renderWithProviders';
 import StatusTimeline from './StatusTimeline';
 import type { EvaluationSummary, StatusHistoryEntry } from '../types';
@@ -17,6 +17,9 @@ const entry = (over: Partial<StatusHistoryEntry> = {}): StatusHistoryEntry => ({
   interviewers: [],
   interviewTags: [],
   evaluationSummaries: [],
+  interviewScheduledAt: null,
+  interviewStatus: null,
+  interviewEvents: null,
   ...over,
 });
 
@@ -88,6 +91,7 @@ describe('StatusTimeline', () => {
           interviewers: [{ userId: 2, name: 'Sam Interviewer' }],
           interviewTags: ['Technical', '1st Level'],
         })]}
+        canViewEvaluations
       />,
     );
     expect(screen.getByText('Sam Interviewer')).toBeInTheDocument();
@@ -96,5 +100,132 @@ describe('StatusTimeline', () => {
     // The interviewer pill links to the interview.
     const links = screen.getAllByRole('link');
     expect(links.some((a) => a.getAttribute('href') === '/interviews/9')).toBe(true);
+  });
+
+  describe('interview lifecycle (issue #173)', () => {
+    const scheduledEntry = (over: Partial<StatusHistoryEntry> = {}) =>
+      entry({
+        status: 'Interview Scheduled',
+        interviewId: 7,
+        interviewAt: '2026-10-20T14:00:00Z',
+        interviewScheduledAt: '2026-10-20T14:00:00Z',
+        interviewStatus: 'Scheduled',
+        ...over,
+      });
+
+    it('shows the current date, not the one first booked, after a move', () => {
+      // The whole point of the feature: a moved interview that still displayed interviewAt
+      // would keep showing the stale date on the timeline.
+      renderWithProviders(
+        <StatusTimeline
+          history={[
+            scheduledEntry({
+              interviewScheduledAt: '2026-10-23T09:30:00Z',
+              interviewEvents: [
+                {
+                  eventType: 'Rescheduled',
+                  previousScheduledAt: '2026-10-20T14:00:00Z',
+                  newScheduledAt: '2026-10-23T09:30:00Z',
+                  reason: 'Candidate asked for Thursday',
+                  actorName: 'Rhonda Recruiter',
+                  createdAt: '2026-10-16T10:00:00Z',
+                },
+              ],
+            }),
+          ]}
+        />,
+      );
+
+      expect(screen.getByText(/Rescheduled from/)).toBeInTheDocument();
+      expect(screen.getByText(/Rhonda Recruiter/)).toBeInTheDocument();
+      expect(screen.getByText(/Candidate asked for Thursday/)).toBeInTheDocument();
+    });
+
+    it('marks a cancelled interview and shows its reason, with no actions', () => {
+      renderWithProviders(
+        <StatusTimeline
+          canManageInterview
+          history={[
+            scheduledEntry({
+              interviewStatus: 'Cancelled',
+              interviewEvents: [
+                {
+                  eventType: 'Cancelled',
+                  previousScheduledAt: '2026-10-20T14:00:00Z',
+                  newScheduledAt: null,
+                  reason: 'Role put on hold',
+                  actorName: 'Rhonda Recruiter',
+                  createdAt: '2026-10-16T10:00:00Z',
+                },
+              ],
+            }),
+          ]}
+        />,
+      );
+
+      expect(screen.getByText('Cancelled')).toBeInTheDocument();
+      expect(screen.getByText(/Role put on hold/)).toBeInTheDocument();
+      // Nothing left to reschedule or cancel.
+      expect(screen.queryByRole('button', { name: /reschedule/i })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /cancel interview/i })).not.toBeInTheDocument();
+    });
+
+    it('offers the actions only when the caller may manage the interview', () => {
+      const onReschedule = vi.fn();
+      const { unmount } = renderWithProviders(
+        <StatusTimeline history={[scheduledEntry()]} canManageInterview={false} />,
+      );
+      expect(screen.queryByRole('button', { name: /reschedule/i })).not.toBeInTheDocument();
+      unmount();
+
+      renderWithProviders(
+        <StatusTimeline
+          history={[scheduledEntry()]}
+          canManageInterview
+          onReschedule={onReschedule}
+        />,
+      );
+      const button = screen.getByRole('button', { name: /reschedule/i });
+      fireEvent.click(button);
+      expect(onReschedule).toHaveBeenCalledWith(7);
+    });
+  });
+
+  describe('interviewer pills link only where the page opens (#198)', () => {
+    const booked = () =>
+      entry({
+        status: 'Interview Scheduled',
+        interviewId: 9,
+        interviewers: [{ userId: 2, name: 'Sam Interviewer' }, { userId: 3, name: 'Pat Panelist' }],
+      });
+    const interviewLinks = () => screen.queryAllByRole('link').filter((a) => a.getAttribute('href') === '/interviews/9');
+
+    it('shows plain text to a viewer who is neither Admin+ nor on the interview (the owning Recruiter)', () => {
+      renderWithProviders(<StatusTimeline history={[booked()]} currentUserId={99} />);
+
+      expect(screen.getByText('Sam Interviewer')).toBeInTheDocument();
+      expect(screen.getByText('Pat Panelist')).toBeInTheDocument();
+      expect(interviewLinks()).toHaveLength(0);
+    });
+
+    it('links every pill for Admin+', () => {
+      renderWithProviders(<StatusTimeline history={[booked()]} canViewEvaluations currentUserId={99} />);
+
+      expect(interviewLinks()).toHaveLength(2);
+    });
+
+    it("links only the viewer's own pill when they are an interviewer", () => {
+      renderWithProviders(<StatusTimeline history={[booked()]} currentUserId={3} />);
+
+      const links = interviewLinks();
+      expect(links).toHaveLength(1);
+      expect(links[0]).toHaveTextContent('Pat Panelist');
+    });
+
+    it('shows plain text when the viewer is unknown', () => {
+      renderWithProviders(<StatusTimeline history={[booked()]} />);
+
+      expect(interviewLinks()).toHaveLength(0);
+    });
   });
 });

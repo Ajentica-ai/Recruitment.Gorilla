@@ -17,6 +17,20 @@ a calendar invite**. The interview also appears under **Up next** on your Dashbo
 
 ![Interviewer dashboard](images/01-dashboard-interviewer.png)
 
+**My interviews** in the sidebar lists every interview you are assigned to, in tabs: **Upcoming**,
+**Awaiting evaluation**, **Submitted** (with the recommendation and rating you gave) and
+**Cancelled**. Search by candidate name, and select a row to open the interview. It is the place to look
+when you want to find what you wrote about someone last month.
+
+**If an interview moves or is called off,** you get another notification and an email: "Interview
+moved" shows the old time struck through beside the new one and carries a fresh calendar invite,
+and "Interview cancelled" tells you it is off and why. A cancelled interview drops off **Up next**.
+If you had started an evaluation it is kept when the interview moves. Because invites are sent as
+publications rather than meeting requests, your calendar may not clear a cancelled event by
+itself, so delete it by hand if it is still there. You may also be taken off a panel while the
+interview itself goes ahead, in which case the email says you have been removed, and any evaluation
+notes you had drafted for it are discarded.
+
 - Upcoming interviews are grouped by day. Each row shows the time (with how long until it starts,
   for today), the candidate, the job opening and your evaluation state: **Pending**, **Draft** or
   **Submitted**.
@@ -74,3 +88,28 @@ At the bottom, the **Overall evaluation** asks for:
 
 After you submit, you can also see the evaluations other panel members have submitted for the
 same interview. You cannot see theirs before you submit your own.
+
+If an interview ended more than a day ago and you have not submitted your evaluation, you get a reminder
+notification linking to the interview. It repeats about once a day, up to three times, and stops as soon as you
+submit. A saved draft does not count as submitted.
+
+## 1.6 Evaluations shared with you
+
+A recruiter can share a candidate's submitted evaluations with you, for example before your round.
+You then get a notification, "Interview evaluations shared with you".
+
+- **Open it from the notification,** or from the **Shared with me** card on your Dashboard (it only
+  appears when something is shared with you).
+- The page opens with a banner saying who shared it, when it ends if it ends, and any note they
+  left. Below it you see the **submitted** evaluations (never drafts) with the same summary and
+  ratings as the Evaluation report, then the candidate's profile and CV, read-only.
+- If you are on the panel of an interview and have not submitted your own evaluation yet, that
+  interview's evaluations stay hidden until you do. Other rounds shared with you are still shown.
+- On an interview page you are assigned to, **Read the shared evaluations** appears when earlier
+  rounds of the same candidate were shared with you.
+- When access ends or is withdrawn, the page says **This share has expired or was revoked**. Ask
+  the person who shared it if you still need it.
+
+Sharing gives you only this read-only view. It does not open the candidate list or the candidate
+page.
+

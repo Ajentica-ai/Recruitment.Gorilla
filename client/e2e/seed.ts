@@ -1,5 +1,6 @@
 import { expect, type APIRequestContext } from '@playwright/test';
 import { randomUUID } from 'node:crypto';
+import { removeDrafts } from './cleanup';
 import { openRoleId, requireData } from './helpers';
 
 /**
@@ -20,27 +21,31 @@ export async function seedCandidate(
   const tag = randomUUID();
   const draft = await uploadDraft(request, auth, `${label} ${tag}`);
 
-  const initial = await (await request.get('/api/status-options/initial', { headers: auth })).json();
-  const created = await request.post('/api/candidates', {
-    headers: auth,
-    data: {
-      fullName: label,
-      email: `probe-${tag}@example.invalid`,
-      relevantExperience: '5 years',
-      isReferred: false,
-      storedFileName: draft.storedFileName,
-      originalFileName: draft.originalFileName,
-      fileType: draft.fileType,
-      fileSizeBytes: draft.fileSizeBytes,
-      initialStatus: initial[0].name,
-      initialStatusComment: 'Seeded by an e2e spec.',
-      allowDuplicate: true,
-    },
-  });
-  expect(created.ok(), `seed failed: ${created.status()} ${await created.text()}`).toBeTruthy();
-
-  await request.post(`/api/candidate-drafts/${draft.id}/discard`, { headers: auth }).catch(() => {});
-  return (await created.json()).id as number;
+  // The candidate keeps the stored CV; the draft is only the way in. Remove it whether or not the seed
+  // succeeds, rather than leave a pending or discarded row behind on every seed (#179).
+  try {
+    const initial = await (await request.get('/api/status-options/initial', { headers: auth })).json();
+    const created = await request.post('/api/candidates', {
+      headers: auth,
+      data: {
+        fullName: label,
+        email: `probe-${tag}@example.invalid`,
+        relevantExperience: '5 years',
+        isReferred: false,
+        storedFileName: draft.storedFileName,
+        originalFileName: draft.originalFileName,
+        fileType: draft.fileType,
+        fileSizeBytes: draft.fileSizeBytes,
+        initialStatus: initial[0].name,
+        initialStatusComment: 'Seeded by an e2e spec.',
+        allowDuplicate: true,
+      },
+    });
+    expect(created.ok(), `seed failed: ${created.status()} ${await created.text()}`).toBeTruthy();
+    return (await created.json()).id as number;
+  } finally {
+    await removeDrafts(request, auth, [draft.id]);
+  }
 }
 
 /** A CV draft as the upload endpoint returns it; only the fields the specs read. */

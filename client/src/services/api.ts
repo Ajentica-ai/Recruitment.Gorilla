@@ -7,6 +7,11 @@ import type {
   ImportCandidateResult,
   CandidateDetail,
   CandidateEvaluationReport,
+  CreateEvaluationSharesPayload,
+  CreateEvaluationSharesResult,
+  EvaluationShare,
+  ShareOptions,
+  SharedEvaluationSummary,
   CandidateSourceOption,
   ChangePasswordPayload,
   EmailSettings,
@@ -28,10 +33,14 @@ import type {
   JobOpening,
   DuplicateCandidate,
   InterviewDetail,
+  InterviewSchedule,
+  ReschedulePayload,
   InterviewEvaluation,
   LoginPayload,
   LoginResult,
   MyInterview,
+  MyInterviewHistory,
+  MyInterviewTab,
   NotificationList,
   PagedResult,
   CandidateListItem,
@@ -179,11 +188,24 @@ export const resetUserPassword = async (id: number, payload: ResetPasswordPayloa
 };
 
 /**
+ * Where a CV is fetched from. A grantee has no candidate-scoped access, so a shared view uses the
+ * grant-checked endpoint instead (#186); everyone else keeps the candidate one.
+ */
+const cvPath = (candidateId: number, fileId: number, shared: boolean) =>
+  shared
+    ? `/shared-evaluations/candidates/${candidateId}/cv/${fileId}`
+    : `/candidates/${candidateId}/cv/${fileId}`;
+
+/**
  * Downloads a candidate's stored CV file with the auth token attached, then
  * triggers a browser save/open. (A plain <a href> can't send the bearer token.)
  */
-export const downloadCvFile = async (candidateId: number, fileId: number): Promise<void> => {
-  const res = await api.get(`/candidates/${candidateId}/cv/${fileId}`, { responseType: 'blob' });
+export const downloadCvFile = async (
+  candidateId: number,
+  fileId: number,
+  shared = false
+): Promise<void> => {
+  const res = await api.get(cvPath(candidateId, fileId, shared), { responseType: 'blob' });
   saveBlob(res.data as Blob, res.headers['content-disposition'] as string | undefined, 'cv');
 };
 
@@ -650,9 +672,10 @@ export const getActiveInterviewTypes = async (): Promise<InterviewTypeOption[]> 
  */
 export const previewCvFile = async (
   candidateId: number,
-  fileId: number
+  fileId: number,
+  shared = false
 ): Promise<{ url: string; contentType: string }> => {
-  const res = await api.get(`/candidates/${candidateId}/cv/${fileId}`, { responseType: 'blob' });
+  const res = await api.get(cvPath(candidateId, fileId, shared), { responseType: 'blob' });
   const blob = res.data as Blob;
   const contentType = (res.headers['content-type'] as string | undefined) ?? blob.type ?? '';
   return { url: URL.createObjectURL(blob), contentType };
@@ -669,8 +692,43 @@ export const getMyInterviews = async (): Promise<MyInterview[]> => {
   return data;
 };
 
+export const getMyInterviewHistory = async (params: {
+  tab: MyInterviewTab;
+  search?: string;
+  page?: number;
+  pageSize?: number;
+}): Promise<MyInterviewHistory> => {
+  const { data } = await api.get<MyInterviewHistory>('/interviews/mine/history', { params });
+  return data;
+};
+
 export const getInterview = async (id: number): Promise<InterviewDetail> => {
   const { data } = await api.get<InterviewDetail>(`/interviews/${id}`);
+  return data;
+};
+
+/** Prefill for the reschedule form. A narrower read model than getInterview, which 404s a
+ *  recruiter who owns the candidate but is not an assigned interviewer. */
+export const getInterviewSchedule = async (id: number): Promise<InterviewSchedule> => {
+  const { data } = await api.get<InterviewSchedule>(`/interviews/${id}/schedule`);
+  return data;
+};
+
+/** Moves a booking. The body fully replaces the schedulable fields. */
+export const rescheduleInterview = async (
+  id: number,
+  payload: ReschedulePayload
+): Promise<InterviewSchedule> => {
+  const { data } = await api.put<InterviewSchedule>(`/interviews/${id}`, payload);
+  return data;
+};
+
+/** Cancels a booking and returns the candidate to Call for Interview. */
+export const cancelInterview = async (
+  id: number,
+  payload: { reason: string }
+): Promise<InterviewSchedule> => {
+  const { data } = await api.post<InterviewSchedule>(`/interviews/${id}/cancel`, payload);
   return data;
 };
 
@@ -835,3 +893,45 @@ export const getUserGuide = async (): Promise<UserGuide> => {
   return data;
 };
 
+// ----- Sharing evaluations (#182) -----
+export const getEvaluationShares = async (candidateId: number): Promise<EvaluationShare[]> => {
+  const { data } = await api.get<EvaluationShare[]>(`/candidates/${candidateId}/evaluation-shares`);
+  return data;
+};
+
+export const getEvaluationShareOptions = async (candidateId: number): Promise<ShareOptions> => {
+  const { data } = await api.get<ShareOptions>(`/candidates/${candidateId}/evaluation-shares/options`);
+  return data;
+};
+
+export const createEvaluationShares = async (
+  candidateId: number,
+  payload: CreateEvaluationSharesPayload
+): Promise<CreateEvaluationSharesResult> => {
+  const { data } = await api.post<CreateEvaluationSharesResult>(
+    `/candidates/${candidateId}/evaluation-shares`,
+    payload
+  );
+  return data;
+};
+
+export const revokeEvaluationShare = async (candidateId: number, shareId: number): Promise<void> => {
+  await api.delete(`/candidates/${candidateId}/evaluation-shares/${shareId}`);
+};
+
+// ----- Shared with me (#186) -----
+export const getSharedWithMe = async (): Promise<SharedEvaluationSummary[]> => {
+  const { data } = await api.get<SharedEvaluationSummary[]>('/shared-evaluations/mine');
+  return data;
+};
+
+export const getSharedReport = async (candidateId: number): Promise<CandidateEvaluationReport> => {
+  const { data } = await api.get<CandidateEvaluationReport>(`/shared-evaluations/candidates/${candidateId}`);
+  return data;
+};
+
+/** The read-only candidate snapshot (no status history) behind a grant. */
+export const getSharedProfile = async (candidateId: number): Promise<CandidateDetail> => {
+  const { data } = await api.get<CandidateDetail>(`/shared-evaluations/candidates/${candidateId}/profile`);
+  return data;
+};

@@ -178,7 +178,7 @@
   <div class="layout">
     <figure style="margin:0">
       <div class="diagram-scroll">
-        <svg class="diagram" id="diagram" viewBox="0 0 1040 1500" role="img" aria-label="Flow diagram: an admin uploads a CV, which is validated and parsed automatically into a CandidateDraft pending review; approving it creates a Candidate with status Uploaded. From there, an admin manually adds each further status through either an interview track or an assessment track, converging on Recommended, then Offer Preparation. Offer Extended and Offer Accepted are written automatically by the offer service; Hired is always a manual final step, gated on Offer Accepted already existing in the history. Rejection branches peel off at the Uploaded stage, after evaluation, and after an offer is extended.">
+        <svg class="diagram" id="diagram" viewBox="0 0 1040 1500" role="img" aria-label="Flow diagram: an admin uploads a CV, which is validated and parsed automatically into a CandidateDraft pending review; approving it creates a Candidate with status Uploaded. From there, an admin manually adds each further status through either an interview track or an assessment track, converging on Recommended, then Offer Preparation. Offer Extended and Offer Accepted are written automatically by the offer service; Hired is always a manual final step, gated on Offer Accepted already existing in the history. Rejection branches peel off at the Uploaded stage, after evaluation, and after an offer is extended. A scheduled interview can also be cancelled, which returns the candidate to Call for Interview.">
           <defs>
             <marker id="arrow" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
               <polygon points="0,0 10,5 0,10" class="arrow-head"/>
@@ -205,6 +205,9 @@
 
           <line class="edge flow-line" data-from="call-interview" data-to="interview-scheduled" x1="190" y1="666" x2="190" y2="686" marker-end="url(#arrow)"/>
           <line class="edge flow-line" data-from="interview-scheduled" data-to="interview-completed" x1="190" y1="752" x2="190" y2="772" marker-end="url(#arrow)"/>
+          <!-- Cancelling a booking returns the candidate to Call for Interview (transition Id 50). -->
+          <path class="edge flow-line" data-from="interview-scheduled" data-to="call-interview" d="M 60 726 H 34 V 636 H 60" fill="none" marker-end="url(#arrow)"/>
+          <text class="box-sub" x="30" y="686" text-anchor="end" transform="rotate(-90 30 686)">cancelled</text>
 
           <line class="edge flow-line" data-from="ask-assessment" data-to="technical-assessment" x1="850" y1="666" x2="850" y2="686" marker-end="url(#arrow)"/>
           <line class="edge flow-line" data-from="technical-assessment" data-to="submission-received" x1="850" y1="752" x2="850" y2="772" marker-end="url(#arrow)"/>
@@ -461,9 +464,9 @@
     "interview-scheduled": {
       title: "Interview Scheduled",
       trigger: "admin: POST /api/candidates/{id}/status",
-      body: "Requires an interview time and at least one assigned interviewer. Creates an Interview row linked back to this StatusHistory entry.",
-      effects: "Notifies each assigned interviewer: in-app notification + email with a calendar (.ics) attachment + Slack DM, category InterviewAssigned.",
-      files: ["Models/Interview.cs", "Services/CandidateService.cs (AddStatusAsync)", "Services/NotificationService.cs"]
+      body: "Requires an interview time and at least one assigned interviewer. Creates an Interview row linked back to this StatusHistory entry. The booking can later be moved in place (PUT /api/interviews/{id}) or cancelled (POST /api/interviews/{id}/cancel): a move writes no new status entry, a cancel returns the candidate to Call for Interview via transition Id 50.",
+      effects: "Notifies each assigned interviewer: in-app notification + email with a calendar (.ics) attachment + Slack DM, category InterviewAssigned. A move or cancel re-notifies everyone affected with an updated invite (categories InterviewRescheduled / InterviewCancelled).",
+      files: ["Models/Interview.cs", "Models/InterviewEvent.cs", "Services/CandidateService.cs (AddStatusAsync)", "Services/InterviewService.cs (RescheduleAsync, CancelAsync)", "Services/NotificationService.cs"]
     },
     "interview-completed": {
       title: "Interview Completed",

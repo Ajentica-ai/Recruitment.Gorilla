@@ -38,6 +38,7 @@ public class CandidatesController(
         [FromQuery] int? roleId,
         [FromQuery] string? skillIds, // CSV of SkillOption ids (axios-friendly)
         [FromQuery] bool referred = false,
+        [FromQuery] string? batch = null,
         [FromQuery] string? bucket = null,
         [FromQuery] string? sort = null,
         [FromQuery] string? dir = null,
@@ -60,6 +61,7 @@ public class CandidatesController(
             RoleId: roleId,
             SkillIds: parsedSkillIds.Count > 0 ? parsedSkillIds : null,
             ReferredOnly: referred,
+            Batch: batch,
             Bucket: CandidateBuckets.IsKnown(bucket) ? bucket : null,
             Sort: sort,
             Dir: dir,
@@ -129,7 +131,7 @@ public class CandidatesController(
     {
         // Enforce read scope before serving the file. Assigned interviewers get access to
         // the candidate's CV too (parallels the interview page bypassing owner-scope).
-        if (await candidateService.GetByIdAsync(id, ReadOwnerScope) is null &&
+        if (await candidateService.GetCurrentStatusIfAccessibleAsync(id, ReadOwnerScope) is null &&
             !await interviewService.IsAssignedInterviewerForCandidateAsync(id, currentUser.UserId ?? 0))
             return NotFound();
 
@@ -146,13 +148,13 @@ public class CandidatesController(
     public async Task<IActionResult> Delete(int id)
     {
         // Capture the name before deletion so the audit summary is readable.
-        var candidate = await candidateService.GetByIdAsync(id, ReadOwnerScope);
+        var candidateName = await candidateService.GetFullNameIfAccessibleAsync(id, ReadOwnerScope);
         var deleted = await candidateService.DeleteAsync(id, WriteOwnerScope);
         if (!deleted) return NotFound();
 
         logger.LogInformation("Deleted candidate {Id} and its CV files.", id);
         await audit.RecordAsync("Candidate.Deleted", "Candidate", id,
-            $"Deleted candidate {(candidate is not null ? $"'{candidate.FullName}' " : "")}(#{id})");
+            $"Deleted candidate {(candidateName is not null ? $"'{candidateName}' " : "")}(#{id})");
         return NoContent();
     }
 
@@ -227,12 +229,18 @@ public class CandidatesController(
         if (referenceError is not null)
             return BadRequest(referenceError);
 
+        // Scope first: the role lock below is not scoped, so asking it first told an out-of-scope caller which candidate
+        // ids exist and which sit in an ended opening (400 versus 404).
+        if (await candidateService.GetCurrentStatusIfAccessibleAsync(id, WriteOwnerScope) is null)
+            return NotFound();
+
         // Block edits once the candidate's applied-for job opening has ended (applies to all roles).
         var lockError = await candidateService.GetRoleLockErrorAsync(id);
         if (lockError is not null)
             return BadRequest(lockError);
 
         var (updated, roleError) = await candidateService.UpdateAsync(id, dto, WriteOwnerScope);
+        if (roleError == CandidateService.DuplicateEmailError) return Conflict(roleError);
         if (roleError is not null) return BadRequest(roleError);
         if (updated is null) return NotFound();
 
@@ -246,7 +254,7 @@ public class CandidatesController(
     public async Task<IActionResult> AddStatus(int id, [FromBody] StatusChangeDto dto)
     {
         // Enforce write scope before validating/applying the change.
-        if (await candidateService.GetByIdAsync(id, WriteOwnerScope) is null)
+        if (await candidateService.GetCurrentStatusIfAccessibleAsync(id, WriteOwnerScope) is null)
             return NotFound();
 
         var validationError = await candidateService.ValidateStatusChangeAsync(id, dto);

@@ -138,10 +138,24 @@ Some statuses need extra details. The form asks for them:
 | **Technical Assessment** | the **task details** and a comment |
 | **Submission Received** | the **submission link** |
 | **Interview Scheduled** | **date and time** and at least one **interviewer** |
+| **Call for Interview** (from Interview Scheduled) | reached by **cancelling** the booked interview, with a reason |
 | **Interview Completed** | a comment; at least one interviewer must have **submitted** their evaluation |
 | **Reject**, **Discontinued**, **Offer Declined** | a comment explaining why |
 | **Recommended** | the candidate must have passed **Code Review** or **Interview Completed** |
 | **Hired** | the candidate must have **Offer Accepted** |
+
+**"You are not assigned to a job opening."** Every CV is filed against a job opening, and you can
+only use the openings an admin has assigned to you. When you have none, the upload area says so
+instead of letting you drop files, and the same note appears on JSON import, on the candidate form
+and when approving a staged CV. Ask an admin to assign you to an open opening; there is nothing
+you can do from your own account.
+
+**"Your job openings have ended."** A different case with a different fix: you *are* assigned, but
+every opening you have is past its end date, and a CV can only be filed against an open one. Ask
+an admin to extend the end date, or to assign you to another opening. Openings past their end date
+are never offered in the dropdown, so this cannot be worked around by picking one anyway.
+
+Admins are not restricted this way and can upload against any open opening.
 
 ## 2.7 Scheduling interviews
 
@@ -162,8 +176,48 @@ overall rating, the recommendations and the average per criterion. Use **Print**
 
 ![Evaluation report](images/02-evaluation-report.png)
 
+**Moving or cancelling a booked interview.** Open **Status history** on the candidate. The
+**Interview Scheduled** entry carries two buttons while the interview is still live:
+
+- **Reschedule** opens the booking as it stands now, so you only change what moved. You can edit
+  the date and time, the duration, the interview types, the panel and the notes, and add an
+  optional reason that goes into the email. The candidate's status does **not** change: moving a
+  booking is not progress through the pipeline. Everyone affected is emailed an updated calendar
+  invite, people added to the panel get the usual assignment message, and anyone removed is told
+  they are off it. The timeline then shows the new date with a quiet "Rescheduled from ..." line
+  beneath it.
+- **Cancel interview** asks for a reason, tells the panel, and returns the candidate to
+  **Call for Interview** so you can book a fresh one from there. The cancelled interview stays in
+  the history, struck through, with the reason.
+
+Two things to know. **Removing an interviewer who has started writing an evaluation deletes their
+draft** (the dialog warns you first). And once **anyone has submitted** an evaluation, the
+interview counts as having happened, so neither button works any more; use **Another round** below
+instead.
+
+One caveat on cancellations: the email is the reliable part. Because invites are sent as
+publications rather than meeting requests, Gmail and Outlook do not always remove the event from
+people's calendars on their own, so the panel may still need to delete it by hand.
+
+**Sharing earlier rounds with the next panel.** When the candidate already has an earlier interview
+with a submitted evaluation, the booking form (and the reschedule form) show a tick box,
+**Share earlier rounds' evaluations with this panel**. It is off by default, so the new panel is not
+influenced by earlier verdicts unless you choose. Tick it and everyone on the panel can read the
+earlier rounds' submitted evaluations from their dashboard, the notification or the interview page,
+with no separate share step. It follows the panel: someone you add gets access, someone you remove
+loses it, unticking it removes it for everyone, and cancelling the interview removes it. Anything you
+shared by hand yourself is never changed by this. People who already see everything (Admins and the
+candidate's own recruiters) are not affected. The panel still cannot read the interview they are about
+to evaluate until they submit their own.
+
 **Another round?** From **Interview Completed** you can schedule again. The new interview gets
-its own panel and evaluations, and the history keeps both rounds.
+its own panel and evaluations, and the history keeps both rounds. This is a *second interview after
+the first one finished*, which is a different thing from moving a booking that has not happened
+yet.
+
+When the last interviewer on a round submits their evaluation, the person who booked the interview and the
+recruiters who can see the candidate get an **All evaluations in** notification linking to the evaluation report.
+That is the cue to move the candidate to **Interview Completed**.
 
 ## 2.8 Offers
 
@@ -175,10 +229,23 @@ Once a candidate is **Recommended**, the **Offer & Compensation** card lets you 
 
    ![Drafting an offer](images/02-offer-draft-form.png)
 
+   The form checks the terms before it saves: the salary must be above zero, a bonus cannot be
+   negative, the currency is a 3-letter code, the expiry date cannot be in the past or before the
+   start date, and job title, equity and notes have length limits (200, 200 and 2,000 characters).
+
 2. **Request Approval** sends it to an Admin, who approves or rejects it (a rejected offer goes
    back to draft). Approval is optional: you can also **Extend Offer** straight from a draft.
 
    ![Offer waiting for approval](images/02-offer-pending.png)
+
+   Once an offer is waiting for approval, approved or sent, its terms are locked: you can only
+   edit a **draft**. A **rejected** offer comes back as a draft with the Admin's comment. After a
+   rejection, approval is no longer optional for that candidate: neither the rejected draft nor a
+   **New Version** can be extended until you request approval and an Admin approves it. Offers
+   follow the same rules as a status change: they stop once the job opening has ended, and you can
+   only start one for a candidate who is **Recommended**, in **Offer Preparation**, or who has
+   **Offer Declined**. A candidate has one offer at a time, so the next one can start only after
+   the candidate has declined the last.
 
 3. **Extend Offer to Candidate** moves the candidate to **Offer Extended**. Send the offer
    itself outside the app (use **Download PDF**).
@@ -186,8 +253,8 @@ Once a candidate is **Recommended**, the **Offer & Compensation** card lets you 
    **Declined** (with a reason) moves them to **Offer Declined**.
 5. Finally, use **Add status** > **Hired**.
 
-**New Version** starts a revised offer. The app never emails candidates; all candidate
-communication happens outside it.
+**New Version** appears once the candidate has declined an offer and starts a revised one. The app
+never emails candidates; all candidate communication happens outside it.
 
 ## 2.9 Jobs and Analytics
 
@@ -204,3 +271,33 @@ period (7 days to All time) and a job opening. As a Recruiter you see figures fo
 candidates only. **Print Report** prints the page.
 
 ![Analytics](images/02-analytics.png)
+
+## 2.10 Sharing evaluations
+
+Sometimes someone who is not a recruiter on a candidate needs to read what the interviewers wrote,
+for example the next round's panel. You can share a candidate's **submitted** evaluations with a
+named person. Drafts are never shared, and the person sees only what you share, nothing else about
+how the candidate is handled.
+
+**To share**
+
+1. Open the candidate and select **Share evaluations**, next to **Evaluation report**. The same
+   button is on the Evaluation report itself, with a line saying how many people already have it.
+2. Under **People**, search and pick one or more people. Anyone who can already read everything
+   (Admins, and the candidate's own recruiters) is greyed out as **Already has access**.
+3. Under **What to share**, choose **All rounds** (this includes rounds booked later) or
+   **Specific interviews** and tick the rounds you mean. Each round shows its date, type and panel.
+4. Optionally set an **Expires** date, after which access ends, and a **Note**. The note goes to
+   each person in their notification.
+5. Select **Share**. The people are notified. If someone was skipped, or something was refused,
+   the message says why.
+
+**To review or stop sharing.** The same drawer lists **Currently shared**: who, which rounds, who
+shared it, when it expires and whether it is active. Select **Revoke** and confirm, and the person
+loses access on their next request. Revoked and expired shares are folded away under **Show
+revoked and expired**. Sharing again with someone who already has an active share updates it
+instead of adding a second one, and leaving the expiry or note empty keeps what is there.
+
+Sharing is available to Recruiters for their own candidates and to Admins for any candidate.
+Interviewers cannot share.
+

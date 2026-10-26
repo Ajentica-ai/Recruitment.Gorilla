@@ -25,6 +25,7 @@ vi.mock('../services/api', () => ({
   getOfferMetrics: vi.fn(),
   getMyInterviews: vi.fn(),
   getNotifications: vi.fn(),
+  getSharedWithMe: vi.fn(),
 }));
 
 const kpis: DashboardKpis = {
@@ -64,6 +65,7 @@ beforeEach(() => {
     totalOffers: 0, activeOffers: 0, acceptedOffers: 0, declinedOffers: 0, totalHired: 0, acceptanceRatePercentage: 0,
   });
   vi.mocked(api.getMyInterviews).mockResolvedValue([]);
+  vi.mocked(api.getSharedWithMe).mockResolvedValue([]);
   vi.mocked(api.getNotifications).mockResolvedValue({ items: [], unreadCount: 0 });
 });
 
@@ -92,7 +94,9 @@ describe('DashboardPage', () => {
     expect(await screen.findByRole('combobox', { name: 'Role' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Recent activity' })).toBeInTheDocument();
     expect(screen.getAllByRole('link', { name: 'View all' }).map((l) => l.getAttribute('href'))).toContain('/candidates');
-    expect(screen.getAllByRole('link', { name: 'Upload CVs' }).length).toBeGreaterThan(0);
+    // The hero's inline shortcut only: the floating phone button was removed because it covered the cards (#168).
+    expect(screen.getAllByRole('link', { name: 'Upload CVs' })).toHaveLength(1);
+    expect(screen.getAllByRole('link', { name: 'Candidates' })).toHaveLength(1);
   });
 
   it('Admin: no role filter, activity "View all" goes to the audit log', async () => {
@@ -110,6 +114,24 @@ describe('DashboardPage', () => {
     renderWithProviders(<DashboardPage />);
     expect(await screen.findByText('new in the last 30 days')).toBeInTheDocument();
     expect(screen.getByText(/vs prior 30 days/)).toHaveTextContent('3 vs prior 30 days');
+  });
+
+  it('shows a "Shared with me" card for an Interviewer only when something is shared', async () => {
+    as('Interviewer');
+    const { unmount } = renderWithProviders(<DashboardPage />);
+    await screen.findByRole('group', { name: 'Pipeline figures' });
+    expect(screen.queryByRole('heading', { name: 'Shared with me' })).not.toBeInTheDocument();
+    unmount();
+
+    vi.mocked(api.getSharedWithMe).mockResolvedValue([
+      {
+        candidateId: 42, candidateName: 'Jane Doe', roleApplied: 'QA Engineer', allRounds: true,
+        interviews: [], grantedByName: 'Rita Recruiter', note: null, expiresAt: null, visibleEvaluationCount: 2,
+      },
+    ]);
+    renderWithProviders(<DashboardPage />);
+    expect(await screen.findByRole('heading', { name: 'Shared with me' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Jane Doe/ })).toHaveAttribute('href', '/shared/candidates/42/evaluations');
   });
 
   it('refresh re-fetches every dashboard query', async () => {
