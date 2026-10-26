@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { ToastProvider } from '../components/ToastStack';
@@ -76,5 +76,37 @@ describe('CandidatesPage URL filters (#195)', () => {
 
     await screen.findByText('Ada Lovelace');
     expect(getCandidates).toHaveBeenCalledWith(expect.objectContaining({ batch: 'Spring intake' }));
+  });
+});
+
+describe('CandidatesPage board truncation (#196)', () => {
+  beforeEach(() => {
+    localStorage.setItem('rg_candidate_view_mode', 'board');
+  });
+  afterEach(() => {
+    localStorage.removeItem('rg_candidate_view_mode');
+  });
+
+  const mockPage = (totalCount: number) =>
+    vi.mocked(getCandidates).mockResolvedValue({
+      items: [candidate], totalCount, page: 1, pageSize: 150, totalPages: 1,
+    } as Awaited<ReturnType<typeof getCandidates>>);
+
+  it('asks for one page of 150 and says so when more candidates match than the board shows', async () => {
+    mockPage(412);
+    renderWithProviders(<CandidatesPage />);
+
+    const note = await screen.findByLabelText('Board truncated');
+    expect(note).toHaveTextContent('Showing 1 of 412 candidates. Narrow the filters to see the rest.');
+    expect(getCandidates).toHaveBeenCalledWith(expect.objectContaining({ page: 1, pageSize: 150 }));
+  });
+
+  it('shows no notice when everything fits on the board', async () => {
+    mockPage(1);
+    renderWithProviders(<CandidatesPage />);
+
+    await waitFor(() => expect(getCandidates).toHaveBeenCalled());
+    await act(async () => {}); // let the resolved page render
+    expect(screen.queryByLabelText('Board truncated')).not.toBeInTheDocument();
   });
 });

@@ -588,3 +588,10 @@
 - 2026-10-22T10:33Z [claude] RG-195 BRANCH @3062074: fix/RG-195/Candidate-list-filters created off origin/develop (user confirmed)
 - 2026-10-22T10:33Z [claude] RG-195 PHASE PLAN→CONSTRUCT @3062074: plan approved (go with recommendation)
 - 2026-10-22T10:36Z [claude] RG-195 DONE @3062074: batch param wired, hired/offers buckets implemented; 694 backend, client ok (known flaky date-picker)
+- 2026-10-22T10:37Z [claude] RG-195 SIDE-EFFECT @684173c: pushed fix/RG-195/Candidate-list-filters, opened PR #222 into develop (user confirmed)
+- 2026-10-22T10:37Z [claude] RG-196 CREATED @684173c: intake of issue #196 (bug); already assigned to @me; board move skipped (gh lacks read:project)
+- 2026-10-22T10:37Z [claude] RG-196 PHASE CLARIFY→PLAN @684173c: plan.md drafted (assumptions 1-4 pending), awaiting approval
+- 2026-10-22T10:38Z [claude] RG-196 DECISION @3062074: CLARIFY assumptions 1-4 accepted (go with recommendation)
+- 2026-10-22T10:38Z [claude] RG-196 BRANCH @3062074: fix/RG-196/Candidate-list-paging created off origin/develop (user confirmed)
+- 2026-10-22T10:38Z [claude] RG-196 PHASE PLAN→CONSTRUCT @3062074: plan approved (go with recommendation)
+- 2026-10-22T10:40Z [claude] RG-196 DONE @3062074: list paging clamped (page 1.., pageSize 1..200), board truncation notice; 705 backend, 321 client

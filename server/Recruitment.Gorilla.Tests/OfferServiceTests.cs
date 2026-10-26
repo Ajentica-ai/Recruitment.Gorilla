@@ -1,5 +1,6 @@
 using Recruitment.Gorilla.API.Auth;
 using Recruitment.Gorilla.API.DTOs;
+using Recruitment.Gorilla.API.Services;
 using Recruitment.Gorilla.Tests.Infrastructure;
 
 namespace Recruitment.Gorilla.Tests;
@@ -53,7 +54,7 @@ public class OfferServiceTests(MySqlDatabaseFixture fixture) : DbTestBase(fixtur
         Assert.NotNull(offer);
 
         // Submit for approval
-        var pending = await Offers().SubmitForApprovalAsync(offer.Id, [approver.Id], admin.Id, admin.Name, null);
+        var pending = await Offers().SubmitForApprovalAsync(offer.Id, offer.CandidateId, [approver.Id], admin.Id, admin.Name, null);
         Assert.NotNull(pending);
         Assert.Equal("PendingApproval", pending.Status);
         Assert.Single(pending.Approvals);
@@ -86,7 +87,7 @@ public class OfferServiceTests(MySqlDatabaseFixture fixture) : DbTestBase(fixtur
         Assert.NotNull(offer);
 
         // Extend offer
-        var extended = await Offers().ExtendOfferAsync(offer.Id, admin.Id, admin.Name, null);
+        var extended = await Offers().ExtendOfferAsync(offer.Id, offer.CandidateId, admin.Id, admin.Name, null);
         Assert.NotNull(extended);
         Assert.Equal("Extended", extended.Status);
 
@@ -96,7 +97,7 @@ public class OfferServiceTests(MySqlDatabaseFixture fixture) : DbTestBase(fixtur
 
         // Candidate accepts
         var accepted = await Offers().RecordDecisionAsync(
-            offer.Id,
+            offer.Id, offer.CandidateId,
             new OfferDecisionDto("Accepted", null),
             admin.Id,
             admin.Name,
@@ -148,7 +149,7 @@ public class OfferServiceTests(MySqlDatabaseFixture fixture) : DbTestBase(fixtur
             admin.Name);
         Assert.NotNull(offer);
 
-        var pdfBytes = await Offers().GenerateOfferLetterPdfAsync(offer.Id, null);
+        var pdfBytes = await Offers().GenerateOfferLetterPdfAsync(offer.Id, offer.CandidateId, null);
         Assert.NotNull(pdfBytes);
         Assert.NotEmpty(pdfBytes);
         // PDF header magic bytes "%PDF-"
@@ -186,7 +187,7 @@ public class OfferServiceTests(MySqlDatabaseFixture fixture) : DbTestBase(fixtur
     public async Task CreateOffer_allows_the_recruiter_who_owns_the_candidate()
     {
         var recruiter = Data.AddUser(Roles.Recruiter);
-        var candidate = Data.AddCandidate(ownerUserId: recruiter.Id);
+        var candidate = Data.AddCandidate(ownerUserId: recruiter.Id, status: "Offer Preparation");
 
         Assert.NotNull(await Offers().CreateOfferAsync(candidate.Id, Salary(), recruiter.Id, recruiter.Id, recruiter.Name));
     }
@@ -198,7 +199,7 @@ public class OfferServiceTests(MySqlDatabaseFixture fixture) : DbTestBase(fixtur
         var admin = Data.AddUser(Roles.Admin);
         var recruiter = Data.AddUser(Roles.Recruiter);
         var role = Data.AddRole(null, null, recruiter.Id);
-        var candidate = Data.AddCandidate(ownerUserId: admin.Id, roleId: role.Id);
+        var candidate = Data.AddCandidate(ownerUserId: admin.Id, roleId: role.Id, status: "Offer Preparation");
 
         Assert.NotNull(await Offers().CreateOfferAsync(candidate.Id, Salary(), recruiter.Id, recruiter.Id, recruiter.Name));
     }
@@ -210,11 +211,11 @@ public class OfferServiceTests(MySqlDatabaseFixture fixture) : DbTestBase(fixtur
         // Pending row would block the offer from ever reaching Approved.
         var admin = Data.AddUser(Roles.Admin);
         var recruiter = Data.AddUser(Roles.Recruiter);
-        var candidate = Data.AddCandidate(ownerUserId: admin.Id);
+        var candidate = Data.AddCandidate(ownerUserId: admin.Id, status: "Offer Preparation");
         var offer = await Offers().CreateOfferAsync(candidate.Id, Salary(), null, admin.Id, admin.Name);
         Assert.NotNull(offer);
 
-        var pending = await Offers().SubmitForApprovalAsync(offer.Id, [recruiter.Id, admin.Id], admin.Id, admin.Name, null);
+        var pending = await Offers().SubmitForApprovalAsync(offer.Id, offer.CandidateId, [recruiter.Id, admin.Id], admin.Id, admin.Name, null);
 
         Assert.NotNull(pending);
         Assert.DoesNotContain(pending.Approvals, a => a.ApproverUserId == recruiter.Id);
@@ -225,11 +226,11 @@ public class OfferServiceTests(MySqlDatabaseFixture fixture) : DbTestBase(fixtur
     public async Task Review_refuses_an_offer_that_is_not_awaiting_approval()
     {
         var admin = Data.AddUser(Roles.Admin);
-        var candidate = Data.AddCandidate(ownerUserId: admin.Id);
+        var candidate = Data.AddCandidate(ownerUserId: admin.Id, status: "Offer Preparation");
         var draft = await Offers().CreateOfferAsync(candidate.Id, Salary(), null, admin.Id, admin.Name);
         Assert.NotNull(draft);
 
-        await Assert.ThrowsAsync<InvalidOperationException>(() => Offers().ReviewApprovalAsync(
+        await Assert.ThrowsAsync<OfferStateException>(() => Offers().ReviewApprovalAsync(
             draft.Id, candidate.Id, new ReviewOfferApprovalDto("Approved", null), admin.Id, admin.Name));
 
         Assert.Equal("Draft", Db.Offers.Single(o => o.Id == draft.Id).Status);
@@ -239,11 +240,11 @@ public class OfferServiceTests(MySqlDatabaseFixture fixture) : DbTestBase(fixtur
     public async Task Review_with_a_mismatched_candidate_id_writes_nothing()
     {
         var admin = Data.AddUser(Roles.Admin);
-        var candidate = Data.AddCandidate(ownerUserId: admin.Id);
-        var otherCandidate = Data.AddCandidate(ownerUserId: admin.Id);
+        var candidate = Data.AddCandidate(ownerUserId: admin.Id, status: "Offer Preparation");
+        var otherCandidate = Data.AddCandidate(ownerUserId: admin.Id, status: "Offer Preparation");
         var offer = await Offers().CreateOfferAsync(candidate.Id, Salary(), null, admin.Id, admin.Name);
         Assert.NotNull(offer);
-        await Offers().SubmitForApprovalAsync(offer.Id, [admin.Id], admin.Id, admin.Name, null);
+        await Offers().SubmitForApprovalAsync(offer.Id, offer.CandidateId, [admin.Id], admin.Id, admin.Name, null);
 
         var reviewed = await Offers().ReviewApprovalAsync(
             offer.Id, otherCandidate.Id, new ReviewOfferApprovalDto("Approved", null), admin.Id, admin.Name);

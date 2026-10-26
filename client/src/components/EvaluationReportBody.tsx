@@ -1,6 +1,7 @@
+import { useMemo } from 'react';
 import { CalendarDays, ClipboardList } from 'lucide-react';
 
-import { EvaluationReadOnly } from '@/components/EvaluationForm';
+import { EvaluationReadOnly, type RubricLike } from '@/components/EvaluationForm';
 import EmptyState from '@/components/common/EmptyState';
 import { Badge, type BadgeVariant } from '@/components/ui/badge';
 import SectionCard from '@/components/common/SectionCard';
@@ -9,11 +10,10 @@ import { skillColorClass } from '@/utils/skillColors';
 import { cn } from '@/lib/utils';
 import type { CandidateEvaluationReport, ReportEvaluation } from '@/types';
 
-const CRITERION_LABELS: Record<string, string> = Object.fromEntries(
+/** The built-in labels, used when the report names no criteria of its own (an older server, or no rubric). */
+const BUILT_IN_LABELS: Record<string, string> = Object.fromEntries(
   EVALUATION_SECTIONS.flatMap((s) => s.criteria.map((c) => [c.key, c.label])),
 );
-/** Keeps per-criterion rows in the same order as the evaluation form. */
-const CRITERION_ORDER = EVALUATION_SECTIONS.flatMap((s) => s.criteria.map((c) => c.key));
 
 const recLabel = (value: string) =>
   RECOMMENDATIONS.find((r) => r.value === value)?.label ?? value;
@@ -66,6 +66,20 @@ export default function EvaluationReportBody({
   dense?: boolean;
 }) {
   const { summary } = data;
+
+  // The criteria the ratings were given on (#190). Without them the read-only cards fall back to the
+  // built-in sections, which is right for a report on the default rubric and nothing else.
+  const rubric = useMemo<RubricLike | null>(
+    () =>
+      data.criteria && data.criteria.length > 0
+        ? {
+            criteria: data.criteria.map((c) => ({ key: c.key, label: c.label, sectionName: c.section, hint: null })),
+          }
+        : null,
+    [data.criteria],
+  );
+  const criterionLabel = (key: string) =>
+    data.criteria?.find((c) => c.key === key)?.label ?? BUILT_IN_LABELS[key] ?? key;
 
   if (summary.interviewerCount === 0) {
     return (
@@ -130,13 +144,10 @@ export default function EvaluationReportBody({
             <span className="field-label">Average by criterion</span>
             <table className="table table-sm mb-0 align-middle">
               <tbody>
-                {CRITERION_ORDER.map((key) =>
-                  summary.criterionAverages.find((c) => c.criterionKey === key),
-                )
-                  .filter((c): c is NonNullable<typeof c> => c != null)
-                  .map((c) => (
+                {/* In the order the server gives: the rubric's, then any unknown keys. */}
+                {summary.criterionAverages.map((c) => (
                     <tr key={c.criterionKey}>
-                      <td>{CRITERION_LABELS[c.criterionKey] ?? c.criterionKey}</td>
+                      <td>{criterionLabel(c.criterionKey)}</td>
                       <td className="col-right w-[128px]">
                         <RatingDots rating={c.average} />
                       </td>
@@ -180,7 +191,7 @@ export default function EvaluationReportBody({
                 title={r.evaluation.interviewerName}
                 actions={<Badge variant="success">Submitted</Badge>}
               >
-                <EvaluationReadOnly evaluation={r.evaluation} />
+                <EvaluationReadOnly evaluation={r.evaluation} rubric={rubric} />
               </SectionCard>
             ))}
           </div>
