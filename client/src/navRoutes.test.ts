@@ -11,12 +11,13 @@ describe('visibleRoutes', () => {
   const labels = (roles: Role[]) => visibleRoutes(roles).map((r) => r.label);
 
   it('shows an Interviewer the Dashboard and the user guide, nothing else', () => {
-    expect(labels(['Interviewer'])).toEqual(['Dashboard', 'User guide']);
+    expect(labels(['Interviewer'])).toEqual(['Dashboard', 'My interviews', 'User guide']);
   });
 
   it('shows a Recruiter the candidate-managing pages but no admin pages', () => {
     expect(labels(['Recruiter'])).toEqual([
       'Dashboard',
+      'My interviews',
       'User guide',
       'Analytics',
       'Jobs',
@@ -28,6 +29,7 @@ describe('visibleRoutes', () => {
   it('shows an Admin the config and audit pages but not Users', () => {
     expect(labels(['Admin'])).toEqual([
       'Dashboard',
+      'My interviews',
       'User guide',
       'Analytics',
       'Jobs',
@@ -41,6 +43,7 @@ describe('visibleRoutes', () => {
   it('shows a SuperAdmin everything', () => {
     expect(labels(['SuperAdmin'])).toEqual([
       'Dashboard',
+      'My interviews',
       'User guide',
       'Analytics',
       'Jobs',
@@ -59,7 +62,7 @@ describe('visibleRoutes', () => {
   });
 
   it('gives a user with no roles the Dashboard and the user guide', () => {
-    expect(labels([])).toEqual(['Dashboard', 'User guide']);
+    expect(labels([])).toEqual(['Dashboard', 'My interviews', 'User guide']);
   });
 });
 

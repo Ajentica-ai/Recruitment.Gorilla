@@ -637,3 +637,10 @@
 - 2026-10-22T16:40Z [claude] RG-202 BRANCH @3062074: feature/RG-202/Evaluation-reminders created off origin/develop (user confirmed)
 - 2026-10-22T16:40Z [claude] RG-202 PHASE PLAN→CONSTRUCT @3062074: plan approved (go with recommendation)
 - 2026-10-22T16:49Z [claude] RG-202 DONE @3062074: overdue reminders (worker+service+EvaluationReminders migration), all-evaluations-in notice; 712 backend; review no High/Medium
+- 2026-10-22T16:58Z [claude] RG-202 SIDE-EFFECT @41c6b13: pushed feature/RG-202/Evaluation-reminders, opened PR #229 into develop (user confirmed)
+- 2026-10-22T17:17Z [claude] RG-203 CREATED @41c6b13: intake of issue #203 (feature, UI); already assigned to @me; board move skipped (gh lacks read:project)
+- 2026-10-22T17:18Z [claude] RG-203 DECISION @41c6b13: CLARIFY assumptions 1-6 accepted (go with recommendation)
+- 2026-10-22T17:18Z [claude] RG-203 PHASE CLARIFY→PLAN @41c6b13: plan.md drafted, awaiting approval
+- 2026-10-22T17:21Z [claude] RG-203 BRANCH @3062074: feature/RG-203/My-interviews-page created off origin/develop (user confirmed)
+- 2026-10-22T17:21Z [claude] RG-203 PHASE PLAN→CONSTRUCT @3062074: plan approved (go with recommendation)
+- 2026-10-22T17:27Z [claude] RG-203 DONE @3062074: GET /api/interviews/mine/history + My interviews page; 710 backend, client ok (known flaky date-picker); no browser/security-agent run

@@ -39,6 +39,8 @@ import type {
   LoginPayload,
   LoginResult,
   MyInterview,
+  MyInterviewHistory,
+  MyInterviewTab,
   NotificationList,
   PagedResult,
   CandidateListItem,
@@ -687,6 +689,16 @@ export const getAssignableUsers = async (): Promise<AssignableUser[]> => {
 
 export const getMyInterviews = async (): Promise<MyInterview[]> => {
   const { data } = await api.get<MyInterview[]>('/interviews/mine');
+  return data;
+};
+
+export const getMyInterviewHistory = async (params: {
+  tab: MyInterviewTab;
+  search?: string;
+  page?: number;
+  pageSize?: number;
+}): Promise<MyInterviewHistory> => {
+  const { data } = await api.get<MyInterviewHistory>('/interviews/mine/history', { params });
   return data;
 };
 

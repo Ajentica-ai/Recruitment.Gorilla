@@ -262,6 +262,10 @@ No `max-width` queries, and the phone is never the exception. Concretely:
 
 Both the upload `CandidateForm` and the detail `ProfileEditor` include **GitHub URL**, **Portfolio website**, a **Role applied for** single-select and a **Skills** multi-select (both `components/SearchableSelect.tsx`, fed by `['config','roles']` / `['config','skills']` — configured values only, **not creatable** from the candidate form), and a **"This candidate has been referred"** checkbox revealing Reference name\* / email\* / Employee ID. Forms validate required full name + email format client-side (mirrored server-side); the legacy free-text role datalist was replaced by the configured role select.
 
+### My interviews (`pages/MyInterviewsPage.tsx`, route `/my-interviews`, #203)
+
+Every role, in the sidebar's Overview group. Tabs (Upcoming, Awaiting evaluation, Submitted, Cancelled, each labelled with its count from the server), a candidate-name search and the shared `Pagination`, all held in the URL (`tab`, `q`, `page`, `pageSize`) through `useTabs` and the search params. It reads `GET /api/interviews/mine/history` (`getMyInterviewHistory`); rows link to `/interviews/{id}` and a submitted row shows the recommendation and rating the user gave. It only ever shows the signed-in user's own assignments, so it needs no role gate.
+
 ### User guide (`pages/UserGuidePage.tsx`, route `/user-guide`)
 `useQuery(['user-guide'], getUserGuide)` fetches `{ edition, label, chapters }` from
 `GET /api/user-guide`, already cut to the caller's role on the server — the frontend never decides
