@@ -164,6 +164,29 @@ public sealed class ApiFixture : IAsyncLifetime
         return role.Id;
     }
 
+    /// <summary>
+    /// Inserts a job opening whose evaluation rubric has the single criterion <paramref name="criterionKey"/>
+    /// (committed) and returns the opening's id.
+    /// </summary>
+    public async Task<int> NewRoleWithRubricAsync(string criterionKey)
+    {
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var rubric = new EvaluationRubric
+        {
+            Name = $"Rubric-{Guid.NewGuid():N}", IsDefault = false, IsActive = true,
+            Criteria = [new RubricCriterion { SectionName = "Custom", Key = criterionKey, Label = criterionKey, SortOrder = 1 }],
+        };
+        var role = new RoleAppliedOption
+        {
+            Name = $"Role-{Guid.NewGuid():N}", SortOrder = 1, IsActive = true,
+            EndDate = DateTime.UtcNow.AddDays(30), EvaluationRubric = rubric,
+        };
+        db.RoleAppliedOptions.Add(role);
+        await db.SaveChangesAsync();
+        return role.Id;
+    }
+
     /// <summary>Inserts a deactivated account (same password as the other seeded users) and returns its email.</summary>
     public async Task<string> NewInactiveUserAsync()
     {

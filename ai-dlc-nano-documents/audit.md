@@ -575,3 +575,23 @@
 - 2026-10-22T09:49Z [claude] RG-193 BRANCH @7cc896b: fix/RG-193/Offer-status-rules-and-lock created off fix/RG-192/Offer-state-machine (user confirmed)
 - 2026-10-22T09:49Z [claude] RG-193 PHASE PLAN→CONSTRUCT @7cc896b: plan approved (go with recommendation)
 - 2026-10-22T10:00Z [claude] RG-193 DONE @7cc896b: offer actions use End Date lock, stage rules, 1 live offer, locked atomic status move; 788 backend, 333 client tests
+- 2026-10-22T10:23Z [claude] RG-193 SIDE-EFFECT @e0d057e: pushed fix/RG-193/Offer-status-rules-and-lock, opened PR #220 (base fix/RG-192/Offer-state-machine; user confirmed)
+- 2026-10-22T10:24Z [claude] RG-194 CREATED @e0d057e: intake of issue #194 (bug); assigned to @me via gh; board move skipped (gh lacks read:project)
+- 2026-10-22T10:24Z [claude] RG-194 PHASE CLARIFY→PLAN @e0d057e: plan.md drafted, awaiting approval
+- 2026-10-22T10:24Z [claude] RG-194 BRANCH @e0d057e: fix/RG-194/Offer-url-candidate-check created off fix/RG-193/Offer-status-rules-and-lock (user confirmed)
+- 2026-10-22T10:24Z [claude] RG-194 PHASE PLAN→CONSTRUCT @e0d057e: plan approved (go with recommendation)
+- 2026-10-22T10:27Z [claude] RG-194 DONE @e0d057e: URL candidate id checked before any offer write; 795 backend tests; security review no High/Medium
+- 2026-10-22T10:29Z [claude] RG-194 SIDE-EFFECT @f4c994b: pushed fix/RG-194/Offer-url-candidate-check, opened PR #221 (base fix/RG-193/Offer-status-rules-and-lock; user confirmed)
+- 2026-10-22T10:30Z [claude] RG-195 CREATED @f4c994b: intake of issue #195 (bug); assigned to @me via gh (already assigned); board move skipped (gh lacks read:project)
+- 2026-10-22T10:32Z [claude] RG-195 DECISION @f4c994b: CLARIFY assumptions 1-5 accepted (go with recommendation)
+- 2026-10-22T10:32Z [claude] RG-195 PHASE CLARIFY→PLAN @f4c994b: plan.md drafted, awaiting approval
+- 2026-10-22T10:33Z [claude] RG-195 BRANCH @3062074: fix/RG-195/Candidate-list-filters created off origin/develop (user confirmed)
+- 2026-10-22T10:33Z [claude] RG-195 PHASE PLAN→CONSTRUCT @3062074: plan approved (go with recommendation)
+- 2026-10-22T10:36Z [claude] RG-195 DONE @3062074: batch param wired, hired/offers buckets implemented; 694 backend, client ok (known flaky date-picker)
+- 2026-10-22T10:37Z [claude] RG-195 SIDE-EFFECT @684173c: pushed fix/RG-195/Candidate-list-filters, opened PR #222 into develop (user confirmed)
+- 2026-10-22T10:37Z [claude] RG-196 CREATED @684173c: intake of issue #196 (bug); already assigned to @me; board move skipped (gh lacks read:project)
+- 2026-10-22T10:37Z [claude] RG-196 PHASE CLARIFY→PLAN @684173c: plan.md drafted (assumptions 1-4 pending), awaiting approval
+- 2026-10-22T10:38Z [claude] RG-196 DECISION @3062074: CLARIFY assumptions 1-4 accepted (go with recommendation)
+- 2026-10-22T10:38Z [claude] RG-196 BRANCH @3062074: fix/RG-196/Candidate-list-paging created off origin/develop (user confirmed)
+- 2026-10-22T10:38Z [claude] RG-196 PHASE PLAN→CONSTRUCT @3062074: plan approved (go with recommendation)
+- 2026-10-22T10:40Z [claude] RG-196 DONE @3062074: list paging clamped (page 1.., pageSize 1..200), board truncation notice; 705 backend, 321 client
