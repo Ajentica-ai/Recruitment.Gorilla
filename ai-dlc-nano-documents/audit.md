@@ -610,3 +610,9 @@
 - 2026-10-22T11:17Z [claude] RG-198 PHASE PLAN→CONSTRUCT @3062074: plan approved (go with recommendation)
 - 2026-10-22T11:19Z [claude] RG-198 REVISED @3062074: client has no user id; add userId to AuthResultDto and AuthUser for the pill rule
 - 2026-10-22T11:22Z [claude] RG-198 DONE @3062074: pills/booker link/RequireRole toast fixed; userId added to AuthResultDto; 695 backend, 325 client
+- 2026-10-22T11:31Z [claude] RG-198 SIDE-EFFECT @109fa58: pushed fix/RG-198/Dead-end-links, opened PR #225 into develop (user confirmed)
+- 2026-10-22T15:14Z [claude] RG-199 CREATED @109fa58: intake of issue #199 (bug, UI); already assigned to @me; board move skipped (gh lacks read:project)
+- 2026-10-22T15:14Z [claude] RG-199 PHASE CLARIFY→PLAN @109fa58: fast path, plan.md drafted, awaiting approval
+- 2026-10-22T15:16Z [claude] RG-199 BRANCH @3062074: fix/RG-199/Evaluation-labels created off origin/develop (user confirmed)
+- 2026-10-22T15:16Z [claude] RG-199 PHASE PLAN→CONSTRUCT @3062074: plan approved (go with recommendation)
+- 2026-10-22T15:18Z [claude] RG-199 DONE @3062074: distinct interviewer count, UpNextCard opens oldest pending; 690 backend, client ok (known flaky date-picker)

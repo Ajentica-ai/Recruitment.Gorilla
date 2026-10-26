@@ -218,8 +218,9 @@ public class InterviewService(
             .Where(c => c.Count > 0)
             .ToList();
 
+        // Distinct people, not evaluations: one interviewer on two rounds is one interviewer (#199).
         var summary = new EvaluationReportSummaryDto(
-            reportEvals.Count,
+            reportEvals.Select(r => r.Evaluation.InterviewerUserId).Distinct().Count(),
             overalls.Count > 0 ? overalls.Average() : null,
             recommendationCounts,
             criterionAverages);
