@@ -674,3 +674,6 @@
 - 2026-10-28T09:45Z [claude] RG-236 SIDE-EFFECT @231c40b: pushed fix/RG-236/Damaged-pdf-upload-500, opened PR #248 into develop (user confirmed)
 - 2026-10-29T09:11Z [claude] RG-237 CREATED @231c40b: intake of issue #237 (bug, UI); already assigned to @me; board move skipped (gh lacks read:project)
 - 2026-10-29T09:11Z [claude] RG-237 PHASE CLARIFY→PLAN @231c40b: fast path, plan.md drafted, awaiting approval
+- 2026-10-29T09:27Z [claude] RG-237 BRANCH @fdeeec2: fix/RG-237/Unknown-url-blank-page created off origin/develop (user confirmed)
+- 2026-10-29T09:27Z [claude] RG-237 PHASE PLAN→CONSTRUCT @fdeeec2: plan approved (go with recommendation)
+- 2026-10-29T09:33Z [claude] RG-237 DONE @fdeeec2: NotFoundPage + path="*" route inside ProtectedLayout; 392 client tests; verified signed-in+out in a running app
