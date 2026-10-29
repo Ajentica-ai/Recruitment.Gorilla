@@ -644,3 +644,36 @@
 - 2026-10-22T17:21Z [claude] RG-203 BRANCH @3062074: feature/RG-203/My-interviews-page created off origin/develop (user confirmed)
 - 2026-10-22T17:21Z [claude] RG-203 PHASE PLAN→CONSTRUCT @3062074: plan approved (go with recommendation)
 - 2026-10-22T17:27Z [claude] RG-203 DONE @3062074: GET /api/interviews/mine/history + My interviews page; 710 backend, client ok (known flaky date-picker); no browser/security-agent run
+- 2026-10-22T17:47Z [claude] RG-203 SIDE-EFFECT @770a7b8: pushed feature/RG-203/My-interviews-page, opened PR #230 into develop (user confirmed)
+- 2026-10-23T10:19Z [claude] RG-188 SIDE-EFFECT @8f83fe0: merged develop into fix/RG-188/Rubric-lookup-by-job-opening (notes conflicts only), pushed; PR #215 now MERGEABLE (user asked)
+- 2026-10-23T16:51Z [claude] RG-189 SIDE-EFFECT @fb583e9: merged develop into fix/RG-189/Cancelled-interview-evaluation (InterviewService conflict resolved), pushed; PR #216 MERGEABLE (user asked)
+- 2026-10-24T14:00Z [claude] RG-190 SIDE-EFFECT @25881fc: merged develop into fix/RG-190/Custom-rubric-ratings-in-report (notes conflicts only), pushed; PR #217 MERGEABLE (user asked)
+- 2026-10-25T18:06Z [claude] RG-191 SIDE-EFFECT @f4ddedf: merged develop into fix/RG-191/Unsavable-evaluation-draft (notes conflicts only), pushed; PR #218 MERGEABLE (user asked)
+- 2026-10-26T05:52Z [claude] RG-192 SIDE-EFFECT @43d215a: merged develop into fix/RG-192/Offer-state-machine (notes conflicts only), pushed; PR #219 MERGEABLE (user asked)
+- 2026-10-26T06:04Z [claude] RG-193 SIDE-EFFECT @d322d44: merged develop into fix/RG-193/Offer-status-rules-and-lock (notes conflicts only; #219 had merged), pushed; PR #220 (user asked)
+- 2026-10-26T06:10Z [claude] RG-194 SIDE-EFFECT @64de865: merged develop into fix/RG-194/Offer-url-candidate-check (audit conflict only; #220 had merged), pushed; PR #221 (user asked)
+- 2026-10-26T06:27Z [claude] RG-195 SIDE-EFFECT @f6dce0c: merged develop into fix/RG-195/Candidate-list-filters (kept RG-195 and RG-196 tests side by side), pushed; PR #222 (user asked)
+- 2026-10-26T06:43Z [claude] RG-197 SIDE-EFFECT @d6432a5: merged develop into fix/RG-197/Offer-input-validation (notes conflicts only; #221 had merged), pushed; PR #224 (user asked)
+- 2026-10-26T06:57Z [claude] RG-198 SIDE-EFFECT @21b6cba: merged develop into fix/RG-198/Dead-end-links (notes conflicts only), pushed; PR #225 (user asked)
+- 2026-10-26T07:06Z [claude] RG-199 SIDE-EFFECT @5d0f451: merged develop into fix/RG-199/Evaluation-labels (notes conflicts only), pushed; PR #226 (user asked)
+- 2026-10-26T07:17Z [claude] RG-200 SIDE-EFFECT @7700763: merged develop into feature/RG-200/Analytics-sql-filtering (notes conflicts only), pushed; PR #227 (user asked)
+- 2026-10-26T07:23Z [claude] RG-201 SIDE-EFFECT @573b45b: merged develop into feature/RG-201/Backend-cleanups (notes conflicts only), pushed; PR #228 (user asked)
+- 2026-10-26T07:49Z [claude] RG-202 SIDE-EFFECT @b194f45: merged develop into feature/RG-202/Evaluation-reminders (backend.md paragraphs kept, notes conflicts), pushed; PR #229 (user asked)
+- 2026-10-26T07:59Z [claude] RG-203 SIDE-EFFECT @757fb4c: merged develop into feature/RG-203/My-interviews-page (notes conflicts only), pushed; PR #230 (user asked)
+- 2026-10-26T09:23Z [claude] release SIDE-EFFECT @876cfa1: pushed release/2.1.0 (develop + prod merged, 59 conflicts to develop's version), opened PR #234 into prod, closed #232 (user asked)
+- 2026-10-26T09:43Z [claude] release SIDE-EFFECT @757fb4c: created issues #235-#247 from the 2.1.0 pre-release test (user asked)
+- 2026-10-28T07:41Z [claude] RG-235 CREATED @757fb4c: intake of issue #235 (question, no code); already assigned to @me; board move skipped (gh lacks read:project)
+- 2026-10-28T07:55Z [claude] RG-235 DECISION @757fb4c: keep EvaluationReminders:Enabled=true for first deploy (user confirmed)
+- 2026-10-28T07:55Z [claude] RG-235 DONE @757fb4c: decision recorded; appsettings.json default (true) already matches, no change needed
+- 2026-10-28T07:57Z [claude] RG-235 SIDE-EFFECT @757fb4c: posted decision comment on #235 and closed it (user confirmed)
+- 2026-10-28T09:14Z [claude] RG-236 CREATED @757fb4c: intake of issue #236 (bug); already assigned to @me; board move skipped (gh lacks read:project)
+- 2026-10-28T09:14Z [claude] RG-236 PHASE CLARIFY→PLAN @757fb4c: fast path, plan.md drafted, awaiting approval
+- 2026-10-28T09:39Z [claude] RG-236 BRANCH @fdeeec2: fix/RG-236/Damaged-pdf-upload-500 created off origin/develop (user confirmed)
+- 2026-10-28T09:39Z [claude] RG-236 PHASE PLAN→CONSTRUCT @fdeeec2: plan approved (go with recommendation)
+- 2026-10-28T09:44Z [claude] RG-236 DONE @fdeeec2: parser.Parse wrapped in try/catch, cleans up the stored file, 400 not 500; 960 backend tests; verified via real API
+- 2026-10-28T09:45Z [claude] RG-236 SIDE-EFFECT @231c40b: pushed fix/RG-236/Damaged-pdf-upload-500, opened PR #248 into develop (user confirmed)
+- 2026-10-29T09:11Z [claude] RG-237 CREATED @231c40b: intake of issue #237 (bug, UI); already assigned to @me; board move skipped (gh lacks read:project)
+- 2026-10-29T09:11Z [claude] RG-237 PHASE CLARIFY→PLAN @231c40b: fast path, plan.md drafted, awaiting approval
+- 2026-10-29T09:27Z [claude] RG-237 BRANCH @fdeeec2: fix/RG-237/Unknown-url-blank-page created off origin/develop (user confirmed)
+- 2026-10-29T09:27Z [claude] RG-237 PHASE PLAN→CONSTRUCT @fdeeec2: plan approved (go with recommendation)
+- 2026-10-29T09:33Z [claude] RG-237 DONE @fdeeec2: NotFoundPage + path="*" route inside ProtectedLayout; 392 client tests; verified signed-in+out in a running app
