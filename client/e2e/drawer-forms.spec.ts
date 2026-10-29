@@ -1,5 +1,5 @@
 import { expect, test, type APIRequestContext, type Page } from '@playwright/test';
-import { seedCandidate } from './seed';
+import { advanceToRecommended, seedCandidate } from './seed';
 
 /**
  * Guards the four forms moved from Dialog to Sheet in #85: add status, draft
@@ -17,7 +17,9 @@ import { seedCandidate } from './seed';
  *    goes back under the fold, on the drawer exactly as it did on the dialog.
  *
  * Add status and draft offer are candidate-scoped and the repo ships no
- * fixtures, so one candidate is seeded through the API and deleted in `finally`.
+ * fixtures, so one candidate is seeded through the API and deleted in `finally`. Draft offer only
+ * shows once a candidate reaches Recommended, Offer Preparation or Offer Declined (#193), so the
+ * seeded candidate is advanced there before the forms loop runs.
  */
 const email = process.env.E2E_ADMIN_EMAIL;
 const password = process.env.E2E_ADMIN_PASSWORD ?? process.env.DEMO_PASSWORD;
@@ -86,6 +88,7 @@ test.describe('converted form drawers', () => {
       test.setTimeout(120_000);
       const auth = await authHeader(request);
       const candidateId = await seedCandidate(request, auth, 'RG85 Form Probe');
+      await advanceToRecommended(request, auth, candidateId, email!);
 
       try {
         await signIn(page);
