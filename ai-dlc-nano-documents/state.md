@@ -1,9 +1,9 @@
 # AI-DLC Nano State
-- Active work item: work-items/RG-238
-- Phase: WRAP-UP
-- Branch: fix/RG-238/Drawer-forms-offer-stage
-- Base SHA: fdeeec2
-- Next step: user decides push + PR for RG-238 (#239 is next in order).
+- Active work item: none
+- Phase: —
+- Branch: —
+- Base SHA: —
+- Next step: user decides which issue to pick next (#240 is next in order).
 - Paused work items: none
-- Uncommitted code: yes
-- Last updated: 2026-10-29T11:05Z by claude
+- Uncommitted code: no
+- Last updated: 2026-10-29T11:35Z by claude
