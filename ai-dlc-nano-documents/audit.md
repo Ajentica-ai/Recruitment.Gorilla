@@ -679,3 +679,6 @@
 - 2026-10-29T09:33Z [claude] RG-237 DONE @fdeeec2: NotFoundPage + path="*" route inside ProtectedLayout; 392 client tests; verified signed-in+out in a running app
 - 2026-10-29T09:47Z [claude] RG-237 SIDE-EFFECT @8e6e20c: pushed fix/RG-237/Unknown-url-blank-page, opened PR #249 into develop (user confirmed)
 - 2026-10-29T10:58Z [claude] RG-238 CREATED @fdeeec2: E2E drawer-forms spec out of date after offer rules (#193)
+- 2026-10-29T10:58Z [claude] RG-238 BRANCH @fdeeec2: fix/RG-238/Drawer-forms-offer-stage created off origin/develop (user confirmed)
+- 2026-10-29T10:58Z [claude] RG-238 PHASE PLAN->CONSTRUCT @fdeeec2: plan and branch approved together (go with recommendation)
+- 2026-10-29T11:05Z [claude] RG-238 PHASE CONSTRUCT->WRAP-UP @fdeeec2: advanceToRecommended seed helper; drawer-forms red-then-green on isolated DB (3 pass); tsc+oxlint clean
