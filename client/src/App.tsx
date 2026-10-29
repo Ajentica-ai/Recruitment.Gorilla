@@ -18,6 +18,7 @@ import ChangePasswordPage from './pages/ChangePasswordPage';
 import UserGuidePage from './pages/UserGuidePage';
 import InterviewPage from './pages/InterviewPage';
 import MyInterviewsPage from './pages/MyInterviewsPage';
+import NotFoundPage from './pages/NotFoundPage';
 import AppShell from './components/shell/AppShell';
 
 /**
@@ -134,6 +135,9 @@ export default function App() {
             />
             <Route path="/change-password" element={<ChangePasswordPage />} />
             <Route path="/user-guide" element={<UserGuidePage />} />
+            {/* Last: any path none of the above matched. Still a child of ProtectedLayout, so a
+                signed-out visitor is redirected to /login first instead of seeing this (#237). */}
+            <Route path="*" element={<NotFoundPage />} />
           </Route>
         </Routes>
       </AuthProvider>

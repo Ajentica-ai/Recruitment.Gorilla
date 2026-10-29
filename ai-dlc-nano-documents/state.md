@@ -1,6 +1,6 @@
 # AI-DLC Nano State
-- Active work item: none
-- Phase: —
+- Active work item: work-items/RG-237
+- Phase: PLAN
 - Branch: —
 - Base SHA: —
 - Next step: user decides push + PR for RG-203.
