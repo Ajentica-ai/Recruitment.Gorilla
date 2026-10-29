@@ -48,6 +48,69 @@ export async function seedCandidate(
   }
 }
 
+/**
+ * Drives a seeded candidate from Uploaded to Recommended through the real status pipeline, so a
+ * spec can reach a stage (Recommended, Offer Preparation, Offer Declined) that only Uploaded and a
+ * few terminal statuses can be seeded into directly. Mirrors the setup `shared-with-me.spec.ts`
+ * does for its own candidate, but with a single interviewer, since one submitted evaluation is all
+ * Interview Completed requires.
+ */
+export async function advanceToRecommended(
+  request: APIRequestContext,
+  auth: Record<string, string>,
+  candidateId: number,
+  interviewerEmail: string,
+): Promise<void> {
+  const usersRes = await request.get('/api/interviews/assignable-users', { headers: auth });
+  expect(usersRes.ok(), `assignable-users failed: ${usersRes.status()}`).toBeTruthy();
+  const users = (await usersRes.json()) as { id: number; email: string }[];
+  const interviewer = users.find((u) => u.email.toLowerCase() === interviewerEmail.toLowerCase());
+  expect(interviewer, `${interviewerEmail} is not a valid active interviewer`).toBeTruthy();
+
+  await postStatus(request, auth, candidateId, { status: 'Call for Interview' });
+  await postStatus(request, auth, candidateId, {
+    status: 'Interview Scheduled',
+    interviewAt: new Date(Date.now() + 2 * 24 * 3600 * 1000).toISOString(),
+    interviewerUserIds: [interviewer!.id],
+    interviewDurationMinutes: 60,
+  });
+
+  const detail = await request.get(`/api/candidates/${candidateId}`, { headers: auth });
+  expect(detail.ok(), 'candidate detail failed').toBeTruthy();
+  const history = (await detail.json()).statusHistory as { status: string; interviewId?: number }[];
+  const interviewId = history.find((h) => h.status === 'Interview Scheduled' && h.interviewId)?.interviewId;
+  expect(interviewId, 'no interview id on the Interview Scheduled status entry').toBeTruthy();
+
+  const rubricRes = await request.get(`/api/evaluation-rubrics/for-interview/${interviewId}`, { headers: auth });
+  expect(rubricRes.ok(), 'rubric lookup failed').toBeTruthy();
+  const keys = ((await rubricRes.json()).criteria as { key: string }[]).map((k) => k.key);
+
+  const evalRes = await request.put(`/api/interviews/${interviewId}/evaluation`, {
+    headers: auth,
+    data: {
+      generalAssessment: 'Seeded by an e2e spec.',
+      recommendation: 'Recommended',
+      overallRating: 4,
+      items: keys.map((key) => ({ criterionKey: key, rating: 4, comment: null })),
+      submit: true,
+    },
+  });
+  expect(evalRes.ok(), `evaluation submit failed: ${evalRes.status()} ${await evalRes.text()}`).toBeTruthy();
+
+  await postStatus(request, auth, candidateId, { status: 'Interview Completed', comment: 'Seeded by an e2e spec.' });
+  await postStatus(request, auth, candidateId, { status: 'Recommended', comment: 'Seeded by an e2e spec.' });
+}
+
+async function postStatus(
+  request: APIRequestContext,
+  auth: Record<string, string>,
+  candidateId: number,
+  data: Record<string, unknown>,
+): Promise<void> {
+  const res = await request.post(`/api/candidates/${candidateId}/status`, { headers: auth, data });
+  expect(res.ok(), `status change to '${data.status}' failed: ${res.status()} ${await res.text()}`).toBeTruthy();
+}
+
 /** A CV draft as the upload endpoint returns it; only the fields the specs read. */
 export interface UploadedDraft {
   id: number;
