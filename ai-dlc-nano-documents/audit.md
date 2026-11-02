@@ -689,3 +689,9 @@
 - 2026-10-29T11:35Z [claude] RG-239 PHASE PLAN->CONSTRUCT @c7980b2: fast-path - plan approved, branch confirmed
 - 2026-10-29T11:35Z [claude] RG-239 PHASE CONSTRUCT->WRAP-UP @28924a5: tsc + oxlint clean; 1 file changed
 - 2026-10-29T11:35Z [claude] RG-239 DONE @28924a5: awaiting push + PR
+- 2026-10-29T11:38Z [claude] RG-239 SIDE-EFFECT @53e54bc: pushed branch + opened PR #251 into develop (user confirmed)
+- 2026-11-02T09:00Z [claude] RG-240 CREATED @53e54bc: issue #240 bug - edu/experience spec flaky on .profile-card timing
+- 2026-11-02T09:10Z [claude] RG-240 BRANCH @53e54bc: fix/RG-240/Edu-experience-spec-timing created off fix/RG-239 (user confirmed)
+- 2026-11-02T09:10Z [claude] RG-240 PHASE PLAN->CONSTRUCT @53e54bc: fast-path approved
+- 2026-11-02T09:10Z [claude] RG-240 PHASE CONSTRUCT->WRAP-UP @970696b: tsc + oxlint clean; 1 file, 8 ins / 2 del
+- 2026-11-02T09:10Z [claude] RG-240 DONE @970696b: awaiting push + PR
