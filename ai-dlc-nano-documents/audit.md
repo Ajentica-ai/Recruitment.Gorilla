@@ -709,3 +709,6 @@
 - 2026-11-02T09:50Z [claude] RG-242 DONE @602d43a: awaiting push + PR
 - 2026-11-02T09:55Z [claude] RG-242 SIDE-EFFECT @7151575: pushed branch + opened PR #254 into develop (user confirmed)
 - 2026-11-02T10:00Z [claude] RG-243 CREATED @7151575: issue #243 bug - toast Date.now() ids collide; duplicate React keys
+- 2026-11-02T11:28Z [claude] RG-244 CREATED @54c38dd: issue #244 improvements - clear build/lint/runtime warnings
+- 2026-11-02T12:37Z [claude] RG-244 BRANCH @54c38dd: feature/RG-244/Clear-warnings created off fix/RG-243 tip (develop blocked by uncommitted nano docs)
+- 2026-11-02T12:43Z [claude] RG-244 PHASE CONSTRUCT->WRAP-UP @7b86dd7: 0 warnings dotnet build, 0 warnings oxlint, 393/393 tests green
