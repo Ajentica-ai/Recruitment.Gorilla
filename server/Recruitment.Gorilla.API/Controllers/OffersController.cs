@@ -11,8 +11,7 @@ namespace Recruitment.Gorilla.API.Controllers;
 [Route("api")]
 public class OffersController(
     OfferService offerService,
-    CurrentUser currentUser,
-    ILogger<OffersController> logger) : ControllerBase
+    CurrentUser currentUser) : ControllerBase
 {
     private int? OwnerScope =>
         currentUser.IsInAnyRole(Roles.SuperAdmin, Roles.Admin) ? null : currentUser.UserId;

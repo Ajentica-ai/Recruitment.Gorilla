@@ -539,6 +539,7 @@ public class CandidateService(
         // Content-Type, and the size feeds the duplicate check).
         var upload = await db.CandidateDrafts
             .Where(d => d.StoredFileName == dto.StoredFileName)
+            .OrderBy(d => d.Id)
             .Select(d => new { d.OriginalFileName, d.FileType, d.FileSizeBytes, d.FileHash })
             .FirstOrDefaultAsync();
 

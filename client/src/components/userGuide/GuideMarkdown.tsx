@@ -68,9 +68,21 @@ export default function GuideMarkdown({
     h1: heading(1),
     h2: heading(2),
     h3: heading(3),
-    p: ({ children }) => (
-      <p className="my-3 leading-[var(--leading-normal)] text-foreground">{children}</p>
-    ),
+    p: ({ node, children }) => {
+      // react-markdown wraps inline images in <p>; our img renderer returns a
+      // <figure>, which is invalid inside <p>. Drop the wrapper when the only
+      // AST child is an img so the figure renders at block level instead.
+      const firstChild = node?.children?.[0];
+      if (
+        node?.children?.length === 1 &&
+        firstChild &&
+        'tagName' in firstChild &&
+        firstChild.tagName === 'img'
+      ) {
+        return <>{children}</>;
+      }
+      return <p className="my-3 leading-[var(--leading-normal)] text-foreground">{children}</p>;
+    },
     ul: ({ children }) => <ul className="my-3 list-disc space-y-1 pl-6">{children}</ul>,
     ol: ({ children }) => <ol className="my-3 list-decimal space-y-1 pl-6">{children}</ol>,
     li: ({ children }) => <li className="leading-[var(--leading-normal)]">{children}</li>,
