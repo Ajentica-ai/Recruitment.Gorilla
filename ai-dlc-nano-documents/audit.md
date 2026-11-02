@@ -701,3 +701,9 @@
 - 2026-11-02T09:30Z [claude] RG-241 PHASE PLAN->CONSTRUCT @10167fd: fast-path approved
 - 2026-11-02T09:30Z [claude] RG-241 PHASE CONSTRUCT->WRAP-UP @09eb00b: 2 tests pass in 4.2s; backlog entry RG-156 resolved
 - 2026-11-02T09:30Z [claude] RG-241 DONE @09eb00b: awaiting push + PR
+- 2026-11-02T09:35Z [claude] RG-241 SIDE-EFFECT @5d0f36b: pushed branch + opened PR #253 into develop (user confirmed)
+- 2026-11-02T09:40Z [claude] RG-242 CREATED @5d0f36b: issue #242 bug - missing candidate retries 3x before showing error (8-10s delay)
+- 2026-11-02T09:50Z [claude] RG-242 BRANCH @5d0f36b: fix/RG-242/No-retry-on-404-candidate created off fix/RG-241 (user confirmed)
+- 2026-11-02T09:50Z [claude] RG-242 PHASE PLAN->CONSTRUCT @5d0f36b: fast-path approved
+- 2026-11-02T09:50Z [claude] RG-242 PHASE CONSTRUCT->WRAP-UP @602d43a: new test 57ms; full suite 391/391 green
+- 2026-11-02T09:50Z [claude] RG-242 DONE @602d43a: awaiting push + PR
