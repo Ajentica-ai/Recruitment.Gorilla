@@ -707,3 +707,5 @@
 - 2026-11-02T09:50Z [claude] RG-242 PHASE PLAN->CONSTRUCT @5d0f36b: fast-path approved
 - 2026-11-02T09:50Z [claude] RG-242 PHASE CONSTRUCT->WRAP-UP @602d43a: new test 57ms; full suite 391/391 green
 - 2026-11-02T09:50Z [claude] RG-242 DONE @602d43a: awaiting push + PR
+- 2026-11-02T09:55Z [claude] RG-242 SIDE-EFFECT @7151575: pushed branch + opened PR #254 into develop (user confirmed)
+- 2026-11-02T10:00Z [claude] RG-243 CREATED @7151575: issue #243 bug - toast Date.now() ids collide; duplicate React keys
