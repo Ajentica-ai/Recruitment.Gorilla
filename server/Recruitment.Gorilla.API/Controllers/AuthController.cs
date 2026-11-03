@@ -23,9 +23,10 @@ public class AuthController(
         var check = await auth.CheckLoginAsync(dto.Email.Trim(), dto.Password);
         if (check.Status == LoginStatus.AccountInactive)
         {
-            logger.LogWarning("Login refused for inactive account '{Email}'.", dto.Email);
-            await audit.RecordAsync("Auth.LoginFailed", actorUserId: null, actorName: dto.Email,
-                summary: $"Login refused for inactive account '{dto.Email}'");
+            var safeEmail = SanitizeEmail(dto.Email);
+            logger.LogWarning("Login refused for inactive account '{Email}'.", safeEmail);
+            await audit.RecordAsync("Auth.LoginFailed", actorUserId: null, actorName: safeEmail,
+                summary: $"Login refused for inactive account '{safeEmail}'");
             return StatusCode(StatusCodes.Status403Forbidden, new
             {
                 code = "account_inactive",
@@ -36,9 +37,10 @@ public class AuthController(
         var user = check.User;
         if (user is null)
         {
-            logger.LogWarning("Failed login attempt for '{Email}'.", dto.Email);
-            await audit.RecordAsync("Auth.LoginFailed", actorUserId: null, actorName: dto.Email,
-                summary: $"Failed login for '{dto.Email}'");
+            var safeEmail = SanitizeEmail(dto.Email);
+            logger.LogWarning("Failed login attempt for '{Email}'.", safeEmail);
+            await audit.RecordAsync("Auth.LoginFailed", actorUserId: null, actorName: safeEmail,
+                summary: $"Failed login for '{safeEmail}'");
             return Unauthorized(new { message = "Invalid email or password." });
         }
 
@@ -105,6 +107,12 @@ public class AuthController(
                 BadRequest(new { message = "Current password is incorrect." }),
             _ => Unauthorized(),
         };
+    }
+
+    private static string SanitizeEmail(string email)
+    {
+        var s = new string(email.Where(c => c != '\r' && c != '\n' && c != '\t').ToArray());
+        return s.Length > 200 ? s[..200] : s;
     }
 
     private static AuthResultDto ToResult(TokenPair pair) => new(

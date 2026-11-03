@@ -315,6 +315,27 @@ public sealed class ApiFixture : IAsyncLifetime
     }
 
     /// <summary>
+    /// Returns the Summary of the most recent audit row for <paramref name="action"/>, polling up to ~5 s
+    /// for the background worker to flush it. Returns null if no row arrives in time.
+    /// </summary>
+    public async Task<string?> LatestAuditSummaryAsync(string action)
+    {
+        for (var attempt = 0; attempt < 50; attempt++)
+        {
+            using var scope = _factory.Services.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var summary = await db.AuditLogs
+                .Where(a => a.Action == action)
+                .OrderByDescending(a => a.Id)
+                .Select(a => a.Summary)
+                .FirstOrDefaultAsync();
+            if (summary is not null) return summary;
+            await Task.Delay(100);
+        }
+        return null;
+    }
+
+    /// <summary>
     /// True when an audit row for <paramref name="action"/> on this entity has a summary containing <paramref name="text"/>.
     /// Audit rows are written through a background queue, so this waits a few seconds for one to land.
     /// </summary>
