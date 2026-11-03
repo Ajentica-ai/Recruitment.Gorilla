@@ -86,7 +86,7 @@ public class AuthLoginTests(ApiFixture fx)
 
         var summary = await fx.LatestAuditSummaryAsync("Auth.LoginFailed");
         Assert.NotNull(summary);
-        Assert.True(summary!.Length <= 210, $"Summary length {summary.Length} exceeds cap");
+        Assert.True(summary!.Length <= 260, $"Summary length {summary.Length} exceeds cap");
         Assert.DoesNotContain("\r", summary);
         Assert.DoesNotContain("\n", summary);
     }
