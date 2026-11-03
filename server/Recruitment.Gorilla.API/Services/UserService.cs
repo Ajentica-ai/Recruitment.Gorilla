@@ -69,7 +69,8 @@ public class UserService(AppDbContext db, EmailService emailService)
         var newRoles = DistinctRoles(dto.Roles);
 
         // Protect the last active Super Admin from losing the role or being deactivated.
-        var wasActiveSuperAdmin = user.IsActive && user.Roles.Any(r => r.Role == Roles.SuperAdmin);
+        var wasActive = user.IsActive;
+        var wasActiveSuperAdmin = wasActive && user.Roles.Any(r => r.Role == Roles.SuperAdmin);
         var staysActiveSuperAdmin = dto.IsActive && newRoles.Contains(Roles.SuperAdmin);
         if (wasActiveSuperAdmin && !staysActiveSuperAdmin && await IsLastActiveSuperAdminAsync(id))
             return MutationResult.Fail("Cannot remove the last active Super Admin.");
@@ -84,6 +85,16 @@ public class UserService(AppDbContext db, EmailService emailService)
             user.Roles.Add(new UserRole { Role = role });
 
         await db.SaveChangesAsync();
+
+        // Revoke all active refresh tokens so a deactivated account cannot continue using them.
+        if (wasActive && !dto.IsActive)
+        {
+            var now = DateTime.UtcNow;
+            await db.RefreshTokens
+                .Where(t => t.Username == id.ToString() && t.RevokedAt == null)
+                .ExecuteUpdateAsync(s => s.SetProperty(t => t.RevokedAt, now));
+        }
+
         return MutationResult.Ok(ToDto(user));
     }
 

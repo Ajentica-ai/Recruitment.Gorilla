@@ -131,6 +131,27 @@ public class AuthServiceTests(MySqlDatabaseFixture fixture) : DbTestBase(fixture
     }
 
     [Fact]
+    public async Task Deactivate_via_UserService_immediately_revokes_all_refresh_tokens()
+    {
+        var user = SeedUser("pw");
+        var pair = await Auth().CreateTokenPairAsync(user);
+
+        // Confirm the token is active before deactivation.
+        Assert.True(await Db.RefreshTokens.AnyAsync(t => t.Username == user.Id.ToString() && t.RevokedAt == null));
+
+        var userService = new UserService(Db, TestEmail());
+        var dto = new Recruitment.Gorilla.API.DTOs.UpdateUserDto(user.Name, [Roles.Recruiter], false);
+        var result = await userService.UpdateAsync(user.Id, dto);
+
+        Assert.Null(result.Error);
+        // AsNoTracking bypasses EF's first-level cache so ExecuteUpdateAsync's direct SQL is visible.
+        var tokens = await Db.RefreshTokens.AsNoTracking()
+            .Where(t => t.Username == user.Id.ToString()).ToListAsync();
+        Assert.NotEmpty(tokens);
+        Assert.All(tokens, t => Assert.NotNull(t.RevokedAt));
+    }
+
+    [Fact]
     public async Task ChangePassword_updates_the_hash_or_reports_the_reason()
     {
         var user = SeedUser("old-pw");
