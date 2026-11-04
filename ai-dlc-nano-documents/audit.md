@@ -682,3 +682,10 @@
 - 2026-10-29T10:58Z [claude] RG-238 BRANCH @fdeeec2: fix/RG-238/Drawer-forms-offer-stage created off origin/develop (user confirmed)
 - 2026-10-29T10:58Z [claude] RG-238 PHASE PLAN->CONSTRUCT @fdeeec2: plan and branch approved together (go with recommendation)
 - 2026-10-29T11:05Z [claude] RG-238 PHASE CONSTRUCT->WRAP-UP @fdeeec2: advanceToRecommended seed helper; drawer-forms red-then-green on isolated DB (3 pass); tsc+oxlint clean
+- 2026-10-29T11:08Z [claude] RG-238 SIDE-EFFECT @c7980b2: pushed fix/RG-238/Drawer-forms-offer-stage, opened PR #250 into develop (user confirmed)
+- 2026-10-29T11:08Z [claude] RG-238 DONE @c7980b2: drawer-forms seeds to Recommended before Draft Offer; red-then-green on isolated DB; 3/3 pass
+- 2026-10-29T11:30Z [claude] RG-239 CREATED @c7980b2: issue #239 bug - kanban spec hardcodes localhost:5173 and admin credentials
+- 2026-10-29T11:35Z [claude] RG-239 BRANCH @c7980b2: fix/RG-239/Kanban-spec-hardcoded-env created off fix/RG-238 (user confirmed)
+- 2026-10-29T11:35Z [claude] RG-239 PHASE PLAN->CONSTRUCT @c7980b2: fast-path - plan approved, branch confirmed
+- 2026-10-29T11:35Z [claude] RG-239 PHASE CONSTRUCT->WRAP-UP @28924a5: tsc + oxlint clean; 1 file changed
+- 2026-10-29T11:35Z [claude] RG-239 DONE @28924a5: awaiting push + PR
