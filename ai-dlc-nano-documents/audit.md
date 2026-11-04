@@ -647,6 +647,9 @@
 - 2026-11-03T11:00Z [claude] RG-246 CREATED @fdeeec2: issue #246 bug - raw email in failed-login log
 - 2026-11-03T11:00Z [claude] RG-246 BRANCH @fdeeec2: fix/RG-246/Sanitize-failed-login-email created off develop (user confirmed)
 - 2026-11-03T11:10Z [claude] RG-246 DONE @fdeeec2: SanitizeEmail helper, 4 usages replaced, integration test; 958/958 pass
+- 2026-11-03T10:14Z [claude] RG-245 CREATED @210a147: issue #245 bug - deactivated user token keeps working
+- 2026-11-03T10:14Z [claude] RG-245 BRANCH @210a147: fix/RG-245/Revoke-tokens-on-deactivation created off develop (user confirmed)
+- 2026-11-03T10:25Z [claude] RG-245 PHASE CONSTRUCT @210a147: all 5 tasks done, 566/566 tests pass
 - 2026-10-22T17:47Z [claude] RG-203 SIDE-EFFECT @770a7b8: pushed feature/RG-203/My-interviews-page, opened PR #230 into develop (user confirmed)
 - 2026-10-23T10:19Z [claude] RG-188 SIDE-EFFECT @8f83fe0: merged develop into fix/RG-188/Rubric-lookup-by-job-opening (notes conflicts only), pushed; PR #215 now MERGEABLE (user asked)
 - 2026-10-23T16:51Z [claude] RG-189 SIDE-EFFECT @fb583e9: merged develop into fix/RG-189/Cancelled-interview-evaluation (InterviewService conflict resolved), pushed; PR #216 MERGEABLE (user asked)

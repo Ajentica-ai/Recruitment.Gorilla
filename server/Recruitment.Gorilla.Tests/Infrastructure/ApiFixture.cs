@@ -457,6 +457,28 @@ public sealed class ApiFixture : IAsyncLifetime
         return (offer.Status, offer.Candidate.CurrentStatus, audit);
     }
 
+    /// <summary>
+    /// Creates a new active user with the given role (committed) and returns their email and id.
+    /// Useful in tests that need a real login and then need to deactivate or assert on that user.
+    /// </summary>
+    public async Task<(string Email, int Id)> NewActiveUserAsync(string role = Roles.Recruiter)
+    {
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var user = new User
+        {
+            Name = $"{role}-{Guid.NewGuid():N}",
+            Email = $"{role.ToLowerInvariant()}-{Guid.NewGuid():N}@test.local",
+            PasswordHash = PasswordHasher.Hash(Password),
+            MustChangePassword = false,
+            IsActive = true,
+            Roles = [new UserRole { Role = role }],
+        };
+        db.Users.Add(user);
+        await db.SaveChangesAsync();
+        return (user.Email, user.Id);
+    }
+
     /// <summary>Inserts an offer in the given status (committed) and returns its id.</summary>
     public async Task<int> NewOfferAsync(int candidateId, string status = "Draft")
     {
