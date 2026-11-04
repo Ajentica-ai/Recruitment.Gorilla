@@ -644,6 +644,9 @@
 - 2026-10-22T17:21Z [claude] RG-203 BRANCH @3062074: feature/RG-203/My-interviews-page created off origin/develop (user confirmed)
 - 2026-10-22T17:21Z [claude] RG-203 PHASE PLAN→CONSTRUCT @3062074: plan approved (go with recommendation)
 - 2026-10-22T17:27Z [claude] RG-203 DONE @3062074: GET /api/interviews/mine/history + My interviews page; 710 backend, client ok (known flaky date-picker); no browser/security-agent run
+- 2026-11-03T11:00Z [claude] RG-246 CREATED @fdeeec2: issue #246 bug - raw email in failed-login log
+- 2026-11-03T11:00Z [claude] RG-246 BRANCH @fdeeec2: fix/RG-246/Sanitize-failed-login-email created off develop (user confirmed)
+- 2026-11-03T11:10Z [claude] RG-246 DONE @fdeeec2: SanitizeEmail helper, 4 usages replaced, integration test; 958/958 pass
 - 2026-11-03T10:14Z [claude] RG-245 CREATED @210a147: issue #245 bug - deactivated user token keeps working
 - 2026-11-03T10:14Z [claude] RG-245 BRANCH @210a147: fix/RG-245/Revoke-tokens-on-deactivation created off develop (user confirmed)
 - 2026-11-03T10:25Z [claude] RG-245 PHASE CONSTRUCT @210a147: all 5 tasks done, 566/566 tests pass

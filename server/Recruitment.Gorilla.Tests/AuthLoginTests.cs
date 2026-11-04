@@ -74,4 +74,20 @@ public class AuthLoginTests(ApiFixture fx)
 
         Assert.Equal(fx.AdminId, body.GetProperty("userId").GetInt32());
     }
+
+    [Fact]
+    public async Task Failed_login_with_injected_crlf_and_long_email_produces_sanitized_audit_entry()
+    {
+        // Craft an email that would forge a second log line and exceed any reasonable column size.
+        var malicious = "attacker@bad.com\r\nINJECTED LINE" + new string('a', 5000);
+
+        var (resp, _) = await Login(malicious, "wrong-password");
+        Assert.Equal(HttpStatusCode.Unauthorized, resp.StatusCode);
+
+        var summary = await fx.LatestAuditSummaryAsync("Auth.LoginFailed");
+        Assert.NotNull(summary);
+        Assert.True(summary!.Length <= 260, $"Summary length {summary.Length} exceeds cap");
+        Assert.DoesNotContain("\r", summary);
+        Assert.DoesNotContain("\n", summary);
+    }
 }
