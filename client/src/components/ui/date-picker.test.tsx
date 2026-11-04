@@ -7,7 +7,9 @@ import { render, screen } from '@testing-library/react';
  * mid-session, so it isn't re-read per render. Testing both branches means
  * setting the UA before the module is evaluated, then resetting the module
  * registry so the next import re-reads it. The first dynamic import after a
- * reset re-transforms the module graph, so this is given a longer timeout.
+ * reset re-transforms the module graph. That re-transform is cheap in
+ * isolation (~3–4 s) but can stall under full-suite CPU saturation, so both
+ * tests carry a generous timeout.
  */
 const FIREFOX_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:133.0) Gecko/20100101 Firefox/133.0';
 const CHROME_UA =
@@ -29,12 +31,12 @@ describe('DatePicker', () => {
   it('shows the custom calendar button on a non-Firefox browser', async () => {
     await renderWithUserAgent(CHROME_UA);
     expect(screen.getByRole('button', { name: 'Open calendar' })).toBeInTheDocument();
-  }, 15000);
+  }, 30000);
 
   it("hides the custom button on Firefox, since its own native icon can't be suppressed", async () => {
     const { container } = await renderWithUserAgent(FIREFOX_UA);
     expect(screen.queryByRole('button', { name: 'Open calendar' })).not.toBeInTheDocument();
     // The native date input itself is still there; typing still works.
     expect(container.querySelector('input[type="date"]')).toBeInTheDocument();
-  }, 15000);
+  }, 30000);
 });

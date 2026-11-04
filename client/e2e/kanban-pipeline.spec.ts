@@ -1,19 +1,15 @@
 import { test, expect } from '@playwright/test';
-import { shotPath } from './helpers';
+import { ADMIN, shotPath, signIn } from './helpers';
 
 test.describe('Visual Recruitment Pipeline (Dual-Mode Kanban Board)', () => {
+  test.skip(!ADMIN.email || !ADMIN.password, 'Set E2E_ADMIN_EMAIL and E2E_ADMIN_PASSWORD.');
+
   test('toggle between Table and Kanban Board, verify columns, stagnant alert, and modal', async ({ page }) => {
     // 1. Login
-    await page.goto('http://localhost:5173/login');
-    await page.fill('input[type="email"], input[name="email"]', 'admin@recruitmentgorilla.com');
-    await page.fill('input[type="password"], input[name="password"]', 'admin');
-    await page.click('button[type="submit"]');
-    await page.waitForURL((url) => !url.pathname.includes('/login'), { timeout: 10000 });
+    await signIn(page, ADMIN);
 
     // 2. Go to /candidates
-    if (!page.url().includes('/candidates')) {
-      await page.goto('http://localhost:5173/candidates');
-    }
+    await page.goto('/candidates');
     await page.waitForSelector('.data-toolbar');
     await page.screenshot({ path: shotPath('01_candidates_table_view.png') });
 

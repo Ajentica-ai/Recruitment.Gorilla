@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils';
 type ToastVariant = 'success' | 'danger' | 'warning' | 'info';
 
 interface ToastItem {
-  id: number;
+  id: string;
   message: string;
   variant: ToastVariant;
 }
@@ -48,13 +48,13 @@ const VARIANT: Record<ToastVariant, { className: string; Icon: typeof Info }> = 
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<ToastItem[]>([]);
 
-  const remove = useCallback((id: number) => {
+  const remove = useCallback((id: string) => {
     setToasts((ts) => ts.filter((t) => t.id !== id));
   }, []);
 
   const addToast = useCallback(
     (message: string, variant: ToastVariant = 'success') => {
-      const id = Date.now();
+      const id = crypto.randomUUID();
       setToasts((ts) => [...ts, { id, message, variant }]);
       setTimeout(() => remove(id), 4000);
     },

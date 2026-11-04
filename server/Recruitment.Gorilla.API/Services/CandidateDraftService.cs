@@ -432,7 +432,7 @@ public class CandidateDraftService(
 
         var candidate = new Candidate
         {
-            FullName = fullName,
+            FullName = fullName!,
             Email = email,
             Phone = (dto.Phone ?? draft.Phone)?.Trim(),
             CurrentTitle = (dto.CurrentTitle ?? draft.CurrentTitle)?.Trim(),
