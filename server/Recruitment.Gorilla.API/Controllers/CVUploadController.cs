@@ -65,7 +65,27 @@ public class CVUploadController(
         var (storedName, fileType) = (stored.StoredFileName, stored.FileType);
         var fullPath = UploadPaths.Resolve(env.ContentRootPath, storedName)!;
 
-        var parsed = parser.Parse(fullPath, fileType);
+        ParsedCVResult parsed;
+        try
+        {
+            parsed = parser.Parse(fullPath, fileType);
+        }
+        catch (Exception ex)
+        {
+            // The signature check only confirms the file starts like a PDF or a zip; the content itself can still be
+            // damaged or (for a PDF) encrypted, which the parser discovers only once it tries to open it. Whatever it
+            // throws (PdfPig and the Open XML packaging layer use their own, unrelated exception types) is the same
+            // problem to the caller: this file cannot be read. Nothing has been persisted yet, so only the file
+            // already written to disk needs cleaning up (#236).
+            intake.Delete(storedName);
+            var unreadableMessage = fileType == "PDF"
+                ? "This PDF could not be read. It may be damaged or password-protected."
+                : "This Word document could not be read. It may be damaged or password-protected.";
+            logger.LogWarning(ex, "Rejected upload '{FileName}': could not be parsed as {FileType}.", file.FileName, fileType);
+            await progressNotifier.NotifyProgressAsync(currentUser.UserId?.ToString(), bId, new CVUploadProgressEvent(
+                bId, idx, total, file.FileName, "error", 0, null, unreadableMessage));
+            return BadRequest(unreadableMessage);
+        }
         var name = parsed.Name;
 
         var (fallbackName, fallbackTitle) = CVParserService.ParseNameAndTitleFromFileName(file.FileName);
