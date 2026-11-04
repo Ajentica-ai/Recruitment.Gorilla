@@ -10,7 +10,7 @@ namespace Recruitment.Gorilla.Tests;
 /// <summary>AuditService: recording an event and querying (filter, date range, order, paging).</summary>
 public class AuditServiceTests(MySqlDatabaseFixture fixture) : DbTestBase(fixture)
 {
-    private AuditService Audit() =>
+    private AuditService MakeAudit() =>
         new(Db, new CurrentUser(new HttpContextAccessor()), NullLogger<AuditService>.Instance);
 
     private void SeedLog(string action, string? entityType, int? entityId, DateTime timestamp, int? actorUserId = 1)
@@ -26,7 +26,7 @@ public class AuditServiceTests(MySqlDatabaseFixture fixture) : DbTestBase(fixtur
     [Fact]
     public async Task Record_writes_a_row_with_actor_and_fields()
     {
-        await Audit().RecordAsync("Candidate.Deleted", actorUserId: 7, actorName: "Alice",
+        await MakeAudit().RecordAsync("Candidate.Deleted", actorUserId: 7, actorName: "Alice",
             entityType: "Candidate", entityId: 44, summary: "Deleted candidate #44", details: "{\"x\":1}");
 
         var row = await Db.AuditLogs.SingleAsync(a => a.Action == "Candidate.Deleted");
@@ -45,7 +45,7 @@ public class AuditServiceTests(MySqlDatabaseFixture fixture) : DbTestBase(fixtur
         SeedLog("Role.Created", "Role", 2, now.AddMinutes(-2));
         SeedLog("Candidate.Deleted", "Candidate", 1, now.AddMinutes(-1)); // newest candidate event
 
-        var result = await Audit().QueryAsync(null, "Candidate", null, null, null, null, page: 1, pageSize: 50);
+        var result = await MakeAudit().QueryAsync(null, "Candidate", null, null, null, null, page: 1, pageSize: 50);
 
         Assert.Equal(2, result.TotalCount);
         Assert.All(result.Items, i => Assert.Equal("Candidate", i.EntityType));
@@ -59,7 +59,7 @@ public class AuditServiceTests(MySqlDatabaseFixture fixture) : DbTestBase(fixtur
         SeedLog("Auth.Login", "User", 1, now.AddDays(-10));
         SeedLog("Auth.LoginFailed", null, null, now.AddMinutes(-5));
 
-        var recentFailures = await Audit().QueryAsync(
+        var recentFailures = await MakeAudit().QueryAsync(
             null, null, null, "Failed", from: now.AddDays(-1), to: null, page: 1, pageSize: 50);
 
         Assert.Single(recentFailures.Items);
@@ -72,8 +72,8 @@ public class AuditServiceTests(MySqlDatabaseFixture fixture) : DbTestBase(fixtur
         var now = DateTime.UtcNow;
         for (var i = 0; i < 5; i++) SeedLog("Test.Event", "Thing", i, now.AddMinutes(-i));
 
-        var pageOne = await Audit().QueryAsync(null, "Thing", null, null, null, null, page: 1, pageSize: 2);
-        var pageTwo = await Audit().QueryAsync(null, "Thing", null, null, null, null, page: 2, pageSize: 2);
+        var pageOne = await MakeAudit().QueryAsync(null, "Thing", null, null, null, null, page: 1, pageSize: 2);
+        var pageTwo = await MakeAudit().QueryAsync(null, "Thing", null, null, null, null, page: 2, pageSize: 2);
 
         Assert.Equal(5, pageOne.TotalCount);
         Assert.Equal(2, pageOne.Items.Count);

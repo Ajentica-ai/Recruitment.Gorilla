@@ -647,3 +647,71 @@
 - 2026-11-03T11:00Z [claude] RG-246 CREATED @fdeeec2: issue #246 bug - raw email in failed-login log
 - 2026-11-03T11:00Z [claude] RG-246 BRANCH @fdeeec2: fix/RG-246/Sanitize-failed-login-email created off develop (user confirmed)
 - 2026-11-03T11:10Z [claude] RG-246 DONE @fdeeec2: SanitizeEmail helper, 4 usages replaced, integration test; 958/958 pass
+- 2026-10-22T17:47Z [claude] RG-203 SIDE-EFFECT @770a7b8: pushed feature/RG-203/My-interviews-page, opened PR #230 into develop (user confirmed)
+- 2026-10-23T10:19Z [claude] RG-188 SIDE-EFFECT @8f83fe0: merged develop into fix/RG-188/Rubric-lookup-by-job-opening (notes conflicts only), pushed; PR #215 now MERGEABLE (user asked)
+- 2026-10-23T16:51Z [claude] RG-189 SIDE-EFFECT @fb583e9: merged develop into fix/RG-189/Cancelled-interview-evaluation (InterviewService conflict resolved), pushed; PR #216 MERGEABLE (user asked)
+- 2026-10-24T14:00Z [claude] RG-190 SIDE-EFFECT @25881fc: merged develop into fix/RG-190/Custom-rubric-ratings-in-report (notes conflicts only), pushed; PR #217 MERGEABLE (user asked)
+- 2026-10-25T18:06Z [claude] RG-191 SIDE-EFFECT @f4ddedf: merged develop into fix/RG-191/Unsavable-evaluation-draft (notes conflicts only), pushed; PR #218 MERGEABLE (user asked)
+- 2026-10-26T05:52Z [claude] RG-192 SIDE-EFFECT @43d215a: merged develop into fix/RG-192/Offer-state-machine (notes conflicts only), pushed; PR #219 MERGEABLE (user asked)
+- 2026-10-26T06:04Z [claude] RG-193 SIDE-EFFECT @d322d44: merged develop into fix/RG-193/Offer-status-rules-and-lock (notes conflicts only; #219 had merged), pushed; PR #220 (user asked)
+- 2026-10-26T06:10Z [claude] RG-194 SIDE-EFFECT @64de865: merged develop into fix/RG-194/Offer-url-candidate-check (audit conflict only; #220 had merged), pushed; PR #221 (user asked)
+- 2026-10-26T06:27Z [claude] RG-195 SIDE-EFFECT @f6dce0c: merged develop into fix/RG-195/Candidate-list-filters (kept RG-195 and RG-196 tests side by side), pushed; PR #222 (user asked)
+- 2026-10-26T06:43Z [claude] RG-197 SIDE-EFFECT @d6432a5: merged develop into fix/RG-197/Offer-input-validation (notes conflicts only; #221 had merged), pushed; PR #224 (user asked)
+- 2026-10-26T06:57Z [claude] RG-198 SIDE-EFFECT @21b6cba: merged develop into fix/RG-198/Dead-end-links (notes conflicts only), pushed; PR #225 (user asked)
+- 2026-10-26T07:06Z [claude] RG-199 SIDE-EFFECT @5d0f451: merged develop into fix/RG-199/Evaluation-labels (notes conflicts only), pushed; PR #226 (user asked)
+- 2026-10-26T07:17Z [claude] RG-200 SIDE-EFFECT @7700763: merged develop into feature/RG-200/Analytics-sql-filtering (notes conflicts only), pushed; PR #227 (user asked)
+- 2026-10-26T07:23Z [claude] RG-201 SIDE-EFFECT @573b45b: merged develop into feature/RG-201/Backend-cleanups (notes conflicts only), pushed; PR #228 (user asked)
+- 2026-10-26T07:49Z [claude] RG-202 SIDE-EFFECT @b194f45: merged develop into feature/RG-202/Evaluation-reminders (backend.md paragraphs kept, notes conflicts), pushed; PR #229 (user asked)
+- 2026-10-26T07:59Z [claude] RG-203 SIDE-EFFECT @757fb4c: merged develop into feature/RG-203/My-interviews-page (notes conflicts only), pushed; PR #230 (user asked)
+- 2026-10-26T09:23Z [claude] release SIDE-EFFECT @876cfa1: pushed release/2.1.0 (develop + prod merged, 59 conflicts to develop's version), opened PR #234 into prod, closed #232 (user asked)
+- 2026-10-26T09:43Z [claude] release SIDE-EFFECT @757fb4c: created issues #235-#247 from the 2.1.0 pre-release test (user asked)
+- 2026-10-28T07:41Z [claude] RG-235 CREATED @757fb4c: intake of issue #235 (question, no code); already assigned to @me; board move skipped (gh lacks read:project)
+- 2026-10-28T07:55Z [claude] RG-235 DECISION @757fb4c: keep EvaluationReminders:Enabled=true for first deploy (user confirmed)
+- 2026-10-28T07:55Z [claude] RG-235 DONE @757fb4c: decision recorded; appsettings.json default (true) already matches, no change needed
+- 2026-10-28T07:57Z [claude] RG-235 SIDE-EFFECT @757fb4c: posted decision comment on #235 and closed it (user confirmed)
+- 2026-10-28T09:14Z [claude] RG-236 CREATED @757fb4c: intake of issue #236 (bug); already assigned to @me; board move skipped (gh lacks read:project)
+- 2026-10-28T09:14Z [claude] RG-236 PHASE CLARIFY→PLAN @757fb4c: fast path, plan.md drafted, awaiting approval
+- 2026-10-28T09:39Z [claude] RG-236 BRANCH @fdeeec2: fix/RG-236/Damaged-pdf-upload-500 created off origin/develop (user confirmed)
+- 2026-10-28T09:39Z [claude] RG-236 PHASE PLAN→CONSTRUCT @fdeeec2: plan approved (go with recommendation)
+- 2026-10-28T09:44Z [claude] RG-236 DONE @fdeeec2: parser.Parse wrapped in try/catch, cleans up the stored file, 400 not 500; 960 backend tests; verified via real API
+- 2026-10-28T09:45Z [claude] RG-236 SIDE-EFFECT @231c40b: pushed fix/RG-236/Damaged-pdf-upload-500, opened PR #248 into develop (user confirmed)
+- 2026-10-29T09:11Z [claude] RG-237 CREATED @231c40b: intake of issue #237 (bug, UI); already assigned to @me; board move skipped (gh lacks read:project)
+- 2026-10-29T09:11Z [claude] RG-237 PHASE CLARIFY→PLAN @231c40b: fast path, plan.md drafted, awaiting approval
+- 2026-10-29T09:27Z [claude] RG-237 BRANCH @fdeeec2: fix/RG-237/Unknown-url-blank-page created off origin/develop (user confirmed)
+- 2026-10-29T09:27Z [claude] RG-237 PHASE PLAN→CONSTRUCT @fdeeec2: plan approved (go with recommendation)
+- 2026-10-29T09:33Z [claude] RG-237 DONE @fdeeec2: NotFoundPage + path="*" route inside ProtectedLayout; 392 client tests; verified signed-in+out in a running app
+- 2026-10-29T09:47Z [claude] RG-237 SIDE-EFFECT @8e6e20c: pushed fix/RG-237/Unknown-url-blank-page, opened PR #249 into develop (user confirmed)
+- 2026-10-29T10:58Z [claude] RG-238 CREATED @fdeeec2: E2E drawer-forms spec out of date after offer rules (#193)
+- 2026-10-29T10:58Z [claude] RG-238 BRANCH @fdeeec2: fix/RG-238/Drawer-forms-offer-stage created off origin/develop (user confirmed)
+- 2026-10-29T10:58Z [claude] RG-238 PHASE PLAN->CONSTRUCT @fdeeec2: plan and branch approved together (go with recommendation)
+- 2026-10-29T11:05Z [claude] RG-238 PHASE CONSTRUCT->WRAP-UP @fdeeec2: advanceToRecommended seed helper; drawer-forms red-then-green on isolated DB (3 pass); tsc+oxlint clean
+- 2026-10-29T11:08Z [claude] RG-238 SIDE-EFFECT @c7980b2: pushed fix/RG-238/Drawer-forms-offer-stage, opened PR #250 into develop (user confirmed)
+- 2026-10-29T11:08Z [claude] RG-238 DONE @c7980b2: drawer-forms seeds to Recommended before Draft Offer; red-then-green on isolated DB; 3/3 pass
+- 2026-10-29T11:30Z [claude] RG-239 CREATED @c7980b2: issue #239 bug - kanban spec hardcodes localhost:5173 and admin credentials
+- 2026-10-29T11:35Z [claude] RG-239 BRANCH @c7980b2: fix/RG-239/Kanban-spec-hardcoded-env created off fix/RG-238 (user confirmed)
+- 2026-10-29T11:35Z [claude] RG-239 PHASE PLAN->CONSTRUCT @c7980b2: fast-path - plan approved, branch confirmed
+- 2026-10-29T11:35Z [claude] RG-239 PHASE CONSTRUCT->WRAP-UP @28924a5: tsc + oxlint clean; 1 file changed
+- 2026-10-29T11:35Z [claude] RG-239 DONE @28924a5: awaiting push + PR
+- 2026-10-29T11:38Z [claude] RG-239 SIDE-EFFECT @53e54bc: pushed branch + opened PR #251 into develop (user confirmed)
+- 2026-11-02T09:00Z [claude] RG-240 CREATED @53e54bc: issue #240 bug - edu/experience spec flaky on .profile-card timing
+- 2026-11-02T09:10Z [claude] RG-240 BRANCH @53e54bc: fix/RG-240/Edu-experience-spec-timing created off fix/RG-239 (user confirmed)
+- 2026-11-02T09:10Z [claude] RG-240 PHASE PLAN->CONSTRUCT @53e54bc: fast-path approved
+- 2026-11-02T09:10Z [claude] RG-240 PHASE CONSTRUCT->WRAP-UP @970696b: tsc + oxlint clean; 1 file, 8 ins / 2 del
+- 2026-11-02T09:10Z [claude] RG-240 DONE @970696b: awaiting push + PR
+- 2026-11-02T09:15Z [claude] RG-240 SIDE-EFFECT @10167fd: pushed branch + opened PR #252 into develop (user confirmed)
+- 2026-11-02T09:20Z [claude] RG-241 CREATED @10167fd: issue #241 bug - date-picker test timeouts under full-suite load; backlog RG-156 folded in
+- 2026-11-02T09:30Z [claude] RG-241 BRANCH @10167fd: fix/RG-241/Datepicker-test-timeout created off fix/RG-240 (user confirmed)
+- 2026-11-02T09:30Z [claude] RG-241 PHASE PLAN->CONSTRUCT @10167fd: fast-path approved
+- 2026-11-02T09:30Z [claude] RG-241 PHASE CONSTRUCT->WRAP-UP @09eb00b: 2 tests pass in 4.2s; backlog entry RG-156 resolved
+- 2026-11-02T09:30Z [claude] RG-241 DONE @09eb00b: awaiting push + PR
+- 2026-11-02T09:35Z [claude] RG-241 SIDE-EFFECT @5d0f36b: pushed branch + opened PR #253 into develop (user confirmed)
+- 2026-11-02T09:40Z [claude] RG-242 CREATED @5d0f36b: issue #242 bug - missing candidate retries 3x before showing error (8-10s delay)
+- 2026-11-02T09:50Z [claude] RG-242 BRANCH @5d0f36b: fix/RG-242/No-retry-on-404-candidate created off fix/RG-241 (user confirmed)
+- 2026-11-02T09:50Z [claude] RG-242 PHASE PLAN->CONSTRUCT @5d0f36b: fast-path approved
+- 2026-11-02T09:50Z [claude] RG-242 PHASE CONSTRUCT->WRAP-UP @602d43a: new test 57ms; full suite 391/391 green
+- 2026-11-02T09:50Z [claude] RG-242 DONE @602d43a: awaiting push + PR
+- 2026-11-02T09:55Z [claude] RG-242 SIDE-EFFECT @7151575: pushed branch + opened PR #254 into develop (user confirmed)
+- 2026-11-02T10:00Z [claude] RG-243 CREATED @7151575: issue #243 bug - toast Date.now() ids collide; duplicate React keys
+- 2026-11-02T11:28Z [claude] RG-244 CREATED @54c38dd: issue #244 improvements - clear build/lint/runtime warnings
+- 2026-11-02T12:37Z [claude] RG-244 BRANCH @54c38dd: feature/RG-244/Clear-warnings created off fix/RG-243 tip (develop blocked by uncommitted nano docs)
+- 2026-11-02T12:43Z [claude] RG-244 PHASE CONSTRUCT->WRAP-UP @7b86dd7: 0 warnings dotnet build, 0 warnings oxlint, 393/393 tests green

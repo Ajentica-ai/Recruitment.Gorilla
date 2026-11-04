@@ -250,6 +250,23 @@ public sealed class ApiFixture : IAsyncLifetime
         if (path is not null && File.Exists(path)) File.Delete(path);
     }
 
+    /// <summary>The names currently on disk in the test run's Uploads folder (#236): a before/after diff proves a
+    /// rejected upload leaves nothing behind, without needing to know the random name it would have been given.</summary>
+    public HashSet<string> UploadedFileNames()
+    {
+        var env = _factory.Services.GetRequiredService<IWebHostEnvironment>();
+        var dir = Path.Combine(env.ContentRootPath, UploadPaths.FolderName);
+        return Directory.Exists(dir) ? new HashSet<string>(Directory.GetFiles(dir).Select(Path.GetFileName)!) : [];
+    }
+
+    /// <summary>How many candidate drafts exist for a batch (#236): zero means a rejected upload wrote no row.</summary>
+    public async Task<int> CandidateDraftCountAsync(string batchId)
+    {
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        return await db.CandidateDrafts.CountAsync(d => d.BatchId == batchId);
+    }
+
     /// <summary>
     /// A one-page PDF carrying a single line of text that PdfPig can read. Unique text gives a unique
     /// hash, so the duplicate-CV check never trips across tests. Mirrors minimalPdf in client/e2e/seed.ts.
