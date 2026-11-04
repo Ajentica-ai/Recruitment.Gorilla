@@ -144,10 +144,16 @@ test.describe('End-to-End Candidate Education, Experience & Coding Profiles Test
     const candidateId = resJson.candidateId;
     expect(candidateId).toBeGreaterThan(0);
 
-    // 13. Navigate directly to the newly created Candidate Detail profile view
+    // 13. Navigate directly to the newly created Candidate Detail profile view.
+    // Start listening before goto so the response is captured regardless of timing.
+    const profileLoaded = page.waitForResponse(
+      (r) => r.url().includes(`/api/candidates/${candidateId}`) && r.status() === 200,
+      { timeout: 15000 },
+    );
     await page.goto(`/candidates/${candidateId}`);
+    await profileLoaded;
     await expect(page).toHaveURL(`/candidates/${candidateId}`);
-    await page.waitForSelector('.profile-card', { timeout: 15000 });
+    await page.waitForSelector('.profile-card', { timeout: 5000 });
 
     // Verify Coding Profile Links
     await expect(page.locator('.profile-links a:has-text("LeetCode")')).toBeVisible();
