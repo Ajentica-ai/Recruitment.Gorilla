@@ -206,9 +206,10 @@ public class OfferStateMachineTests(MySqlDatabaseFixture fixture) : DbTestBase(f
     {
         var (candidate, admin) = await DeclinedAfterRejectionAsync();
         var newVersion = await NewVersionAsync(candidate, admin);
+        Assert.NotNull(newVersion);
 
         var ex = await Assert.ThrowsAsync<OfferStateException>(() =>
-            Offers().ExtendOfferAsync(newVersion!.Id, newVersion.CandidateId, admin.Id, admin.Name, null));
+            Offers().ExtendOfferAsync(newVersion.Id, newVersion.CandidateId, admin.Id, admin.Name, null));
 
         Assert.Contains("rejected", ex.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Equal("Draft", (await Db.Offers.AsNoTracking().SingleAsync(o => o.Id == newVersion.Id)).Status);
@@ -434,18 +435,20 @@ public class OfferStateMachineApiTests(ApiFixture fx)
             var edit = fx.SendAsync(HttpMethod.Put, Url(candidateId, offerId), token, new { baseSalary = 777777 });
             var extend = fx.SendAsync(HttpMethod.Post, Url(candidateId, offerId, "/extend"), token);
             await Task.WhenAll(edit, extend);
+            var editStatus = (await edit).StatusCode;
+            var extendStatus = (await extend).StatusCode;
 
             var stored = await fx.SendAsync(HttpMethod.Get, Url(candidateId, offerId), token);
             var body = await stored.Content.ReadAsStringAsync();
             using var doc = System.Text.Json.JsonDocument.Parse(body);
             var status = doc.RootElement.GetProperty("status").GetString();
             var salary = doc.RootElement.GetProperty("baseSalary").GetDecimal();
-            if (extend.Result.StatusCode == HttpStatusCode.OK && edit.Result.StatusCode != HttpStatusCode.OK)
+            if (extendStatus == HttpStatusCode.OK && editStatus != HttpStatusCode.OK)
                 Assert.Equal(90000, salary); // extended first: the edit was refused and nothing was overwritten
-            if (status == "Extended" && edit.Result.StatusCode != HttpStatusCode.OK)
+            if (status == "Extended" && editStatus != HttpStatusCode.OK)
                 Assert.Equal(90000, salary);
             // Whatever the order, a refusal is a 409, never a 500.
-            Assert.DoesNotContain(HttpStatusCode.InternalServerError, new[] { edit.Result.StatusCode, extend.Result.StatusCode });
+            Assert.DoesNotContain(HttpStatusCode.InternalServerError, new[] { editStatus, extendStatus });
         }
     }
 

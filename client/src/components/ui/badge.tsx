@@ -59,4 +59,5 @@ function Badge({
  */
 export type BadgeVariant = VariantProps<typeof badgeVariants>['variant'];
 
+// eslint-disable-next-line react-refresh/only-export-components
 export { Badge, badgeVariants };

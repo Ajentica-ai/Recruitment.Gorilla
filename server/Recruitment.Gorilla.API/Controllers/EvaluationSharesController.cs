@@ -50,7 +50,7 @@ public class EvaluationSharesController(
         if (currentUser.UserId is not int actorId) return Unauthorized();
         if (!await CanSeeCandidateAsync(candidateId)) return NotFound();
 
-        var (result, error) = await shares.CreateAsync(candidateId, dto, actorId, currentUser.Name);
+        var (result, error) = await shares.CreateAsync(candidateId, dto, actorId, currentUser.Name ?? string.Empty);
         if (result is null) return BadRequest(error);
 
         logger.LogInformation(
@@ -65,7 +65,7 @@ public class EvaluationSharesController(
         if (currentUser.UserId is not int actorId) return Unauthorized();
         if (!await CanSeeCandidateAsync(candidateId)) return NotFound();
 
-        var outcome = await shares.RevokeAsync(candidateId, shareId, actorId, currentUser.Name);
+        var outcome = await shares.RevokeAsync(candidateId, shareId, actorId, currentUser.Name ?? string.Empty);
         return outcome switch
         {
             RevokeShareResult.NotFound => NotFound(),

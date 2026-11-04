@@ -1,9 +1,9 @@
 # AI-DLC Nano State
-- Active work item: none
-- Phase: —
-- Branch: —
-- Base SHA: —
-- Next step: user decides which issue to pick next (#244 is next in order).
+- Active work item: work-items/RG-244
+- Phase: WRAP-UP
+- Branch: feature/RG-244/Clear-warnings
+- Base SHA: 54c38dd
+- Next step: user decides push + PR
 - Paused work items: none
 - Uncommitted code: no
-- Last updated: 2026-11-02T10:10Z by claude
+- Last updated: 2026-11-02T10:40Z by claude

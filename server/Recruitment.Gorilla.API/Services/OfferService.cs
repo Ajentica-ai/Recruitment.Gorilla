@@ -13,8 +13,7 @@ public class OfferService(
     AppDbContext db,
     CandidateService candidateService,
     NotificationService notificationService,
-    AuditService audit,
-    ILogger<OfferService> logger)
+    AuditService audit)
 {
     static OfferService()
     {

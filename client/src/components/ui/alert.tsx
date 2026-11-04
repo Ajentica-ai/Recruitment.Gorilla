@@ -49,4 +49,5 @@ function AlertDescription({ className, ...props }: React.ComponentProps<'div'>) 
   return <div data-slot="alert-description" className={cn('min-w-0', className)} {...props} />;
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export { Alert, AlertTitle, AlertDescription, alertVariants };

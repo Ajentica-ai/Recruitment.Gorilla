@@ -35,7 +35,8 @@ if (string.IsNullOrWhiteSpace(connStr))
         "or environment variables.");
 
 builder.Services.AddDbContext<AppDbContext>(opt =>
-    opt.UseMySql(connStr, ServerVersion.AutoDetect(connStr)));
+    opt.UseMySql(connStr, ServerVersion.AutoDetect(connStr),
+        mySql => mySql.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery)));
 
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<CandidateService>();
