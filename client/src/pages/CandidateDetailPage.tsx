@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { isAxiosError } from 'axios';
 import { ChevronLeft, ClipboardList, FileText, History, Pencil, Plus, Trash2 } from 'lucide-react';
 import {
   deleteCandidate,
@@ -109,6 +110,8 @@ export default function CandidateDetailPage() {
     queryKey: ['candidate', candidateId],
     queryFn: () => getCandidate(candidateId),
     enabled: Number.isFinite(candidateId),
+    retry: (failureCount, error) =>
+      !(isAxiosError(error) && error.response?.status === 404) && failureCount < 3,
   });
 
   const deleteMutation = useMutation({
