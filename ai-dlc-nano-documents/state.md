@@ -3,7 +3,7 @@
 - Phase: —
 - Branch: —
 - Base SHA: —
-- Next step: user decides push + PR for RG-236 (#237 is next in order).
+- Next step: user decides push + PR for RG-237 (#238 is next in order).
 - Paused work items: none
 - Uncommitted code: no
-- Last updated: 2026-10-22T09:00Z by claude
+- Last updated: 2026-10-29T09:11Z by claude
