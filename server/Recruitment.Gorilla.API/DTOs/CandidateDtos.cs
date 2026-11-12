@@ -13,7 +13,9 @@ public record CandidateExperienceDto(
     string JobTitle,
     string Company,
     string? Duration,
-    string? Description
+    string? Description,
+    string? StartMonth = null,
+    string? EndMonth = null
 );
 
 public record CVDraftDto(

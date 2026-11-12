@@ -12,6 +12,22 @@ export interface CandidateExperience {
   company: string;
   duration?: string | null;
   description?: string | null;
+  /** Inclusive "yyyy-MM". Read from the CV; cleared when the reviewer retypes the dates. */
+  startMonth?: string | null;
+  /** Inclusive "yyyy-MM". Null with a startMonth means the role is ongoing. */
+  endMonth?: string | null;
+}
+
+/** One role as the experience estimate sees it: only the dates matter. */
+export interface ExperienceEstimateItem {
+  duration?: string | null;
+  startMonth?: string | null;
+  endMonth?: string | null;
+}
+
+export interface ExperienceEstimateResult {
+  /** One of the Relevant Experience presets, or null when no role has usable dates. */
+  relevantExperience: string | null;
 }
 
 export interface CVDraft {

@@ -24,7 +24,7 @@ public class CandidateImportService(
 {
     /// <summary>The relevant-experience presets the review form offers; keep in step with
     /// EXPERIENCE_PRESETS in client/src/components/drafts/DraftReviewWorkspace.tsx.</summary>
-    public static readonly string[] ExperiencePresets = ["< 1 Year", "1-2 Years", "3-5 Years", "5-8 Years", "8+ Years"];
+    public static readonly string[] ExperiencePresets = ["< 1 Year", "1-2 Years", "2-3 Years", "3-5 Years", "5-8 Years", "8+ Years"];
 
     /// <summary>Accepts what the template allows a person or an AI to write: comments, trailing commas, any
     /// key casing, and numbers where text is expected.</summary>

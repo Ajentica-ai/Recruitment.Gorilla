@@ -539,4 +539,26 @@ public class ControllerAuthorizationTests(ApiFixture fx)
 
         Assert.True(found, "expected a Candidate.Deleted audit row for the deleted candidate");
     }
+
+    // ---- Re-estimate relevant experience from roles: CanWriteCandidate (Interviewer excluded) ----
+
+    [Theory]
+    [InlineData("SuperAdmin", HttpStatusCode.OK)]
+    [InlineData("Admin", HttpStatusCode.OK)]
+    [InlineData("Recruiter", HttpStatusCode.OK)]
+    [InlineData("Interviewer", HttpStatusCode.Forbidden)]
+    public async Task Estimate_draft_experience(string role, HttpStatusCode expected)
+    {
+        var resp = await fx.SendAsync(HttpMethod.Post, "/api/candidate-drafts/estimate-experience",
+            await TokenFor(role), new { experiences = Array.Empty<object>() });
+        Assert.Equal(expected, resp.StatusCode);
+    }
+
+    [Fact]
+    public async Task Estimate_draft_experience_rejects_anonymous_callers()
+    {
+        var resp = await fx.SendAsync(HttpMethod.Post, "/api/candidate-drafts/estimate-experience",
+            token: null, new { experiences = Array.Empty<object>() });
+        Assert.Equal(HttpStatusCode.Unauthorized, resp.StatusCode);
+    }
 }
