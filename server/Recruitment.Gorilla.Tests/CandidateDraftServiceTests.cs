@@ -70,6 +70,38 @@ public class CandidateDraftServiceTests(MySqlDatabaseFixture fixture) : DbTestBa
     }
 
     [Fact]
+    public async Task Parsed_experience_months_survive_the_draft_round_trip_and_an_empty_title_is_kept()
+    {
+        var service = AsAdmin();
+        var draft = await service.CreateDraftAsync(
+            "gap.pdf", $"stored_gap_{Guid.NewGuid():N}.pdf", "PDF", 1000, "batch_gap", null,
+            "Gap Candidate", "gap@test.com", null, null, null, null, null,
+            experiences:
+            [
+                new ParsedExperience("Engineer", "Alpha", "Jan 2015 - Mar 2017", null, "2015-01", "2017-03"),
+                new ParsedExperience("", "", "Jun 2023 - Present", null, "2023-06", null),
+            ]);
+
+        var loaded = await service.GetDraftByIdAsync(draft.Id);
+
+        Assert.NotNull(loaded?.Experiences);
+        Assert.Collection(loaded.Experiences,
+            e =>
+            {
+                Assert.Equal("Engineer", e.JobTitle);
+                Assert.Equal("2015-01", e.StartMonth);
+                Assert.Equal("2017-03", e.EndMonth);
+            },
+            e =>
+            {
+                Assert.Equal("", e.JobTitle);
+                Assert.Equal("", e.Company);
+                Assert.Equal("2023-06", e.StartMonth);
+                Assert.Null(e.EndMonth);
+            });
+    }
+
+    [Fact]
     public async Task ApproveDraft_creates_candidate_and_links_cvfile()
     {
         var service = AsAdmin();

@@ -74,6 +74,8 @@ import type {
   DraftsFilterParams,
   PagedDraftsResult,
   UpdateCandidateDraftRequest,
+  ExperienceEstimateItem,
+  ExperienceEstimateResult,
   ApproveCandidateDraftRequest,
   BulkApproveDraftsRequest,
   BulkDiscardDraftsRequest,
@@ -299,6 +301,13 @@ export const updateCandidateDraft = async (
   payload: UpdateCandidateDraftRequest
 ): Promise<CandidateDraft> => {
   const { data } = await api.put<CandidateDraft>(`/candidate-drafts/${id}`, payload);
+  return data;
+};
+
+export const estimateDraftExperience = async (
+  experiences: ExperienceEstimateItem[]
+): Promise<ExperienceEstimateResult> => {
+  const { data } = await api.post<ExperienceEstimateResult>('/candidate-drafts/estimate-experience', { experiences });
   return data;
 };
 
