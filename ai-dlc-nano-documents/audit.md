@@ -718,3 +718,11 @@
 - 2026-11-02T11:28Z [claude] RG-244 CREATED @54c38dd: issue #244 improvements - clear build/lint/runtime warnings
 - 2026-11-02T12:37Z [claude] RG-244 BRANCH @54c38dd: feature/RG-244/Clear-warnings created off fix/RG-243 tip (develop blocked by uncommitted nano docs)
 - 2026-11-02T12:43Z [claude] RG-244 PHASE CONSTRUCT->WRAP-UP @7b86dd7: 0 warnings dotnet build, 0 warnings oxlint, 393/393 tests green
+- 2026-11-17T10:01Z [claude] RG-261 CREATED @f685d24: issue #261 toast dark-mode transparency (bug, already assigned to user)
+- 2026-11-17T10:01Z [claude] RG-261 PHASE CLARIFY→PLAN @f685d24: plan drafted, awaiting approval and branch
+- 2026-11-17T10:01Z [claude] RG-261 SIDE-EFFECT @f685d24: board status NOT moved (gh token lacks read:project); assignee already set
+- 2026-11-17T10:13Z [claude] RG-261 BRANCH @d63670d: fix/RG-261/Toast-dark-mode-background created off origin/develop (user confirmed)
+- 2026-11-17T10:13Z [claude] RG-261 DECISION @d63670d: plan approved; hover/focus pause and longer error toast included (user confirmed)
+- 2026-11-17T10:13Z [claude] RG-261 PHASE PLAN→CONSTRUCT @d63670d: plan approved
+- 2026-11-17T10:16Z [claude] RG-261 PHASE CONSTRUCT→WRAP-UP @d63670d: tests 403 pass, tsc/oxlint clean, contrast >=5.2:1 all variants, screenshots ok
+- 2026-11-17T10:16Z [claude] RG-261 DONE @d63670d: opaque toast surface, accent bar, hover/focus pause, 10s error; uncommitted
