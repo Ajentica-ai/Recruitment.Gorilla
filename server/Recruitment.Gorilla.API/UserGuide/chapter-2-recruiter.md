@@ -186,6 +186,13 @@ overall rating, the recommendations and the average per criterion. Use **Print**
   invite, people added to the panel get the usual assignment message, and anyone removed is told
   they are off it. The timeline then shows the new date with a quiet "Rescheduled from ..." line
   beneath it.
+  **Recruiters and Super Admins** can also pick a time that has already passed, for example to
+  record that the interview really happened earlier than booked. A reason is required, the form
+  says "This time is in the past. Invites will not be sent.", and the time cannot be before the
+  candidate was added or before the status the interview follows. Nobody is emailed and no
+  calendar invite goes out; the interviewers only get an in-app notice. The timeline marks the
+  move **Back-dated** with who did it and why. Admins still pick future times only. Booking the
+  interview from **Add Status** follows the same rule, and the Comment is the reason.
 - **Cancel interview** asks for a reason, tells the panel, and returns the candidate to
   **Call for Interview** so you can book a fresh one from there. The cancelled interview stays in
   the history, struck through, with the reason.

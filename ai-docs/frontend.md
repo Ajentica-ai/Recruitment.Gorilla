@@ -538,3 +538,5 @@ The `.docx`/PDF flows and auth need the backend running; see [dev-setup.md](dev-
 The Admin+ interview page hides reschedule and cancel controls when the candidate's applied job
 opening has closed. The candidate detail page uses the same `roleClosed` rule, and the API applies
 the lock to both writes.
+
+**Back-dated interviews (#263).** `RescheduleInterviewModal` and `AddStatusModal` read the role with `useOptionalAuth()`: a Recruiter or Super Admin may pick a time that has passed (the note "This time is in the past. Invites will not be sent." appears and a reason is required: the Reason field on reschedule, the Comment on Add Status), anyone else keeps the future-only error. Messages and the past check live in `lib/backdating.ts`. `StatusTimeline` shows a `RescheduledBackdated` move as "Back-dated ... Moved to a past time from ..." and a booking made for a past time with its reason. The server enforces all of it.

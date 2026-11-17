@@ -718,3 +718,12 @@
 - 2026-11-02T11:28Z [claude] RG-244 CREATED @54c38dd: issue #244 improvements - clear build/lint/runtime warnings
 - 2026-11-02T12:37Z [claude] RG-244 BRANCH @54c38dd: feature/RG-244/Clear-warnings created off fix/RG-243 tip (develop blocked by uncommitted nano docs)
 - 2026-11-02T12:43Z [claude] RG-244 PHASE CONSTRUCT->WRAP-UP @7b86dd7: 0 warnings dotnet build, 0 warnings oxlint, 393/393 tests green
+- 2026-11-17T10:41Z [claude] RG-263 CREATED @33417dd: issue #263 back-dated reschedule (feature, already assigned to user)
+- 2026-11-17T10:41Z [claude] RG-263 PHASE CLARIFY→PLAN @33417dd: plan drafted; awaiting approval, branch and assumptions
+- 2026-11-17T10:41Z [claude] RG-263 SIDE-EFFECT @33417dd: board status NOT moved (gh token lacks read:project); assignee already set
+- 2026-11-17T10:45Z [claude] RG-263 BRANCH @d63670d: feature/RG-263/Backdated-interview-reschedule created off origin/develop (user confirmed)
+- 2026-11-17T10:45Z [claude] RG-263 DECISION @d63670d: plan and assumptions approved (Recruiter/SuperAdmin; Comment as reason on Add Status)
+- 2026-11-17T10:45Z [claude] RG-263 PHASE PLAN→CONSTRUCT @d63670d: plan approved
+- 2026-11-17T10:58Z [claude] RG-263 PHASE CONSTRUCT→WRAP-UP @d63670d: dotnet 985 + vitest 405 pass, tsc/oxlint clean, browser check ok on scratch DB (dropped)
+- 2026-11-17T10:58Z [claude] RG-263 DONE @d63670d: back-dated reschedule/booking for Recruiter+SuperAdmin; uncommitted
+- 2026-11-17T12:24Z [claude] RG-263 REVISED @d63670d: reschedule intro no longer promises an email for a past time; thorough scratch test 46 API + 23 UI passed

@@ -389,6 +389,17 @@ public sealed class ApiFixture : IAsyncLifetime
         return interview.Id;
     }
 
+    /// <summary>Moves a candidate's creation and every status entry back to <paramref name="when"/> (committed), so a past interview time is not before they were added.</summary>
+    public async Task AgeCandidateAsync(int candidateId, DateTime when)
+    {
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var candidate = await db.Candidates.Include(c => c.StatusHistories).FirstAsync(c => c.Id == candidateId);
+        candidate.CreatedAt = when;
+        foreach (var h in candidate.StatusHistories) h.ChangedAt = when;
+        await db.SaveChangesAsync();
+    }
+
     /// <summary>Inserts one interviewer's evaluation (submitted or a draft) on an interview (committed).</summary>
     public async Task AddEvaluationAsync(int interviewId, int userId, bool submitted, int overallRating = 4)
     {

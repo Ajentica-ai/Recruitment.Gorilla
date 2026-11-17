@@ -24,6 +24,8 @@ import {
   rescheduleInterview,
 } from '../services/api';
 import { DURATION_OPTIONS } from '@/lib/interviewOptions';
+import { FUTURE_ONLY_ERROR, PAST_REASON_ERROR, PAST_TIME_NOTE, isPastTime } from '@/lib/backdating';
+import { useOptionalAuth } from '../auth/AuthContext';
 
 const Req = () => (
   <span className="text-[var(--danger-text)]" aria-hidden="true">
@@ -34,6 +36,7 @@ const Req = () => (
 interface RescheduleFieldErrors {
   scheduledAt?: string;
   interviewers?: string;
+  reason?: string;
 }
 
 /** Datetime-local shape the DatePicker expects, from the ISO string the API returns. */
@@ -68,6 +71,9 @@ export default function RescheduleInterviewModal({
 }: RescheduleInterviewModalProps) {
   const queryClient = useQueryClient();
   const { addToast } = useToast();
+  // A Recruiter or Super Admin may move a booking to a time that has passed (#263); anyone else may not.
+  const auth = useOptionalAuth();
+  const canBackdate = auth?.hasAnyRole('SuperAdmin', 'Recruiter') ?? false;
 
   const [scheduledAt, setScheduledAt] = useState('');
   const [durationMinutes, setDurationMinutes] = useState(60);
@@ -157,8 +163,10 @@ export default function RescheduleInterviewModal({
     e.preventDefault();
     const errs: RescheduleFieldErrors = {};
     if (!scheduledAt) errs.scheduledAt = 'Interview date/time is required.';
-    else if (new Date(scheduledAt).getTime() <= Date.now())
-      errs.scheduledAt = 'Pick a time in the future.';
+    else if (isPastTime(scheduledAt)) {
+      if (!canBackdate) errs.scheduledAt = FUTURE_ONLY_ERROR;
+      else if (!reason.trim()) errs.reason = PAST_REASON_ERROR;
+    }
     if (interviewerIds.length === 0) errs.interviewers = 'Select at least one interviewer.';
     if (Object.keys(errs).length > 0) {
       setFieldErrors(errs);
@@ -168,6 +176,7 @@ export default function RescheduleInterviewModal({
   };
 
   const blocked = schedule?.hasSubmittedEvaluation === true;
+  const backdating = canBackdate && isPastTime(scheduledAt);
 
   return (
     <Sheet open={show} onOpenChange={(open) => { if (!open) { handleHide(); } }}>
@@ -180,8 +189,9 @@ export default function RescheduleInterviewModal({
           </SheetHeader>
           <SheetBody>
             <p className="form-help mb-6">
-              Moves this booking. The candidate stays at Interview Scheduled, and everyone affected
-              is emailed an updated calendar invite.
+              {backdating
+                ? 'Moves this booking. The candidate stays at Interview Scheduled. Nothing is emailed for a time in the past; the interviewers get an in-app notice.'
+                : 'Moves this booking. The candidate stays at Interview Scheduled, and everyone affected is emailed an updated calendar invite.'}
             </p>
 
             {isLoading && (
@@ -212,6 +222,9 @@ export default function RescheduleInterviewModal({
                     }}
                     aria-invalid={!!fieldErrors.scheduledAt || undefined}
                   />
+                  {backdating ? (
+                    <p className="form-help mt-1">{PAST_TIME_NOTE}</p>
+                  ) : null}
                   {fieldErrors.scheduledAt ? (
                     <p className="text-[length:var(--text-sm)] text-[var(--danger-text)]">
                       {fieldErrors.scheduledAt}
@@ -294,13 +307,26 @@ export default function RescheduleInterviewModal({
                 </div>
 
                 <div className="col-span-12 md:col-span-12">
-                  <Label className="mb-1">Reason for the change</Label>
+                  <Label className="mb-1">
+                    Reason for the change {backdating && <Req />}
+                  </Label>
                   <Textarea
                     rows={2}
-                    placeholder="Optional — included in the email to the interviewers"
+                    placeholder={
+                      backdating
+                        ? 'Why is this time in the past? (required)'
+                        : 'Optional, included in the email to the interviewers'
+                    }
                     value={reason}
-                    onChange={(e) => setReason(e.target.value)}
+                    onChange={(e) => {
+                      setReason(e.target.value);
+                      clearFE('reason');
+                    }}
+                    aria-invalid={!!fieldErrors.reason || undefined}
                   />
+                  {fieldErrors.reason ? (
+                    <p className="text-[length:var(--text-sm)] text-[var(--danger-text)]">{fieldErrors.reason}</p>
+                  ) : null}
                 </div>
               </div>
             )}

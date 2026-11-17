@@ -257,7 +257,8 @@ public class CandidatesController(
         if (await candidateService.GetCurrentStatusIfAccessibleAsync(id, WriteOwnerScope) is null)
             return NotFound();
 
-        var validationError = await candidateService.ValidateStatusChangeAsync(id, dto);
+        var validationError = await candidateService.ValidateStatusChangeAsync(
+            id, dto, canBackdate: currentUser.IsInAnyRole(Roles.SuperAdmin, Roles.Recruiter));
         if (validationError is not null)
             return BadRequest(validationError);
 

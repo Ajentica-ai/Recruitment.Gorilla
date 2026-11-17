@@ -19,9 +19,17 @@ vi.mock('../services/api', () => ({
   getEvaluationShareOptions: vi.fn(),
 }));
 
+// Who is signed in decides whether a past interview time is allowed (#263). No provider means an Admin-like user.
+const auth = vi.hoisted(() => ({ roles: null as string[] | null }));
+vi.mock('../auth/AuthContext', () => ({
+  useOptionalAuth: () =>
+    auth.roles === null ? undefined : { hasAnyRole: (...want: string[]) => want.some((r) => auth.roles!.includes(r)) },
+}));
+
 describe('AddStatusModal', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    auth.roles = null;
     vi.mocked(getEvaluationShareOptions).mockResolvedValue({ interviews: [], users: [], earlierRoundsWithEvaluations: 0 });
     vi.mocked(getNextStatusOptions).mockResolvedValue([
       { id: 9, name: 'Recommended', sortOrder: 11, isInitial: false },
@@ -149,6 +157,62 @@ describe('AddStatusModal', () => {
 
       await waitFor(() => expect(addStatus).toHaveBeenCalledTimes(1));
       expect(vi.mocked(addStatus).mock.calls[0][1]).toMatchObject({ shareEarlierRoundsWithPanel: true });
+    });
+  });
+
+  describe('booking an interview for a time in the past (#263)', () => {
+    beforeEach(() => {
+      vi.mocked(getAssignableUsers).mockResolvedValue([{ id: 11, name: 'Ivy Interviewer', email: 'ivy@test.local' }]);
+    });
+
+    const fillBooking = async (container: HTMLElement, date: string) => {
+      const input = container.ownerDocument.querySelector('input[type="date"]') as HTMLInputElement;
+      fireEvent.change(input, { target: { value: date } });
+      fireEvent.focus(await screen.findByPlaceholderText('Search users to assign…'));
+      fireEvent.mouseDown(await screen.findByRole('option', { name: /Ivy Interviewer/ }));
+    };
+
+    const open = () =>
+      renderWithProviders(
+        <AddStatusModal candidateId={42} initialStatus="Interview Scheduled" show onHide={vi.fn()} onAdded={vi.fn()} />,
+      );
+
+    it('refuses it for an Admin with the future-only message', async () => {
+      auth.roles = ['Admin'];
+      const { container } = open();
+      await fillBooking(container, '2020-01-15');
+
+      await userEvent.click(screen.getByRole('button', { name: /save status/i }));
+
+      expect(await screen.findByText('Pick a time in the future.')).toBeInTheDocument();
+      expect(addStatus).not.toHaveBeenCalled();
+    });
+
+    it.each([['Recruiter'], ['SuperAdmin']])('lets a %s do it with the note, once the comment gives a reason', async (role) => {
+      auth.roles = [role];
+      const { container } = open();
+      await fillBooking(container, '2020-01-15');
+      expect(screen.getByText('This time is in the past. Invites will not be sent.')).toBeInTheDocument();
+
+      await userEvent.click(screen.getByRole('button', { name: /save status/i }));
+      expect(await screen.findByText('A reason is required when the time is in the past.')).toBeInTheDocument();
+      expect(addStatus).not.toHaveBeenCalled();
+
+      await userEvent.type(screen.getByPlaceholderText(/why is this time in the past/i), 'Held by phone, entered late');
+      await userEvent.click(screen.getByRole('button', { name: /save status/i }));
+
+      await waitFor(() => expect(addStatus).toHaveBeenCalledTimes(1));
+      expect(vi.mocked(addStatus).mock.calls[0][1]).toMatchObject({
+        status: 'Interview Scheduled', comment: 'Held by phone, entered late',
+      });
+    });
+
+    it('shows no note for a future time', async () => {
+      auth.roles = ['Recruiter'];
+      const { container } = open();
+      await fillBooking(container, '2031-06-01');
+
+      expect(screen.queryByText(/Invites will not be sent/)).not.toBeInTheDocument();
     });
   });
 });
