@@ -25,6 +25,7 @@ import {
   previewCvFile,
 } from '../services/api';
 import { StatusBadge } from './StatusBadge';
+import ExperienceDescription from './ExperienceDescription';
 import { skillColorClass } from '../utils/skillColors';
 import { externalUrl } from '../utils/externalUrl';
 import CvPreviewDialog, { type CvPreview } from './CvPreviewDialog';
@@ -138,6 +139,9 @@ function ContactTile({ icon, label, value, href, allowCopy = false }: ContactTil
     </div>
   );
 }
+
+// A leading "Languages:" style label on a free-text skill ("Languages: C#" is the skill C#).
+const CATEGORY_LABEL = /^[A-Za-z][A-Za-z /&+]{0,30}:s*/;
 
 interface Props {
   candidate: CandidateDetail;
@@ -399,7 +403,7 @@ export default function ReadOnlyCandidateProfile({
     if (candidate.skills && candidate.skills.trim()) {
       return candidate.skills
         .split(/[,•|;\n]/)
-        .map((s) => s.trim())
+        .map((s) => s.trim().replace(CATEGORY_LABEL, ''))
         .filter((s) => s.length > 0);
     }
     return [];
@@ -959,7 +963,7 @@ export default function ReadOnlyCandidateProfile({
                   <div className="education-card__header">
                     <div className="flex items-center gap-2 min-w-0">
                       <GraduationCap size={15} className="education-card__icon shrink-0" />
-                      <span className="education-card__degree truncate">
+                      <span className="education-card__degree truncate" title={edu.degree}>
                         {edu.degree}
                       </span>
                     </div>
@@ -1001,7 +1005,7 @@ export default function ReadOnlyCandidateProfile({
                   <div className="experience-card__header">
                     <div className="flex items-center gap-2 min-w-0">
                       <Building2 size={15} className="experience-card__icon shrink-0" />
-                      <span className="experience-card__title truncate">
+                      <span className="experience-card__title truncate" title={exp.jobTitle}>
                         {exp.jobTitle}
                       </span>
                     </div>
@@ -1014,11 +1018,7 @@ export default function ReadOnlyCandidateProfile({
                   <div className="experience-card__company">
                     {exp.company}
                   </div>
-                  {exp.description && (
-                    <div className="experience-card__description">
-                      {exp.description}
-                    </div>
-                  )}
+                  <ExperienceDescription text={exp.description} />
                 </div>
               ))}
             </div>

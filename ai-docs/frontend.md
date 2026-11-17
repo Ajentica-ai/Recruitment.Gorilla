@@ -538,3 +538,5 @@ The `.docx`/PDF flows and auth need the backend running; see [dev-setup.md](dev-
 The Admin+ interview page hides reschedule and cancel controls when the candidate's applied job
 opening has closed. The candidate detail page uses the same `roleClosed` rule, and the API applies
 the lock to both writes.
+
+**Work-experience descriptions (#262, `components/ExperienceDescription.tsx`):** `ReadOnlyCandidateProfile` renders an experience description through `ExperienceDescription`: lines that start with a bullet glyph (`•●▪‣◦·`) or `-`/`*`/en dash plus a space become a real `<ul>`, other lines stay separate paragraphs, a blank description renders nothing. The wrapper uses the `.experience-card__desc` class (the markup used to say `__description`, which had no CSS, so newlines collapsed). Job titles and degrees keep `truncate` but carry a `title` tooltip with the full text. Free-text skills drop a leading label (`Languages: C#` gives the chip `C#`). Server-side joining of hard-wrapped CV lines in `ParseExperienceLines` is deferred until PR #302 (same parser file) merges.
