@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { renderWithProviders } from '../test/renderWithProviders';
 import { getActiveRoleOptions, uploadCV } from '../services/api';
 import type { RoleAppliedOption } from '../types';
+import { readScanText } from '../lib/cvOcr/scanText';
 import BulkUploader from './BulkUploader';
 
 const openRole: RoleAppliedOption = {
@@ -28,6 +29,8 @@ vi.mock('../services/api', () => ({
   uploadCV: vi.fn(),
   getActiveRoleOptions: vi.fn().mockResolvedValue([]),
 }));
+
+vi.mock('../lib/cvOcr/scanText', () => ({ readScanText: vi.fn().mockResolvedValue(null) }));
 
 vi.mock('../services/signalr', () => ({
   startCVUploadHub: vi.fn().mockResolvedValue({
@@ -117,5 +120,44 @@ describe('BulkUploader', () => {
     expect(await screen.findByText(/Skipped 1 duplicate CV that has already been uploaded: jane\.pdf/i)).toBeInTheDocument();
     expect(screen.queryByText(/Could not parse/i)).not.toBeInTheDocument();
     expect(handleParsed).not.toHaveBeenCalled();
+  });
+
+  it('sends the OCR text of a scanned PDF with the upload and shows the OCR status', async () => {
+    vi.mocked(getActiveRoleOptions).mockResolvedValueOnce([openRole]);
+    let release: (v: unknown) => void = () => {};
+    vi.mocked(readScanText).mockImplementationOnce(async (_file, opts) => {
+      opts?.onOcrStart?.();
+      await new Promise((r) => (release = r));
+      return 'Jane Doe jane@example.com';
+    });
+    vi.mocked(uploadCV).mockResolvedValueOnce({ id: 1, fullName: 'Jane Doe', readFromScan: true } as never);
+    const callsBefore = vi.mocked(uploadCV).mock.calls.length;
+    const { container } = renderWithProviders(<BulkUploader onDraftsParsed={vi.fn()} />);
+
+    await screen.findByRole('option', { name: 'Backend Engineer' });
+    await userEvent.selectOptions(screen.getByLabelText(/Target Job Opening/i), 'Backend Engineer');
+    const input = container.querySelector('input[type="file"]') as HTMLInputElement;
+    await userEvent.upload(input, new File(['cv'], 'scan.pdf', { type: 'application/pdf' }));
+
+    expect(await screen.findByText(/Reading scan \(OCR\)/i)).toBeInTheDocument();
+    release(undefined);
+    await vi.waitFor(() => expect(uploadCV).toHaveBeenCalledTimes(callsBefore + 1));
+    expect(vi.mocked(uploadCV).mock.calls.at(-1)?.[6]).toBe('Jane Doe jane@example.com');
+  });
+
+  it('uploads normally with no OCR text when the PDF already has text or OCR fails', async () => {
+    vi.mocked(getActiveRoleOptions).mockResolvedValueOnce([openRole]);
+    vi.mocked(readScanText).mockResolvedValueOnce(null);
+    vi.mocked(uploadCV).mockResolvedValueOnce({ id: 2, fullName: 'Sam' } as never);
+    const callsBefore = vi.mocked(uploadCV).mock.calls.length;
+    const { container } = renderWithProviders(<BulkUploader onDraftsParsed={vi.fn()} />);
+
+    await screen.findByRole('option', { name: 'Backend Engineer' });
+    await userEvent.selectOptions(screen.getByLabelText(/Target Job Opening/i), 'Backend Engineer');
+    const input = container.querySelector('input[type="file"]') as HTMLInputElement;
+    await userEvent.upload(input, new File(['cv'], 'text.pdf', { type: 'application/pdf' }));
+
+    await vi.waitFor(() => expect(uploadCV).toHaveBeenCalledTimes(callsBefore + 1));
+    expect(vi.mocked(uploadCV).mock.calls.at(-1)?.[6]).toBeUndefined();
   });
 });

@@ -3,6 +3,7 @@ import { useDropzone } from 'react-dropzone';
 import { useQuery } from '@tanstack/react-query';
 import { CheckCircle2, Copy, FileText, UploadCloud, XCircle } from 'lucide-react';
 import { getActiveRoleOptions, uploadCV } from '../services/api';
+import { readScanText } from '../lib/cvOcr/scanText';
 import { getCVUploadHubConnection, startCVUploadHub, type CVUploadProgressEvent } from '../services/signalr';
 import { offerableJobOpenings } from '../utils/jobOpenings';
 import NoJobOpeningNotice from './common/NoJobOpeningNotice';
@@ -20,7 +21,7 @@ interface Props {
 
 interface FileProgressState {
   fileName: string;
-  status: 'queued' | 'parsing' | 'completed' | 'error' | 'duplicate';
+  status: 'queued' | 'ocr' | 'parsing' | 'completed' | 'error' | 'duplicate';
   error?: string | null;
 }
 
@@ -136,13 +137,24 @@ export default function BulkUploader({ onDraftsParsed }: Props) {
         });
 
         try {
+          // A scanned PDF has no text for the server to read, so read it here first. Any failure falls back to a
+          // normal upload with no OCR text.
+          const ocrText = await readScanText(file, {
+            onOcrStart: () =>
+              setFileProgresses((prev) => {
+                const next = [...prev];
+                if (next[i]) next[i] = { fileName: file.name, status: 'ocr' };
+                return next;
+              }),
+          });
           const draft = await uploadCV(
             file,
             batchId,
             i,
             files.length,
             batchName.trim() || undefined,
-            selectedRoleId ?? undefined
+            selectedRoleId ?? undefined,
+            ocrText ?? undefined
           );
           drafts.push(draft);
           setFileProgresses((prev) => {
@@ -296,6 +308,12 @@ export default function BulkUploader({ onDraftsParsed }: Props) {
                 <div className="shrink-0">
                   {fp.status === 'queued' && (
                     <Badge variant="neutral">Queued</Badge>
+                  )}
+                  {fp.status === 'ocr' && (
+                    <Badge variant="brand">
+                      <Spinner className="size-3" />
+                      Reading scan (OCR)
+                    </Badge>
                   )}
                   {fp.status === 'parsing' && (
                     <Badge variant="brand">

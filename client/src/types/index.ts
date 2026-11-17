@@ -37,6 +37,8 @@ export interface CVDraft {
   gitLabUrl?: string | null;
   educations?: CandidateEducation[] | null;
   experiences?: CandidateExperience[] | null;
+  /** True when the file was a scan and its fields were read from browser OCR text. */
+  readFromScan?: boolean;
 }
 
 /** What POST /candidate-import returns: the Pending draft an entry became, and what to check in review. */
@@ -80,6 +82,8 @@ export interface CandidateDraft {
   gitLabUrl?: string | null;
   educations?: CandidateEducation[] | null;
   experiences?: CandidateExperience[] | null;
+  /** True when the file was a scan and its fields were read from browser OCR text. */
+  readFromScan?: boolean;
 }
 
 export interface CandidateDraftListItem {

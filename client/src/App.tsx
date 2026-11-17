@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './auth/AuthContext';
 import LoadingPanel from './components/common/Loading';
@@ -19,6 +20,10 @@ import UserGuidePage from './pages/UserGuidePage';
 import InterviewPage from './pages/InterviewPage';
 import MyInterviewsPage from './pages/MyInterviewsPage';
 import NotFoundPage from './pages/NotFoundPage';
+
+// Dev-only RG-260 spike. The dynamic import sits behind import.meta.env.DEV, so production builds drop the
+// page and its heavy pdf.js / mammoth / Tesseract.js chunks entirely.
+const CvOcrSpikePage = import.meta.env.DEV ? lazy(() => import('./pages/CvOcrSpikePage')) : null;
 import AppShell from './components/shell/AppShell';
 
 /**
@@ -133,7 +138,19 @@ export default function App() {
                 </RequireRole>
               }
             />
-            <Route path="/change-password" element={<ChangePasswordPage />} />
+            {CvOcrSpikePage && (
+              <Route
+                path="/spike/cv-ocr"
+                element={
+                  <RequireRole roles={['SuperAdmin', 'Admin']}>
+                    <Suspense fallback={<LoadingPanel />}>
+                      <CvOcrSpikePage />
+                    </Suspense>
+                  </RequireRole>
+                }
+              />
+            )}
+            <Route path="/change-password"element={<ChangePasswordPage />} />
             <Route path="/user-guide" element={<UserGuidePage />} />
             {/* Last: any path none of the above matched. Still a child of ProtectedLayout, so a
                 signed-out visitor is redirected to /login first instead of seeing this (#237). */}

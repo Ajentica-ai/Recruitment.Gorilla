@@ -261,7 +261,8 @@ public class CandidateDraftService(
             d.HackerRankUrl,
             d.GitLabUrl,
             educations,
-            experiences
+            experiences,
+            d.ReadFromScan
         );
     }
 
@@ -314,7 +315,8 @@ public class CandidateDraftService(
         List<ParsedExperience>? experiences = null,
         int? roleAppliedOptionId = null,
         string? fileHash = null,
-        string? relevantExperience = null)
+        string? relevantExperience = null,
+        bool readFromScan = false)
     {
         var eduDtos = educations?.Select((e, idx) => new CandidateEducationDto(idx + 1, e.Degree, e.Institution, e.GraduationYear, e.Cgpa)).ToList();
         var expDtos = experiences?.Select((e, idx) => new CandidateExperienceDto(idx + 1, e.JobTitle, e.Company, e.Duration, e.Description)).ToList();
@@ -326,6 +328,7 @@ public class CandidateDraftService(
             FileType = fileType,
             FileSizeBytes = fileSizeBytes,
             FileHash = fileHash,
+            ReadFromScan = readFromScan,
             BatchId = batchId,
             BatchName = batchName,
             FullName = fullName,

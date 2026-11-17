@@ -38,7 +38,8 @@ public record CVDraftDto(
     string? HackerRankUrl = null,
     string? GitLabUrl = null,
     List<CandidateEducationDto>? Educations = null,
-    List<CandidateExperienceDto>? Experiences = null
+    List<CandidateExperienceDto>? Experiences = null,
+    bool ReadFromScan = false
 );
 
 public record CreateCandidateDto(

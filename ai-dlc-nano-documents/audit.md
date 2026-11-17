@@ -718,3 +718,22 @@
 - 2026-11-02T11:28Z [claude] RG-244 CREATED @54c38dd: issue #244 improvements - clear build/lint/runtime warnings
 - 2026-11-02T12:37Z [claude] RG-244 BRANCH @54c38dd: feature/RG-244/Clear-warnings created off fix/RG-243 tip (develop blocked by uncommitted nano docs)
 - 2026-11-02T12:43Z [claude] RG-244 PHASE CONSTRUCT->WRAP-UP @7b86dd7: 0 warnings dotnet build, 0 warnings oxlint, 393/393 tests green
+- 2026-11-12T08:36Z [claude] RG-260 SIDE-EFFECT @d63670d: issue already assigned to rayhan-ajentica; board status set to In Development
+- 2026-11-12T08:36Z [claude] RG-260 CREATED @d63670d: in-browser LLM CV extraction (feature, labels enhancement/frontend/backend/cv-parsing)
+- 2026-11-12T08:37Z [claude] RG-260 SIDE-EFFECT @d63670d: CORRECTION: board status NOT changed (gh token lacks read:project); assignee was already set
+- 2026-11-12T08:37Z [claude] RG-260 PHASE INTAKE→CLARIFY @d63670d: intent drafted, scope questions pending
+- 2026-11-12T08:48Z [claude] RG-260 DECISION @d63670d: spike only; HTTPS dev-only (localhost); WebLLM default model host (user confirmed)
+- 2026-11-12T08:48Z [claude] RG-260 PHASE CLARIFY→PLAN @d63670d: plan.md drafted, awaiting approval and branch yes
+- 2026-11-12T09:00Z [claude] RG-260 BRANCH @d63670d: feature/RG-260/In-browser-CV-extraction-spike created off origin/develop (user confirmed)
+- 2026-11-12T09:00Z [claude] RG-260 PHASE PLAN→CONSTRUCT @d63670d: plan approved by user
+- 2026-11-12T09:09Z [claude] RG-260 PHASE CONSTRUCT→WRAP-UP @d63670d: 7/7 tasks; tsc, oxlint, 423 client tests, prod build excludes spike
+- 2026-11-12T09:09Z [claude] RG-260 DONE @d63670d: spike built locally, uncommitted; real model run not yet verified
+- 2026-11-12T12:07Z [claude] RG-260 REVISED @d63670d: spike benchmarked on iGPU (0.6B ok, 1.7B GPU lost, 4B quota); findings in intent.md
+- 2026-11-12T12:49Z [claude] RG-260 REVISED @d63670d: added Tesseract.js OCR path, contacts regex, lean mode; benchmarked OCR and regex parser
+- 2026-11-12T13:09Z [claude] RG-260 REVISED @d63670d: user asked to complete the full issue; MVP plan drafted, awaiting approval (scope grew past spike)
+- 2026-11-12T13:10Z [claude] RG-260 DECISION @d63670d: flag in Configuration (default OFF); deploy docs only; client sends OCR text for scans (user confirmed)
+- 2026-11-12T13:35Z [claude] RG-260 DECISION @d63670d: user dropped the AI model; Tesseract.js OCR only; AI code, WebLLM dep and AI docs removed
+- 2026-11-12T13:35Z [claude] RG-260 REVISED @d63670d: OCR-in-upload plan drafted, awaiting approval; dev page renamed to /spike/cv-ocr
+- 2026-11-17T06:04Z [claude] RG-260 PHASE PLAN→CONSTRUCT @d63670d: OCR-in-upload plan approved as proposed, incl. migration (user confirmed)
+- 2026-11-17T06:16Z [claude] RG-260 PHASE CONSTRUCT→WRAP-UP @d63670d: 6/6 tasks; dotnet 985, vitest 427, tsc, oxlint, build ok; real-browser e2e on scratch DB
+- 2026-11-17T06:16Z [claude] RG-260 DONE @d63670d: OCR-in-upload built, uncommitted; migration AddDraftReadFromScan not applied to dev DB (API applies on start)

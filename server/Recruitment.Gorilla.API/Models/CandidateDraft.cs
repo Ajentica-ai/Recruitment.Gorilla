@@ -36,6 +36,9 @@ public class CandidateDraft
     /// <summary>SHA-256 of the file content (hex). Used to block re-uploading the same CV.</summary>
     public string? FileHash { get; set; }
 
+    /// <summary>True when the file had no text layer and the fields were read from browser OCR text (#260).</summary>
+    public bool ReadFromScan { get; set; }
+
     /// <summary>Status of the draft: "Pending", "Approved", "Discarded"</summary>
     public string Status { get; set; } = "Pending";
 

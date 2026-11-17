@@ -1,5 +1,6 @@
 # Backlog
 <!-- Out-of-scope findings, newest first. Delete a line when it is resolved. -->
+- [2026-11-17] CVUploadController - CurrentTitle falls back to the file name, so a numbered or generated name becomes the job title (found: RG-260)
 - [2026-10-25] client/my-interviews - no "Shared with me" tab yet (#182 phase 4); panel removals are not recoverable (no history row) (found: RG-203)
 - [2026-10-25] backend/EvaluationReminderService - two API instances could double-send (no row claim/concurrency token) (found: RG-202)
 - [2026-10-25] client/dashboard - optional "N interviews with missing evaluations" badge for recruiters not built (found: RG-202)

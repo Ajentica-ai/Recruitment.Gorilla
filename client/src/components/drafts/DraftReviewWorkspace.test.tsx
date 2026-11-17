@@ -307,3 +307,38 @@ describe('DraftReviewWorkspace referral capture', () => {
     );
   });
 });
+
+describe('DraftReviewWorkspace scan notice (#260)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(getCandidateDrafts).mockResolvedValue({
+      items: [listItem],
+      totalCount: 1,
+      page: 1,
+      pageSize: 50,
+      totalPages: 1,
+      totalPending: 1,
+      totalApproved: 0,
+      totalDiscarded: 0,
+      nextCursor: null,
+    });
+    vi.mocked(getActiveRoleOptions).mockResolvedValue([]);
+    vi.mocked(getActiveSourceOptions).mockResolvedValue([]);
+  });
+
+  it('warns the reviewer when the fields were read from a scan with OCR', async () => {
+    vi.mocked(getCandidateDraft).mockResolvedValue({ ...draft, readFromScan: true });
+    renderWithProviders(<DraftReviewWorkspace />);
+
+    expect(await screen.findByText(/Read from a scan \(OCR\): check every field/i)).toBeInTheDocument();
+  });
+
+  it('shows no scan notice for an ordinary draft', async () => {
+    vi.mocked(getCandidateDraft).mockResolvedValue({ ...draft, readFromScan: false });
+    renderWithProviders(<DraftReviewWorkspace />);
+
+    await screen.findByText(/Added /i);
+    expect(screen.queryByText(/Read from a scan/i)).not.toBeInTheDocument();
+  });
+});
+

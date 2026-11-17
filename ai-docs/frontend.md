@@ -421,6 +421,14 @@ Each CV file has **Preview** + **Download**. Preview calls `previewCvFile` (auth
 ### Login
 `LoginPage` no longer hints credentials (placeholders removed, `autoComplete="off"`, no app-prefill).
 
+### CV text and OCR (`pages/CvOcrSpikePage.tsx` + `lib/cvOcr/`, dev route `/spike/cv-ocr`, #260)
+Reads CV text in the browser: pdf.js for a PDF's text layer (column-aware line building, ligature repair, link annotations), mammoth for DOCX, and Tesseract.js (7.0.0, English) for scans. No AI model is used.
+- **OCR path.** A PDF with no text layer, or a PNG/JPG, is rendered (pdf.js to canvas at 2x, first 4 pages) and read with Tesseract.js. Tesseract only turns an image into characters; it does not find fields, so its text still needs the normal parser. The worker, wasm core and language data load from Tesseract.js's default CDN on first use (self-host for production).
+- **In the upload flow (`BulkUploader`).** For each PDF, `scanText.ts` `readScanText` reads the text layer first; only a PDF with no text layer is OCR'd (the file shows "Reading scan (OCR)"), and the text is sent as `ocrText` with the upload. Any OCR failure returns null and the file uploads normally, so OCR never blocks an upload. The review screen shows a warning badge on drafts with `readFromScan`. PNG/JPG are not accepted by the server, so only scanned PDFs use this path.
+- **Files:** `textLayout.ts` (pure layout helpers), `extractText.ts` (`extractCvText`, routes by file type), `ocr.ts`, `scanText.ts`.
+- **Dev only.** The route and its lazy import sit behind `import.meta.env.DEV` in `App.tsx`, so production builds contain none of it. SuperAdmin/Admin only, no nav entry.
+- **Measured (6 synthetic CVs, one page):** about 0.7 to 2 s per page, 99% of words recovered from a clean scan and 96% from a blurry one. Blurry scans lose URLs and emails most (a `/` read as a letter, spaces inside an email).
+
 ## Theme (`styles/tokens.css`)
 - **Violet accent** (`--primary: #7c5cfc` light / `#8b6dff` dark) on
   near-colourless slate neutrals, Plus Jakarta Sans, a 12.5px base
