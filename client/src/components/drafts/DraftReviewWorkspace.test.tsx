@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { fireEvent, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { renderWithProviders } from '../../test/renderWithProviders';
 import DraftReviewWorkspace from './DraftReviewWorkspace';
@@ -12,6 +12,7 @@ vi.mock('../../services/api', () => ({
   getActiveRoleOptions: vi.fn().mockResolvedValue([]),
   getActiveSourceOptions: vi.fn().mockResolvedValue([]),
   updateCandidateDraft: vi.fn(),
+  estimateDraftExperience: vi.fn().mockResolvedValue({ relevantExperience: null }),
   approveCandidateDraft: vi.fn(),
   bulkApproveCandidateDrafts: vi.fn(),
   discardCandidateDraft: vi.fn(),
@@ -25,6 +26,7 @@ import {
   deleteCandidateDraft,
   bulkDeleteCandidateDrafts,
   approveCandidateDraft,
+  estimateDraftExperience,
   getActiveRoleOptions,
   getActiveSourceOptions,
 } from '../../services/api';
@@ -115,6 +117,11 @@ describe('DraftReviewWorkspace relevant experience', () => {
     expect(within(group).getByRole('radio', { name: '8+ Years' })).toBeChecked();
   });
 
+  it('offers the 2-3 Years band and shows it as selected', async () => {
+    const group = await openPending('2-3 Years');
+    expect(within(group).getByRole('radio', { name: '2-3 Years' })).toBeChecked();
+  });
+
   it('does not invent a 3-5 Years default when nothing was parsed', async () => {
     const group = await openPending(null);
     expect(within(group).getByRole('radio', { name: '3-5 Years' })).not.toBeChecked();
@@ -127,6 +134,91 @@ describe('DraftReviewWorkspace relevant experience', () => {
     await openPending('3-5 Years');
 
     expect(await screen.findByText(/You are not assigned to a job opening/i)).toBeInTheDocument();
+  });
+});
+
+describe('DraftReviewWorkspace relevant experience follows the roles', () => {
+  const role = {
+    jobTitle: 'Engineer',
+    company: 'Alpha',
+    duration: 'Jan 2010 - Dec 2011',
+    startMonth: '2010-01',
+    endMonth: '2011-12',
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(getCandidateDrafts).mockImplementation(async () => page([item(7, 'Pending')]));
+    vi.mocked(getCandidateDraft).mockImplementation(
+      async (id) =>
+        ({ ...detail(item(id, 'Pending')), relevantExperience: '1-2 Years', experiences: [role] }) as CandidateDraft,
+    );
+    // Stands in for the server: one role is 1-2 Years, two or more is 3-5 Years.
+    vi.mocked(estimateDraftExperience).mockImplementation(async (roles) => ({
+      relevantExperience: roles.length >= 2 ? '3-5 Years' : '1-2 Years',
+    }));
+  });
+
+  const addSecondRole = async () => {
+    fireEvent.click(screen.getByRole('button', { name: /Add Experience/ }));
+    const dates = await screen.findAllByLabelText('Duration / Dates');
+    fireEvent.change(dates[1], { target: { value: 'Jan 2020 - Dec 2021' } });
+  };
+
+  const lastEstimateSettled = () =>
+    act(async () => {
+      await vi.mocked(estimateDraftExperience).mock.results.at(-1)?.value;
+    });
+
+  it('refreshes the value when a role is added and the field still follows the estimate', async () => {
+    renderWithProviders(<DraftReviewWorkspace />);
+    const group = await screen.findByLabelText('Relevant experience');
+    await waitFor(() => expect(estimateDraftExperience).toHaveBeenCalled());
+    await lastEstimateSettled();
+    expect(within(group).getByRole('radio', { name: '1-2 Years' })).toBeChecked();
+
+    await addSecondRole();
+
+    await waitFor(
+      () => expect(within(group).getByRole('radio', { name: '3-5 Years' })).toBeChecked(),
+      { timeout: 3000 },
+    );
+  });
+
+  it('leaves a value the reviewer picked by hand alone', async () => {
+    renderWithProviders(<DraftReviewWorkspace />);
+    const group = await screen.findByLabelText('Relevant experience');
+    await waitFor(() => expect(estimateDraftExperience).toHaveBeenCalled());
+    await lastEstimateSettled();
+
+    fireEvent.click(within(group).getByRole('radio', { name: '8+ Years' }));
+    await addSecondRole();
+
+    await waitFor(
+      () =>
+        expect(estimateDraftExperience).toHaveBeenLastCalledWith(
+          expect.arrayContaining([expect.objectContaining({ duration: 'Jan 2020 - Dec 2021' })]),
+        ),
+      { timeout: 3000 },
+    );
+    await lastEstimateSettled();
+    expect(within(group).getByRole('radio', { name: '8+ Years' })).toBeChecked();
+  });
+
+  it('sends retyped dates as text so the server does not read the months parsed earlier', async () => {
+    renderWithProviders(<DraftReviewWorkspace />);
+    await screen.findByLabelText('Relevant experience');
+    const dates = await screen.findAllByLabelText('Duration / Dates');
+
+    fireEvent.change(dates[0], { target: { value: 'Jan 2012 - Dec 2013' } });
+
+    await waitFor(
+      () =>
+        expect(estimateDraftExperience).toHaveBeenLastCalledWith([
+          { duration: 'Jan 2012 - Dec 2013', startMonth: null, endMonth: null },
+        ]),
+      { timeout: 3000 },
+    );
   });
 });
 

@@ -7,6 +7,7 @@ import {
   getCandidateDraft,
   getDraftBatches,
   updateCandidateDraft,
+  estimateDraftExperience,
   approveCandidateDraft,
   bulkApproveCandidateDrafts,
   discardCandidateDraft,
@@ -41,6 +42,7 @@ import type {
   CandidateDraft,
   ApproveCandidateDraftRequest,
   UpdateCandidateDraftRequest,
+  ExperienceEstimateItem,
 } from '../../types';
 
 interface Props {
@@ -48,7 +50,7 @@ interface Props {
   onCandidateCreated?: () => void;
 }
 
-const EXPERIENCE_PRESETS = ['< 1 Year', '1-2 Years', '3-5 Years', '5-8 Years', '8+ Years'];
+const EXPERIENCE_PRESETS = ['< 1 Year', '1-2 Years', '2-3 Years', '3-5 Years', '5-8 Years', '8+ Years'];
 
 /**
  * A draft has nowhere to store a referral: `CandidateDrafts` has no referral columns, so
@@ -294,6 +296,58 @@ export default function DraftReviewWorkspace({ initialBatchId, onCandidateCreate
       }));
     }
   }, [roles, editForm.roleAppliedOptionId]);
+
+  /**
+   * Relevant Experience follows the roles on screen until the reviewer picks a value of their own.
+   * The estimate itself is computed by the server (the interval maths stays in one place). The field
+   * keeps following only while it still equals the estimate of the roles as they were before the
+   * edit, so a hand-picked value sticks, including after the draft is reloaded.
+   */
+  const [debouncedRoles, setDebouncedRoles] = useState<{ draftId: number | null; roles: ExperienceEstimateItem[] }>({
+    draftId: null,
+    roles: [],
+  });
+  const rolesForEstimate = useMemo<ExperienceEstimateItem[]>(
+    () =>
+      (editForm.experiences ?? []).map((e) => ({
+        duration: e.duration ?? null,
+        startMonth: e.startMonth ?? null,
+        endMonth: e.endMonth ?? null,
+      })),
+    [editForm.experiences]
+  );
+  const activeDraftId = activeDraft?.id ?? null;
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedRoles({ draftId: activeDraftId, roles: rolesForEstimate }), 400);
+    return () => clearTimeout(timer);
+  }, [rolesForEstimate, activeDraftId]);
+
+  const estimateEnabled = activeDraftId !== null && debouncedRoles.draftId === activeDraftId;
+  const { data: experienceEstimate } = useQuery({
+    queryKey: ['draft-experience-estimate', debouncedRoles.draftId, debouncedRoles.roles],
+    queryFn: () => estimateDraftExperience(debouncedRoles.roles),
+    enabled: estimateEnabled,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  // undefined until the first estimate for the open draft arrives, which only sets the baseline.
+  const trackedEstimate = useRef<string | null | undefined>(undefined);
+  useEffect(() => {
+    trackedEstimate.current = undefined;
+  }, [activeDraftId]);
+
+  useEffect(() => {
+    if (!experienceEstimate || !estimateEnabled) return;
+    const next = experienceEstimate.relevantExperience;
+    const tracked = trackedEstimate.current;
+    if (tracked !== undefined && tracked !== next) {
+      setEditForm((prev) =>
+        (prev.relevantExperience ?? '') === (tracked ?? '') ? { ...prev, relevantExperience: next ?? '' } : prev
+      );
+    }
+    trackedEstimate.current = next;
+  }, [experienceEstimate, estimateEnabled]);
 
   // Next / Previous navigation in queue
   const currentIndex = drafts.findIndex((d) => d.id === selectedDraftId);
@@ -1566,7 +1620,7 @@ export default function DraftReviewWorkspace({ initialBatchId, onCandidateCreate
                                     setEditForm((prev) => ({
                                       ...prev,
                                       experiences: prev.experiences?.map((item, i) =>
-                                        i === idx ? { ...item, duration: val } : item
+                                        i === idx ? { ...item, duration: val, startMonth: null, endMonth: null } : item
                                       ),
                                     }));
                                   }}

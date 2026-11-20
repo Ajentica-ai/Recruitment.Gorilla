@@ -65,6 +65,7 @@ marked **Duplicate**.
 - The right side shows the extracted details for the selected draft. Check and correct them:
   name, email, phone, title, location, role applied for, relevant experience, sourcing channel,
   skills, summary, links, education and work history.
+- **Relevant experience** is estimated from the dated roles, leaving gaps between jobs out. It updates as you add, remove or retype roles, until you pick a value yourself; after that your choice stays.
 - **Approve & Create Candidate** creates the candidate at status **Uploaded**.
   **Save Changes** keeps your edits for later. **Discard Draft** removes it.
 - Shortcuts: Ctrl+Enter approves, Ctrl+Left and Ctrl+Right move through the queue.

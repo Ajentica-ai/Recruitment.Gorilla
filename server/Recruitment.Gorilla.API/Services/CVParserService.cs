@@ -13,11 +13,17 @@ public record ParsedEducation(
     string? Cgpa
 );
 
+/// <summary>
+/// StartMonth/EndMonth are "yyyy-MM" and both inclusive. A null EndMonth with a StartMonth means the role is ongoing.
+/// Both are null when the dates could not be read; <see cref="Duration"/> stays the text the reviewer sees.
+/// </summary>
 public record ParsedExperience(
     string JobTitle,
     string Company,
     string? Duration,
-    string? Description
+    string? Description,
+    string? StartMonth = null,
+    string? EndMonth = null
 );
 
 public record ParsedCVResult(
@@ -70,8 +76,35 @@ public class CVParserService
     private static readonly Regex YearRegex =
         new(@"\b(19\d\d|20\d\d)\b", RegexOptions.Compiled);
 
+    private const string MonthName =
+        @"\b(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:t(?:ember)?)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\b\.?";
+
+    // One end of a date range: MM/YYYY, YYYY-MM, "Mon YYYY", "Mon 'YY", a bare year, or a bare 'YY.
+    private const string DatePoint =
+        @"(?:(?:0?[1-9]|1[0-2])/(?:19|20)\d{2}" +
+        @"|(?:19|20)\d{2}-(?:0[1-9]|1[0-2])(?!\d)" +
+        @"|" + MonthName + @",?\s*(?:(?:19|20)\d{2}|['’]\d{2})" +
+        @"|(?:19|20)\d{2}" +
+        @"|['’]\d{2})";
+
+    private const string OpenEnd =
+        @"(?:Present|Current(?:ly)?|Now|Ongoing|Today|(?:Till|Until|To)\s+(?:date|now|today|present)|date)";
+
     private static readonly Regex DateRangeRegex =
-        new(@"(?:(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.?\s+)?\d{4}\s*[-–—]\s*(?:Present|Current|(?:(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.?\s+)?\d{4}|\d+\s+Years?)", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+        new(@"(?<![\d/])(?<start>" + DatePoint + @")\s*(?:[-–\u2014]|\bto\b|\buntil\b|\btill\b)\s*(?<end>" + OpenEnd + @"\b|" + DatePoint + @")",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+    private static readonly Regex OpenEndRegex =
+        new("^" + OpenEnd + "$", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+    private static readonly Regex PointNumericMonthFirstRegex =
+        new(@"^(\d{1,2})/((?:19|20)\d{2})$", RegexOptions.Compiled);
+
+    private static readonly Regex PointNumericYearFirstRegex =
+        new(@"^((?:19|20)\d{2})-(\d{2})$", RegexOptions.Compiled);
+
+    private static readonly Regex PointNamedRegex =
+        new(@"^(?:([A-Za-z]+)\.?,?\s*)?(?:((?:19|20)\d{2})|['’](\d{2}))$", RegexOptions.Compiled);
 
     private static readonly string[] BdLocations =
     [
@@ -276,7 +309,7 @@ public class CVParserService
             if (experiences.Count == 0 && (lower.StartsWith("experience") || lower.StartsWith("professional experience") || lower.StartsWith("work experience") || lower.StartsWith("employment history") || lower.StartsWith("work history")))
             {
                 var expLines = new List<string>();
-                for (int j = i + 1; j < Math.Min(i + 25, lines.Length); j++)
+                for (int j = i + 1; j < lines.Length; j++)
                 {
                     if (IsHeading(lines[j])) break;
                     expLines.Add(lines[j]);
@@ -407,74 +440,143 @@ public class CVParserService
         return list;
     }
 
+    private static readonly Regex HeaderSeparatorRegex =
+        new(@"\s*(?:\u2014|–|[-|]|(?<=\s)at(?=\s))\s*", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+    private static bool IsBullet(string line) =>
+        line.StartsWith("•") || line.StartsWith("-") || line.StartsWith("*") || line.StartsWith("–");
+
+    private static string TextAroundDate(string line, Match dateMatch) =>
+        line.Replace(dateMatch.Value, "").Trim(' ', '|', '-', '–', '\u2014', ',', '(', ')');
+
+    // True when one of the next two lines is a date that closes a header written over several lines
+    // (title, company, date). A date inside a full "Title - Company (dates)" line starts its own role instead.
+    private static bool StartsRoleHeader(List<string> lines, int index)
+    {
+        for (var k = 1; k <= 2 && index + k < lines.Count; k++)
+        {
+            var next = lines[index + k];
+            if (IsBullet(next)) return false;
+            var match = DateRangeRegex.Match(next);
+            if (!match.Success) continue;
+            return HeaderSeparatorRegex.Split(TextAroundDate(next, match)).Length < 2;
+        }
+        return false;
+    }
+
     private static List<ParsedExperience> ParseExperienceLines(List<string> lines)
     {
         var list = new List<ParsedExperience>();
-        if (lines.Count == 0) return list;
 
-        string? currentTitle = null;
-        string? currentCompany = null;
-        string? currentDuration = null;
+        string? title = null, company = null, duration = null, start = null, end = null;
+        // The header (title, company, dates) is complete; later plain lines are description unless they open a new role.
+        var headerClosed = false;
         var descSb = new StringBuilder();
+
+        bool HasContent() => title != null || company != null || duration != null;
 
         void Flush()
         {
-            if (!string.IsNullOrWhiteSpace(currentTitle) || !string.IsNullOrWhiteSpace(currentCompany))
+            if (HasContent())
             {
                 list.Add(new ParsedExperience(
-                    currentTitle ?? "Software Engineer",
-                    currentCompany ?? "Company",
-                    currentDuration,
-                    descSb.ToString().Trim().NullIfEmpty()
-                ));
-                currentTitle = null;
-                currentCompany = null;
-                currentDuration = null;
-                descSb.Clear();
+                    title ?? "",
+                    company ?? "",
+                    duration,
+                    descSb.ToString().Trim().NullIfEmpty(),
+                    start,
+                    end));
             }
+            title = company = duration = start = end = null;
+            headerClosed = false;
+            descSb.Clear();
         }
 
-        foreach (var line in lines)
+        void SetDates(Match dateMatch)
         {
+            duration = dateMatch.Value.Trim();
+            var range = TryParseDateRange(dateMatch.Value);
+            start = range?.Start;
+            end = range?.End;
+        }
+
+        for (var i = 0; i < lines.Count; i++)
+        {
+            var line = lines[i];
             var dateMatch = DateRangeRegex.Match(line);
             if (dateMatch.Success)
             {
-                if (currentTitle != null || currentCompany != null) Flush();
-
-                currentDuration = dateMatch.Value.Trim();
-                var remaining = line.Replace(dateMatch.Value, "").Trim(' ', '|', '-', '–', ',', '(', ')');
-                if (!string.IsNullOrWhiteSpace(remaining))
+                var remaining = TextAroundDate(line, dateMatch);
+                if (string.IsNullOrWhiteSpace(remaining))
                 {
-                    var parts = Regex.Split(remaining, @"\s*(?:—|–|[-|]|(?<=\s)at(?=\s))\s*", RegexOptions.IgnoreCase);
-                    if (parts.Length >= 2)
+                    // A bare date line closes the title/company lines above it. If the role already has dates,
+                    // or there is nothing above it, it opens a role whose title and company may follow (or never come).
+                    if ((title != null || company != null) && duration == null)
                     {
-                        currentTitle = parts[0].Trim();
-                        currentCompany = parts[1].Trim();
+                        SetDates(dateMatch);
+                        headerClosed = true;
                     }
                     else
                     {
-                        if (currentTitle == null) currentTitle = remaining;
-                        else currentCompany ??= remaining;
+                        Flush();
+                        SetDates(dateMatch);
                     }
+                    continue;
                 }
+
+                var parts = HeaderSeparatorRegex.Split(remaining);
+                if (parts.Length >= 2)
+                {
+                    Flush();
+                    title = parts[0].Trim();
+                    company = parts[1].Trim();
+                }
+                else if (title != null && company == null && duration == null)
+                {
+                    company = remaining;
+                }
+                else
+                {
+                    Flush();
+                    title = remaining;
+                }
+                SetDates(dateMatch);
+                headerClosed = true;
                 continue;
             }
 
-            if (line.StartsWith("•") || line.StartsWith("-") || line.StartsWith("*") || line.StartsWith("–"))
+            var text = line.Trim();
+            if (IsBullet(line))
             {
-                descSb.AppendLine(line.Trim());
+                descSb.AppendLine(text);
             }
-            else if (currentTitle == null)
+            else if (!HasContent())
             {
-                currentTitle = line.Trim();
+                title = text;
             }
-            else if (currentCompany == null)
+            else if (headerClosed)
             {
-                currentCompany = line.Trim();
+                if (StartsRoleHeader(lines, i))
+                {
+                    Flush();
+                    title = text;
+                }
+                else
+                {
+                    descSb.AppendLine(text);
+                }
+            }
+            else if (title == null)
+            {
+                title = text;
+            }
+            else if (company == null)
+            {
+                company = text;
             }
             else
             {
-                descSb.AppendLine(line.Trim());
+                descSb.AppendLine(text);
             }
         }
 
@@ -515,21 +617,104 @@ public class CVParserService
         return lines.FirstOrDefault(l => l.Length is > 2 and <= 40 && !l.Contains('@') && !l.Any(char.IsDigit));
     }
 
-    private static readonly Regex DurationPartRegex =
-        new(@"(?:(?<mon>Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.?\s+)?(?<year>\d{4})", RegexOptions.IgnoreCase | RegexOptions.Compiled);
-
     private static readonly Regex DurationYearsRegex =
         new(@"^\s*(?<n>\d+)\s+Years?\s*$", RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
     private static readonly string[] MonthAbbreviations =
         ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"];
 
+    private static string FormatMonth(int year, int month) => $"{year:D4}-{month:D2}";
+
+    private static int TwoDigitYear(int yy) => yy <= DateTime.UtcNow.Year % 100 ? 2000 + yy : 1900 + yy;
+
+    private static int? MonthFromName(string name)
+    {
+        if (name.Length < 3) return null;
+        var index = Array.IndexOf(MonthAbbreviations, name[..3].ToLowerInvariant());
+        return index < 0 ? null : index + 1;
+    }
+
+    private static (int Year, int? Month)? ParseDatePoint(string text)
+    {
+        var t = text.Trim();
+
+        var m = PointNumericMonthFirstRegex.Match(t);
+        if (m.Success) return (int.Parse(m.Groups[2].Value), int.Parse(m.Groups[1].Value));
+
+        m = PointNumericYearFirstRegex.Match(t);
+        if (m.Success) return (int.Parse(m.Groups[1].Value), int.Parse(m.Groups[2].Value));
+
+        m = PointNamedRegex.Match(t);
+        if (!m.Success) return null;
+
+        var year = m.Groups[2].Success ? int.Parse(m.Groups[2].Value) : TwoDigitYear(int.Parse(m.Groups[3].Value));
+        int? month = null;
+        if (m.Groups[1].Success)
+        {
+            month = MonthFromName(m.Groups[1].Value);
+            if (month is null) return null;
+        }
+        return (year, month);
+    }
+
+    /// <summary>
+    /// Reads the first date range in <paramref name="text"/> as inclusive "yyyy-MM" months. Year-only ends are placed
+    /// mid-year (July to June) so two roles a year apart are never joined into one. End is null when the role is ongoing.
+    /// </summary>
+    private static (string Start, string? End)? TryParseDateRange(string text)
+    {
+        var match = DateRangeRegex.Match(text);
+        if (!match.Success) return null;
+
+        var start = ParseDatePoint(match.Groups["start"].Value);
+        if (start is null) return null;
+
+        string? endMonth = null;
+        var endText = match.Groups["end"].Value.Trim();
+        if (!OpenEndRegex.IsMatch(endText))
+        {
+            var end = ParseDatePoint(endText);
+            if (end is null) return null;
+            endMonth = FormatMonth(end.Value.Year, end.Value.Month ?? 6);
+        }
+
+        return (FormatMonth(start.Value.Year, start.Value.Month ?? 7), endMonth);
+    }
+
+    private static bool TryParseMonthIndex(string? value, out int index)
+    {
+        index = 0;
+        if (string.IsNullOrWhiteSpace(value) || value.Length != 7 || value[4] != '-') return false;
+        if (!int.TryParse(value.AsSpan(0, 4), out var year) || !int.TryParse(value.AsSpan(5, 2), out var month) || month is < 1 or > 12)
+            return false;
+        index = year * 12 + month;
+        return true;
+    }
+
+    public static string BucketRelevantExperience(int totalMonths) => totalMonths switch
+    {
+        < 12 => "< 1 Year",
+        < 24 => "1-2 Years",
+        < 36 => "2-3 Years",
+        < 60 => "3-5 Years",
+        < 96 => "5-8 Years",
+        _ => "8+ Years"
+    };
+
     /// <summary>
     /// Estimates total relevant experience from the dated roles and returns one of the review-form presets
-    /// ("&lt; 1 Year", "1-2 Years", "3-5 Years", "5-8 Years", "8+ Years"). Overlapping roles are counted once.
-    /// Returns null when no role has a parseable duration, so the reviewer chooses instead of getting a guess.
+    /// ("&lt; 1 Year", "1-2 Years", "2-3 Years", "3-5 Years", "5-8 Years", "8+ Years"). Overlapping roles are counted
+    /// once and gaps between roles count as zero. Returns null when no role has a usable duration, so the reviewer
+    /// chooses instead of getting a guess.
     /// </summary>
-    public static string? EstimateRelevantExperience(IEnumerable<ParsedExperience> experiences, DateTime now)
+    public static string? EstimateRelevantExperience(IEnumerable<ParsedExperience> experiences, DateTime now) =>
+        EstimateTotalMonths(experiences, now) is { } months ? BucketRelevantExperience(months) : null;
+
+    /// <summary>
+    /// A role is read from its structured StartMonth/EndMonth when present, otherwise from the text in Duration
+    /// (so a reviewer who retypes the dates is still understood). The current month is not counted for ongoing roles.
+    /// </summary>
+    public static int? EstimateTotalMonths(IEnumerable<ParsedExperience> experiences, DateTime now)
     {
         var nowIdx = now.Year * 12 + now.Month;           // exclusive end index of the current month
         var spans = new List<(int Start, int End)>();
@@ -537,26 +722,35 @@ public class CVParserService
 
         foreach (var exp in experiences)
         {
-            if (string.IsNullOrWhiteSpace(exp.Duration)) continue;
+            int startIdx;
+            int endIdx;
 
-            var years = DurationYearsRegex.Match(exp.Duration);
-            if (years.Success)
+            if (TryParseMonthIndex(exp.StartMonth, out startIdx))
             {
-                standaloneMonths += int.Parse(years.Groups["n"].Value) * 12;
+                if (string.IsNullOrWhiteSpace(exp.EndMonth)) endIdx = nowIdx;
+                else if (TryParseMonthIndex(exp.EndMonth, out var endMonthIdx)) endIdx = endMonthIdx + 1;
+                else continue;
+            }
+            else if (!string.IsNullOrWhiteSpace(exp.Duration))
+            {
+                var years = DurationYearsRegex.Match(exp.Duration);
+                if (years.Success)
+                {
+                    standaloneMonths += int.Parse(years.Groups["n"].Value) * 12;
+                    continue;
+                }
+
+                var range = TryParseDateRange(exp.Duration);
+                if (range is null || !TryParseMonthIndex(range.Value.Start, out startIdx)) continue;
+                if (range.Value.End is null) endIdx = nowIdx;
+                else if (TryParseMonthIndex(range.Value.End, out var endMonthIdx)) endIdx = endMonthIdx + 1;
+                else continue;
+            }
+            else
+            {
                 continue;
             }
 
-            var parts = DurationPartRegex.Matches(exp.Duration);
-            if (parts.Count == 0) continue;
-
-            var start = parts[0];
-            var startIdx = start.Groups["year"].Success
-                ? int.Parse(start.Groups["year"].Value) * 12 + MonthOf(start, 1)
-                : 0;
-            var isOpen = Regex.IsMatch(exp.Duration, @"Present|Current", RegexOptions.IgnoreCase) || parts.Count < 2;
-            var endIdx = isOpen
-                ? nowIdx
-                : int.Parse(parts[1].Groups["year"].Value) * 12 + MonthOf(parts[1], 12) + 1;
             endIdx = Math.Min(endIdx, nowIdx);
             if (endIdx > startIdx) spans.Add((startIdx, endIdx));
         }
@@ -574,17 +768,7 @@ public class CVParserService
         }
         if (curEnd > 0) totalMonths += curEnd - curStart;
 
-        return totalMonths switch
-        {
-            < 12 => "< 1 Year",
-            < 36 => "1-2 Years",
-            < 60 => "3-5 Years",
-            < 96 => "5-8 Years",
-            _ => "8+ Years"
-        };
-
-        static int MonthOf(Match m, int fallback) =>
-            m.Groups["mon"].Success ? Array.IndexOf(MonthAbbreviations, m.Groups["mon"].Value.ToLowerInvariant()[..3]) + 1 : fallback;
+        return totalMonths;
     }
 
     public static (string Name, string? Title) ParseNameAndTitleFromFileName(string fileName)
@@ -600,7 +784,14 @@ public class CVParserService
         return (baseName.Replace('_', ' '), null);
     }
 
+    // Short standalone headings that end the experience section now that it is no longer capped at 25 lines.
+    // Whole-line only, so a role titled "Training Manager" or "Languages Teacher" is not mistaken for a heading.
+    private static readonly Regex StandaloneHeadingRegex =
+        new(@"^(?:LANGUAGES|REFERENCES|AWARDS|INTERESTS|HOBBIES|TRAINING|COURSES|VOLUNTEER(?:\s+EXPERIENCE)?|EXTRACURRICULAR\s+ACTIVITIES|ACTIVITIES|DECLARATION)\s*:?$",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
     private static bool IsHeading(string line) =>
+        StandaloneHeadingRegex.IsMatch(line.Trim()) ||
         Regex.IsMatch(line.Trim(), @"^(EDUCATION|ACADEMIC|ACADEMICS|EXPERIENCE|WORK\s+EXPERIENCE|EMPLOYMENT|PROFESSIONAL\s+EXPERIENCE|SKILLS|TECHNICAL\s+SKILLS|TECHNOLOGIES|PROJECTS|KEY\s+PROJECTS|PUBLICATIONS|CERTIFICATIONS|ACHIEVEMENTS|SUMMARY|PROFESSIONAL\s+SUMMARY|PROFILE|OBJECTIVE)\b", RegexOptions.IgnoreCase);
 }
 

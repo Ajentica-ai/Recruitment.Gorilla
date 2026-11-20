@@ -155,3 +155,17 @@ public record PagedDraftsResultDto(
     int TotalDiscarded,
     int? NextCursor = null
 );
+
+public record EstimateExperienceItemDto(
+    string? Duration = null,
+    string? StartMonth = null,
+    string? EndMonth = null
+);
+
+public record EstimateExperienceDto(
+    List<EstimateExperienceItemDto>? Experiences = null
+);
+
+public record EstimateExperienceResultDto(
+    string? RelevantExperience
+);

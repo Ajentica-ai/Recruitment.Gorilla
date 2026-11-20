@@ -718,3 +718,12 @@
 - 2026-11-02T11:28Z [claude] RG-244 CREATED @54c38dd: issue #244 improvements - clear build/lint/runtime warnings
 - 2026-11-02T12:37Z [claude] RG-244 BRANCH @54c38dd: feature/RG-244/Clear-warnings created off fix/RG-243 tip (develop blocked by uncommitted nano docs)
 - 2026-11-02T12:43Z [claude] RG-244 PHASE CONSTRUCT->WRAP-UP @7b86dd7: 0 warnings dotnet build, 0 warnings oxlint, 393/393 tests green
+- 2026-11-11T12:03Z [claude] RG-259 CREATED @d63670d: intake of issue #259 (bug, cv-parsing); already assigned to @me; board move skipped (gh lacks read:project)
+- 2026-11-11T12:03Z [claude] RG-259 PHASE INTAKE→CLARIFY @d63670d: intent.md drafted, questions pending
+- 2026-11-11T12:10Z [claude] RG-259 DECISION @d63670d: add 2-3 Years band; server estimate endpoint with override-aware auto-update; months in draft JSON only (user confirmed)
+- 2026-11-11T12:10Z [claude] RG-259 PHASE CLARIFY→PLAN @d63670d: plan.md drafted, awaiting plan + branch approval
+- 2026-11-11T12:20Z [claude] RG-259 BRANCH @d63670d: fix/RG-259/CV-experience-gaps created off origin/develop (user confirmed)
+- 2026-11-11T12:20Z [claude] RG-259 PHASE PLAN→CONSTRUCT @d63670d: plan approved (user confirmed)
+- 2026-11-11T12:31Z [claude] RG-259 REVISED @d63670d: plan unchanged; estimate endpoint uses its own slim DTO (MVC would require non-empty title/company on the shared one)
+- 2026-11-11T12:38Z [claude] RG-259 PHASE CONSTRUCT→WRAP-UP @d63670d: 7/7 tasks, 995 backend + 399 client tests, tsc and oxlint clean
+- 2026-11-11T12:38Z [claude] RG-259 DONE @d63670d: parser binds dates to roles, new date formats, mid-year year-only, 2-3 band, estimate endpoint + review auto-update; uncommitted
