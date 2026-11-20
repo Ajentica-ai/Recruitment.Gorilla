@@ -34,7 +34,8 @@ public record CandidateDraftDto(
     string? HackerRankUrl = null,
     string? GitLabUrl = null,
     List<CandidateEducationDto>? Educations = null,
-    List<CandidateExperienceDto>? Experiences = null
+    List<CandidateExperienceDto>? Experiences = null,
+    bool ReadFromScan = false
 );
 
 public record CandidateDraftListItemDto(
@@ -154,4 +155,18 @@ public record PagedDraftsResultDto(
     int TotalApproved,
     int TotalDiscarded,
     int? NextCursor = null
+);
+
+public record EstimateExperienceItemDto(
+    string? Duration = null,
+    string? StartMonth = null,
+    string? EndMonth = null
+);
+
+public record EstimateExperienceDto(
+    List<EstimateExperienceItemDto>? Experiences = null
+);
+
+public record EstimateExperienceResultDto(
+    string? RelevantExperience
 );

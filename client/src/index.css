@@ -2356,7 +2356,23 @@ a.list-row__title:hover {
   line-height: var(--leading-relaxed);
   color: var(--text-soft);
   margin-top: var(--space-2);
-  white-space: pre-line;
+}
+
+/* A description is paragraphs and bullet lists (ExperienceDescription), not one pre-line run (#262). */
+.experience-card__desc > p + p,
+.experience-card__desc > p + ul,
+.experience-card__desc > ul + p {
+  margin-top: var(--space-1);
+}
+
+.experience-card__desc > ul {
+  margin: 0;
+  padding-left: 1.1rem;
+  list-style: disc;
+}
+
+.experience-card__desc > ul > li + li {
+  margin-top: 2px;
 }
 
 /* ===== Profile sections =====

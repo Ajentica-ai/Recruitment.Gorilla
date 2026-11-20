@@ -150,7 +150,9 @@ public class CVParserServiceTests
     [InlineData("2016 - 2026", "8+ Years")]
     [InlineData("Jan 2023 - Present", "3-5 Years")]
     [InlineData("Jun 2024 - Dec 2024", "< 1 Year")]
-    [InlineData("Jan 2024 - Present", "1-2 Years")]
+    [InlineData("Jan 2025 - Present", "1-2 Years")]
+    [InlineData("Jan 2024 - Jan 2026", "2-3 Years")]
+    [InlineData("Jan 2024 - Present", "2-3 Years")]
     [InlineData("Jan 2020 - Jan 2026", "5-8 Years")]
     [InlineData("10 Years", "8+ Years")]
     public void EstimateRelevantExperience_buckets_a_single_range(string duration, string expected)
@@ -165,8 +167,8 @@ public class CVParserServiceTests
         var jobs = Jobs("2016 - 2021", "2019 - 2026");
         Assert.Equal("8+ Years", CVParserService.EstimateRelevantExperience(jobs, Now));
 
-        // Two separate 2-year roles (year-only ranges are inclusive) = 4 years.
-        Assert.Equal("3-5 Years", CVParserService.EstimateRelevantExperience(Jobs("2010 - 2011", "2015 - 2016"), Now));
+        // Year-only ranges run mid-year to mid-year, so two separate 1-year spans are 2 years in total.
+        Assert.Equal("2-3 Years", CVParserService.EstimateRelevantExperience(Jobs("2010 - 2011", "2015 - 2016"), Now));
     }
 
     [Fact]
@@ -202,5 +204,225 @@ public class CVParserServiceTests
             Assert.Equal("8+ Years", CVParserService.EstimateRelevantExperience(result.Experiences, Now));
         }
         finally { File.Delete(tempFile); }
+    }
+
+    private const string CvHead = "Tahmid Rahman\ntahmid@recruitmentgorilla.com\n\nExperience\n";
+    private const string CvTail = "\nEducation\nBSc in Computer Science, BUET (2015)\n";
+
+    private static ParsedCVResult ParseTxt(string rawText)
+    {
+        var tempFile = Path.Combine(Path.GetTempPath(), $"RG259_{Guid.NewGuid():N}.txt");
+        File.WriteAllText(tempFile, rawText);
+        try { return new CVParserService().Parse(tempFile, "TXT"); }
+        finally { File.Delete(tempFile); }
+    }
+
+    private static string? Estimate(IEnumerable<ParsedExperience> jobs) =>
+        CVParserService.EstimateRelevantExperience(jobs, Now);
+
+    [Fact]
+    public void Parse_binds_a_date_line_to_the_role_above_it_and_keeps_the_last_role()
+    {
+        var result = ParseTxt(CvHead + """
+            Software Engineer
+            Alpha Corp
+            Jan 2015 - Mar 2017
+            • Built things.
+            Senior Engineer
+            Beta Ltd
+            Jun 2023 - Present
+            • Led a team.
+            """ + CvTail);
+
+        Assert.Collection(result.Experiences,
+            e =>
+            {
+                Assert.Equal("Software Engineer", e.JobTitle);
+                Assert.Equal("Alpha Corp", e.Company);
+                Assert.Equal("Jan 2015 - Mar 2017", e.Duration);
+            },
+            e =>
+            {
+                Assert.Equal("Senior Engineer", e.JobTitle);
+                Assert.Equal("Beta Ltd", e.Company);
+                Assert.Equal("Jun 2023 - Present", e.Duration);
+            });
+        // 27 + 40 months; the 6-year gap is left out. Treating the roles as continuous would give 8+ Years.
+        Assert.Equal("5-8 Years", Estimate(result.Experiences));
+    }
+
+    [Fact]
+    public void Parse_reads_a_title_line_followed_by_a_company_and_date_line()
+    {
+        var result = ParseTxt(CvHead + """
+            Software Engineer
+            Alpha | Jan 2012 - Dec 2014
+            • Built things.
+            Data Engineer
+            Beta | Jan 2024 - Present
+            • Built pipelines.
+            """ + CvTail);
+
+        Assert.Collection(result.Experiences,
+            e =>
+            {
+                Assert.Equal("Software Engineer", e.JobTitle);
+                Assert.Equal("Alpha", e.Company);
+                Assert.Equal("Jan 2012 - Dec 2014", e.Duration);
+            },
+            e =>
+            {
+                Assert.Equal("Data Engineer", e.JobTitle);
+                Assert.Equal("Beta", e.Company);
+                Assert.Equal("Jan 2024 - Present", e.Duration);
+            });
+        Assert.Equal("5-8 Years", Estimate(result.Experiences));
+    }
+
+    [Fact]
+    public void Parse_reads_numeric_month_year_dates_without_turning_them_into_a_company()
+    {
+        var result = ParseTxt(CvHead + """
+            Software Engineer
+            Alpha Corp
+            03/2012 - 05/2014
+            Senior Engineer
+            Beta Ltd
+            06/2024 - Present
+            """ + CvTail);
+
+        Assert.Collection(result.Experiences,
+            e =>
+            {
+                Assert.Equal("Software Engineer", e.JobTitle);
+                Assert.Equal("Alpha Corp", e.Company);
+                Assert.Equal("03/2012 - 05/2014", e.Duration);
+            },
+            e =>
+            {
+                Assert.Equal("Senior Engineer", e.JobTitle);
+                Assert.Equal("Beta Ltd", e.Company);
+                Assert.Equal("06/2024 - Present", e.Duration);
+            });
+        Assert.Equal("3-5 Years", Estimate(result.Experiences));
+    }
+
+    [Fact]
+    public void Parse_reads_to_ranges_as_separate_roles()
+    {
+        var result = ParseTxt(CvHead + """
+            Software Engineer
+            Alpha Corp
+            Jan 2012 to Dec 2013
+            Senior Engineer
+            Beta Ltd
+            Jan 2025 to Present
+            """ + CvTail);
+
+        Assert.Equal(2, result.Experiences.Count);
+        Assert.Equal("Jan 2012 to Dec 2013", result.Experiences[0].Duration);
+        Assert.Equal("Jan 2025 to Present", result.Experiences[1].Duration);
+        Assert.Equal("3-5 Years", Estimate(result.Experiences));
+    }
+
+    [Fact]
+    public void Parse_keeps_a_final_dated_role_that_has_no_title_line()
+    {
+        var result = ParseTxt(CvHead + """
+            Software Engineer
+            Alpha Corp
+            Jan 2015 - Mar 2017
+            Jun 2023 - Present
+            """ + CvTail);
+
+        Assert.Equal(2, result.Experiences.Count);
+        Assert.Equal("Software Engineer", result.Experiences[0].JobTitle);
+        Assert.Equal("Jun 2023 - Present", result.Experiences[1].Duration);
+        Assert.Equal("5-8 Years", Estimate(result.Experiences));
+    }
+
+    [Fact]
+    public void Parse_never_invents_a_title_or_company()
+    {
+        var result = ParseTxt(CvHead + "Jan 2020 - Present" + CvTail);
+
+        var role = Assert.Single(result.Experiences);
+        Assert.Equal("", role.JobTitle);
+        Assert.Equal("", role.Company);
+        Assert.Equal("Jan 2020 - Present", role.Duration);
+    }
+
+    [Fact]
+    public void Parse_reads_every_role_in_a_long_experience_section()
+    {
+        var result = ParseTxt(CvHead + """
+            Engineer One
+            Co One
+            Jan 2022 - Present
+            • Built a.
+            • Built b.
+            • Built c.
+            Engineer Two
+            Co Two
+            Jan 2020 - Dec 2021
+            • Built a.
+            • Built b.
+            • Built c.
+            Engineer Three
+            Co Three
+            Jan 2018 - Dec 2019
+            • Built a.
+            • Built b.
+            • Built c.
+            Engineer Four
+            Co Four
+            Jan 2016 - Dec 2017
+            • Built a.
+            • Built b.
+            • Built c.
+            Engineer Five
+            Co Five
+            Jan 2014 - Dec 2015
+            • Built a.
+            • Built b.
+            • Built c.
+            """ + CvTail);
+
+        Assert.Equal(5, result.Experiences.Count);
+        Assert.Equal("Engineer Five", result.Experiences[4].JobTitle);
+        Assert.Equal("Co Five", result.Experiences[4].Company);
+        Assert.Equal("Jan 2014 - Dec 2015", result.Experiences[4].Duration);
+        Assert.Equal("8+ Years", Estimate(result.Experiences));
+    }
+
+    [Theory]
+    [InlineData("03/2012 - 05/2014", "2-3 Years")]
+    [InlineData("2012-03 - 2014-05", "2-3 Years")]
+    [InlineData("Jan 2012 to Dec 2013", "2-3 Years")]
+    [InlineData("Jan 2012 until Dec 2013", "2-3 Years")]
+    [InlineData("Jan '23 - Dec '24", "2-3 Years")]
+    [InlineData("Jan 2020 - Now", "5-8 Years")]
+    [InlineData("Jan 2020 - Ongoing", "5-8 Years")]
+    [InlineData("Jan 2020 - Till date", "5-8 Years")]
+    [InlineData("Jan 2020 - To date", "5-8 Years")]
+    [InlineData("Jan '20 - Present", "5-8 Years")]
+    public void EstimateRelevantExperience_understands_common_date_formats(string duration, string expected)
+    {
+        Assert.Equal(expected, Estimate(Jobs(duration)));
+    }
+
+    [Fact]
+    public void EstimateRelevantExperience_leaves_gaps_out()
+    {
+        // 24 + 24 months. Counting the 8-year gap would give 8+ Years.
+        Assert.Equal("3-5 Years", Estimate(Jobs("Jan 2010 - Dec 2011", "Jan 2020 - Dec 2021")));
+    }
+
+    [Fact]
+    public void EstimateRelevantExperience_does_not_bridge_a_gap_between_year_only_ranges()
+    {
+        // Mid-year to mid-year is 12 + 12 months with a year between them; Jan-to-Dec would join them into 4 years.
+        Assert.Equal("2-3 Years", Estimate(Jobs("2014 - 2015", "2016 - 2017")));
+        Assert.Equal("3-5 Years", Estimate(Jobs("2010 - 2012", "2016 - 2018")));
     }
 }

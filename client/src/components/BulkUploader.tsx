@@ -3,6 +3,7 @@ import { useDropzone } from 'react-dropzone';
 import { useQuery } from '@tanstack/react-query';
 import { CheckCircle2, Copy, FileText, UploadCloud, XCircle } from 'lucide-react';
 import { getActiveRoleOptions, uploadCV } from '../services/api';
+import { readScanText } from '../lib/cvOcr/scanText';
 import { getCVUploadHubConnection, startCVUploadHub, type CVUploadProgressEvent } from '../services/signalr';
 import { offerableJobOpenings } from '../utils/jobOpenings';
 import NoJobOpeningNotice from './common/NoJobOpeningNotice';
@@ -20,7 +21,7 @@ interface Props {
 
 interface FileProgressState {
   fileName: string;
-  status: 'queued' | 'parsing' | 'completed' | 'error' | 'duplicate';
+  status: 'queued' | 'ocr' | 'parsing' | 'completed' | 'error' | 'duplicate';
   error?: string | null;
 }
 
@@ -127,29 +128,37 @@ export default function BulkUploader({ onDraftsParsed }: Props) {
       const failures: string[] = [];
       const skipped: string[] = [];
 
-      for (let i = 0; i < files.length; i++) {
-        const file = files[i];
+      const setStatus = (i: number, status: FileProgressState['status']) =>
         setFileProgresses((prev) => {
           const next = [...prev];
-          if (next[i]) next[i] = { fileName: file.name, status: 'parsing' };
+          if (next[i]) next[i] = { fileName: files[i].name, status };
           return next;
         });
+      // A scanned PDF has no text for the server to read, so it is read here first. readScanText never rejects:
+      // any failure gives null and the file uploads with no OCR text.
+      const scanText = (i: number) => readScanText(files[i], { onOcrStart: () => setStatus(i, 'ocr') });
+
+      // The next file's scan check (and OCR, for a scan) runs while the current file uploads.
+      let nextScan: Promise<string | null> | null = files.length > 0 ? scanText(0) : null;
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const scan = nextScan!;
+        nextScan = i + 1 < files.length ? scanText(i + 1) : null;
 
         try {
+          const ocrText = await scan;
+          setStatus(i, 'parsing');
           const draft = await uploadCV(
             file,
             batchId,
             i,
             files.length,
             batchName.trim() || undefined,
-            selectedRoleId ?? undefined
+            selectedRoleId ?? undefined,
+            ocrText ?? undefined
           );
           drafts.push(draft);
-          setFileProgresses((prev) => {
-            const next = [...prev];
-            if (next[i]) next[i] = { fileName: file.name, status: 'completed' };
-            return next;
-          });
+          setStatus(i, 'completed');
         } catch (err: any) {
           // 409 = the server already holds a CV with identical content.
           const isDuplicate = err?.response?.status === 409;
@@ -296,6 +305,12 @@ export default function BulkUploader({ onDraftsParsed }: Props) {
                 <div className="shrink-0">
                   {fp.status === 'queued' && (
                     <Badge variant="neutral">Queued</Badge>
+                  )}
+                  {fp.status === 'ocr' && (
+                    <Badge variant="brand">
+                      <Spinner className="size-3" />
+                      Reading scan (OCR)
+                    </Badge>
                   )}
                   {fp.status === 'parsing' && (
                     <Badge variant="brand">

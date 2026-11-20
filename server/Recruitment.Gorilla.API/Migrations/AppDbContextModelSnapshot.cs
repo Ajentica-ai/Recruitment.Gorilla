@@ -340,6 +340,9 @@ namespace Recruitment.Gorilla.API.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("varchar(500)");
 
+                    b.Property<bool>("ReadFromScan")
+                        .HasColumnType("tinyint(1)");
+
                     b.Property<string>("RelevantExperience")
                         .HasMaxLength(100)
                         .HasColumnType("varchar(100)");
