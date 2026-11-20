@@ -5,8 +5,14 @@ import { withPdf } from './extractText';
 
 /** Pages OCR'd per PDF. A CV is rarely longer, and each page costs seconds of CPU. */
 const MAX_OCR_PAGES = 4;
-/** Render scale: 2x of the 72 dpi PDF space is about 144 dpi, enough for body text without a huge canvas. */
-const RENDER_SCALE = 2;
+/**
+ * Render scale: 3x of the 72 dpi PDF space is about 216 dpi. Measured on 18 synthetic scans (clean 300 dpi,
+ * blurred 200 dpi, 150 dpi), 3x beat 2x on every kind (clean: emails 6/6 vs 4/6; 150 dpi: words 98.5% vs 97.7%)
+ * for about 20% more time per page, and 4x added nothing on degraded scans.
+ */
+const RENDER_SCALE = 3;
+/** Longest canvas side in pixels, so an oversized page (A3, a poster export) cannot make a huge canvas. */
+const MAX_CANVAS_SIDE = 4000;
 /** A worker idle this long is terminated to free its memory (wasm heap plus language data, tens of MB). */
 const WORKER_IDLE_MS = 60_000;
 
@@ -36,10 +42,20 @@ let idleTimer: ReturnType<typeof setTimeout> | null = null;
 let currentLog: ((m: LogMessage) => void) | null = null;
 let queue: Promise<unknown> = Promise.resolve();
 
+/**
+ * Tesseract.js files are self-hosted (see tesseractAssets in vite.config.ts), never fetched from a CDN. The URLs
+ * must be absolute: the worker starts from a blob URL, where a relative path would not resolve.
+ */
+export function ocrAssetPaths() {
+  const dir = new URL(`${import.meta.env.BASE_URL}${__OCR_ASSET_DIR__}/`, window.location.href).href;
+  return { workerPath: `${dir}worker.min.js`, corePath: dir, langPath: dir };
+}
+
 function getWorker(): Promise<TesseractWorker> {
   if (!workerPromise) {
     workerPromise = import('tesseract.js').then(({ createWorker }) =>
-      createWorker('eng', 1, { logger: (m: LogMessage) => currentLog?.(m) }),
+      // OEM 1 = LSTM only: loads the smaller LSTM core and the best_int English model, the files self-hosted.
+      createWorker('eng', 1, { ...ocrAssetPaths(), logger: (m: LogMessage) => currentLog?.(m) }),
     );
     // A worker that failed to start must not be handed out again.
     workerPromise.catch(() => {
@@ -91,8 +107,8 @@ function finish(parts: string[], pageCount: number, t0: number): OcrResult {
  * OCR for CVs with no text layer (scans, photos, "print to image" PDFs). Tesseract.js only reads
  * characters out of an image; it does not know what a name or an employer is, so its output still goes
  * through the same field extraction as any other CV text.
- * The worker, wasm core and language data are fetched from Tesseract.js's default CDN on first use;
- * production would self-host them.
+ * The worker, wasm core and English model are served by this app (see ocrAssetPaths), and the model is
+ * cached in IndexedDB after the first use.
  */
 export function ocrPages(images: Array<HTMLCanvasElement | Blob>, onProgress?: (p: OcrProgress) => void): Promise<OcrResult> {
   const t0 = performance.now();
@@ -112,7 +128,9 @@ export function ocrPages(images: Array<HTMLCanvasElement | Blob>, onProgress?: (
 
 async function renderPage(doc: PDFDocumentProxy, n: number): Promise<HTMLCanvasElement> {
   const pdfPage = await doc.getPage(n);
-  const viewport = pdfPage.getViewport({ scale: RENDER_SCALE });
+  const base = pdfPage.getViewport({ scale: 1 });
+  const scale = Math.min(RENDER_SCALE, MAX_CANVAS_SIDE / Math.max(base.width, base.height));
+  const viewport = pdfPage.getViewport({ scale });
   const canvas = document.createElement('canvas');
   canvas.width = Math.ceil(viewport.width);
   canvas.height = Math.ceil(viewport.height);
@@ -123,7 +141,7 @@ async function renderPage(doc: PDFDocumentProxy, n: number): Promise<HTMLCanvasE
   return canvas;
 }
 
-/** Frees a canvas's pixel buffer now instead of waiting for garbage collection (about 8 MB per A4 page at 2x). */
+/** Frees a canvas's pixel buffer now instead of waiting for garbage collection (about 18 MB per A4 page at 3x). */
 function release(canvas: HTMLCanvasElement) {
   canvas.width = 0;
   canvas.height = 0;

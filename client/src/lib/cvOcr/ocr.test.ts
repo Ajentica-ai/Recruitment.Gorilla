@@ -9,7 +9,7 @@ const tess = vi.hoisted(() => ({
 vi.mock('tesseract.js', () => ({ createWorker: tess.createWorker }));
 vi.mock('./extractText', () => ({ withPdf: vi.fn() }));
 
-import { ocrImage, ocrPages, terminateOcrWorker } from './ocr';
+import { ocrImage, ocrPages, ocrPdfDocument, terminateOcrWorker } from './ocr';
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -30,6 +30,15 @@ describe('ocrPages', () => {
     expect(result.text).toBe('Jane Doe\nEngineer\n\n\nPage two finance');
     expect(result.pageCount).toBe(2);
     expect(tess.createWorker).toHaveBeenCalledWith('eng', 1, expect.objectContaining({ logger: expect.any(Function) }));
+  });
+
+  it('loads the worker, core and model from this app, never from a CDN', async () => {
+    tess.recognize.mockResolvedValue({ data: { text: 'x' } });
+    await ocrPages([new Blob(['a'])]);
+    const opts = tess.createWorker.mock.calls[0][2] as Record<string, string>;
+    const dir = `${window.location.origin}/${__OCR_ASSET_DIR__}/`;
+    expect(opts).toMatchObject({ workerPath: `${dir}worker.min.js`, corePath: dir, langPath: dir });
+    expect(dir).toMatch(/^http:\/\/localhost(:\d+)?\/tesseract\/\d/);
   });
 
   it('reuses one worker across jobs instead of starting one per file', async () => {
@@ -98,3 +107,55 @@ describe('ocrImage', () => {
     expect(r.pageCount).toBe(1);
   });
 });
+
+describe('ocrPdfDocument', () => {
+  const fakeDoc = (numPages: number, size = { width: 595, height: 842 }) => {
+    const scales: number[] = [];
+    const doc = {
+      numPages,
+      getPage: vi.fn(async () => ({
+        getViewport: ({ scale }: { scale: number }) => {
+          scales.push(scale);
+          return { width: size.width * scale, height: size.height * scale };
+        },
+        render: () => ({ promise: Promise.resolve() }),
+        cleanup: vi.fn(),
+      })),
+    };
+    return { doc, scales };
+  };
+
+  beforeEach(() => {
+    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue({} as never);
+  });
+
+  it('reads at most four pages at 3x and frees every canvas', async () => {
+    const { doc, scales } = fakeDoc(6);
+    const seen: HTMLCanvasElement[] = [];
+    tess.recognize.mockImplementation(async (c: HTMLCanvasElement) => {
+      seen.push(c);
+      expect(c.width).toBe(Math.ceil(595 * 3));
+      return { data: { text: `page ${seen.length}` } };
+    });
+    const r = await ocrPdfDocument(doc as never);
+    expect(doc.getPage).toHaveBeenCalledTimes(4);
+    expect(r.pageCount).toBe(6);
+    expect(r.text).toBe('page 1\n\npage 2\n\npage 3\n\npage 4');
+    expect(scales.filter((s) => s !== 1)).toEqual([3, 3, 3, 3]);
+    expect(seen.every((c) => c.width === 0 && c.height === 0)).toBe(true);
+  });
+
+  it('scales an oversized page down so the canvas stays bounded', async () => {
+    const { doc } = fakeDoc(1, { width: 2384, height: 3370 });
+    let width = 0;
+    let height = 0;
+    tess.recognize.mockImplementation(async (c: HTMLCanvasElement) => {
+      ({ width, height } = c);
+      return { data: { text: 'x' } };
+    });
+    await ocrPdfDocument(doc as never);
+    expect(Math.max(width, height)).toBeLessThanOrEqual(4000);
+    expect(width).toBeGreaterThan(0);
+  });
+});
+
