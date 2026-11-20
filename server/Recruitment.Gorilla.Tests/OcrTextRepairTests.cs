@@ -12,6 +12,18 @@ public class OcrTextRepairTests
         Assert.Equal(expected, OcrTextRepair.Repair(input));
 
     [Theory]
+    [InlineData("Address: Mirpur, Dhaka. arif@gmail.com")]
+    [InlineData("Email: jane@example.com. Then call me")]
+    [InlineData("Email: jane@example.com. available from June")]
+    [InlineData("Contact: Jane.Doe@Example.com")]
+    public void Does_not_glue_neighbouring_text_onto_a_correct_email(string input) =>
+        Assert.Equal(input, OcrTextRepair.Repair(input));
+
+    [Fact]
+    public void Repairs_a_spaced_email_without_touching_the_sentence_before_it() =>
+        Assert.Equal("Lives in Dhaka. arif.hossain@gmail.com", OcrTextRepair.Repair("Lives in Dhaka. arif. hossain@gmail. com"));
+
+    [Theory]
     [InlineData("Linkedin: https://www_linkedin.comVin/arif-hossain", "Linkedin: https://www.linkedin.com/in/arif-hossain")]
     [InlineData("LinkedIn: https://www.linkedin.com/in/jane-doe", "LinkedIn: https://www.linkedin.com/in/jane-doe")]
     [InlineData("linkedin.com/inVnusrat-jahan", "linkedin.com/in/nusrat-jahan")]

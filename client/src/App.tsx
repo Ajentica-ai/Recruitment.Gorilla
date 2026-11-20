@@ -20,11 +20,11 @@ import UserGuidePage from './pages/UserGuidePage';
 import InterviewPage from './pages/InterviewPage';
 import MyInterviewsPage from './pages/MyInterviewsPage';
 import NotFoundPage from './pages/NotFoundPage';
+import AppShell from './components/shell/AppShell';
 
 // Dev-only RG-260 spike. The dynamic import sits behind import.meta.env.DEV, so production builds drop the
 // page and its heavy pdf.js / mammoth / Tesseract.js chunks entirely.
 const CvOcrSpikePage = import.meta.env.DEV ? lazy(() => import('./pages/CvOcrSpikePage')) : null;
-import AppShell from './components/shell/AppShell';
 
 /**
  * Auth gate for everything behind the login page. The chrome itself lives in
@@ -150,7 +150,7 @@ export default function App() {
                 }
               />
             )}
-            <Route path="/change-password"element={<ChangePasswordPage />} />
+            <Route path="/change-password" element={<ChangePasswordPage />} />
             <Route path="/user-guide" element={<UserGuidePage />} />
             {/* Last: any path none of the above matched. Still a child of ProtectedLayout, so a
                 signed-out visitor is redirected to /login first instead of seeing this (#237). */}

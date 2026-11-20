@@ -13,9 +13,18 @@ public static class OcrTextRepair
     // Characters OCR commonly returns for a "/" it could not read cleanly.
     private const string SlashLookalikes = @"VvlI|!\\";
 
+    // An email with stray spaces: "arif. hossain@example. invalid" or "name @ example.org". The space is only
+    // closed up where it cannot be a sentence break, so text next to a correct email is never glued onto it:
+    // - local part: a spaced dot only between lowercase pieces, and the match must start at a word boundary
+    //   ("Dhaka. arif@gmail.com" keeps "Dhaka." out of the address);
+    // - domain: a spaced dot only before the first dot, followed by a lowercase TLD-like word
+    //   ("jane@example.com. Then" stays as it is).
     private static readonly Regex SpacedEmail = new(
-        @"(?<local>[A-Za-z0-9._%+-]+(?:\.[ \t]+[A-Za-z0-9._%+-]+)*)[ \t]*@[ \t]*(?<domain>[A-Za-z0-9-]+(?:\.[ \t]*[A-Za-z0-9-]+)+)",
+        @"(?<![A-Za-z0-9._%+-])(?<local>(?:[a-z0-9._%+-]+\.[ \t]+)*[A-Za-z0-9._%+-]+)[ \t]*@[ \t]*" +
+        @"(?<domain>[A-Za-z0-9-]+(?:(?:\.[A-Za-z0-9-]+)+|\.[ \t]+[a-z]{2,24}\b(?:\.[A-Za-z0-9-]+)*))",
         RegexOptions.Compiled);
+
+    private static readonly Regex Whitespace = new(@"[ \t]+", RegexOptions.Compiled);
 
     private static readonly Regex WwwUnderscore = new(
         @"\bwww[_ ](?=(?:linkedin|github|gitlab|leetcode|codeforces|hackerrank)\b)",
@@ -39,7 +48,7 @@ public static class OcrTextRepair
         if (string.IsNullOrWhiteSpace(text)) return string.Empty;
 
         var repaired = text.Replace("\r\n", "\n");
-        repaired = SpacedEmail.Replace(repaired, m => Regex.Replace(m.Value, @"[ \t]+", ""));
+        repaired = SpacedEmail.Replace(repaired, m => Whitespace.Replace(m.Value, ""));
         repaired = WwwUnderscore.Replace(repaired, "www.");
         repaired = LinkedIn.Replace(repaired, "linkedin.com/in/");
         repaired = HostGluedSlash.Replace(repaired, m => $"{m.Groups["host"].Value.ToLowerInvariant()}.com/");

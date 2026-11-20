@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const tess = vi.hoisted(() => ({
   recognize: vi.fn(),
@@ -7,14 +7,18 @@ const tess = vi.hoisted(() => ({
 }));
 
 vi.mock('tesseract.js', () => ({ createWorker: tess.createWorker }));
-vi.mock('./extractText', () => ({ openPdf: vi.fn() }));
+vi.mock('./extractText', () => ({ withPdf: vi.fn() }));
 
-import { ocrImage, ocrPages } from './ocr';
+import { ocrImage, ocrPages, terminateOcrWorker } from './ocr';
 
 beforeEach(() => {
   vi.clearAllMocks();
   tess.terminate.mockResolvedValue(undefined);
   tess.createWorker.mockResolvedValue({ recognize: tess.recognize, terminate: tess.terminate });
+});
+
+afterEach(async () => {
+  await terminateOcrWorker();
 });
 
 describe('ocrPages', () => {
@@ -28,10 +32,48 @@ describe('ocrPages', () => {
     expect(tess.createWorker).toHaveBeenCalledWith('eng', 1, expect.objectContaining({ logger: expect.any(Function) }));
   });
 
-  it('terminates the worker even when recognition fails', async () => {
-    tess.recognize.mockRejectedValue(new Error('bad image'));
+  it('reuses one worker across jobs instead of starting one per file', async () => {
+    tess.recognize.mockResolvedValue({ data: { text: 'x' } });
+    await ocrPages([new Blob(['a'])]);
+    await ocrPages([new Blob(['b'])]);
+    expect(tess.createWorker).toHaveBeenCalledTimes(1);
+    expect(tess.terminate).not.toHaveBeenCalled();
+  });
+
+  it('runs concurrent jobs one at a time on the shared worker', async () => {
+    let inFlight = 0;
+    let maxInFlight = 0;
+    tess.recognize.mockImplementation(async () => {
+      maxInFlight = Math.max(maxInFlight, ++inFlight);
+      await new Promise((r) => setTimeout(r, 5));
+      inFlight--;
+      return { data: { text: 'x' } };
+    });
+    await Promise.all([ocrPages([new Blob(['a'])]), ocrPages([new Blob(['b'])]), ocrPages([new Blob(['c'])])]);
+    expect(maxInFlight).toBe(1);
+  });
+
+  it('terminates the worker when recognition fails, and the next job starts a fresh one', async () => {
+    tess.recognize.mockRejectedValueOnce(new Error('bad image'));
     await expect(ocrPages([new Blob(['a'])])).rejects.toThrow('bad image');
     expect(tess.terminate).toHaveBeenCalledTimes(1);
+
+    tess.recognize.mockResolvedValueOnce({ data: { text: 'ok' } });
+    expect((await ocrPages([new Blob(['b'])])).text).toBe('ok');
+    expect(tess.createWorker).toHaveBeenCalledTimes(2);
+  });
+
+  it('terminates an idle worker after a minute', async () => {
+    vi.useFakeTimers();
+    try {
+      tess.recognize.mockResolvedValue({ data: { text: 'x' } });
+      await ocrPages([new Blob(['a'])]);
+      expect(tess.terminate).not.toHaveBeenCalled();
+      await vi.advanceTimersByTimeAsync(60_000);
+      expect(tess.terminate).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('reports progress with the page being read', async () => {

@@ -128,25 +128,26 @@ export default function BulkUploader({ onDraftsParsed }: Props) {
       const failures: string[] = [];
       const skipped: string[] = [];
 
-      for (let i = 0; i < files.length; i++) {
-        const file = files[i];
+      const setStatus = (i: number, status: FileProgressState['status']) =>
         setFileProgresses((prev) => {
           const next = [...prev];
-          if (next[i]) next[i] = { fileName: file.name, status: 'parsing' };
+          if (next[i]) next[i] = { fileName: files[i].name, status };
           return next;
         });
+      // A scanned PDF has no text for the server to read, so it is read here first. readScanText never rejects:
+      // any failure gives null and the file uploads with no OCR text.
+      const scanText = (i: number) => readScanText(files[i], { onOcrStart: () => setStatus(i, 'ocr') });
+
+      // The next file's scan check (and OCR, for a scan) runs while the current file uploads.
+      let nextScan: Promise<string | null> | null = files.length > 0 ? scanText(0) : null;
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const scan = nextScan!;
+        nextScan = i + 1 < files.length ? scanText(i + 1) : null;
 
         try {
-          // A scanned PDF has no text for the server to read, so read it here first. Any failure falls back to a
-          // normal upload with no OCR text.
-          const ocrText = await readScanText(file, {
-            onOcrStart: () =>
-              setFileProgresses((prev) => {
-                const next = [...prev];
-                if (next[i]) next[i] = { fileName: file.name, status: 'ocr' };
-                return next;
-              }),
-          });
+          const ocrText = await scan;
+          setStatus(i, 'parsing');
           const draft = await uploadCV(
             file,
             batchId,
@@ -157,11 +158,7 @@ export default function BulkUploader({ onDraftsParsed }: Props) {
             ocrText ?? undefined
           );
           drafts.push(draft);
-          setFileProgresses((prev) => {
-            const next = [...prev];
-            if (next[i]) next[i] = { fileName: file.name, status: 'completed' };
-            return next;
-          });
+          setStatus(i, 'completed');
         } catch (err: any) {
           // 409 = the server already holds a CV with identical content.
           const isDuplicate = err?.response?.status === 409;

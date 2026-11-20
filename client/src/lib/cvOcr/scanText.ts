@@ -10,14 +10,16 @@ export const MAX_OCR_CHARS = 200_000;
 export async function readScanText(file: File, opts: { onOcrStart?: () => void } = {}): Promise<string | null> {
   if (!file.name.toLowerCase().endsWith('.pdf')) return null;
   try {
-    const { extractPdf } = await import('./extractText');
-    const own = await extractPdf(file);
-    if (!own.noTextLayer) return null;
-
-    opts.onOcrStart?.();
-    const { ocrPdf } = await import('./ocr');
-    const { text } = await ocrPdf(file);
-    const trimmed = text.trim();
+    const { withPdf, pdfHasTextLayer } = await import('./extractText');
+    // The PDF is opened once: the text-layer probe stops at the first page with enough text, and a scan goes
+    // straight to OCR from the same document.
+    const text = await withPdf(file, async (doc) => {
+      if (await pdfHasTextLayer(doc)) return null;
+      opts.onOcrStart?.();
+      const { ocrPdfDocument } = await import('./ocr');
+      return (await ocrPdfDocument(doc)).text;
+    });
+    const trimmed = text?.trim() ?? '';
     if (trimmed.length === 0) return null;
     return trimmed.length > MAX_OCR_CHARS ? trimmed.slice(0, MAX_OCR_CHARS) : trimmed;
   } catch (e) {

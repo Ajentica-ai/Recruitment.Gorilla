@@ -160,4 +160,28 @@ describe('BulkUploader', () => {
     await vi.waitFor(() => expect(uploadCV).toHaveBeenCalledTimes(callsBefore + 1));
     expect(vi.mocked(uploadCV).mock.calls.at(-1)?.[6]).toBeUndefined();
   });
+
+  it('reads the next file while the current one uploads', async () => {
+    vi.mocked(getActiveRoleOptions).mockResolvedValueOnce([openRole]);
+    let finishUpload: (v: unknown) => void = () => {};
+    vi.mocked(uploadCV).mockImplementationOnce(() => new Promise((r) => (finishUpload = r)) as never);
+    vi.mocked(uploadCV).mockResolvedValueOnce({ id: 4, fullName: 'B' } as never);
+    const scansBefore = vi.mocked(readScanText).mock.calls.length;
+    const uploadsBefore = vi.mocked(uploadCV).mock.calls.length;
+    const { container } = renderWithProviders(<BulkUploader onDraftsParsed={vi.fn()} />);
+
+    await screen.findByRole('option', { name: 'Backend Engineer' });
+    await userEvent.selectOptions(screen.getByLabelText(/Target Job Opening/i), 'Backend Engineer');
+    const input = container.querySelector('input[type="file"]') as HTMLInputElement;
+    await userEvent.upload(input, [
+      new File(['a'], 'a.pdf', { type: 'application/pdf' }),
+      new File(['b'], 'b.pdf', { type: 'application/pdf' }),
+    ]);
+
+    // The first upload is still in flight, yet the second file has already been checked for a scan.
+    await vi.waitFor(() => expect(vi.mocked(readScanText).mock.calls.length).toBe(scansBefore + 2));
+    expect(vi.mocked(readScanText).mock.calls.at(-1)?.[0].name).toBe('b.pdf');
+    finishUpload({ id: 3, fullName: 'A' });
+    await vi.waitFor(() => expect(uploadCV).toHaveBeenCalledTimes(uploadsBefore + 2));
+  });
 });
