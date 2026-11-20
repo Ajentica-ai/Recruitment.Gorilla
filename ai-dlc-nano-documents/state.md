@@ -1,9 +1,9 @@
 # AI-DLC Nano State
 - Active work item: none
 - Phase: -
-- Branch: feature/RG-260/In-browser-CV-extraction-spike (uncommitted work)
+- Branch: feature/RG-260/In-browser-CV-extraction-spike (pushed, PR #303; develop merged in after RG-259 landed via #302)
 - Base SHA: -
-- Next step: user tests, then decides commit + push + PR for RG-260 (migration applies on next API start).
+- Next step: review and merge PR #303 (migration AddDraftReadFromScan applies on next API start).
 - Paused work items: none
-- Uncommitted code: yes
-- Last updated: 2026-11-17T06:16Z by claude
+- Uncommitted code: no
+- Last updated: 2026-11-20T00:00Z by claude

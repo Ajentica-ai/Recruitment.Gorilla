@@ -266,6 +266,12 @@ public class CandidateDraftService(
         );
     }
 
+    /// <summary>Re-estimates the Relevant Experience preset from the roles on screen, so the review form can refresh it as roles are edited.</summary>
+    public string? EstimateRelevantExperience(List<EstimateExperienceItemDto>? experiences) =>
+        CVParserService.EstimateRelevantExperience(
+            (experiences ?? []).Select(e => new ParsedExperience("", "", e.Duration, null, e.StartMonth, e.EndMonth)),
+            DateTime.UtcNow);
+
     public async Task<List<DraftBatchSummaryDto>> GetBatchesAsync()
     {
         var query = ScopedDrafts();
@@ -319,7 +325,7 @@ public class CandidateDraftService(
         bool readFromScan = false)
     {
         var eduDtos = educations?.Select((e, idx) => new CandidateEducationDto(idx + 1, e.Degree, e.Institution, e.GraduationYear, e.Cgpa)).ToList();
-        var expDtos = experiences?.Select((e, idx) => new CandidateExperienceDto(idx + 1, e.JobTitle, e.Company, e.Duration, e.Description)).ToList();
+        var expDtos = experiences?.Select((e, idx) => new CandidateExperienceDto(idx + 1, e.JobTitle, e.Company, e.Duration, e.Description, e.StartMonth, e.EndMonth)).ToList();
 
         var draft = new CandidateDraft
         {
