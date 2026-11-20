@@ -239,10 +239,13 @@ export const uploadCV = async (
   fileIndex?: number,
   totalFiles?: number,
   batchName?: string,
-  roleAppliedOptionId?: number
+  roleAppliedOptionId?: number,
+  /** OCR text of a scanned PDF, read in the browser; the server uses it only when the file has no text of its own. */
+  ocrText?: string
 ): Promise<CVDraft> => {
   const form = new FormData();
   form.append('file', file);
+  if (ocrText) form.append('ocrText', ocrText);
   if (batchId) form.append('batchId', batchId);
   if (batchName) form.append('batchName', batchName);
   if (roleAppliedOptionId != null) form.append('roleAppliedOptionId', roleAppliedOptionId.toString());

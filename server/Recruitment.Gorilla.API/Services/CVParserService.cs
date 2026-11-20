@@ -113,7 +113,17 @@ public class CVParserService
         "Banani", "Dhanmondi", "Mohakhali", "Badda", "Mohammadpur", "Bashundhara", "Bangladesh"
     ];
 
-    public ParsedCVResult Parse(string filePath, string fileType)
+    public ParsedCVResult Parse(string filePath, string fileType) => ParseDetailed(filePath, fileType, null).Result;
+
+    /// <summary>Fewer characters than this in a file's own text means it has no usable text layer (a scan).</summary>
+    public const int MinTextLayerChars = 40;
+
+    /// <summary>
+    /// Parses a CV. When the file has no text layer of its own (a scanned PDF) and the browser supplied OCR text,
+    /// that text is repaired and parsed instead, and <c>ReadFromScan</c> is true so the reviewer can be told. OCR text
+    /// is only used for such files: a file with real text is always read from the file itself.
+    /// </summary>
+    public (ParsedCVResult Result, bool ReadFromScan) ParseDetailed(string filePath, string fileType, string? ocrText)
     {
         var hyperlinks = new List<string>();
         var text = fileType.ToUpperInvariant() switch
@@ -122,7 +132,15 @@ public class CVParserService
             "TXT" => File.ReadAllText(filePath),
             _ => ExtractWordText(filePath)
         };
-        return ExtractFields(text, hyperlinks);
+
+        var hasTextLayer = text.Count(c => !char.IsWhiteSpace(c)) >= MinTextLayerChars;
+        if (!hasTextLayer && !string.IsNullOrWhiteSpace(ocrText))
+        {
+            var repaired = OcrTextRepair.Repair(ocrText);
+            if (repaired.Count(c => !char.IsWhiteSpace(c)) >= MinTextLayerChars)
+                return (ExtractFields(repaired, hyperlinks), true);
+        }
+        return (ExtractFields(text, hyperlinks), false);
     }
 
     private static string ExtractPdfText(string filePath, List<string> hyperlinks)

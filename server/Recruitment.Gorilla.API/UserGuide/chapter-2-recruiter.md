@@ -49,6 +49,10 @@ Adding candidates has two steps: **upload** the CVs, then **review** what was ex
 
 ![Upload & Intake](images/02-upload-cvs.png)
 
+A scanned CV (a PDF with no selectable text) shows **Reading scan (OCR)** for a few seconds while
+your browser reads the page image. Its draft is marked **Read from a scan (OCR): check every field**,
+because OCR can misread characters, especially in emails and links.
+
 Each CV is read in the background and saved as a **draft**. When it finishes, select
 **Open Review Workspace**.
 

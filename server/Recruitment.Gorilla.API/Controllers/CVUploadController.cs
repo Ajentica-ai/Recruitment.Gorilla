@@ -25,7 +25,8 @@ public class CVUploadController(
         [FromForm] string? batchName = null,
         [FromForm] int? fileIndex = null,
         [FromForm] int? totalFiles = null,
-        [FromForm] int? roleAppliedOptionId = null)
+        [FromForm] int? roleAppliedOptionId = null,
+        [FromForm] string? ocrText = null)
     {
         var bId = batchId ?? Guid.NewGuid().ToString("N");
         var idx = fileIndex ?? 0;
@@ -66,9 +67,10 @@ public class CVUploadController(
         var fullPath = UploadPaths.Resolve(env.ContentRootPath, storedName)!;
 
         ParsedCVResult parsed;
+        bool readFromScan;
         try
         {
-            parsed = parser.Parse(fullPath, fileType);
+            (parsed, readFromScan) = parser.ParseDetailed(fullPath, fileType, UsableOcrText(ocrText, file.FileName));
         }
         catch (Exception ex)
         {
@@ -99,7 +101,8 @@ public class CVUploadController(
             parsed.Educations, parsed.Experiences,
             roleAppliedOptionId: roleAppliedOptionId,
             fileHash: fileHash,
-            relevantExperience: CVParserService.EstimateRelevantExperience(parsed.Experiences, DateTime.UtcNow));
+            relevantExperience: CVParserService.EstimateRelevantExperience(parsed.Experiences, DateTime.UtcNow),
+            readFromScan: readFromScan);
 
         var eduDtos = parsed.Educations.Select((e, i) => new CandidateEducationDto(i + 1, e.Degree, e.Institution, e.GraduationYear, e.Cgpa)).ToList();
         var expDtos = parsed.Experiences.Select((e, i) => new CandidateExperienceDto(i + 1, e.JobTitle, e.Company, e.Duration, e.Description)).ToList();
@@ -121,7 +124,7 @@ public class CVUploadController(
             file.FileName, storedName, fileType, file.Length,
             draftEntity.Id, bId, batchName,
             parsed.Location, parsed.LeetCode, parsed.Codeforces, parsed.HackerRank, parsed.GitLab,
-            eduDtos, expDtos);
+            eduDtos, expDtos, readFromScan);
 
         logger.LogInformation(
             "Parsed & persisted CV '{FileName}' ({FileType}, {Size} bytes) as Draft #{DraftId} stored as {StoredName}.",
@@ -132,5 +135,16 @@ public class CVUploadController(
             bId, idx, total, file.FileName, "completed", 100, draft, null));
 
         return Ok(draft);
+    }
+
+    /// <summary>The browser's OCR text is a hint for scanned files, so it is capped; anything larger is ignored, not rejected.</summary>
+    internal const int MaxOcrTextChars = 200_000;
+
+    private string? UsableOcrText(string? ocrText, string fileName)
+    {
+        if (string.IsNullOrWhiteSpace(ocrText)) return null;
+        if (ocrText.Length <= MaxOcrTextChars) return ocrText;
+        logger.LogWarning("Ignored OCR text for '{FileName}': {Length} characters is over the {Max} limit.", fileName, ocrText.Length, MaxOcrTextChars);
+        return null;
     }
 }

@@ -1,0 +1,161 @@
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+const tess = vi.hoisted(() => ({
+  recognize: vi.fn(),
+  terminate: vi.fn(),
+  createWorker: vi.fn(),
+}));
+
+vi.mock('tesseract.js', () => ({ createWorker: tess.createWorker }));
+vi.mock('./extractText', () => ({ withPdf: vi.fn() }));
+
+import { ocrImage, ocrPages, ocrPdfDocument, terminateOcrWorker } from './ocr';
+
+beforeEach(() => {
+  vi.clearAllMocks();
+  tess.terminate.mockResolvedValue(undefined);
+  tess.createWorker.mockResolvedValue({ recognize: tess.recognize, terminate: tess.terminate });
+});
+
+afterEach(async () => {
+  await terminateOcrWorker();
+});
+
+describe('ocrPages', () => {
+  it('recognises each image, joins the pages and cleans the text', async () => {
+    tess.recognize
+      .mockResolvedValueOnce({ data: { text: 'Jane Doe\nEngineer\n' } })
+      .mockResolvedValueOnce({ data: { text: `Page two ${String.fromCharCode(0xfb01)}nance` } });
+    const result = await ocrPages([new Blob(['a']), new Blob(['b'])]);
+    expect(result.text).toBe('Jane Doe\nEngineer\n\n\nPage two finance');
+    expect(result.pageCount).toBe(2);
+    expect(tess.createWorker).toHaveBeenCalledWith('eng', 1, expect.objectContaining({ logger: expect.any(Function) }));
+  });
+
+  it('loads the worker, core and model from this app, never from a CDN', async () => {
+    tess.recognize.mockResolvedValue({ data: { text: 'x' } });
+    await ocrPages([new Blob(['a'])]);
+    const opts = tess.createWorker.mock.calls[0][2] as Record<string, string>;
+    const dir = `${window.location.origin}/${__OCR_ASSET_DIR__}/`;
+    expect(opts).toMatchObject({ workerPath: `${dir}worker.min.js`, corePath: dir, langPath: dir });
+    expect(dir).toMatch(/^http:\/\/localhost(:\d+)?\/tesseract\/\d/);
+  });
+
+  it('reuses one worker across jobs instead of starting one per file', async () => {
+    tess.recognize.mockResolvedValue({ data: { text: 'x' } });
+    await ocrPages([new Blob(['a'])]);
+    await ocrPages([new Blob(['b'])]);
+    expect(tess.createWorker).toHaveBeenCalledTimes(1);
+    expect(tess.terminate).not.toHaveBeenCalled();
+  });
+
+  it('runs concurrent jobs one at a time on the shared worker', async () => {
+    let inFlight = 0;
+    let maxInFlight = 0;
+    tess.recognize.mockImplementation(async () => {
+      maxInFlight = Math.max(maxInFlight, ++inFlight);
+      await new Promise((r) => setTimeout(r, 5));
+      inFlight--;
+      return { data: { text: 'x' } };
+    });
+    await Promise.all([ocrPages([new Blob(['a'])]), ocrPages([new Blob(['b'])]), ocrPages([new Blob(['c'])])]);
+    expect(maxInFlight).toBe(1);
+  });
+
+  it('terminates the worker when recognition fails, and the next job starts a fresh one', async () => {
+    tess.recognize.mockRejectedValueOnce(new Error('bad image'));
+    await expect(ocrPages([new Blob(['a'])])).rejects.toThrow('bad image');
+    expect(tess.terminate).toHaveBeenCalledTimes(1);
+
+    tess.recognize.mockResolvedValueOnce({ data: { text: 'ok' } });
+    expect((await ocrPages([new Blob(['b'])])).text).toBe('ok');
+    expect(tess.createWorker).toHaveBeenCalledTimes(2);
+  });
+
+  it('terminates an idle worker after a minute', async () => {
+    vi.useFakeTimers();
+    try {
+      tess.recognize.mockResolvedValue({ data: { text: 'x' } });
+      await ocrPages([new Blob(['a'])]);
+      expect(tess.terminate).not.toHaveBeenCalled();
+      await vi.advanceTimersByTimeAsync(60_000);
+      expect(tess.terminate).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('reports progress with the page being read', async () => {
+    tess.createWorker.mockImplementation(async (_lang: string, _n: number, opts: { logger: (m: unknown) => void }) => ({
+      recognize: async () => {
+        opts.logger({ status: 'recognizing text', progress: 0.5 });
+        return { data: { text: 'x' } };
+      },
+      terminate: tess.terminate,
+    }));
+    const seen: Array<{ page: number; pages: number; progress: number }> = [];
+    await ocrPages([new Blob(['a'])], (p) => seen.push({ page: p.page, pages: p.pages, progress: p.progress }));
+    expect(seen).toEqual([{ page: 1, pages: 1, progress: 0.5 }]);
+  });
+});
+
+describe('ocrImage', () => {
+  it('runs OCR on a single image file', async () => {
+    tess.recognize.mockResolvedValue({ data: { text: 'Scanned CV text' } });
+    const r = await ocrImage(new File(['x'], 'scan.png'));
+    expect(r.text).toBe('Scanned CV text');
+    expect(r.pageCount).toBe(1);
+  });
+});
+
+describe('ocrPdfDocument', () => {
+  const fakeDoc = (numPages: number, size = { width: 595, height: 842 }) => {
+    const scales: number[] = [];
+    const doc = {
+      numPages,
+      getPage: vi.fn(async () => ({
+        getViewport: ({ scale }: { scale: number }) => {
+          scales.push(scale);
+          return { width: size.width * scale, height: size.height * scale };
+        },
+        render: () => ({ promise: Promise.resolve() }),
+        cleanup: vi.fn(),
+      })),
+    };
+    return { doc, scales };
+  };
+
+  beforeEach(() => {
+    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue({} as never);
+  });
+
+  it('reads at most four pages at 3x and frees every canvas', async () => {
+    const { doc, scales } = fakeDoc(6);
+    const seen: HTMLCanvasElement[] = [];
+    tess.recognize.mockImplementation(async (c: HTMLCanvasElement) => {
+      seen.push(c);
+      expect(c.width).toBe(Math.ceil(595 * 3));
+      return { data: { text: `page ${seen.length}` } };
+    });
+    const r = await ocrPdfDocument(doc as never);
+    expect(doc.getPage).toHaveBeenCalledTimes(4);
+    expect(r.pageCount).toBe(6);
+    expect(r.text).toBe('page 1\n\npage 2\n\npage 3\n\npage 4');
+    expect(scales.filter((s) => s !== 1)).toEqual([3, 3, 3, 3]);
+    expect(seen.every((c) => c.width === 0 && c.height === 0)).toBe(true);
+  });
+
+  it('scales an oversized page down so the canvas stays bounded', async () => {
+    const { doc } = fakeDoc(1, { width: 2384, height: 3370 });
+    let width = 0;
+    let height = 0;
+    tess.recognize.mockImplementation(async (c: HTMLCanvasElement) => {
+      ({ width, height } = c);
+      return { data: { text: 'x' } };
+    });
+    await ocrPdfDocument(doc as never);
+    expect(Math.max(width, height)).toBeLessThanOrEqual(4000);
+    expect(width).toBeGreaterThan(0);
+  });
+});
+

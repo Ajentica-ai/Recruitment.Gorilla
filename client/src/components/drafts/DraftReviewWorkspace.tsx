@@ -917,6 +917,15 @@ export default function DraftReviewWorkspace({ initialBatchId, onCandidateCreate
                           ({(activeDraft.fileSizeBytes / 1024).toFixed(0)} KB)
                         </span>
                       </Badge>
+                      {activeDraft.readFromScan && (
+                        <Badge
+                          variant="warning"
+                          className="max-w-full"
+                          title="This CV is a scan with no text of its own. Its fields were read with OCR, which can misread characters, so check each one against the CV."
+                        >
+                          Read from a scan (OCR): check every field
+                        </Badge>
+                      )}
                       {activeDraft.batchName && (
                         <Badge variant="outline" className="max-w-full">
                           <span className="truncate inline-block max-w-[160px] sm:max-w-[240px]">
