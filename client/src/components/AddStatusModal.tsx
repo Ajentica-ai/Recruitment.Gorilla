@@ -25,6 +25,8 @@ import {
   getNextStatusOptions,
 } from '../services/api';
 import { DURATION_OPTIONS } from '@/lib/interviewOptions';
+import { FUTURE_ONLY_ERROR, PAST_REASON_ERROR, PAST_TIME_NOTE, isPastTime } from '@/lib/backdating';
+import { useOptionalAuth } from '../auth/AuthContext';
 
 const Req = () => (
   <span className="text-[var(--danger-text)]" aria-hidden="true">
@@ -59,6 +61,9 @@ export default function AddStatusModal({
   onAdded,
 }: AddStatusModalProps) {
   const { addToast } = useToast();
+  // A Recruiter or Super Admin may book an interview for a time that has passed (#263); anyone else may not.
+  const auth = useOptionalAuth();
+  const canBackdate = auth?.hasAnyRole('SuperAdmin', 'Recruiter') ?? false;
   const [status, setStatus] = useState(initialStatus || '');
   const [comment, setComment] = useState('');
   const [taskDetails, setTaskDetails] = useState('');
@@ -92,6 +97,7 @@ export default function AddStatusModal({
   const requiresSubmissionUrl = status === 'Submission Received' || status === 'Submission Receieved';
   const requiresInterviewAt = status === 'Interview Scheduled';
   const requiresInterviewers = status === 'Interview Scheduled';
+  const backdating = requiresInterviewAt && canBackdate && isPastTime(interviewAt);
 
   const { data: assignableUsers = [] } = useQuery({
     queryKey: ['assignable-users'],
@@ -166,6 +172,11 @@ export default function AddStatusModal({
     if (requiresTaskDetails && !taskDetails.trim()) errs.taskDetails = 'Task details are required.';
     if (requiresSubmissionUrl && !submissionUrl.trim()) errs.submissionUrl = 'Submission link is required.';
     if (requiresInterviewAt && !interviewAt) errs.interviewAt = 'Interview date/time is required.';
+    else if (requiresInterviewAt && isPastTime(interviewAt)) {
+      // The comment doubles as the reason for a time that has passed.
+      if (!canBackdate) errs.interviewAt = FUTURE_ONLY_ERROR;
+      else if (!comment.trim()) errs.comment = PAST_REASON_ERROR;
+    }
     if (requiresInterviewers && interviewerIds.length === 0)
       errs.interviewers = 'Select at least one interviewer.';
     if (Object.keys(errs).length > 0) {
@@ -269,6 +280,7 @@ export default function AddStatusModal({
                   }}
                   aria-invalid={!!fieldErrors.interviewAt || undefined}
                 />
+                {backdating ? <p className="form-help mt-1">{PAST_TIME_NOTE}</p> : null}
                 {fieldErrors.interviewAt ? <p className="text-[length:var(--text-sm)] text-[var(--danger-text)]">{fieldErrors.interviewAt}</p> : null}
               </div>
             )}
@@ -337,16 +349,22 @@ export default function AddStatusModal({
             )}
 
             <div className="col-span-12 md:col-span-12">
-              {requiresComment ? (
+              {requiresComment || backdating ? (
                 <Label className="mb-1">
-                  Comment <Req />
+                  {backdating ? 'Reason' : 'Comment'} <Req />
                 </Label>
               ) : (
                 requiresInterviewers && <Label className="mb-1">Notes for interviewers (optional)</Label>
               )}
               <Textarea
                 rows={2}
-                placeholder={requiresComment || requiresInterviewers ? '' : 'Comment (optional)'}
+                placeholder={
+                  backdating
+                    ? 'Why is this time in the past?'
+                    : requiresComment || requiresInterviewers
+                      ? ''
+                      : 'Comment (optional)'
+                }
                 value={comment}
                 onChange={(e) => {
                   setComment(e.target.value);

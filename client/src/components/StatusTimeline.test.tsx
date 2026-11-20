@@ -141,6 +141,58 @@ describe('StatusTimeline', () => {
       expect(screen.getByText(/Candidate asked for Thursday/)).toBeInTheDocument();
     });
 
+    it('labels a move to a past time as back-dated, with who, the old time and the reason (#263)', () => {
+      renderWithProviders(
+        <StatusTimeline
+          history={[
+            scheduledEntry({
+              interviewScheduledAt: '2026-10-14T09:30:00Z',
+              interviewEvents: [
+                {
+                  eventType: 'RescheduledBackdated',
+                  previousScheduledAt: '2026-10-20T14:00:00Z',
+                  newScheduledAt: '2026-10-14T09:30:00Z',
+                  reason: 'It actually took place on Wednesday',
+                  actorName: 'Rhonda Recruiter',
+                  createdAt: '2026-10-16T10:00:00Z',
+                },
+              ],
+            }),
+          ]}
+        />,
+      );
+
+      expect(screen.getByText(/Back-dated/)).toBeInTheDocument();
+      expect(screen.getByText(/Moved to a past time from/)).toBeInTheDocument();
+      expect(screen.getByText(/Rhonda Recruiter/)).toBeInTheDocument();
+      expect(screen.getByText(/It actually took place on Wednesday/)).toBeInTheDocument();
+      expect(screen.queryByText(/Rescheduled from/)).not.toBeInTheDocument();
+    });
+
+    it('shows the reason on an interview that was booked for a time already past (#263)', () => {
+      renderWithProviders(
+        <StatusTimeline
+          history={[
+            scheduledEntry({
+              interviewEvents: [
+                {
+                  eventType: 'Scheduled',
+                  previousScheduledAt: null,
+                  newScheduledAt: '2026-10-20T14:00:00Z',
+                  reason: 'Held by phone, entered late',
+                  actorName: 'Rhonda Recruiter',
+                  createdAt: '2026-10-22T10:00:00Z',
+                },
+              ],
+            }),
+          ]}
+        />,
+      );
+
+      expect(screen.getByText(/Booked for a past time/)).toBeInTheDocument();
+      expect(screen.getByText(/Held by phone, entered late/)).toBeInTheDocument();
+    });
+
     it('marks a cancelled interview and shows its reason, with no actions', () => {
       renderWithProviders(
         <StatusTimeline

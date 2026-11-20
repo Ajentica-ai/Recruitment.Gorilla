@@ -594,7 +594,7 @@ public class InterviewService(
     /// time T", and a reschedule changes neither the status nor the time it was reached.
     /// </summary>
     public async Task<(InterviewScheduleDto? Dto, string? Error, bool NotFound, bool Conflict)> RescheduleAsync(
-        int id, RescheduleInterviewDto dto, int? ownerScope, int actorUserId, string actorName)
+        int id, RescheduleInterviewDto dto, int? ownerScope, int actorUserId, string actorName, bool canBackdate = false)
     {
         var interview = await LoadForScheduleAsync(id);
         if (interview is null) return (null, null, true, false);
@@ -617,8 +617,16 @@ public class InterviewService(
             return (null, $"The candidate is now at \"{candidate.CurrentStatus}\", so this interview can no longer be moved.", false, true);
 
         var scheduledAt = dto.ScheduledAt.ToUniversalTime();
-        if (scheduledAt <= DateTime.UtcNow)
-            return (null, "Pick a time in the future.", false, false);
+        // A time that has passed is allowed only for a Recruiter or Super Admin, with a reason, and not before
+        // the candidate was added or the status this interview follows (#263).
+        var backdated = scheduledAt <= DateTime.UtcNow;
+        if (backdated)
+        {
+            var (createdAt, followsAt, followsName) = await BackdatedInterview.BoundsAsync(
+                db, interview.CandidateId, InterviewScheduledStatus, booking: false);
+            var backdateError = BackdatedInterview.Check(scheduledAt, canBackdate, dto.Reason, createdAt, followsAt, followsName);
+            if (backdateError is not null) return (null, backdateError, false, false);
+        }
 
         var newInterviewerIds = (dto.InterviewerUserIds ?? []).Distinct().ToList();
         if (newInterviewerIds.Count == 0)
@@ -693,7 +701,7 @@ public class InterviewService(
         db.InterviewEvents.Add(new InterviewEvent
         {
             InterviewId = interview.Id,
-            EventType = InterviewEventTypes.Rescheduled,
+            EventType = backdated ? InterviewEventTypes.RescheduledBackdated : InterviewEventTypes.Rescheduled,
             PreviousScheduledAt = previousScheduledAt,
             NewScheduledAt = scheduledAt,
             Reason = reason,
@@ -704,8 +712,8 @@ public class InterviewService(
         await db.SaveChangesAsync();
 
         await audit.RecordAsync(
-            "Interview.Rescheduled", "Interview", interview.Id,
-            $"Interview for {candidate.FullName} moved",
+            backdated ? "Interview.RescheduledBackdated" : "Interview.Rescheduled", "Interview", interview.Id,
+            backdated ? $"Interview for {candidate.FullName} moved to a past time" : $"Interview for {candidate.FullName} moved",
             $"From {previousScheduledAt:u} to {scheduledAt:u}." + (reason is null ? "" : $" Reason: {reason}")
             + (previousShareEarlier == interview.ShareEarlierRoundsWithPanel
                 ? ""
@@ -716,8 +724,12 @@ public class InterviewService(
             interview, newInterviewerIds, interview.ShareEarlierRoundsWithPanel, actorUserId);
         if (tx is not null) await tx.CommitAsync();
 
-        await NotifyRescheduledAsync(interview, candidate.FullName, candidate.RoleApplied ?? candidate.AppliedRole,
-            previousScheduledAt, reason, retainedIds, addedIds, removedIds, actorUserId, withEarlierRounds);
+        // Nothing outward for a time that has already gone: no email, Slack or calendar invite, only an in-app notice.
+        if (backdated)
+            await NotifyBackdatedAsync(interview, candidate.FullName, retainedIds, addedIds, removedIds, actorUserId);
+        else
+            await NotifyRescheduledAsync(interview, candidate.FullName, candidate.RoleApplied ?? candidate.AppliedRole,
+                previousScheduledAt, reason, retainedIds, addedIds, removedIds, actorUserId, withEarlierRounds);
 
         var fresh = await LoadForScheduleAsync(id);
         return (ToScheduleDto(fresh!, candidate.FullName), null, false, false);
@@ -865,6 +877,29 @@ public class InterviewService(
     /// Each group hears the thing that is true for them: retained interviewers that it moved,
     /// new ones the normal assignment message, dropped ones that they are off the panel.
     /// </summary>
+    /// <summary>
+    /// In-app only (#263): the interview time is already past, so an email, a Slack message or a calendar invite would
+    /// invite people to something that has happened. Interviewers still need to know the record changed.
+    /// </summary>
+    private async Task NotifyBackdatedAsync(
+        Interview interview, string candidateName, List<int> retainedIds, List<int> addedIds, List<int> removedIds, int actorUserId)
+    {
+        var link = $"/interviews/{interview.Id}";
+        var when = $"{interview.ScheduledAt:dd MMM yyyy, HH:mm} UTC";
+        foreach (var uid in retainedIds)
+            await notificationService.NotifyAsync(uid, "Interview moved",
+                $"The interview with {candidateName} has been recorded as held on {when}.", link);
+        foreach (var uid in addedIds)
+            await notificationService.NotifyAsync(uid, "Interview assigned",
+                $"You have been assigned to the interview with {candidateName}, recorded as held on {when}.", link);
+        foreach (var uid in removedIds)
+            await notificationService.NotifyAsync(uid, "Interview cancelled",
+                $"You are no longer on the interview with {candidateName}.", null);
+
+        await NotifyBookerAsync(interview, candidateName, actorUserId,
+            "Interview moved", $"{candidateName}'s interview was recorded as held on {when}.");
+    }
+
     private async Task NotifyRescheduledAsync(
         Interview interview, string candidateName, string? roleName, DateTime previousScheduledAt,
         string? reason, List<int> retainedIds, List<int> addedIds, List<int> removedIds, int actorUserId,

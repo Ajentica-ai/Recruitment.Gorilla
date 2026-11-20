@@ -730,7 +730,7 @@ export interface InterviewDetail {
 export type InterviewLifecycleStatus = 'Scheduled' | 'Cancelled';
 
 export interface InterviewEventEntry {
-  eventType: 'Scheduled' | 'Rescheduled' | 'Cancelled';
+  eventType: 'Scheduled' | 'Rescheduled' | 'RescheduledBackdated' | 'Cancelled';
   previousScheduledAt: string | null;
   newScheduledAt: string | null;
   reason: string | null;

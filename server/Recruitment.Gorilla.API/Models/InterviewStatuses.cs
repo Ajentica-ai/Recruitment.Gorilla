@@ -13,5 +13,7 @@ public static class InterviewEventTypes
 {
     public const string Scheduled = "Scheduled";
     public const string Rescheduled = "Rescheduled";
+    /// <summary>A move to a time that has already passed (#263): the interview happened earlier than booked.</summary>
+    public const string RescheduledBackdated = "RescheduledBackdated";
     public const string Cancelled = "Cancelled";
 }

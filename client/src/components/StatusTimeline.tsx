@@ -163,7 +163,10 @@ export default function StatusTimeline({
                 // date here.
                 const cancelled = entry.interviewStatus === 'Cancelled';
                 const current = entry.interviewScheduledAt ?? entry.interviewAt;
-                const moves = (entry.interviewEvents ?? []).filter((e) => e.eventType === 'Rescheduled');
+                const moves = (entry.interviewEvents ?? []).filter(
+                  (e) => e.eventType === 'Rescheduled' || e.eventType === 'RescheduledBackdated',
+                );
+                const pastBooking = (entry.interviewEvents ?? []).find((e) => e.eventType === 'Scheduled' && e.reason);
                 const lastMove = moves.length > 0 ? moves[moves.length - 1] : null;
                 const cancellation = (entry.interviewEvents ?? []).find((e) => e.eventType === 'Cancelled');
                 return (
@@ -177,8 +180,17 @@ export default function StatusTimeline({
                     </div>
                     {lastMove?.previousScheduledAt && !cancelled && (
                       <div className="text-[length:var(--text-sm)] text-muted-foreground">
-                        Rescheduled from {formatDate(lastMove.previousScheduledAt)} by {lastMove.actorName}
-                        {lastMove.reason ? ` — ${lastMove.reason}` : ''}
+                        {lastMove.eventType === 'RescheduledBackdated' && (
+                          <span className="status status--interview mr-2">Back-dated</span>
+                        )}
+                        {lastMove.eventType === 'RescheduledBackdated' ? 'Moved to a past time from' : 'Rescheduled from'}{' '}
+                        {formatDate(lastMove.previousScheduledAt)} by {lastMove.actorName}
+                        {lastMove.reason ? ` - ${lastMove.reason}` : ''}
+                      </div>
+                    )}
+                    {pastBooking && !lastMove && !cancelled && (
+                      <div className="text-[length:var(--text-sm)] text-muted-foreground">
+                        Booked for a past time by {pastBooking.actorName} - {pastBooking.reason}
                       </div>
                     )}
                     {cancelled && cancellation?.reason && (

@@ -88,7 +88,8 @@ public class InterviewsController(
         if (currentUser.UserId is not int userId) return Unauthorized();
 
         var (result, error, notFound, conflict) = await interviews.RescheduleAsync(
-            id, dto, OwnerScope, userId, currentUser.Name ?? string.Empty);
+            id, dto, OwnerScope, userId, currentUser.Name ?? string.Empty,
+            canBackdate: currentUser.IsInAnyRole(Roles.SuperAdmin, Roles.Recruiter));
         if (notFound) return NotFound();
         if (conflict) return Conflict(new { message = error });
         if (error is not null) return BadRequest(new { message = error });

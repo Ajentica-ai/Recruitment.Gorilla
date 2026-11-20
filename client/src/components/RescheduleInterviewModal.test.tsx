@@ -12,6 +12,13 @@ import {
 } from '../services/api';
 import type { InterviewSchedule } from '../types';
 
+// Who is signed in decides whether a past time is allowed (#263). No provider means a plain Admin-like user.
+const auth = vi.hoisted(() => ({ roles: [] as string[] | null }));
+vi.mock('../auth/AuthContext', () => ({
+  useOptionalAuth: () =>
+    auth.roles === null ? undefined : { hasAnyRole: (...want: string[]) => want.some((r) => auth.roles!.includes(r)) },
+}));
+
 vi.mock('../services/api', () => ({
   getInterviewSchedule: vi.fn(),
   getAssignableUsers: vi.fn(),
@@ -57,6 +64,7 @@ const renderModal = () =>
 describe('RescheduleInterviewModal', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    auth.roles = null;
     vi.mocked(getInterviewSchedule).mockResolvedValue(schedule());
     vi.mocked(getAssignableUsers).mockResolvedValue([
       { id: 11, name: 'Ivy Interviewer', email: 'ivy@test.local' },
@@ -135,6 +143,58 @@ describe('RescheduleInterviewModal', () => {
 
     expect(await screen.findByText(/pick a time in the future/i)).toBeInTheDocument();
     expect(rescheduleInterview).not.toHaveBeenCalled();
+  });
+
+  describe('a time in the past (#263)', () => {
+    const openOnPast = async () => {
+      vi.mocked(getInterviewSchedule).mockResolvedValue(schedule({ scheduledAt: inDays(-2).toISOString() }));
+      renderModal();
+      await screen.findByLabelText('Interview duration');
+    };
+
+    it.each([['Recruiter'], ['SuperAdmin']])('lets a %s pick it, shows the note and requires a reason', async (role) => {
+      auth.roles = [role];
+      const user = userEvent.setup();
+      await openOnPast();
+
+      expect(screen.getByText('This time is in the past. Invites will not be sent.')).toBeInTheDocument();
+      // The intro must not promise an email that will not be sent.
+      expect(screen.queryByText(/everyone affected is emailed/)).not.toBeInTheDocument();
+      expect(screen.getByText(/Nothing is emailed for a time in the past/)).toBeInTheDocument();
+      expect(screen.getByText(/Reason for the change/).textContent).toContain('*');
+
+      await user.click(screen.getByRole('button', { name: /save new time/i }));
+      expect(await screen.findByText('A reason is required when the time is in the past.')).toBeInTheDocument();
+      expect(rescheduleInterview).not.toHaveBeenCalled();
+
+      await user.type(screen.getByPlaceholderText(/why is this time in the past/i), 'It took place on Monday');
+      await user.click(screen.getByRole('button', { name: /save new time/i }));
+
+      await waitFor(() => expect(rescheduleInterview).toHaveBeenCalled());
+      const payload = vi.mocked(rescheduleInterview).mock.calls[0][1];
+      expect(new Date(payload.scheduledAt).getTime()).toBeLessThan(Date.now());
+      expect(payload.reason).toBe('It took place on Monday');
+    });
+
+    it('keeps the future-only rule, with no note, for an Admin', async () => {
+      auth.roles = ['Admin'];
+      const user = userEvent.setup();
+      await openOnPast();
+
+      expect(screen.queryByText(/Invites will not be sent/)).not.toBeInTheDocument();
+      await user.click(screen.getByRole('button', { name: /save new time/i }));
+
+      expect(await screen.findByText(/pick a time in the future/i)).toBeInTheDocument();
+      expect(rescheduleInterview).not.toHaveBeenCalled();
+    });
+
+    it('does not show the note for a future time', async () => {
+      auth.roles = ['Recruiter'];
+      renderModal();
+      await screen.findByLabelText('Interview duration');
+
+      expect(screen.queryByText(/Invites will not be sent/)).not.toBeInTheDocument();
+    });
   });
 
   it('blocks the form when an evaluation has already been submitted', async () => {

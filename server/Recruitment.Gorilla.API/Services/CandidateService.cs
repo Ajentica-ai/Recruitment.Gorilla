@@ -359,7 +359,7 @@ public class CandidateService(
         return candidate is null ? null : RoleLockError(candidate.RoleAppliedOption);
     }
 
-    public async Task<string?> ValidateStatusChangeAsync(int candidateId, StatusChangeDto dto)
+    public async Task<string?> ValidateStatusChangeAsync(int candidateId, StatusChangeDto dto, bool canBackdate = false)
     {
         var candidate = await db.Candidates
             .Include(c => c.StatusHistories)
@@ -402,6 +402,18 @@ public class CandidateService(
         {
             if (dto.InterviewAt is null)
                 return "Interview Scheduled requires interview date/time.";
+
+            // A past time is for a Recruiter or Super Admin only, with the comment as the reason, and not before the
+            // candidate was added or reached their current status (#263). A future time skips all of this.
+            var interviewAtUtc = dto.InterviewAt.Value.ToUniversalTime();
+            if (interviewAtUtc <= DateTime.UtcNow)
+            {
+                var (createdAt, followsAt, followsName) = await BackdatedInterview.BoundsAsync(
+                    db, candidateId, InterviewScheduled, booking: true);
+                var backdateError = BackdatedInterview.Check(
+                    interviewAtUtc, canBackdate, dto.Comment, createdAt, followsAt, followsName);
+                if (backdateError is not null) return backdateError;
+            }
 
             if (dto.InterviewerUserIds is not { Count: > 0 })
                 return "Interview Scheduled requires at least one interviewer.";
@@ -756,6 +768,7 @@ public class CandidateService(
         // When scheduling an interview, create the Interview + assigned interviewers in the
         // same save (StatusHistory nav sets the FK). Notifications follow once we have the Id.
         Interview? interview = null;
+        var pastBooking = dto.InterviewAt is DateTime bookedAt && bookedAt.ToUniversalTime() <= DateTime.UtcNow;
         if (dto.Status == InterviewScheduled && dto.InterviewAt is not null &&
             dto.InterviewerUserIds is { Count: > 0 })
         {
@@ -782,6 +795,8 @@ public class CandidateService(
             {
                 EventType = InterviewEventTypes.Scheduled,
                 NewScheduledAt = interview.ScheduledAt,
+                // A booking for a time already past carries its reason (#263).
+                Reason = pastBooking ? dto.Comment?.Trim() : null,
                 ActorUserId = currentUserId,
                 ActorName = entry.ChangedBy,
             });
@@ -810,6 +825,17 @@ public class CandidateService(
 
             foreach (var uid in dto.InterviewerUserIds!.Distinct())
             {
+                // The time has already passed (#263): an in-app notice only, no email, Slack or calendar invite.
+                if (pastBooking)
+                {
+                    await notificationService.NotifyAsync(
+                        uid, "Interview assigned",
+                        $"You have been assigned to the interview with {candidate.FullName}, recorded as held on " +
+                        $"{interview.ScheduledAt:dd MMM yyyy, HH:mm} UTC.",
+                        $"/interviews/{interview.Id}");
+                    continue;
+                }
+
                 var interviewer = await db.Users.FindAsync(uid);
                 var hasEarlierRounds = withEarlierRounds.Contains(uid);
                 var earlierRoundsUrl = hasEarlierRounds
