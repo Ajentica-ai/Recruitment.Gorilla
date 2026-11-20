@@ -13,7 +13,9 @@ public record CandidateExperienceDto(
     string JobTitle,
     string Company,
     string? Duration,
-    string? Description
+    string? Description,
+    string? StartMonth = null,
+    string? EndMonth = null
 );
 
 public record CVDraftDto(
@@ -38,7 +40,8 @@ public record CVDraftDto(
     string? HackerRankUrl = null,
     string? GitLabUrl = null,
     List<CandidateEducationDto>? Educations = null,
-    List<CandidateExperienceDto>? Experiences = null
+    List<CandidateExperienceDto>? Experiences = null,
+    bool ReadFromScan = false
 );
 
 public record CreateCandidateDto(

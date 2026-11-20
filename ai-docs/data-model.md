@@ -61,6 +61,7 @@ One row per uploaded file. The physical file is on disk under `Uploads/` as `{GU
 | StoredFileName | varchar(500) | `{GUID}.pdf`/`.docx` on disk |
 | FileType | varchar(10) | `"PDF"` or `"Word"` |
 | FileSizeBytes | bigint | |
+| ReadFromScan | bool | True when the file had no text layer and its fields were read from browser OCR text (#260). Default false. |
 | FileHash | varchar(64)? | SHA-256 of the content (hex), indexed. Copied from the draft on approval. Null on rows stored before hashing existed until a same-size upload backfills it. |
 | UploadedAt | datetime | |
 

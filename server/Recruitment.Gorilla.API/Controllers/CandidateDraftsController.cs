@@ -50,6 +50,10 @@ public class CandidateDraftsController(CandidateDraftService draftService) : Con
         return Ok(new { candidateId = candidate!.Id, message = $"Successfully created candidate '{candidate.FullName}'." });
     }
 
+    [HttpPost("estimate-experience")]
+    public ActionResult<EstimateExperienceResultDto> EstimateExperience([FromBody] EstimateExperienceDto dto) =>
+        Ok(new EstimateExperienceResultDto(draftService.EstimateRelevantExperience(dto.Experiences)));
+
     [HttpPost("bulk-approve")]
     public async Task<IActionResult> BulkApprove([FromBody] BulkApproveDraftsDto dto)
     {
