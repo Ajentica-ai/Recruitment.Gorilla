@@ -549,3 +549,9 @@ The `.docx`/PDF flows and auth need the backend running; see [dev-setup.md](dev-
 The Admin+ interview page hides reschedule and cancel controls when the candidate's applied job
 opening has closed. The candidate detail page uses the same `roleClosed` rule, and the API applies
 the lock to both writes.
+
+**Toasts (#261, `components/ToastStack.tsx`):** each toast paints the opaque `--surface` colour first and layers its `--*-tint` on top, with a 4px left accent bar in the variant colour. The tints alone are only ~14% alpha in dark mode, so a toast floating over a table or dialog showed that content through its text. A toast stops counting down while the pointer is over it or focus is inside it, and then restarts the full countdown. Durations: success and info 4s, warning 6s, error 10s.
+
+
+
+
