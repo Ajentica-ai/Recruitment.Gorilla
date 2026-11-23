@@ -746,3 +746,9 @@
 - 2026-11-17T06:04Z [claude] RG-260 PHASE PLAN→CONSTRUCT @d63670d: OCR-in-upload plan approved as proposed, incl. migration (user confirmed)
 - 2026-11-17T06:16Z [claude] RG-260 PHASE CONSTRUCT→WRAP-UP @d63670d: 6/6 tasks; dotnet 985, vitest 427, tsc, oxlint, build ok; real-browser e2e on scratch DB
 - 2026-11-17T06:16Z [claude] RG-260 DONE @d63670d: OCR-in-upload built, uncommitted; migration AddDraftReadFromScan not applied to dev DB (API applies on start)
+- 2026-11-23T12:21Z [claude] RG-262-server CREATED @82f9f86: server half of #262 (join wrapped CV lines); frontend half merged in #305
+- 2026-11-23T12:21Z [claude] RG-262-server DECISION @82f9f86: plan approved; join capitalised continuations too (user: go with recommendation)
+- 2026-11-23T12:21Z [claude] RG-262-server BRANCH @82f9f86: fix/RG-262/Join-wrapped-CV-lines created off origin/develop (user confirmed)
+- 2026-11-23T12:21Z [claude] RG-262-server PHASE PLAN→CONSTRUCT @82f9f86: items 3,4 already on develop
+- 2026-11-23T12:23Z [claude] RG-262-server PHASE CONSTRUCT→WRAP-UP @82f9f86: wrapped-line join + 5 tests, backend 1049 passed, ai-docs/backend.md updated
+- 2026-11-23T12:44Z [claude] RG-262-server DONE @82f9f86: wrapped-line join, 6 tests incl. real PDF, backend 1050 passed; PR next (Closes #262)
