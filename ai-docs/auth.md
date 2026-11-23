@@ -85,7 +85,7 @@ Built in `AuthService.CreateAccessToken(User)`:
 
 ## First-login password change
 - Accounts created by a SuperAdmin (and any admin password reset) set `MustChangePassword = true`.
-- `Authorization/PasswordChangedRequirement.cs` + handler are added to the `FallbackPolicy`. When the `must_change_password` claim is present, **every** request is denied **except** the allow-list (`/api/auth/change-password`), so a first-login user can only change their password until they do.
+- `Authorization/PasswordChangedRequirement.cs` + handler enforce it. When the `must_change_password` claim is present, **every** request is denied **except** the allow-list (`/api/auth/change-password`) and the `[AllowAnonymous]` auth endpoints (login, refresh, logout), so a first-login user can only change their password until they do. **It is registered in three places on purpose (#264)** (`Program.cs`, one shared policy): a global MVC `AuthorizeFilter` (covers `[Authorize(Roles = ...)]`, which builds its own policy and does *not* combine with the default policy), `DefaultPolicy` (a plain `[Authorize]`, including the CV upload hub, which is not an MVC action) and `FallbackPolicy` (endpoints with no authorization metadata). With only the fallback it enforced nothing, because every controller carries `[Authorize]`. `ForcedPasswordChangeTests` covers each case; a token issued before the change keeps the claim, so sign in again after changing it.
 - The frontend mirrors this: `ProtectedLayout` redirects to `/change-password` while `mustChangePassword` is set.
 
 ## Seeding the first SuperAdmin
@@ -98,7 +98,7 @@ On startup (`Program.cs`, after `Migrate()`): if **no users exist**, seed a Supe
 ## Validation hardening (`Program.cs`)
 - `Jwt:Key` from user secrets; startup throws if missing or < 32 bytes.
 - `TokenValidationParameters`: validate issuer/audience/lifetime/signing-key; `RequireSignedTokens`, `RequireExpirationTime`; **`ValidAlgorithms = [HS256]`** (prevents alg-confusion); `ClockSkew = Zero`; `MapInboundClaims = false`; `NameClaimType = sub`, `RoleClaimType = role`.
-- **Default-deny**: `FallbackPolicy = RequireAuthenticatedUser()` + `PasswordChangedRequirement` — every endpoint needs auth (and a changed password) unless `[AllowAnonymous]`.
+- **Default-deny**: `FallbackPolicy` and `DefaultPolicy` = `RequireAuthenticatedUser()` + `PasswordChangedRequirement`, plus a global `AuthorizeFilter` with the same policy: every endpoint needs auth (and a changed password) unless `[AllowAnonymous]`.
 
 ## Frontend (`services/api.ts` + `auth/AuthContext.tsx`)
 - Axios `withCredentials: true` so the refresh cookie rides along on `/auth/*`.
