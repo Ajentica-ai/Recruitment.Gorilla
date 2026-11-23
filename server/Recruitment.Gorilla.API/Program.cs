@@ -3,6 +3,7 @@ using System.Security.Claims;
 using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc.Authorization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
@@ -23,7 +24,20 @@ Environment.SetEnvironmentVariable(
 builder.Logging.ClearProviders();
 builder.Logging.AddLog4Net("log4net.config");
 
-builder.Services.AddControllers();
+// Every authenticated request must also be past any forced password change (#264). One policy, used in three places
+// below because no single one is enough:
+//  - a global MVC filter, which also covers [Authorize(Roles = ...)] endpoints (a Roles-only attribute builds its own
+//    policy and does NOT combine with the default policy);
+//  - DefaultPolicy, for a plain [Authorize] (the hub, which is not an MVC action);
+//  - FallbackPolicy, for endpoints with no authorization metadata at all.
+// The change-password endpoint stays reachable through the requirement's allow-list; [AllowAnonymous] endpoints
+// (sign-in, refresh, sign-out) are skipped by all three.
+var authenticatedAndPasswordChanged = new AuthorizationPolicyBuilder()
+    .RequireAuthenticatedUser()
+    .AddRequirements(new PasswordChangedRequirement())
+    .Build();
+
+builder.Services.AddControllers(options => options.Filters.Add(new AuthorizeFilter(authenticatedAndPasswordChanged)));
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
@@ -174,12 +188,12 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 
 // Default-deny: every endpoint requires an authenticated user (unless [AllowAnonymous]),
 // and a user with a pending forced password change is blocked from all but the
-// change-password endpoint.
+// change-password endpoint (see authenticatedAndPasswordChanged above, #264).
 builder.Services.AddAuthorization(options =>
-    options.FallbackPolicy = new AuthorizationPolicyBuilder()
-        .RequireAuthenticatedUser()
-        .AddRequirements(new PasswordChangedRequirement())
-        .Build());
+{
+    options.DefaultPolicy = authenticatedAndPasswordChanged;
+    options.FallbackPolicy = authenticatedAndPasswordChanged;
+});
 
 var allowedOrigins = builder.Configuration.GetSection("AllowedOrigins").Get<string[]>() ?? [];
 builder.Services.AddCors(opt =>

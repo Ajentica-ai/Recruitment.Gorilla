@@ -490,6 +490,28 @@ public sealed class ApiFixture : IAsyncLifetime
         return (user.Email, user.Id);
     }
 
+    /// <summary>
+    /// An active user who still has to change their temporary password (<c>MustChangePassword</c> true), as a user
+    /// created by an admin or after an admin reset is. Signs in with <see cref="Password"/>.
+    /// </summary>
+    public async Task<(string Email, int Id)> NewMustChangePasswordUserAsync(string role = Roles.Recruiter)
+    {
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var user = new User
+        {
+            Name = $"{role}-{Guid.NewGuid():N}",
+            Email = $"{role.ToLowerInvariant()}-{Guid.NewGuid():N}@test.local",
+            PasswordHash = PasswordHasher.Hash(Password),
+            MustChangePassword = true,
+            IsActive = true,
+            Roles = [new UserRole { Role = role }],
+        };
+        db.Users.Add(user);
+        await db.SaveChangesAsync();
+        return (user.Email, user.Id);
+    }
+
     /// <summary>Inserts an offer in the given status (committed) and returns its id.</summary>
     public async Task<int> NewOfferAsync(int candidateId, string status = "Draft")
     {

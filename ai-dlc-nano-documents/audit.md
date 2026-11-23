@@ -746,3 +746,13 @@
 - 2026-11-17T06:04Z [claude] RG-260 PHASE PLAN→CONSTRUCT @d63670d: OCR-in-upload plan approved as proposed, incl. migration (user confirmed)
 - 2026-11-17T06:16Z [claude] RG-260 PHASE CONSTRUCT→WRAP-UP @d63670d: 6/6 tasks; dotnet 985, vitest 427, tsc, oxlint, build ok; real-browser e2e on scratch DB
 - 2026-11-17T06:16Z [claude] RG-260 DONE @d63670d: OCR-in-upload built, uncommitted; migration AddDraftReadFromScan not applied to dev DB (API applies on start)
+- 2026-11-23T08:17Z [claude] RG-264 CREATED @64ecffa: issue #264 forced password change not enforced (bug, security, already assigned to user)
+- 2026-11-23T08:17Z [claude] RG-264 PHASE CLARIFY→PLAN @64ecffa: plan drafted; awaiting approval and branch
+- 2026-11-23T08:17Z [claude] RG-264 SIDE-EFFECT @64ecffa: board status NOT moved (gh token lacks read:project); assignee already set
+- 2026-11-23T08:27Z [claude] RG-264 BRANCH @82f9f86: fix/RG-264/Enforce-forced-password-change created off origin/develop (user confirmed)
+- 2026-11-23T08:27Z [claude] RG-264 DECISION @82f9f86: plan approved incl. client shell-query gating (user: go with recommendation)
+- 2026-11-23T08:27Z [claude] RG-264 PHASE PLAN→CONSTRUCT @82f9f86: plan approved
+- 2026-11-23T08:34Z [claude] RG-264 REVISED @82f9f86: Roles-only [Authorize] ignores DefaultPolicy; added global AuthorizeFilter as well (test caught it)
+- 2026-11-23T08:34Z [claude] RG-264 PHASE CONSTRUCT→WRAP-UP @82f9f86: dotnet 1057 + vitest 472 pass; scratch browser check ok (DB dropped)
+- 2026-11-23T08:34Z [claude] RG-264 DONE @82f9f86: forced password change enforced on API; uncommitted
+- 2026-11-23T09:32Z [claude] RG-264 REVISED @82f9f86: extra browser checks: pending Admin + CV upload hub (12 passed); scratch DB dropped

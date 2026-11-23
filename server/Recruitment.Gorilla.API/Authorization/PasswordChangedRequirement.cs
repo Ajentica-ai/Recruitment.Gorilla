@@ -4,9 +4,9 @@ namespace Recruitment.Gorilla.API.Authorization;
 
 /// <summary>
 /// Requires that the authenticated user is not in a "must change password" state.
-/// Part of the fallback policy, so it guards every endpoint except the allow-listed
-/// ones (the change-password endpoint), forcing a first-login user to set a new
-/// password before doing anything else.
+/// Applied through the default policy, the fallback policy and a global MVC filter (see Program.cs, #264), so it
+/// guards every endpoint except the allow-listed ones (the change-password endpoint), forcing a first-login user to
+/// set a new password before doing anything else.
 /// </summary>
 public class PasswordChangedRequirement : IAuthorizationRequirement;
 

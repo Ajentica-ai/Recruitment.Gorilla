@@ -28,7 +28,7 @@ export default function SidebarNav({
   onToggleCollapse,
   onHide,
 }: SidebarNavProps) {
-  const { user } = useAuth();
+  const { user, mustChangePassword } = useAuth();
   const location = useLocation();
   const [pendingPath, setPendingPath] = useState<string | null>(null);
 
@@ -49,7 +49,8 @@ export default function SidebarNav({
   const { data: draftTotals } = useQuery({
     queryKey: ['candidate-drafts', 'sidebar-count'],
     queryFn: () => getCandidateDrafts({ status: 'Pending', pageSize: 1 }),
-    enabled: canSeeDrafts,
+    // Nothing but change-password is allowed while a temporary password is pending (#264).
+    enabled: canSeeDrafts && !mustChangePassword,
     staleTime: 60_000,
   });
   const pendingDrafts = draftTotals?.totalPending ?? 0;

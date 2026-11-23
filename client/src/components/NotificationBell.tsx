@@ -11,6 +11,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { getNotifications, markAllNotificationsRead, markNotificationRead } from '@/services/api';
 import { cn } from '@/lib/utils';
+import { useOptionalAuth } from '../auth/AuthContext';
 import type { AppNotification } from '@/types';
 
 const relativeTime = (iso: string): string => {
@@ -29,11 +30,14 @@ export default function NotificationBell() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
+  // The API refuses everything but change-password while a temporary password is pending (#264), so do not ask.
+  const mustChangePassword = useOptionalAuth()?.mustChangePassword ?? false;
 
   const { data } = useQuery({
     queryKey: ['notifications'],
     queryFn: getNotifications,
     refetchInterval: 60_000,
+    enabled: !mustChangePassword,
   });
 
   const items = data?.items ?? [];
