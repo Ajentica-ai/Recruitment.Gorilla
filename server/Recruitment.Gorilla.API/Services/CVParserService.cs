@@ -489,7 +489,9 @@ public class CVParserService
         string? title = null, company = null, duration = null, start = null, end = null;
         // The header (title, company, dates) is complete; later plain lines are description unless they open a new role.
         var headerClosed = false;
-        var descSb = new StringBuilder();
+        var descLines = new List<string>();
+        // True while the last description line is a bullet (or a bullet already extended by wrapped lines).
+        var inBullet = false;
 
         bool HasContent() => title != null || company != null || duration != null;
 
@@ -501,13 +503,33 @@ public class CVParserService
                     title ?? "",
                     company ?? "",
                     duration,
-                    descSb.ToString().Trim().NullIfEmpty(),
+                    string.Join(Environment.NewLine, descLines).Trim().NullIfEmpty(),
                     start,
                     end));
             }
             title = company = duration = start = end = null;
             headerClosed = false;
-            descSb.Clear();
+            descLines.Clear();
+            inBullet = false;
+        }
+
+        void AddBullet(string text)
+        {
+            descLines.Add(text);
+            inBullet = true;
+        }
+
+        // A PDF hard-wraps a long bullet over several physical lines (#262). A plain line right after a
+        // bullet that has not ended its sentence is the rest of that bullet, so it is joined onto it.
+        void AddDescriptionLine(string text)
+        {
+            if (inBullet && descLines.Count > 0 && !EndsSentence(descLines[^1]))
+            {
+                descLines[^1] = descLines[^1] + " " + text;
+                return;
+            }
+            descLines.Add(text);
+            inBullet = false;
         }
 
         void SetDates(Match dateMatch)
@@ -566,7 +588,7 @@ public class CVParserService
             var text = line.Trim();
             if (IsBullet(line))
             {
-                descSb.AppendLine(text);
+                AddBullet(text);
             }
             else if (!HasContent())
             {
@@ -581,7 +603,7 @@ public class CVParserService
                 }
                 else
                 {
-                    descSb.AppendLine(text);
+                    AddDescriptionLine(text);
                 }
             }
             else if (title == null)
@@ -594,13 +616,19 @@ public class CVParserService
             }
             else
             {
-                descSb.AppendLine(text);
+                AddDescriptionLine(text);
             }
         }
 
         Flush();
 
         return list;
+    }
+
+    private static bool EndsSentence(string line)
+    {
+        var trimmed = line.TrimEnd();
+        return trimmed.Length > 0 && ".!?:;".Contains(trimmed[^1]);
     }
 
     private static string? MatchUrl(string text, List<string> hyperlinks, Regex regex)

@@ -425,4 +425,131 @@ public class CVParserServiceTests
         Assert.Equal("2-3 Years", Estimate(Jobs("2014 - 2015", "2016 - 2017")));
         Assert.Equal("3-5 Years", Estimate(Jobs("2010 - 2012", "2016 - 2018")));
     }
+
+    // ---- Hard-wrapped bullets (#262) ---------------------------------------
+    //
+    // A PDF breaks a long bullet over several physical lines. The parser must hand
+    // back one description line per bullet, not one per physical line.
+
+    private static string[] ParseDescriptionLines(string bullets)
+    {
+        var rawText = "Jane Doe\nSenior Engineer\nEmail: jane@example.com\n\nProfessional Experience\n"
+            + "Senior Software Engineer - Brain Station 23 (Jan 2022 - Present)\n"
+            + bullets + "\n\nEducation\nBSc in Computer Science (2020)\n";
+        var tempFile = Path.Combine(Path.GetTempPath(), $"Jane_Doe_Senior_Engineer_{Guid.NewGuid():N}.txt");
+        File.WriteAllText(tempFile, rawText);
+        try
+        {
+            var result = new CVParserService().Parse(tempFile, "TXT");
+            var description = Assert.Single(result.Experiences!).Description;
+            Assert.NotNull(description);
+            return description!.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries);
+        }
+        finally
+        {
+            if (File.Exists(tempFile)) File.Delete(tempFile);
+        }
+    }
+
+    [Fact]
+    public void A_bullet_wrapped_over_three_lines_becomes_one_line()
+    {
+        var lines = ParseDescriptionLines(
+            "• Built the payments API that handles high volume\n" +
+            "transactions for card and wallet payments across\n" +
+            "three regions");
+
+        Assert.Equal(
+            ["• Built the payments API that handles high volume transactions for card and wallet payments across three regions"],
+            lines);
+    }
+
+    [Fact]
+    public void A_bullet_that_a_real_pdf_wraps_over_two_lines_is_one_description_line()
+    {
+        QuestPDF.Settings.License = LicenseType.Community;
+        const string longBullet =
+            "• Built the payments API that handles high volume card and wallet payments across three regions without any outage during peak season";
+        var tempFile = Path.Combine(Path.GetTempPath(), $"Jane_Doe_Senior_Engineer_{Guid.NewGuid():N}.pdf");
+        Document.Create(container => container.Page(page =>
+        {
+            page.Size(PageSizes.A4);
+            page.Margin(72);
+            page.DefaultTextStyle(x => x.FontSize(11));
+            page.Content().Column(col =>
+            {
+                col.Spacing(6);
+                col.Item().Text("Jane Doe").FontSize(22).Bold();
+                col.Item().Text("Email: jane@example.com");
+                col.Item().Text("Professional Experience").FontSize(14).Bold();
+                col.Item().Text("Senior Software Engineer - Brain Station 23 (Jan 2022 - Present)");
+                col.Item().Text(longBullet);
+                col.Item().Text("• Cut costs by 60%");
+                col.Item().Text("Education").FontSize(14).Bold();
+                col.Item().Text("BSc in Computer Science (2020)");
+            });
+        })).GeneratePdf(tempFile);
+
+        try
+        {
+            var result = new CVParserService().Parse(tempFile, "PDF");
+            var description = Assert.Single(result.Experiences!).Description;
+            var lines = description!.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries);
+
+            Assert.Equal([longBullet, "• Cut costs by 60%"], lines);
+        }
+        finally
+        {
+            if (File.Exists(tempFile)) File.Delete(tempFile);
+        }
+    }
+
+    [Fact]
+    public void A_wrapped_continuation_that_starts_with_a_capital_is_joined_too()
+    {
+        var lines = ParseDescriptionLines(
+            "- Migrated the reporting stack from SQL Server to\n" +
+            "PostgreSQL without downtime");
+
+        Assert.Equal(["- Migrated the reporting stack from SQL Server to PostgreSQL without downtime"], lines);
+    }
+
+    [Fact]
+    public void Separate_bullets_stay_separate_and_each_wrapped_one_is_joined()
+    {
+        var lines = ParseDescriptionLines(
+            "• Led a team of four engineers and ran the\n" +
+            "weekly planning\n" +
+            "• Cut deploy time by 60%\n" +
+            "• Wrote the on-call runbook that is used by\n" +
+            "the whole platform group");
+
+        Assert.Equal(
+        [
+            "• Led a team of four engineers and ran the weekly planning",
+            "• Cut deploy time by 60%",
+            "• Wrote the on-call runbook that is used by the whole platform group",
+        ], lines);
+    }
+
+    [Fact]
+    public void A_line_after_a_finished_bullet_is_not_joined_into_it()
+    {
+        var lines = ParseDescriptionLines(
+            "• Built the payments API.\n" +
+            "Also mentored two junior engineers");
+
+        Assert.Equal(["• Built the payments API.", "Also mentored two junior engineers"], lines);
+    }
+
+    [Fact]
+    public void Bullets_that_are_not_wrapped_are_unchanged()
+    {
+        var lines = ParseDescriptionLines(
+            "• Built the payments API\n" +
+            "• Led a team of 4\n" +
+            "• Cut deploy time by 60%");
+
+        Assert.Equal(["• Built the payments API", "• Led a team of 4", "• Cut deploy time by 60%"], lines);
+    }
 }
