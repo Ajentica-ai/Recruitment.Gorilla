@@ -214,38 +214,7 @@ using (var scope = app.Services.CreateScope())
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     db.Database.Migrate();
 
-    var email = app.Configuration["Auth:SeedAdminEmail"] ?? "admin@recruitmentgorilla.com";
-    var passwordHash = app.Configuration["Auth:PasswordHash"];
-    var adminUser = await db.Users.Include(u => u.Roles).FirstOrDefaultAsync(u => u.Email == email);
-    if (adminUser is null)
-    {
-        if (string.IsNullOrWhiteSpace(passwordHash))
-        {
-            app.Logger.LogWarning(
-                "No users exist and Auth:PasswordHash is not configured — no Super Admin was seeded.");
-        }
-        else
-        {
-            var name = app.Configuration["Auth:SeedAdminName"] ?? "Super Admin";
-            db.Users.Add(new User
-            {
-                Name = name,
-                Email = email,
-                PasswordHash = passwordHash,
-                MustChangePassword = false,
-                IsActive = true,
-                Roles = [new UserRole { Role = Roles.SuperAdmin }],
-            });
-            await db.SaveChangesAsync();
-            app.Logger.LogInformation("Seeded initial Super Admin '{Email}'.", email);
-        }
-    }
-    else if (!string.IsNullOrWhiteSpace(passwordHash) && adminUser.PasswordHash != passwordHash)
-    {
-        adminUser.PasswordHash = passwordHash;
-        await db.SaveChangesAsync();
-        app.Logger.LogInformation("Updated Super Admin '{Email}' password hash from configuration.", email);
-    }
+    await SuperAdminSeeder.SeedAsync(db, app.Configuration, app.Logger);
 }
 
 app.Logger.LogInformation("Recruitment.Gorilla API starting in {Environment} environment.",

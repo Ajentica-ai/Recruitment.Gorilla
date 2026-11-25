@@ -746,3 +746,9 @@
 - 2026-11-17T06:04Z [claude] RG-260 PHASE PLAN→CONSTRUCT @d63670d: OCR-in-upload plan approved as proposed, incl. migration (user confirmed)
 - 2026-11-17T06:16Z [claude] RG-260 PHASE CONSTRUCT→WRAP-UP @d63670d: 6/6 tasks; dotnet 985, vitest 427, tsc, oxlint, build ok; real-browser e2e on scratch DB
 - 2026-11-17T06:16Z [claude] RG-260 DONE @d63670d: OCR-in-upload built, uncommitted; migration AddDraftReadFromScan not applied to dev DB (API applies on start)
+- 2026-11-23T12:55Z [claude] RG-265 CREATED @82f9f86: startup seeding overwrites the Super Admin password hash (#265)
+- 2026-11-23T12:55Z [claude] RG-265 DECISION @82f9f86: plan approved; revoke refresh tokens on reset; extract SuperAdminSeeder (user: go with recommendation)
+- 2026-11-23T12:55Z [claude] RG-265 BRANCH @82f9f86: fix/RG-265/Keep-admin-password-on-restart off origin/develop (user confirmed)
+- 2026-11-23T12:55Z [claude] RG-265 PHASE PLAN→CONSTRUCT @82f9f86: high blast radius tier
+- 2026-11-23T12:58Z [claude] RG-265 DONE @82f9f86: SuperAdminSeeder, no overwrite on restart, opt-in reset; 8 tests, backend 1052 passed; docs updated
+- 2026-11-25T07:57Z [claude] RG-265 DECISION @82f9f86: verified on a real API, 3 restarts, scratch DB dropped; PR approved by user
