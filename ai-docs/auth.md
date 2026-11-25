@@ -91,6 +91,8 @@ Built in `AuthService.CreateAccessToken(User)`:
 ## Seeding the first SuperAdmin
 On startup (`Program.cs`, after `Migrate()`): if **no users exist**, seed a SuperAdmin from config — `Auth:SeedAdminEmail` (default `admin@recruitmentgorilla.com`), `Auth:SeedAdminName` (default `Super Admin`), and the existing `Auth:PasswordHash` (user secrets) — with `MustChangePassword = false`. This preserves the original admin password while moving identity into the DB. **Log in with that email + the existing admin password.**
 
+The seed runs only when that admin does not exist (`Data/SuperAdminSeeder.cs`). A restart **never** overwrites the stored hash, so a password the Super Admin changed survives deploys (#265). The one exception is the explicit break-glass opt-in `Auth:ResetSeedAdminPassword=true`: when the configured hash differs from the stored one it is applied, `MustChangePassword` is set, the admin's refresh tokens are revoked and a warning is logged. It must be removed after one start (see [dev-setup.md](dev-setup.md)). Tests: `SuperAdminSeederTests`.
+
 ## Credentials (hashed)
 - `Auth:PasswordHash` is a **PBKDF2-HMAC-SHA256** hash in **user secrets**, format `iterations.saltBase64.hashBase64` (100k iterations, 16-byte salt, 32-byte key). It only seeds the first SuperAdmin; thereafter every user has their own `PasswordHash` row.
 - To (re)generate a hash, see [dev-setup.md](dev-setup.md).

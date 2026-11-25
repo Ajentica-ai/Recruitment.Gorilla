@@ -81,7 +81,9 @@ $iter = 100000
 $pb = New-Object Security.Cryptography.Rfc2898DeriveBytes($pass,$salt,$iter,[Security.Cryptography.HashAlgorithmName]::SHA256)
 "$iter.$([Convert]::ToBase64String($salt)).$([Convert]::ToBase64String($pb.GetBytes(32)))"
 ```
-The hash format and algorithm must match `AuthService.VerifyPassword` (PBKDF2-SHA256, 32-byte key). To change the admin password, regenerate with a new `$pass` and update the secret.
+The hash format and algorithm must match `AuthService.VerifyPassword` (PBKDF2-SHA256, 32-byte key). The secret only seeds the **first** Super Admin (when no such user exists yet). Changing it later does nothing on its own: a restart never overwrites a password the admin has set (#265).
+
+**Break-glass reset of the Super Admin password.** If the admin is locked out or the password may have leaked, regenerate a hash with a new `$pass`, update the `Auth:PasswordHash` secret, and start the API once with `Auth:ResetSeedAdminPassword=true` (for example `$env:Auth__ResetSeedAdminPassword="true"; dotnet run ...`). If the stored hash differs, the API replaces it, sets `MustChangePassword`, revokes that admin's refresh tokens, and logs a warning. The setting stays in effect until you remove it, so **remove it after that one start**; left on, every restart resets the password to the configured hash again.
 
 ## 2. Database
 ```bash
