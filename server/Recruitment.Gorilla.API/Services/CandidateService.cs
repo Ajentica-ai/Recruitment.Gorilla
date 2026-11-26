@@ -817,7 +817,7 @@ public class CandidateService(
                 ? await panelAutoShare.SyncAsync(
                     interview, dto.InterviewerUserIds!.Distinct().ToList(), true, currentUserId)
                 : [];
-            var interviewUrl = $"{config["App:ClientBaseUrl"]?.TrimEnd('/')}/interviews/{interview.Id}";
+            var interviewUrl = $"{PublicLinks.BaseUrl(config)}/interviews/{interview.Id}";
             var invite = new InterviewInviteDetails(
                 interview.Id, candidate.FullName, roleName,
                 interview.ScheduledAt, interview.DurationMinutes, interviewUrl);
@@ -839,7 +839,7 @@ public class CandidateService(
                 var interviewer = await db.Users.FindAsync(uid);
                 var hasEarlierRounds = withEarlierRounds.Contains(uid);
                 var earlierRoundsUrl = hasEarlierRounds
-                    ? $"{config["App:ClientBaseUrl"]?.TrimEnd('/')}{EvaluationAccess.SharedReportLink(candidate.Id)}"
+                    ? $"{PublicLinks.BaseUrl(config)}{EvaluationAccess.SharedReportLink(candidate.Id)}"
                     : null;
                 var (emailSubject, emailHtml) = EmailTemplates.InterviewAssigned(
                     interviewer?.Name ?? "there", candidate.FullName, roleName,

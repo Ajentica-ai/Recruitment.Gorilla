@@ -54,8 +54,13 @@ plus a shared sender display name, an Enabled toggle and a **Send test email** b
 (the SMTP password, the API key) is encrypted at rest (`SecretProtector`, AES-GCM keyed by
 `Encryption:Key`) and never returned to the client. The `Smtp:*`/`EmailApi:*` config/`appsettings`
 values are a **fallback** only, picked between by `Email:Provider` (default `Smtp`). Gmail/Workspace
-app passwords require 2-Step Verification; `App:ClientBaseUrl` (default `http://localhost:5173`)
-builds absolute links in emails — set it to your real frontend origin in other environments. In
+app passwords require 2-Step Verification. Absolute links in emails and Slack come from
+`PublicLinks.BaseUrl` (#327): a real `App:ClientBaseUrl` wins; a localhost value (the
+`appsettings.json` default `http://localhost:5173`, the compose default `http://localhost:8090`)
+counts as unset, and the browser's `Origin` header on the request that triggers the message is
+used instead, then the last `Origin` seen on a signed-in request (for background work such as
+reminders), else the link is left out. So no deployment needs it set, but setting it pins the
+address. In
 Docker, provide `Encryption__Key` (and any fallback `Smtp__*`/`EmailApi__ApiKey`/`Slack__BotToken`)
 as environment variables. See [specs/email-outbox-and-notification-api.md](specs/email-outbox-and-notification-api.md).
 

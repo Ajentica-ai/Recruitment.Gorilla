@@ -8,7 +8,9 @@ namespace Recruitment.Gorilla.Tests;
 
 /// <summary>
 /// SlackService: best-effort DM send — pure, no DB, no real network (fake ISlackTransport + resolver).
+/// In the public-links collection because the link line reads the process-wide remembered origin (#327).
 /// </summary>
+[Collection(PublicLinksStateCollection.Name)]
 public class SlackServiceTests
 {
     private sealed class RecordingSlackTransport : ISlackTransport
@@ -42,7 +44,7 @@ public class SlackServiceTests
             throw new SlackApiException("invalid_auth", isTransient: false);
     }
 
-    private static IConfiguration Config(string? clientBaseUrl = "http://localhost:5173") =>
+    private static IConfiguration Config(string? clientBaseUrl = "https://recruitment.example.com") =>
         new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?> { ["App:ClientBaseUrl"] = clientBaseUrl })
             .Build();
@@ -115,7 +117,32 @@ public class SlackServiceTests
 
         var text = transport.Calls[1].Form["text"];
         Assert.Contains("Candidate &lt;Smith &amp; Co&gt; applied", text);
-        Assert.Contains("<http://localhost:5173/candidates/1|Open in Recruitment Gorilla>", text);
+        Assert.Contains("<https://recruitment.example.com/candidates/1|Open in Recruitment Gorilla>", text);
+    }
+
+    [Fact]
+    public async Task EnqueueAsync_links_to_the_browser_origin_when_only_the_localhost_default_is_configured()
+    {
+        // #327: production runs on the compose default http://localhost:8090; the link must follow the address the
+        // person who triggered the notification is actually using.
+        var transport = new RecordingSlackTransport();
+        using (PublicLinks.UseRequestOrigin("https://recruitment.example.com"))
+            await Slack(transport, config: Config("http://localhost:8090")).EnqueueAsync(
+                NotificationCategories.InterviewAssigned, "a@b.com", "Title", "Message", "/interviews/24");
+
+        var text = transport.Calls[1].Form["text"];
+        Assert.Contains("<https://recruitment.example.com/interviews/24|Open in Recruitment Gorilla>", text);
+        Assert.DoesNotContain("localhost", text);
+    }
+
+    [Fact]
+    public async Task EnqueueAsync_omits_the_link_rather_than_send_a_localhost_one()
+    {
+        var transport = new RecordingSlackTransport();
+        await Slack(transport, config: Config("http://localhost:8090")).EnqueueAsync(
+            NotificationCategories.InterviewAssigned, "a@b.com", "Title", "Message", "/interviews/24");
+
+        Assert.DoesNotContain("Open in Recruitment Gorilla", transport.Calls[1].Form["text"]);
     }
 
     [Fact]
