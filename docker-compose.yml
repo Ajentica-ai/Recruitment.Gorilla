@@ -82,6 +82,9 @@ services:
       # CORS is not exercised in this setup, but a wrong value here is the kind
       # of thing that only shows up once someone does split the origins.
       AllowedOrigins__0: ${PUBLIC_ORIGIN:-http://localhost:8090}
+      # Base of the links in emails and Slack. A localhost value counts as unset
+      # and the API uses the browser's Origin instead (#327), so this default is
+      # harmless on a server; a real PUBLIC_ORIGIN pins the address.
       App__ClientBaseUrl: ${PUBLIC_ORIGIN:-http://localhost:8090}
 
       # Seeds the first Super Admin, once, when the Users table is empty.

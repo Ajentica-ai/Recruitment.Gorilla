@@ -746,3 +746,8 @@
 - 2026-11-17T06:04Z [claude] RG-260 PHASE PLAN→CONSTRUCT @d63670d: OCR-in-upload plan approved as proposed, incl. migration (user confirmed)
 - 2026-11-17T06:16Z [claude] RG-260 PHASE CONSTRUCT→WRAP-UP @d63670d: 6/6 tasks; dotnet 985, vitest 427, tsc, oxlint, build ok; real-browser e2e on scratch DB
 - 2026-11-17T06:16Z [claude] RG-260 DONE @d63670d: OCR-in-upload built, uncommitted; migration AddDraftReadFromScan not applied to dev DB (API applies on start)
+- 2026-11-26T10:31Z [claude] RG-327 CREATED @82f9f86: issue #327 links in Slack/email point to localhost:8090 in production
+- 2026-11-26T10:31Z [claude] RG-327 DECISION @82f9f86: code-only fix, base URL from browser Origin; localhost config counts as unset (user confirmed)
+- 2026-11-26T10:31Z [claude] RG-327 BRANCH @82f9f86: fix/RG-327/Notification-links-localhost created off origin/develop (user confirmed)
+- 2026-11-26T10:31Z [claude] RG-327 PHASE PLAN→CONSTRUCT @82f9f86: plan approved
+- 2026-11-26T10:31Z [claude] RG-327 PHASE CONSTRUCT→WRAP-UP @82f9f86: 1085 tests green, real API check 8/8, old code reproduces bug

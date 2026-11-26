@@ -1,9 +1,9 @@
 # AI-DLC Nano State
-- Active work item: none
-- Phase: -
-- Branch: feature/RG-260/In-browser-CV-extraction-spike (pushed, PR #303; develop merged in after RG-259 landed via #302)
-- Base SHA: -
-- Next step: review and merge PR #303 (migration AddDraftReadFromScan applies on next API start).
+- Active work item: work-items/RG-327
+- Phase: WRAP-UP
+- Branch: fix/RG-327/Notification-links-localhost (off origin/develop)
+- Base SHA: 82f9f86
+- Next step: review and merge the RG-327 PR (Closes #327); new links follow the browser origin after deploy.
 - Paused work items: none
 - Uncommitted code: no
-- Last updated: 2026-11-20T00:00Z by claude
+- Last updated: 2026-11-26T00:00Z by claude

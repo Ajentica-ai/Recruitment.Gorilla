@@ -852,7 +852,7 @@ public class InterviewService(
         e.EventType, e.PreviousScheduledAt, e.NewScheduledAt, e.Reason, e.ActorName, e.CreatedAt);
 
     private string InterviewUrl(int interviewId) =>
-        $"{config["App:ClientBaseUrl"]?.TrimEnd('/')}/interviews/{interviewId}";
+        $"{PublicLinks.BaseUrl(config)}/interviews/{interviewId}";
 
     /// <summary>
     /// RFC 5545 requires an ORGANIZER on a METHOD:CANCEL and clients drop the message without one.
@@ -927,7 +927,7 @@ public class InterviewService(
             var name = await UserNameAsync(uid);
             var hasEarlierRounds = withEarlierRounds.Contains(uid);
             var earlierRoundsUrl = hasEarlierRounds
-                ? $"{config["App:ClientBaseUrl"]?.TrimEnd('/')}{EvaluationAccess.SharedReportLink(interview.CandidateId)}"
+                ? $"{PublicLinks.BaseUrl(config)}{EvaluationAccess.SharedReportLink(interview.CandidateId)}"
                 : null;
             var (subject, html) = EmailTemplates.InterviewAssigned(
                 name, candidateName, roleName, interview.ScheduledAt, url, invite, earlierRoundsUrl);

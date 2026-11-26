@@ -195,6 +195,9 @@ if (app.Environment.IsDevelopment())
 
 app.UseCors();
 app.UseAuthentication();
+// After authentication: the browser's Origin feeds the absolute links in emails and Slack (#327), and is
+// only remembered for background work when the caller is signed in.
+app.Use(PublicLinks.TrackRequestOriginAsync);
 app.UseAuthorization();
 app.MapControllers();
 

@@ -83,7 +83,7 @@ public class SlackService(
 
         if (!string.IsNullOrWhiteSpace(linkUrl))
         {
-            var baseUrl = config["App:ClientBaseUrl"]?.TrimEnd('/');
+            var baseUrl = PublicLinks.BaseUrl(config);
             if (!string.IsNullOrWhiteSpace(baseUrl))
                 text += $"\n<{baseUrl}{linkUrl}|Open in Recruitment Gorilla>";
         }
